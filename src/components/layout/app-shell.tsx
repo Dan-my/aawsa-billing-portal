@@ -15,9 +15,9 @@ import {
   Building,
   ClipboardList,
   UserCog,
-  Tachometer,
+  LayoutDashboard, // Changed from Tachometer
   Menu,
-  Droplets,
+  Droplets, // Ensured Droplets is imported
   ChevronDown,
   ChevronRight,
   UploadCloud,
@@ -58,7 +58,7 @@ interface User {
 }
 
 const adminNavItems = [
-  { href: "/admin/dashboard", icon: Tachometer, label: "Dashboard" },
+  { href: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" }, // Changed from Tachometer
   {
     label: "Management",
     icon: Settings,
@@ -75,7 +75,7 @@ const adminNavItems = [
 ];
 
 const staffNavItems = [
-  { href: "/staff/dashboard", icon: Tachometer, label: "Dashboard" },
+  { href: "/staff/dashboard", icon: LayoutDashboard, label: "Dashboard" }, // Changed from Tachometer
   { href: "/staff/meter-readings", icon: ClipboardList, label: "Meter Readings" },
   { href: "/staff/data-entry", icon: UploadCloud, label: "Data Entry" },
 ];
@@ -192,7 +192,7 @@ export function AppShell({ children, userRole }: AppShellProps) {
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <Tachometer className="h-12 w-12 animate-spin text-primary" />
+        <LayoutDashboard className="h-12 w-12 animate-spin text-primary" /> 
       </div>
     );
   }
@@ -216,7 +216,7 @@ export function AppShell({ children, userRole }: AppShellProps) {
       <Sidebar collapsible="icon" side="left" variant="sidebar" className="border-r border-sidebar-border">
         <SidebarHeader className="p-4">
            <Link href={userRole === 'admin' ? '/admin/dashboard' : '/staff/dashboard'} className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
-            <WaterIcon className="h-8 w-8 text-primary" />
+            <Droplets className="h-8 w-8 text-primary" /> 
             <h1 className="text-xl font-semibold group-data-[collapsible=icon]:hidden">AAWSA Portal</h1>
           </Link>
         </SidebarHeader>
@@ -274,3 +274,4 @@ export function AppShell({ children, userRole }: AppShellProps) {
     </SidebarProvider>
   );
 }
+

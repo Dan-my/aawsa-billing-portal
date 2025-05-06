@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart as BarChartIcon, PieChart as PieChartIcon, TrendingUp, Users } from 'lucide-react'; // Aliased chart icons
-import { ResponsiveContainer, BarChart, PieChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell } from 'recharts'; // BarChart, PieChart are recharts components
+import { ResponsiveContainer, BarChart, PieChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Bar } from 'recharts'; // BarChart, PieChart, Bar are recharts components
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 
 const billsData = [

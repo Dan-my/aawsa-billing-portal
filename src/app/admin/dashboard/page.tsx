@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart as BarChartIcon, PieChart as PieChartIcon, LineChart as LineChartIcon, Building } from 'lucide-react'; // Added Building, aliased chart icons to avoid conflict with recharts components
-import { ResponsiveContainer, BarChart, PieChart, LineChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Line } from 'recharts'; // BarChart, PieChart, LineChart are recharts components
+import { ResponsiveContainer, BarChart, PieChart, LineChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Line, Bar } from 'recharts'; // BarChart, PieChart, LineChart, Bar are recharts components
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'; 
 
 

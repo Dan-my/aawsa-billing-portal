@@ -1,8 +1,25 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart as BarChartIcon, PieChart as PieChartIcon, TrendingUp, Users } from 'lucide-react'; // Aliased chart icons
-import { ResponsiveContainer, BarChart, PieChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Bar } from 'recharts'; // BarChart, PieChart, Bar are recharts components
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { PieChart as PieChartIcon, TrendingUp, Users, BarChart as BarChartIcon } from "lucide-react"; // Aliased chart icons
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  BarChart, // Recharts BarChart
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  Bar, // Recharts Bar
+} from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 
 const billsData = [
@@ -10,7 +27,7 @@ const billsData = [
   { name: 'Unpaid Bills', value: 15, fill: 'hsl(var(--destructive))' },
 ];
 
-const customerData = [
+const customerData = [ // This data is not used in the current chart, but kept for potential future use
   { name: 'Your Customers', value: 250, fill: 'hsl(var(--chart-1))' },
 ];
 

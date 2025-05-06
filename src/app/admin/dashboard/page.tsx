@@ -1,9 +1,10 @@
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart, PieChart, LineChart } from 'lucide-react';
-import { ResponsiveContainer, Bar, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Line } from 'recharts';
-import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'; // Assuming Chart components are in ui
+import { BarChart as BarChartIcon, PieChart as PieChartIcon, LineChart as LineChartIcon, Building } from 'lucide-react'; // Added Building, aliased chart icons to avoid conflict with recharts components
+import { ResponsiveContainer, BarChart, PieChart, LineChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Line } from 'recharts'; // BarChart, PieChart, LineChart are recharts components
+import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'; 
 
 
 const totalBillsData = [
@@ -52,7 +53,7 @@ export default function AdminDashboardPage() {
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Bills</CardTitle>
-            <BarChart className="h-5 w-5 text-muted-foreground" />
+            <BarChartIcon className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">1600</div>
@@ -77,7 +78,7 @@ export default function AdminDashboardPage() {
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Customer Counts</CardTitle>
-            <PieChart className="h-5 w-5 text-muted-foreground" />
+            <PieChartIcon className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">12,180</div>

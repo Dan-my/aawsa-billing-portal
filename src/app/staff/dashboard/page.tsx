@@ -1,8 +1,9 @@
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart, CheckCircle, AlertCircle, TrendingUp, Users } from 'lucide-react';
-import { ResponsiveContainer, Bar, XAxis, YAxis, Tooltip, Legend, Pie, Cell } from 'recharts';
+import { BarChart as BarChartIcon, PieChart as PieChartIcon, TrendingUp, Users } from 'lucide-react'; // Aliased chart icons
+import { ResponsiveContainer, BarChart, PieChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell } from 'recharts'; // BarChart, PieChart are recharts components
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 
 const billsData = [
@@ -38,7 +39,7 @@ export default function StaffDashboardPage() {
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Bills Status (Current Cycle)</CardTitle>
-            <PieChart className="h-5 w-5 text-muted-foreground" />
+            <PieChartIcon className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">100 Bills</div>
@@ -64,7 +65,7 @@ export default function StaffDashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Customers in Your Branch</CardTitle>
             <Users className="h-5 w-5 text-muted-foreground" />
-          </CardHeader>
+          </Header>
           <CardContent>
             <div className="text-2xl font-bold">250</div>
             <p className="text-xs text-muted-foreground">Total customers assigned</p>

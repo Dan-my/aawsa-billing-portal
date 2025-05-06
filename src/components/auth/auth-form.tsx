@@ -46,23 +46,31 @@ export function AuthForm() {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    // Placeholder authentication logic
-    // In a real app, you would call your authentication API here
+    let roleToSet: string | null = null;
+    let redirectTo: string | null = null;
+    let toastMessage: string | null = null;
+
     if (values.email === "admin@aawsa.com" && values.password === "password") {
-      // Simulate setting auth state (e.g., storing a token in localStorage or context)
-      localStorage.setItem("userRole", "admin");
-      toast({
-        title: "Login Successful",
-        description: "Welcome, Admin!",
-      });
-      router.push("/admin/dashboard");
+      roleToSet = "admin";
+      redirectTo = "/admin/dashboard";
+      toastMessage = "Welcome, Admin!";
     } else if (values.email === "staff@aawsa.com" && values.password === "password") {
-      localStorage.setItem("userRole", "staff");
+      roleToSet = "staff";
+      redirectTo = "/staff/dashboard";
+      toastMessage = "Welcome, Staff!";
+    }
+
+    if (roleToSet && redirectTo && toastMessage) {
+      // Set localStorage for client-side checks
+      localStorage.setItem("userRole", roleToSet);
+      // Set cookie for middleware and server-side checks
+      document.cookie = `userRole=${roleToSet}; path=/; max-age=${60 * 60 * 24 * 7}`; // Max age 7 days
       toast({
         title: "Login Successful",
-        description: "Welcome, Staff!",
+        description: toastMessage,
       });
-      router.push("/staff/dashboard");
+      router.push(redirectTo);
+      router.refresh(); // Ensure the page refreshes and middleware re-evaluates
     } else {
       toast({
         variant: "destructive",

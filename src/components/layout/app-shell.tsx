@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils"; // Imported cn for SvgLogo
 
 interface AppShellProps {
   children: ReactNode;
@@ -85,8 +86,11 @@ export function AppShell({ children, userRole }: AppShellProps) {
 
   const handleLogout = () => {
     localStorage.removeItem("userRole");
+    // Clear the cookie by setting its max-age to 0
+    document.cookie = "userRole=; path=/; max-age=0";
     toast({ title: "Logged Out", description: "You have been successfully logged out." });
     router.push("/");
+    router.refresh(); // Ensure middleware re-evaluates after logout
   };
 
   if (!mounted) {

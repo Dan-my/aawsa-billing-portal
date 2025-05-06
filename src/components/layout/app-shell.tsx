@@ -15,12 +15,13 @@ import {
   Building,
   ClipboardList,
   UserCog,
-  LayoutDashboard, // Changed from Tachometer
+  LayoutDashboard, 
   Menu,
-  Droplets, // Ensured Droplets is imported
+  Droplets, 
   ChevronDown,
   ChevronRight,
   UploadCloud,
+  Gauge, // Using Gauge as an alternative for Bulk Meters
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -58,14 +59,14 @@ interface User {
 }
 
 const adminNavItems = [
-  { href: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" }, // Changed from Tachometer
+  { href: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   {
     label: "Management",
     icon: Settings,
     subItems: [
       { href: "/admin/branches", icon: Building, label: "Branches" },
       { href: "/admin/staff-management", icon: UserCog, label: "Staff" },
-      { href: "/admin/bulk-meters", icon: Droplets, label: "Bulk Meters" },
+      { href: "/admin/bulk-meters", icon: Gauge, label: "Bulk Meters" }, // Changed Droplets to Gauge
       { href: "/admin/individual-customers", icon: Users, label: "Customers" },
     ],
   },
@@ -75,7 +76,7 @@ const adminNavItems = [
 ];
 
 const staffNavItems = [
-  { href: "/staff/dashboard", icon: LayoutDashboard, label: "Dashboard" }, // Changed from Tachometer
+  { href: "/staff/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/staff/meter-readings", icon: ClipboardList, label: "Meter Readings" },
   { href: "/staff/data-entry", icon: UploadCloud, label: "Data Entry" },
 ];
@@ -204,9 +205,12 @@ export function AppShell({ children, userRole }: AppShellProps) {
   }
   
   const getInitials = (email: string) => {
-    const parts = email.split('@')[0].split('.');
-    if (parts.length > 1) {
+    const parts = email.split('@')[0].split(/[._-]/); // Split by '.', '_', or '-'
+    if (parts.length > 1 && parts[0] && parts[1]) {
       return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    if (parts[0] && parts[0].length >=2) {
+      return parts[0].substring(0, 2).toUpperCase();
     }
     return email.substring(0, 2).toUpperCase();
   }
@@ -274,4 +278,3 @@ export function AppShell({ children, userRole }: AppShellProps) {
     </SidebarProvider>
   );
 }
-

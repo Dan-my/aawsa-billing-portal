@@ -14,8 +14,8 @@ interface User {
 }
 
 const billsData = [
-  { name: 'Paid Bills', value: 85, fill: 'hsl(var(--chart-1))' }, // Cyan
-  { name: 'Unpaid Bills', value: 15, fill: 'hsl(var(--chart-2))' }, // Gray
+  { name: 'Paid Bills', value: 85, fill: 'hsl(var(--chart-1))' }, 
+  { name: 'Unpaid Bills', value: 15, fill: 'hsl(var(--chart-2))' }, 
 ];
 
 const monthlyPerformanceData = [
@@ -26,9 +26,9 @@ const monthlyPerformanceData = [
 ];
 
 const chartConfig = {
-  paid: { label: "Paid", color: "hsl(var(--chart-1))" }, // Cyan
-  unpaid: { label: "Unpaid", color: "hsl(var(--chart-2))" }, // Gray
-  customers: { label: "Customers", color: "hsl(var(--chart-1))"}, // Cyan
+  paid: { label: "Paid", color: "hsl(var(--chart-1))" }, 
+  unpaid: { label: "Unpaid", color: "hsl(var(--chart-2))" }, 
+  customers: { label: "Customers", color: "hsl(var(--chart-1))"}, 
 } satisfies import("@/components/ui/chart").ChartConfig;
 
 export default function StaffDashboardPage() {

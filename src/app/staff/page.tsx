@@ -34,8 +34,8 @@ interface User {
 }
 
 const billsData = [
-  { name: 'Paid Bills', value: 85, fill: 'hsl(var(--chart-2))' },
-  { name: 'Unpaid Bills', value: 15, fill: 'hsl(var(--destructive))' },
+  { name: 'Paid Bills', value: 85, fill: 'hsl(var(--chart-1))' }, // Updated to use chart-1
+  { name: 'Unpaid Bills', value: 15, fill: 'hsl(var(--chart-2))' }, // Was destructive, changed to chart-2 for consistency
 ];
 
 const monthlyPerformanceData = [
@@ -46,12 +46,12 @@ const monthlyPerformanceData = [
 ];
 
 const chartConfig = {
-  paid: { label: "Paid", color: "hsl(var(--chart-2))" },
-  unpaid: { label: "Unpaid", color: "hsl(var(--destructive))" },
+  paid: { label: "Paid", color: "hsl(var(--chart-1))" }, // Updated to use chart-1
+  unpaid: { label: "Unpaid", color: "hsl(var(--chart-2))" }, // Was destructive, changed to chart-2
   customers: { label: "Customers", color: "hsl(var(--chart-1))"},
 } satisfies import("@/components/ui/chart").ChartConfig;
 
-export default function StaffPage() { // Renamed from StaffDashboardPage to avoid conflict if this was the old dashboard
+export default function StaffPage() { 
   const [branchName, setBranchName] = React.useState<string>("Your Branch");
 
   React.useEffect(() => {
@@ -66,8 +66,6 @@ export default function StaffPage() { // Renamed from StaffDashboardPage to avoi
         console.error("Failed to parse user from localStorage", e);
       }
     }
-     // If this page is meant to be the dashboard, it should redirect or render the dashboard content.
-    // For now, it just mirrors the dashboard's visual structure for consistency.
   }, []);
 
   return (
@@ -142,8 +140,8 @@ export default function StaffPage() { // Renamed from StaffDashboardPage to avoi
                 <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
                 <Legend />
-                <Bar dataKey="paid" stackId="a" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="unpaid" stackId="a" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="paid" stackId="a" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} /> 
+                <Bar dataKey="unpaid" stackId="a" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </ChartContainer>

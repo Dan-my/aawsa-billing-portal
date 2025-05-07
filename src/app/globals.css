@@ -27,7 +27,7 @@ body {
     --border: 210 20% 89.8%;
     --input: 210 20% 89.8%;
     --ring: 211 100% 50%; /* Blue */
-    --chart-1: 180 70% 45%; /* Cyan */
+    --chart-1: 205 70% 60%; /* Light Blue */
     --chart-2: 210 15% 65%; /* Gray */
     --chart-3: 30 80% 55%; /* Orange */
     --chart-4: 280 65% 60%; /* Purple */
@@ -62,7 +62,7 @@ body {
     --border: 210 20% 14.9%;
     --input: 210 20% 14.9%;
     --ring: 211 100% 60%; /* Lighter Blue */
-    --chart-1: 180 70% 55%; /* Cyan - slightly lighter for dark mode */
+    --chart-1: 205 70% 65%; /* Light Blue - slightly lighter for dark mode */
     --chart-2: 210 15% 50%; /* Gray - slightly darker/more visible for dark mode */
     --chart-3: 30 80% 60%; /* Orange - slightly lighter for dark mode */
     --chart-4: 280 65% 65%; /* Purple - slightly lighter for dark mode */

@@ -15,13 +15,13 @@ import { initialBulkMeters } from "../bulk-meters/page";
 
 
 const totalBillsData = [
-  { status: 'Paid', count: 1250, fill: 'hsl(var(--chart-1))' }, // Cyan
-  { status: 'Unpaid', count: 350, fill: 'hsl(var(--chart-2))' }, // Gray
+  { status: 'Paid', count: 1250, fill: 'hsl(var(--chart-1))' }, 
+  { status: 'Unpaid', count: 350, fill: 'hsl(var(--chart-2))' }, 
 ];
 
 const customerCountData = [
-  { name: 'Bulk Meters', value: 150, fill: 'hsl(var(--chart-1))' }, // Cyan
-  { name: 'Individual Customers', value: 12030, fill: 'hsl(var(--chart-2))' }, // Gray
+  { name: 'Bulk Meters', value: 150, fill: 'hsl(var(--chart-1))' }, 
+  { name: 'Individual Customers', value: 12030, fill: 'hsl(var(--chart-2))' }, 
 ];
 
 const branchPerformanceData = [
@@ -43,11 +43,11 @@ const waterUsageTrendData = [
 ];
 
 const chartConfig = {
-  paid: { label: "Paid", color: "hsl(var(--chart-1))" }, // Cyan
-  unpaid: { label: "Unpaid", color: "hsl(var(--chart-2))" }, // Gray
-  bulkMeters: { label: "Bulk Meters", color: "hsl(var(--chart-1))" }, // Cyan
-  individualCustomers: { label: "Individual Customers", color: "hsl(var(--chart-2))" }, // Gray
-  waterUsage: { label: "Water Usage (m³)", color: "hsl(var(--chart-1))" }, // Cyan
+  paid: { label: "Paid", color: "hsl(var(--chart-1))" }, 
+  unpaid: { label: "Unpaid", color: "hsl(var(--chart-2))" }, 
+  bulkMeters: { label: "Bulk Meters", color: "hsl(var(--chart-1))" }, 
+  individualCustomers: { label: "Individual Customers", color: "hsl(var(--chart-2))" }, 
+  waterUsage: { label: "Water Usage (m³)", color: "hsl(var(--chart-1))" }, 
 } satisfies import("@/components/ui/chart").ChartConfig;
 
 
@@ -271,4 +271,3 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
-

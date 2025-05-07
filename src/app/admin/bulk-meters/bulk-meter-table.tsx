@@ -2,7 +2,8 @@
 "use client";
 
 import * as React from "react";
-import { MoreHorizontal, Edit, Trash2, Gauge } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Gauge, Eye } from "lucide-react";
+import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -78,6 +79,12 @@ export function BulkMeterTable({ data, onEdit, onDelete }: BulkMeterTableProps) 
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                     <Link href={`/admin/bulk-meters/${bulkMeter.id}`} passHref>
+                       <DropdownMenuItem>
+                         <Eye className="mr-2 h-4 w-4" />
+                         View Details
+                       </DropdownMenuItem>
+                     </Link>
                     <DropdownMenuItem onClick={() => onEdit(bulkMeter)}>
                       <Edit className="mr-2 h-4 w-4" />
                       Edit
@@ -97,3 +104,4 @@ export function BulkMeterTable({ data, onEdit, onDelete }: BulkMeterTableProps) 
     </div>
   );
 }
+

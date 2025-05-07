@@ -30,16 +30,18 @@ import {
   customerTypes, 
   sewerageConnections,
 } from "@/app/admin/data-entry/customer-data-entry-types";
-import type { IndividualCustomer } from "./individual-customer-types";
-import { individualCustomerStatuses } from "./individual-customer-types";
+import type { IndividualCustomer, PaymentStatus } from "./individual-customer-types"; // Added PaymentStatus
+import { individualCustomerStatuses, paymentStatuses } from "./individual-customer-types"; // Added paymentStatuses
 import { getBulkMeters, subscribeToBulkMeters } from "@/lib/data-store"; 
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse } from "date-fns";
 
 
-// Extend the base schema from data entry to include status for management purposes
+// Extend the base schema from data entry to include status and paymentStatus for management purposes
 const individualCustomerFormObjectSchema = baseIndividualCustomerDataSchema.extend({
   status: z.enum(individualCustomerStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
+  paymentStatus: z.enum(paymentStatuses, { errorMap: () => ({ message: "Please select a valid payment status."}) }),
+  // calculatedBill is derived, not part of the form input for editing, but will be part of the type
 });
 
 // Re-apply the refinement to the extended schema
@@ -82,6 +84,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
       sewerageConnection: undefined,
       assignedBulkMeterId: undefined,
       status: undefined,
+      paymentStatus: undefined, // Added
     },
   });
 
@@ -106,7 +109,8 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         meterSize: defaultValues.meterSize ?? undefined,
         previousReading: defaultValues.previousReading ?? undefined,
         currentReading: defaultValues.currentReading ?? undefined,
-        assignedBulkMeterId: defaultValues.assignedBulkMeterId, // Will be a string as it's now mandatory
+        assignedBulkMeterId: defaultValues.assignedBulkMeterId,
+        paymentStatus: defaultValues.paymentStatus ?? undefined, // Added
       });
     } else {
       form.reset({
@@ -127,6 +131,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         sewerageConnection: undefined,
         assignedBulkMeterId: undefined, 
         status: undefined,
+        paymentStatus: undefined, // Added
       });
     }
   }, [defaultValues, form, open]);
@@ -165,6 +170,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                         {dynamicBulkMeters.map((bm) => (
                           <SelectItem key={bm.id} value={bm.id}>{bm.name}</SelectItem>
                         ))}
+                        {dynamicBulkMeters.length === 0 && <SelectItem value="loading" disabled>Loading bulk meters...</SelectItem>}
                       </SelectContent>
                     </Select>
                     <FormDescription>If this customer's meter is sub-metered under a bulk meter.</FormDescription>
@@ -436,11 +442,11 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                 name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Status *</FormLabel>
+                    <FormLabel>Customer Status *</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
+                          <SelectValue placeholder="Select customer status" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -449,6 +455,29 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                         ))}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="paymentStatus"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bill Payment Status *</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select payment status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {paymentStatuses.map(status => (
+                          <SelectItem key={status} value={status}>{status}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>Status of the current/latest bill.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

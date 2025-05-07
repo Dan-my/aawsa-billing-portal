@@ -10,11 +10,17 @@ export type IndividualCustomerStatus = (typeof individualCustomerStatuses)[numbe
 export { customerTypes, sewerageConnections } from "@/app/admin/data-entry/customer-data-entry-types";
 export type { CustomerType, SewerageConnection } from "@/app/admin/data-entry/customer-data-entry-types";
 
+export const paymentStatuses = ['Paid', 'Unpaid'] as const;
+export type PaymentStatus = (typeof paymentStatuses)[number];
+
 
 // This type represents the data structure for an individual customer entity.
 // It combines the fields from the data entry schema with an ID and a specific status.
 export type IndividualCustomer = z.infer<typeof individualCustomerDataEntrySchema> & {
   id: string;
   status: IndividualCustomerStatus;
-  // assignedBulkMeterId is already part of individualCustomerDataEntrySchema and is optional
+  // assignedBulkMeterId is already part of individualCustomerDataEntrySchema and is mandatory
+  paymentStatus: PaymentStatus; 
+  calculatedBill: number; 
 };
+

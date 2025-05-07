@@ -1,6 +1,6 @@
 
 import type { ReactNode } from 'react';
-import type { IndividualCustomer, IndividualCustomerStatus } from '@/app/admin/individual-customers/individual-customer-types';
+import type { IndividualCustomer, IndividualCustomerStatus, PaymentStatus } from '@/app/admin/individual-customers/individual-customer-types';
 import type { BulkMeter, BulkMeterStatus } from '@/app/admin/bulk-meters/bulk-meter-types';
 
 // It's better to define initial data here or fetch from a common source
@@ -24,7 +24,7 @@ const notifyBulkMeterListeners = () => bulkMeterListeners.forEach(listener => li
 
 // Initializer functions
 export const initializeCustomers = (initialData: IndividualCustomer[]) => {
-  if (!initialCustomersLoaded) {
+  if (!initialCustomersLoaded || customers.length === 0) { // Also re-init if empty
     customers = [...initialData];
     initialCustomersLoaded = true;
     notifyCustomerListeners();
@@ -32,7 +32,7 @@ export const initializeCustomers = (initialData: IndividualCustomer[]) => {
 };
 
 export const initializeBulkMeters = (initialData: BulkMeter[]) => {
-  if (!initialBulkMetersLoaded) {
+  if (!initialBulkMetersLoaded || bulkMeters.length === 0) { // Also re-init if empty
     bulkMeters = [...initialData];
     initialBulkMetersLoaded = true;
     notifyBulkMeterListeners();
@@ -45,10 +45,10 @@ export const getCustomers = (): IndividualCustomer[] => [...customers];
 export const getBulkMeters = (): BulkMeter[] => [...bulkMeters];
 
 // Actions for Individual Customers
-export const addCustomer = (customerData: Omit<IndividualCustomer, 'id' | 'status'> & { status: IndividualCustomerStatus }) => {
+export const addCustomer = (customerData: Omit<IndividualCustomer, 'id'>) => {
   const newCustomer: IndividualCustomer = {
     ...customerData,
-    id: Date.now().toString(),
+    id: `cust_${Date.now().toString()}_${Math.random().toString(36).substring(2, 7)}`, // More unique ID
   };
   customers = [newCustomer, ...customers];
   notifyCustomerListeners();
@@ -66,10 +66,10 @@ export const deleteCustomer = (customerId: string) => {
 };
 
 // Actions for Bulk Meters
-export const addBulkMeter = (bulkMeterData: Omit<BulkMeter, 'id' | 'status'> & { status: BulkMeterStatus }) => {
+export const addBulkMeter = (bulkMeterData: Omit<BulkMeter, 'id'>) => {
    const newBulkMeter: BulkMeter = {
     ...bulkMeterData,
-    id: Date.now().toString(),
+    id: `bm_${Date.now().toString()}_${Math.random().toString(36).substring(2, 7)}`, // More unique ID
   };
   bulkMeters = [newBulkMeter, ...bulkMeters];
   notifyBulkMeterListeners();

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import type { IndividualCustomer, IndividualCustomerStatus } from "./individual-customer-types";
+import type { IndividualCustomer, IndividualCustomerStatus, PaymentStatus } from "./individual-customer-types";
 import { IndividualCustomerFormDialog } from "./individual-customer-form-dialog";
 import { IndividualCustomerTable } from "./individual-customer-table";
 // import { mockBulkMeters_DEPRECATED as staticMockBulkMeters } from "@/app/admin/data-entry/customer-data-entry-types";
@@ -27,14 +27,16 @@ import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 import { initialBulkMeters as defaultInitialBulkMeters } from "../bulk-meters/page";
 
 
+const TARIFF_RATE = 5.50; // ETB per m³
+
 export const initialCustomers: IndividualCustomer[] = [
-  { id: "cust001", name: "Abebe Bikila", customerKeyNumber: "CUST001", contractNumber: "CON001", customerType: "Domestic", bookNumber: "B001", ordinal: 1, meterSize: 0.5, meterNumber: "MTR001", previousReading: 100, currentReading: 120, month: "2023-11", specificArea: "Kebele 1, House 101", location: "Bole", ward: "Woreda 3", sewerageConnection: "Yes", status: "Active", assignedBulkMeterId: "bm001" },
-  { id: "cust002", name: "Fatuma Roba", customerKeyNumber: "CUST002", contractNumber: "CON002", customerType: "Domestic", bookNumber: "B001", ordinal: 2, meterSize: 0.5, meterNumber: "MTR002", previousReading: 200, currentReading: 250, month: "2023-11", specificArea: "Kebele 2, House 202", location: "Kality", ward: "Woreda 5", sewerageConnection: "No", status: "Active", assignedBulkMeterId: "bm002" }, // Ensure this one has a valid ID from initialBulkMeters
-  { id: "cust003", name: "Haile Gebrselassie", customerKeyNumber: "CUST003", contractNumber: "CON003", customerType: "Non-domestic", bookNumber: "B002", ordinal: 1, meterSize: 1, meterNumber: "MTR003", previousReading: 500, currentReading: 600, month: "2023-11", specificArea: "Industrial Area, Plot 3", location: "Megenagna", ward: "Woreda 7", sewerageConnection: "Yes", status: "Inactive", assignedBulkMeterId: "bm003"},
+  { id: "cust001", name: "Abebe Bikila", customerKeyNumber: "CUST001", contractNumber: "CON001", customerType: "Domestic", bookNumber: "B001", ordinal: 1, meterSize: 0.5, meterNumber: "MTR001", previousReading: 100, currentReading: 120, month: "2023-11", specificArea: "Kebele 1, House 101", location: "Bole", ward: "Woreda 3", sewerageConnection: "Yes", status: "Active", assignedBulkMeterId: "bm001", paymentStatus: "Paid", calculatedBill: (120-100) * TARIFF_RATE },
+  { id: "cust002", name: "Fatuma Roba", customerKeyNumber: "CUST002", contractNumber: "CON002", customerType: "Domestic", bookNumber: "B001", ordinal: 2, meterSize: 0.5, meterNumber: "MTR002", previousReading: 200, currentReading: 250, month: "2023-11", specificArea: "Kebele 2, House 202", location: "Kality", ward: "Woreda 5", sewerageConnection: "No", status: "Active", assignedBulkMeterId: "bm002", paymentStatus: "Unpaid", calculatedBill: (250-200) * TARIFF_RATE }, 
+  { id: "cust003", name: "Haile Gebrselassie", customerKeyNumber: "CUST003", contractNumber: "CON003", customerType: "Non-domestic", bookNumber: "B002", ordinal: 1, meterSize: 1, meterNumber: "MTR003", previousReading: 500, currentReading: 600, month: "2023-11", specificArea: "Industrial Area, Plot 3", location: "Megenagna", ward: "Woreda 7", sewerageConnection: "Yes", status: "Inactive", assignedBulkMeterId: "bm003", paymentStatus: "Paid", calculatedBill: (600-500) * TARIFF_RATE},
 ];
 
 // Type for form submission, merging IndividualCustomer (excluding id) with optional id and required status.
-type IndividualCustomerFormData = Omit<IndividualCustomer, 'id'> & { id?: string; status: IndividualCustomerStatus };
+type IndividualCustomerFormData = Omit<IndividualCustomer, 'id' | 'calculatedBill'> & { id?: string; status: IndividualCustomerStatus; paymentStatus: PaymentStatus };
 
 export default function IndividualCustomersPage() {
   const { toast } = useToast();
@@ -47,20 +49,18 @@ export default function IndividualCustomersPage() {
   const [customerToDelete, setCustomerToDelete] = React.useState<IndividualCustomer | null>(null);
 
   React.useEffect(() => {
-    // Initialize bulk meters first if not already, to ensure dropdowns can populate
-    // and initialCustomers can reference valid bulk meter IDs.
     if (getBulkMeters().length === 0) {
       initializeBulkMeters(defaultInitialBulkMeters);
     }
-    if (getCustomers().length === 0) {
-       initializeCustomers(initialCustomers);
-    }
-
-
-    const unsubscribeCustomers = subscribeToCustomers(setCustomers);
+    // Update bulkMetersList from the store whenever it changes
     const unsubscribeBulkMeters = subscribeToBulkMeters((updatedBulkMeters) => {
       setBulkMetersList(updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
     });
+
+    if (getCustomers().length === 0) {
+       initializeCustomers(initialCustomers);
+    }
+    const unsubscribeCustomers = subscribeToCustomers(setCustomers);
     
     return () => {
       unsubscribeCustomers();
@@ -93,14 +93,23 @@ export default function IndividualCustomersPage() {
   };
 
   const handleSubmitCustomer = (data: IndividualCustomerFormData) => {
-    if (selectedCustomer && data.id) { // data.id will be undefined for new, selectedCustomer.id for edit
-      updateCustomerInStore({ ...selectedCustomer, ...data, id: selectedCustomer.id });
+    const usage = data.currentReading - data.previousReading;
+    const calculatedBill = usage * TARIFF_RATE;
+    const customerDataWithBill: IndividualCustomer = { 
+        ...data, 
+        calculatedBill,
+        id: selectedCustomer?.id || Date.now().toString() // Keep existing ID or generate new
+    };
+    
+    if (selectedCustomer) { 
+      updateCustomerInStore(customerDataWithBill);
       toast({ title: "Customer Updated", description: `${data.name} has been updated.` });
     } else {
-      // For new customer, addCustomerToStore will generate an ID
-      const newCustomerData = { ...data } as Omit<IndividualCustomer, 'id'>; // type assertion after removing id
-      delete (newCustomerData as any).id; // Ensure id is not passed if it was spuriously on data
-      addCustomerToStore(newCustomerData);
+      // For new customer, addCustomerToStore will use the generated ID
+      const newCustomerData = { ...customerDataWithBill } as Omit<IndividualCustomer, 'id'> & { id?: string };
+      if (!newCustomerData.id) delete newCustomerData.id; // remove id if it's for a new customer (though we generate one above)
+      
+      addCustomerToStore(newCustomerData as Omit<IndividualCustomer, 'id'>); // addCustomerToStore now handles ID generation
       toast({ title: "Customer Added", description: `${data.name} has been added.` });
     }
     setIsFormOpen(false);

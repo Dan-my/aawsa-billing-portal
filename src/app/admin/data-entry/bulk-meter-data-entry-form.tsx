@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -24,6 +23,7 @@ import { initialBulkMeters as defaultInitialBulkMeters } from "../bulk-meters/pa
 import { initialCustomers as defaultInitialCustomers } from "../individual-customers/page";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse } from "date-fns";
+import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 
 export function BulkMeterDataEntryForm() {
   const { toast } = useToast();
@@ -52,8 +52,10 @@ export function BulkMeterDataEntryForm() {
   });
 
   function onSubmit(data: BulkMeterDataEntryFormValues) {
-    // Add status to the data before sending to store
-    const bulkMeterDataForStore = { ...data, status: "Active" } as const; // Default to Active
+    const bulkMeterDataForStore: Omit<BulkMeter, 'id'> = { 
+      ...data, 
+      status: "Active" // Default to Active status for new entries
+    };
     
     addBulkMeterToStore(bulkMeterDataForStore);
     toast({

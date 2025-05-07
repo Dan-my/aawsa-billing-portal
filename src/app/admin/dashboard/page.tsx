@@ -2,9 +2,11 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart as BarChartIcon, PieChart as PieChartIcon, LineChart as LineChartIcon, Building } from 'lucide-react'; // Added Building, aliased chart icons to avoid conflict with recharts components
-import { ResponsiveContainer, BarChart, PieChart, LineChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Line, Bar } from 'recharts'; // BarChart, PieChart, LineChart, Bar are recharts components
+import { BarChart as BarChartIcon, PieChart as PieChartIcon, LineChart as LineChartIcon, Building, Users, Gauge, ArrowRight } from 'lucide-react'; // Added Building, Users, Gauge, ArrowRight, aliased chart icons
+import { ResponsiveContainer, BarChart, PieChart, LineChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Line, Bar } from 'recharts'; 
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'; 
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 
 const totalBillsData = [
@@ -114,6 +116,35 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="shadow-lg">
+        <CardHeader>
+            <CardTitle>Quick Access</CardTitle>
+            <CardDescription>Navigate quickly to key management areas.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Link href="/admin/bulk-meters" passHref>
+                <Button variant="outline" className="w-full justify-start p-4 h-auto">
+                    <Gauge className="mr-3 h-6 w-6 text-primary" />
+                    <div>
+                        <p className="font-semibold text-base">View Bulk Meters</p>
+                        <p className="text-xs text-muted-foreground">Manage all bulk water meters.</p>
+                    </div>
+                    <ArrowRight className="ml-auto h-5 w-5 text-muted-foreground" />
+                </Button>
+            </Link>
+            <Link href="/admin/individual-customers" passHref>
+                <Button variant="outline" className="w-full justify-start p-4 h-auto">
+                    <Users className="mr-3 h-6 w-6 text-primary" />
+                    <div>
+                        <p className="font-semibold text-base">View Individual Customers</p>
+                        <p className="text-xs text-muted-foreground">Manage all individual customer accounts.</p>
+                    </div>
+                    <ArrowRight className="ml-auto h-5 w-5 text-muted-foreground" />
+                </Button>
+            </Link>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="shadow-lg">

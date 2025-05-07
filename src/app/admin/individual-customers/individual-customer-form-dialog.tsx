@@ -149,6 +149,29 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <FormField
+                control={form.control}
+                name="assignedBulkMeterId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assign to Bulk Meter *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a bulk meter" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {dynamicBulkMeters.map((bm) => (
+                          <SelectItem key={bm.id} value={bm.id}>{bm.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>If this customer's meter is sub-metered under a bulk meter.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="name"
@@ -365,29 +388,6 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={form.control}
-                name="assignedBulkMeterId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Assign to Bulk Meter *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a bulk meter" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {dynamicBulkMeters.map((bm) => (
-                          <SelectItem key={bm.id} value={bm.id}>{bm.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>If this customer's meter is sub-metered under a bulk meter.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

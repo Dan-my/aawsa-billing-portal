@@ -11,12 +11,26 @@ import { useToast } from "@/hooks/use-toast";
 import type { IndividualCustomer, IndividualCustomerStatus } from "./individual-customer-types";
 import { IndividualCustomerFormDialog } from "./individual-customer-form-dialog";
 import { IndividualCustomerTable } from "./individual-customer-table";
-import { mockBulkMeters } from "@/app/admin/data-entry/customer-data-entry-types"; // For dropdown and display
+// import { mockBulkMeters_DEPRECATED as staticMockBulkMeters } from "@/app/admin/data-entry/customer-data-entry-types";
+import { 
+  getCustomers, 
+  addCustomer as addCustomerToStore, 
+  updateCustomer as updateCustomerInStore, 
+  deleteCustomer as deleteCustomerFromStore,
+  subscribeToCustomers,
+  initializeCustomers,
+  getBulkMeters,
+  subscribeToBulkMeters,
+  initializeBulkMeters,
+} from "@/lib/data-store";
+import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
+import { initialBulkMeters as defaultInitialBulkMeters } from "../bulk-meters/page";
 
-const initialCustomers: IndividualCustomer[] = [
-  { id: "cust001", name: "Abebe Bikila", customerKeyNumber: "CUST001", contractNumber: "CON001", customerType: "Domestic", bookNumber: "B001", ordinal: 1, meterSize: 0.5, meterNumber: "MTR001", previousReading: 100, currentReading: 120, month: "2023-11", specificArea: "Kebele 1, House 101", location: "Bole", ward: "Woreda 3", sewerageConnection: "Yes", status: "Active", assignedBulkMeterId: "bm_kality_001" },
+
+export const initialCustomers: IndividualCustomer[] = [
+  { id: "cust001", name: "Abebe Bikila", customerKeyNumber: "CUST001", contractNumber: "CON001", customerType: "Domestic", bookNumber: "B001", ordinal: 1, meterSize: 0.5, meterNumber: "MTR001", previousReading: 100, currentReading: 120, month: "2023-11", specificArea: "Kebele 1, House 101", location: "Bole", ward: "Woreda 3", sewerageConnection: "Yes", status: "Active", assignedBulkMeterId: "bm001" },
   { id: "cust002", name: "Fatuma Roba", customerKeyNumber: "CUST002", contractNumber: "CON002", customerType: "Domestic", bookNumber: "B001", ordinal: 2, meterSize: 0.5, meterNumber: "MTR002", previousReading: 200, currentReading: 250, month: "2023-11", specificArea: "Kebele 2, House 202", location: "Kality", ward: "Woreda 5", sewerageConnection: "No", status: "Active" },
-  { id: "cust003", name: "Haile Gebrselassie", customerKeyNumber: "CUST003", contractNumber: "CON003", customerType: "Non-domestic", bookNumber: "B002", ordinal: 1, meterSize: 1, meterNumber: "MTR003", previousReading: 500, currentReading: 600, month: "2023-11", specificArea: "Industrial Area, Plot 3", location: "Megenagna", ward: "Woreda 7", sewerageConnection: "Yes", status: "Inactive", assignedBulkMeterId: "bm_megenagna_commercial_003"},
+  { id: "cust003", name: "Haile Gebrselassie", customerKeyNumber: "CUST003", contractNumber: "CON003", customerType: "Non-domestic", bookNumber: "B002", ordinal: 1, meterSize: 1, meterNumber: "MTR003", previousReading: 500, currentReading: 600, month: "2023-11", specificArea: "Industrial Area, Plot 3", location: "Megenagna", ward: "Woreda 7", sewerageConnection: "Yes", status: "Inactive", assignedBulkMeterId: "bm003"},
 ];
 
 // Type for form submission, merging IndividualCustomer (excluding id) with optional id and required status.
@@ -24,12 +38,30 @@ type IndividualCustomerFormData = Omit<IndividualCustomer, 'id'> & { id?: string
 
 export default function IndividualCustomersPage() {
   const { toast } = useToast();
-  const [customers, setCustomers] = React.useState<IndividualCustomer[]>(initialCustomers);
+  const [customers, setCustomers] = React.useState<IndividualCustomer[]>(getCustomers());
+  const [bulkMetersList, setBulkMetersList] = React.useState<{id: string, name: string}[]>(getBulkMeters().map(bm => ({id: bm.id, name: bm.name })));
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [selectedCustomer, setSelectedCustomer] = React.useState<IndividualCustomer | null>(null);
   const [customerToDelete, setCustomerToDelete] = React.useState<IndividualCustomer | null>(null);
+
+  React.useEffect(() => {
+    initializeCustomers(initialCustomers);
+    // Initialize bulk meters if not already, to ensure dropdowns can populate
+    initializeBulkMeters(defaultInitialBulkMeters);
+
+
+    const unsubscribeCustomers = subscribeToCustomers(setCustomers);
+    const unsubscribeBulkMeters = subscribeToBulkMeters((updatedBulkMeters) => {
+      setBulkMetersList(updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
+    });
+    
+    return () => {
+      unsubscribeCustomers();
+      unsubscribeBulkMeters();
+    };
+  }, []);
 
   const handleAddCustomer = () => {
     setSelectedCustomer(null);
@@ -48,7 +80,7 @@ export default function IndividualCustomersPage() {
 
   const confirmDelete = () => {
     if (customerToDelete) {
-      setCustomers(customers.filter(c => c.id !== customerToDelete.id));
+      deleteCustomerFromStore(customerToDelete.id);
       toast({ title: "Customer Deleted", description: `${customerToDelete.name} has been removed.` });
       setCustomerToDelete(null);
     }
@@ -56,15 +88,15 @@ export default function IndividualCustomersPage() {
   };
 
   const handleSubmitCustomer = (data: IndividualCustomerFormData) => {
-    if (selectedCustomer) {
-      // Edit existing customer
-      setCustomers(customers.map(c => c.id === selectedCustomer.id ? { ...selectedCustomer, ...data } : c));
+    if (selectedCustomer && data.id) { // data.id will be undefined for new, selectedCustomer.id for edit
+      updateCustomerInStore({ ...selectedCustomer, ...data, id: selectedCustomer.id });
       toast({ title: "Customer Updated", description: `${data.name} has been updated.` });
     } else {
-      // Add new customer
-      const newCustomer: IndividualCustomer = { ...data, id: Date.now().toString() };
-      setCustomers([newCustomer, ...customers]);
-      toast({ title: "Customer Added", description: `${newCustomer.name} has been added.` });
+      // For new customer, addCustomerToStore will generate an ID
+      const newCustomerData = { ...data } as Omit<IndividualCustomer, 'id'>; // type assertion after removing id
+      delete (newCustomerData as any).id; // Ensure id is not passed if it was spuriously on data
+      addCustomerToStore(newCustomerData);
+      toast({ title: "Customer Added", description: `${data.name} has been added.` });
     }
     setIsFormOpen(false);
     setSelectedCustomer(null);
@@ -113,7 +145,7 @@ export default function IndividualCustomersPage() {
               data={filteredCustomers}
               onEdit={handleEditCustomer}
               onDelete={handleDeleteCustomer}
-              bulkMetersList={mockBulkMeters} // Pass mock data for display
+              bulkMetersList={bulkMetersList}
             />
           )}
         </CardContent>
@@ -124,7 +156,7 @@ export default function IndividualCustomersPage() {
         onOpenChange={setIsFormOpen}
         onSubmit={handleSubmitCustomer}
         defaultValues={selectedCustomer}
-        // bulkMeters={mockBulkMeters} // Pass if dynamic selection is needed
+        bulkMeters={bulkMetersList}
       />
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

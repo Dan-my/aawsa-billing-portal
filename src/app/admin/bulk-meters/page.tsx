@@ -11,8 +11,16 @@ import { useToast } from "@/hooks/use-toast";
 import type { BulkMeter, BulkMeterStatus } from "./bulk-meter-types";
 import { BulkMeterFormDialog } from "./bulk-meter-form-dialog";
 import { BulkMeterTable } from "./bulk-meter-table";
+import { 
+  getBulkMeters, 
+  addBulkMeter as addBulkMeterToStore, 
+  updateBulkMeter as updateBulkMeterInStore, 
+  deleteBulkMeter as deleteBulkMeterFromStore,
+  subscribeToBulkMeters,
+  initializeBulkMeters
+} from "@/lib/data-store";
 
-const initialBulkMeters: BulkMeter[] = [
+export const initialBulkMeters: BulkMeter[] = [
   { id: "bm001", name: "Kality Industrial Meter", customerKeyNumber: "BMK001", contractNumber: "BMC001", meterSize: 3, meterNumber: "MTR-BM-001", previousReading: 10000, currentReading: 10500, month: "2023-11", specificArea: "Ind. Zone A", location: "Kality", ward: "Woreda 5", status: "Active" },
   { id: "bm002", name: "Bole Airport Feeder", customerKeyNumber: "BMB002", contractNumber: "BMC002", meterSize: 4, meterNumber: "MTR-BM-002", previousReading: 25000, currentReading: 26500, month: "2023-11", specificArea: "Airport Cargo", location: "Bole", ward: "Woreda 1", status: "Active" },
   { id: "bm003", name: "Megenagna Res. Supply", customerKeyNumber: "BMM003", contractNumber: "BMC003", meterSize: 2.5, meterNumber: "MTR-BM-003", previousReading: 5000, currentReading: 5200, month: "2023-11", specificArea: "Block 10", location: "Megenagna", ward: "Woreda 8", status: "Maintenance" },
@@ -23,12 +31,18 @@ type BulkMeterFormData = Omit<BulkMeter, 'id'> & { id?: string; status: BulkMete
 
 export default function BulkMetersPage() {
   const { toast } = useToast();
-  const [bulkMeters, setBulkMeters] = React.useState<BulkMeter[]>(initialBulkMeters);
+  const [bulkMeters, setBulkMeters] = React.useState<BulkMeter[]>(getBulkMeters());
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [selectedBulkMeter, setSelectedBulkMeter] = React.useState<BulkMeter | null>(null);
   const [bulkMeterToDelete, setBulkMeterToDelete] = React.useState<BulkMeter | null>(null);
+
+  React.useEffect(() => {
+    initializeBulkMeters(initialBulkMeters);
+    const unsubscribe = subscribeToBulkMeters(setBulkMeters);
+    return () => unsubscribe();
+  }, []);
 
   const handleAddBulkMeter = () => {
     setSelectedBulkMeter(null);
@@ -47,7 +61,7 @@ export default function BulkMetersPage() {
 
   const confirmDelete = () => {
     if (bulkMeterToDelete) {
-      setBulkMeters(bulkMeters.filter(bm => bm.id !== bulkMeterToDelete.id));
+      deleteBulkMeterFromStore(bulkMeterToDelete.id);
       toast({ title: "Bulk Meter Deleted", description: `${bulkMeterToDelete.name} has been removed.` });
       setBulkMeterToDelete(null);
     }
@@ -55,15 +69,14 @@ export default function BulkMetersPage() {
   };
 
   const handleSubmitBulkMeter = (data: BulkMeterFormData) => {
-    if (selectedBulkMeter) {
-      // Edit existing bulk meter
-      setBulkMeters(bulkMeters.map(bm => bm.id === selectedBulkMeter.id ? { ...selectedBulkMeter, ...data } : bm));
+    if (selectedBulkMeter && data.id) {
+      updateBulkMeterInStore({ ...selectedBulkMeter, ...data, id: selectedBulkMeter.id });
       toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
     } else {
-      // Add new bulk meter
-      const newBulkMeter: BulkMeter = { ...data, id: Date.now().toString() }; // Ensure all fields from BulkMeter are present
-      setBulkMeters([newBulkMeter, ...bulkMeters]);
-      toast({ title: "Bulk Meter Added", description: `${newBulkMeter.name} has been added.` });
+      const newBulkMeterData = { ...data } as Omit<BulkMeter, 'id'>;
+      delete (newBulkMeterData as any).id;
+      addBulkMeterToStore(newBulkMeterData);
+      toast({ title: "Bulk Meter Added", description: `${data.name} has been added.` });
     }
     setIsFormOpen(false);
     setSelectedBulkMeter(null);

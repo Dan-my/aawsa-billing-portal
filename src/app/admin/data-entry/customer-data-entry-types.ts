@@ -54,10 +54,6 @@ export const bulkMeterDataEntrySchema = z.object({
 
 export type BulkMeterDataEntryFormValues = z.infer<typeof bulkMeterDataEntrySchema>;
 
-// Mock data for bulk meters - in a real app, this would come from a database
-export const mockBulkMeters = [
-  { id: "bm_kality_001", name: "Kality Industrial Zone - BM001" },
-  { id: "bm_bole_residential_002", name: "Bole Residential Complex - BM002" },
-  { id: "bm_megenagna_commercial_003", name: "Megenagna Commercial Area - BM003" },
-];
-export type MockBulkMeter = typeof mockBulkMeters[number];
+// The static list `mockBulkMeters` has been removed as dynamic data from the store is now used.
+// The type definition is kept as it might be used by props or other type definitions.
+export type MockBulkMeter = { id: string; name: string };

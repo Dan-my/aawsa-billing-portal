@@ -22,14 +22,32 @@ import {
   type IndividualCustomerDataEntryFormValues,
   customerTypes,
   sewerageConnections,
-  mockBulkMeters, // Using mock data for now
-  type MockBulkMeter,
+  // mockBulkMeters_DEPRECATED, // No longer using static mock data
 } from "./customer-data-entry-types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
+import { addCustomer as addCustomerToStore, getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, initializeCustomers } from "@/lib/data-store";
+import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
+import { initialBulkMeters as defaultInitialBulkMeters } from "../bulk-meters/page";
+import { initialCustomers as defaultInitialCustomers } from "../individual-customers/page";
+
 
 export function IndividualCustomerDataEntryForm() {
   const { toast } = useToast();
+  const [availableBulkMeters, setAvailableBulkMeters] = React.useState<{id: string, name: string}[]>([]);
+
+  React.useEffect(() => {
+    // Ensure stores are initialized
+    initializeCustomers(defaultInitialCustomers);
+    initializeBulkMeters(defaultInitialBulkMeters);
+    
+    setAvailableBulkMeters(getBulkMeters().map(bm => ({ id: bm.id, name: bm.name })));
+    const unsubscribe = subscribeToBulkMeters((updatedBulkMeters) => {
+      setAvailableBulkMeters(updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
+    });
+    return () => unsubscribe();
+  }, []);
+
   const form = useForm<IndividualCustomerDataEntryFormValues>({
     resolver: zodResolver(individualCustomerDataEntrySchema),
     defaultValues: {
@@ -53,7 +71,10 @@ export function IndividualCustomerDataEntryForm() {
   });
 
   function onSubmit(data: IndividualCustomerDataEntryFormValues) {
-    console.log("Individual Customer Data Submitted:", data);
+    // Add status to the data before sending to store, as store expects it for addCustomer
+    const customerDataForStore = { ...data, status: "Active" } as const; // Default to Active for new entries
+    
+    addCustomerToStore(customerDataForStore);
     toast({
       title: "Data Entry Submitted",
       description: `Data for individual customer ${data.name} has been successfully recorded.`,
@@ -288,15 +309,15 @@ export function IndividualCustomerDataEntryForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Assign to Bulk Meter (Optional)</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a bulk meter" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="none">None (Standalone)</SelectItem>
-                          {mockBulkMeters.map((bm: MockBulkMeter) => (
+                          <SelectItem value="">None (Standalone)</SelectItem>
+                          {availableBulkMeters.map((bm) => (
                             <SelectItem key={bm.id} value={bm.id}>{bm.name}</SelectItem>
                           ))}
                         </SelectContent>

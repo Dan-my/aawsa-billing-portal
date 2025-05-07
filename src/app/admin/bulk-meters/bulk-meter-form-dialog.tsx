@@ -28,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { bulkMeterDataEntrySchema } from "@/app/admin/data-entry/customer-data-entry-types";
 import type { BulkMeter } from "./bulk-meter-types";
 import { bulkMeterStatuses } from "./bulk-meter-types";
+// No direct store imports needed here if onSubmit in page.tsx handles it.
 
 // Extend the base schema from data entry to include status for management purposes
 const bulkMeterFormSchema = bulkMeterDataEntrySchema.extend({
@@ -90,7 +91,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
   }, [defaultValues, form, open]);
 
   const handleSubmit = (data: BulkMeterFormValues) => {
-    onSubmit(data);
+    onSubmit(data); // The page component's onSubmit will interact with the store
     onOpenChange(false); 
   };
 

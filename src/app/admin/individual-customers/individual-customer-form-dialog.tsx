@@ -29,11 +29,12 @@ import {
   individualCustomerDataEntrySchema, 
   customerTypes, 
   sewerageConnections, 
-  mockBulkMeters, // Using mock data for bulk meter list
-  type MockBulkMeter
+  // mockBulkMeters_DEPRECATED, // No longer using static mock data here
 } from "@/app/admin/data-entry/customer-data-entry-types";
 import type { IndividualCustomer } from "./individual-customer-types";
 import { individualCustomerStatuses } from "./individual-customer-types";
+import { getBulkMeters, subscribeToBulkMeters } from "@/lib/data-store"; // Import data store functions
+
 
 // Extend the base schema from data entry to include status for management purposes
 const individualCustomerFormSchema = individualCustomerDataEntrySchema.extend({
@@ -47,11 +48,12 @@ interface IndividualCustomerFormDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: IndividualCustomerFormValues) => void;
   defaultValues?: IndividualCustomer | null;
-  // Potentially pass actual bulk meters list if dynamic selection is needed later
-  // bulkMeters?: { id: string; name: string }[]; 
+  bulkMeters?: { id: string; name: string }[]; // This will now be populated from the store via props
 }
 
-export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, defaultValues }: IndividualCustomerFormDialogProps) {
+export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, defaultValues, bulkMeters: propBulkMeters }: IndividualCustomerFormDialogProps) {
+  const [dynamicBulkMeters, setDynamicBulkMeters] = React.useState<{ id: string; name: string }[]>(propBulkMeters || []);
+  
   const form = useForm<IndividualCustomerFormValues>({
     resolver: zodResolver(individualCustomerFormSchema),
     defaultValues: {
@@ -76,15 +78,28 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
   });
 
   React.useEffect(() => {
+    // If propBulkMeters is not provided initially or is empty, fetch from store and subscribe
+    if (!propBulkMeters || propBulkMeters.length === 0) {
+        setDynamicBulkMeters(getBulkMeters().map(bm => ({ id: bm.id, name: bm.name })));
+    } else {
+         setDynamicBulkMeters(propBulkMeters); // Use provided props if available
+    }
+
+    const unsubscribe = subscribeToBulkMeters((updatedBulkMeters) => {
+      setDynamicBulkMeters(updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
+    });
+    return () => unsubscribe();
+  }, [propBulkMeters]);
+
+  React.useEffect(() => {
     if (defaultValues) {
       form.reset({
         ...defaultValues,
-        // Ensure numeric fields are correctly set or reset if undefined/null
         ordinal: defaultValues.ordinal ?? undefined,
         meterSize: defaultValues.meterSize ?? undefined,
         previousReading: defaultValues.previousReading ?? undefined,
         currentReading: defaultValues.currentReading ?? undefined,
-        assignedBulkMeterId: defaultValues.assignedBulkMeterId || undefined, // Ensure 'none' or actual ID
+        assignedBulkMeterId: defaultValues.assignedBulkMeterId || undefined,
       });
     } else {
       form.reset({
@@ -356,7 +371,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="">None (Standalone)</SelectItem>
-                        {mockBulkMeters.map((bm: MockBulkMeter) => (
+                        {dynamicBulkMeters.map((bm) => (
                           <SelectItem key={bm.id} value={bm.id}>{bm.name}</SelectItem>
                         ))}
                       </SelectContent>

@@ -19,9 +19,19 @@ import { useToast } from "@/hooks/use-toast";
 import { bulkMeterDataEntrySchema, type BulkMeterDataEntryFormValues } from "./customer-data-entry-types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
+import { addBulkMeter as addBulkMeterToStore, initializeBulkMeters, initializeCustomers } from "@/lib/data-store";
+import { initialBulkMeters as defaultInitialBulkMeters } from "../bulk-meters/page";
+import { initialCustomers as defaultInitialCustomers } from "../individual-customers/page";
 
 export function BulkMeterDataEntryForm() {
   const { toast } = useToast();
+
+  React.useEffect(() => {
+    // Ensure stores are initialized
+    initializeCustomers(defaultInitialCustomers);
+    initializeBulkMeters(defaultInitialBulkMeters);
+  }, []);
+
   const form = useForm<BulkMeterDataEntryFormValues>({
     resolver: zodResolver(bulkMeterDataEntrySchema),
     defaultValues: {
@@ -40,7 +50,10 @@ export function BulkMeterDataEntryForm() {
   });
 
   function onSubmit(data: BulkMeterDataEntryFormValues) {
-    console.log("Bulk Meter Data Submitted:", data);
+    // Add status to the data before sending to store
+    const bulkMeterDataForStore = { ...data, status: "Active" } as const; // Default to Active
+    
+    addBulkMeterToStore(bulkMeterDataForStore);
     toast({
       title: "Data Entry Submitted",
       description: `Data for bulk meter ${data.name} has been successfully recorded.`,

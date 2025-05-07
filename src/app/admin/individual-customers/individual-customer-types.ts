@@ -1,7 +1,7 @@
 
 import type { z } from "zod";
 // Assuming individualCustomerDataEntrySchema already exists and is comprehensive
-import type { individualCustomerDataEntrySchema } from "@/app/admin/data-entry/customer-data-entry-types"; 
+import type { baseIndividualCustomerDataSchema } from "@/app/admin/data-entry/customer-data-entry-types"; 
 
 export const individualCustomerStatuses = ['Active', 'Inactive', 'Suspended'] as const;
 export type IndividualCustomerStatus = (typeof individualCustomerStatuses)[number];
@@ -16,10 +16,10 @@ export type PaymentStatus = (typeof paymentStatuses)[number];
 
 // This type represents the data structure for an individual customer entity.
 // It combines the fields from the data entry schema with an ID and a specific status.
-export type IndividualCustomer = z.infer<typeof individualCustomerDataEntrySchema> & {
+export type IndividualCustomer = z.infer<typeof baseIndividualCustomerDataSchema> & {
   id: string;
   status: IndividualCustomerStatus;
-  // assignedBulkMeterId is already part of individualCustomerDataEntrySchema and is mandatory
+  // assignedBulkMeterId is already part of baseIndividualCustomerDataSchema and is mandatory
   paymentStatus: PaymentStatus; 
   calculatedBill: number; 
 };

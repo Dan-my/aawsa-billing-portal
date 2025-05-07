@@ -4,12 +4,11 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { UploadCloud, FileText } from "lucide-react";
+import { UploadCloud, FileText, User, Users } from "lucide-react"; // User for individual, Users for bulk/group
+import { StaffIndividualCustomerEntryForm } from "./staff-individual-customer-entry-form";
+import { StaffBulkMeterEntryForm } from "./staff-bulk-meter-entry-form";
 
-interface User {
+interface UserSession {
   email: string;
   role: "admin" | "staff";
   branchName?: string;
@@ -17,12 +16,13 @@ interface User {
 
 export default function StaffDataEntryPage() {
   const [branchName, setBranchName] = React.useState<string>("Your Branch");
+  const [activeFormTab, setActiveFormTab] = React.useState("individualStaff");
 
   React.useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
-        const parsedUser: User = JSON.parse(storedUser);
+        const parsedUser: UserSession = JSON.parse(storedUser);
         if (parsedUser.role === "staff" && parsedUser.branchName) {
           setBranchName(parsedUser.branchName);
         }
@@ -35,44 +35,55 @@ export default function StaffDataEntryPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Data Entry - {branchName}</h1>
-      <Tabs defaultValue="form" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
-          <TabsTrigger value="form"><FileText className="mr-2 h-4 w-4 inline-block"/>Form Entry</TabsTrigger>
-          <TabsTrigger value="csv"><UploadCloud className="mr-2 h-4 w-4 inline-block"/>CSV Upload</TabsTrigger>
+      <Tabs defaultValue="formEntry" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 md:w-[400px] mb-6">
+          <TabsTrigger value="formEntry"><FileText className="mr-2 h-4 w-4 inline-block"/>Form Entry</TabsTrigger>
+          <TabsTrigger value="csvUpload"><UploadCloud className="mr-2 h-4 w-4 inline-block"/>CSV Upload</TabsTrigger>
         </TabsList>
-        <TabsContent value="form">
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle>Meter Reading Form Entry ({branchName})</CardTitle>
-              <CardDescription>Enter meter readings manually for customers in your branch.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p>A form for data entry specific to your branch will be available here.</p>
-              {/* Placeholder for form fields */}
-              <div className="space-y-2">
-                <Label htmlFor="customer-key">Customer Key Number</Label>
-                <Input id="customer-key" placeholder="Enter customer key number" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="current-reading-staff">Current Reading</Label>
-                <Input id="current-reading-staff" type="number" placeholder="Enter current reading" />
-              </div>
-              <Button>Submit Reading</Button>
-               <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
-                Branch-specific data entry form coming soon.
-              </div>
-            </CardContent>
-          </Card>
+        
+        <TabsContent value="formEntry">
+          <Tabs defaultValue={activeFormTab} onValueChange={setActiveFormTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-1 md:grid-cols-2 md:w-[500px] mb-6">
+              <TabsTrigger value="individualStaff"><User className="mr-2 h-4 w-4 inline-block"/>Individual Customer Entry</TabsTrigger>
+              <TabsTrigger value="bulkStaff"><Users className="mr-2 h-4 w-4 inline-block"/>Bulk Meter Entry</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="individualStaff">
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <CardTitle>Individual Customer & Meter Reading Entry ({branchName})</CardTitle>
+                  <CardDescription>Enter new customer details and initial readings, or update readings for existing customers in your branch.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <StaffIndividualCustomerEntryForm branchName={branchName} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="bulkStaff">
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <CardTitle>Bulk Meter & Reading Entry ({branchName})</CardTitle>
+                  <CardDescription>Enter new bulk meter details and initial readings, or update readings for existing bulk meters relevant to your branch.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <StaffBulkMeterEntryForm branchName={branchName} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </TabsContent>
-        <TabsContent value="csv">
+
+        <TabsContent value="csvUpload">
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle>Upload CSV File ({branchName})</CardTitle>
               <CardDescription>Upload meter readings in bulk for your branch using a CSV file.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid w-full max-w-sm items-center gap-1.5">
-                <Label htmlFor="csv-file-staff">CSV File</Label>
+              {/* CSV Upload components from original file - can be refined later */}
+               <div className="grid w-full max-w-sm items-center gap-1.5">
+                <label htmlFor="csv-file-staff">CSV File</label>
                 <Input id="csv-file-staff" type="file" accept=".csv" />
               </div>
               <Button>
@@ -91,3 +102,4 @@ export default function StaffDataEntryPage() {
     </div>
   );
 }
+

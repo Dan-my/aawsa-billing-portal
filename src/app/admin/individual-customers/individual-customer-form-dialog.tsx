@@ -33,6 +33,8 @@ import {
 import type { IndividualCustomer } from "./individual-customer-types";
 import { individualCustomerStatuses } from "./individual-customer-types";
 import { getBulkMeters, subscribeToBulkMeters } from "@/lib/data-store"; 
+import { DatePicker } from "@/components/ui/date-picker";
+import { format, parse } from "date-fns";
 
 const NONE_BULK_METER_ID = "_NONE_";
 
@@ -105,7 +107,6 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         meterSize: defaultValues.meterSize ?? undefined,
         previousReading: defaultValues.previousReading ?? undefined,
         currentReading: defaultValues.currentReading ?? undefined,
-        // If assignedBulkMeterId is undefined or an empty string from data, map it to NONE_BULK_METER_ID for the select, or keep the ID.
         assignedBulkMeterId: defaultValues.assignedBulkMeterId ? defaultValues.assignedBulkMeterId : (defaultValues.assignedBulkMeterId === undefined || defaultValues.assignedBulkMeterId === '' ? undefined : defaultValues.assignedBulkMeterId),
       });
     } else {
@@ -125,7 +126,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         location: "",
         ward: "",
         sewerageConnection: undefined,
-        assignedBulkMeterId: undefined, // For new, it's unselected
+        assignedBulkMeterId: undefined, 
         status: undefined,
       });
     }
@@ -297,11 +298,15 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                 control={form.control}
                 name="month"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Initial Reading Month (YYYY-MM) *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., 2023-12" {...field} />
-                    </FormControl>
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Initial Reading Month *</FormLabel>
+                     <DatePicker
+                        date={field.value ? parse(field.value, "yyyy-MM", new Date()) : undefined}
+                        setDate={(selectedDate) => {
+                          field.onChange(selectedDate ? format(selectedDate, "yyyy-MM") : "");
+                        }}
+                        placeholder="Select initial reading month"
+                      />
                      <FormDescription>Month of the initial readings above.</FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -427,4 +432,3 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
     </Dialog>
   );
 }
-

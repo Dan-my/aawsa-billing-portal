@@ -28,7 +28,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { baseBulkMeterDataSchema } from "@/app/admin/data-entry/customer-data-entry-types";
 import type { BulkMeter } from "./bulk-meter-types";
 import { bulkMeterStatuses } from "./bulk-meter-types";
-// No direct store imports needed here if onSubmit in page.tsx handles it.
+import { DatePicker } from "@/components/ui/date-picker";
+import { format, parse } from "date-fns";
+
 
 // Extend the base schema from data entry to include status for management purposes
 const bulkMeterFormObjectSchema = baseBulkMeterDataSchema.extend({
@@ -98,7 +100,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
   }, [defaultValues, form, open]);
 
   const handleSubmit = (data: BulkMeterFormValues) => {
-    onSubmit(data); // The page component's onSubmit will interact with the store
+    onSubmit(data); 
     onOpenChange(false); 
   };
 
@@ -211,11 +213,15 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 control={form.control}
                 name="month"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Initial Reading Month (YYYY-MM) *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., 2023-12" {...field} />
-                    </FormControl>
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Initial Reading Month *</FormLabel>
+                     <DatePicker
+                        date={field.value ? parse(field.value, "yyyy-MM", new Date()) : undefined}
+                        setDate={(selectedDate) => {
+                          field.onChange(selectedDate ? format(selectedDate, "yyyy-MM") : "");
+                        }}
+                        placeholder="Select initial reading month"
+                      />
                     <FormDescription>Month of the initial readings above.</FormDescription>
                     <FormMessage />
                   </FormItem>

@@ -29,6 +29,8 @@ import { addCustomer as addCustomerToStore, getBulkMeters, subscribeToBulkMeters
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 import { initialBulkMeters as defaultInitialBulkMeters } from "../bulk-meters/page";
 import { initialCustomers as defaultInitialCustomers } from "../individual-customers/page";
+import { DatePicker } from "@/components/ui/date-picker";
+import { format, parse } from "date-fns";
 
 const NONE_BULK_METER_ID = "_NONE_";
 
@@ -61,7 +63,7 @@ export function IndividualCustomerDataEntryForm() {
       meterNumber: "",
       previousReading: undefined,
       currentReading: undefined,
-      month: "", // YYYY-MM
+      month: "", // YYYY-MM string
       specificArea: "",
       location: "",
       ward: "",
@@ -237,12 +239,16 @@ export function IndividualCustomerDataEntryForm() {
                   control={form.control}
                   name="month"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Reading Month (YYYY-MM) *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., 2023-12" {...field} />
-                      </FormControl>
-                      <FormDescription>Enter the month and year of the reading.</FormDescription>
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Reading Month *</FormLabel>
+                      <DatePicker
+                        date={field.value ? parse(field.value, "yyyy-MM", new Date()) : undefined}
+                        setDate={(selectedDate) => {
+                          field.onChange(selectedDate ? format(selectedDate, "yyyy-MM") : "");
+                        }}
+                        placeholder="Select reading month"
+                      />
+                      <FormDescription>Select the month and year of the reading.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -344,4 +350,3 @@ export function IndividualCustomerDataEntryForm() {
     </ScrollArea>
   );
 }
-

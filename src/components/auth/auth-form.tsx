@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Droplets } from "lucide-react"; // Changed from WaterIcon to Droplets
+import { Droplets } from "lucide-react";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -30,6 +30,7 @@ type UserRole = "admin" | "staff";
 interface User {
   email: string;
   role: UserRole;
+  branchName?: string; // Added for staff
 }
 
 export function AuthForm() {
@@ -47,16 +48,23 @@ export function AuthForm() {
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     const { email, password } = values;
 
-    // Dummy authentication logic
-    if (password === "password") {
+    if (password === "password") { // Dummy password check
       let user: User | null = null;
       let redirectTo = "";
 
       if (email === "admin@aawsa.com") {
         user = { email, role: "admin" };
         redirectTo = "/admin/dashboard";
-      } else if (email === "staff@aawsa.com") {
-        user = { email, role: "staff" };
+      } else if (email.endsWith("@aawsa.com") && email !== "admin@aawsa.com") {
+        // Staff login based on branch name convention: [branchname]@aawsa.com
+        const emailParts = email.split("@");
+        const branchIdentifier = emailParts[0];
+        
+        // Convert identifier to a displayable branch name (e.g., "kality" -> "Kality Branch")
+        // This is a simple conversion; a real app might look up branch details.
+        const branchName = branchIdentifier.charAt(0).toUpperCase() + branchIdentifier.slice(1) + " Branch";
+        
+        user = { email, role: "staff", branchName };
         redirectTo = "/staff/dashboard";
       }
 
@@ -64,22 +72,21 @@ export function AuthForm() {
         localStorage.setItem("user", JSON.stringify(user));
         toast({
           title: "Login Successful",
-          description: `Welcome, ${user.role}! Redirecting...`,
+          description: `Welcome, ${user.role === 'admin' ? user.email : user.branchName}! Redirecting...`,
         });
-        // Using window.location.assign for a full page reload to ensure middleware and layout effects.
-        window.location.assign(redirectTo);
+        window.location.assign(redirectTo); // Use assign for full page reload to ensure middleware/layout effects
       } else {
         toast({
           variant: "destructive",
           title: "Login Failed",
-          description: "Invalid email or password.",
+          description: "Invalid email or password. Use 'admin@aawsa.com' or '[branchname]@aawsa.com' (e.g. kality@aawsa.com) with password 'password'.",
         });
       }
     } else {
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: "Invalid email or password.",
+        description: "Invalid email or password. Use 'admin@aawsa.com' or '[branchname]@aawsa.com' (e.g. kality@aawsa.com) with password 'password'.",
       });
     }
   };
@@ -89,7 +96,7 @@ export function AuthForm() {
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <Droplets className="h-8 w-8" /> {/* Changed from WaterIcon to Droplets */}
+            <Droplets className="h-8 w-8" />
           </div>
           <CardTitle className="text-3xl font-bold">AAWSA Billing Portal</CardTitle>
           <CardDescription>Sign in to access your account</CardDescription>
@@ -104,7 +111,7 @@ export function AuthForm() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., admin@aawsa.com" {...field} />
+                      <Input placeholder="e.g., admin@aawsa.com or kality@aawsa.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -129,7 +136,7 @@ export function AuthForm() {
             </form>
           </Form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            Use admin@aawsa.com or staff@aawsa.com with password 'password'.
+            Use admin@aawsa.com or [branchname]@aawsa.com (e.g. kality@aawsa.com) with password 'password'.
           </p>
         </CardContent>
       </Card>

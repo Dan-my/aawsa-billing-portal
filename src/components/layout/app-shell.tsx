@@ -21,7 +21,7 @@ import {
   ChevronDown,
   ChevronRight,
   UploadCloud,
-  Gauge, // Using Gauge as an alternative for Bulk Meters
+  Gauge, 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,6 +56,7 @@ import Image from 'next/image';
 interface User {
   email: string;
   role: "admin" | "staff";
+  branchName?: string; // Added for staff
 }
 
 const adminNavItems = [
@@ -66,7 +67,7 @@ const adminNavItems = [
     subItems: [
       { href: "/admin/branches", icon: Building, label: "Branches" },
       { href: "/admin/staff-management", icon: UserCog, label: "Staff" },
-      { href: "/admin/bulk-meters", icon: Gauge, label: "Bulk Meters" }, // Changed Droplets to Gauge
+      { href: "/admin/bulk-meters", icon: Gauge, label: "Bulk Meters" },
       { href: "/admin/individual-customers", icon: Users, label: "Customers" },
     ],
   },
@@ -164,18 +165,15 @@ export function AppShell({ children, userRole }: AppShellProps) {
         if (parsedUser.role === userRole) {
           setUser(parsedUser);
         } else {
-          // Role mismatch, redirect to login
           localStorage.removeItem("user");
           toast({ title: "Access Denied", description: "You do not have permission to access this page.", variant: "destructive" });
           router.replace("/");
         }
       } catch (error) {
-        // Invalid JSON or other error, treat as not logged in
         localStorage.removeItem("user");
         router.replace("/");
       }
     } else {
-      // No user in localStorage, redirect to login
       router.replace("/");
     }
     setIsLoading(false);
@@ -199,13 +197,17 @@ export function AppShell({ children, userRole }: AppShellProps) {
   }
 
   if (!user) {
-    // This case should ideally be handled by the useEffect redirect,
-    // but it's a fallback.
     return null;
   }
   
-  const getInitials = (email: string) => {
-    const parts = email.split('@')[0].split(/[._-]/); // Split by '.', '_', or '-'
+  const getInitials = (email: string, branchName?: string) => {
+    if (branchName) {
+      const branchParts = branchName.replace(" Branch", "").split(" ");
+      if (branchParts.length > 0 && branchParts[0]) {
+        return branchParts[0].substring(0, 2).toUpperCase();
+      }
+    }
+    const parts = email.split('@')[0].split(/[._-]/);
     if (parts.length > 1 && parts[0] && parts[1]) {
       return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
     }
@@ -239,10 +241,10 @@ export function AppShell({ children, userRole }: AppShellProps) {
               <Button variant="ghost" className="w-full justify-start p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-auto">
                  <Avatar className="h-8 w-8">
                   <AvatarImage src={`https://picsum.photos/seed/${user.email}/40/40`} data-ai-hint="profile avatar" />
-                  <AvatarFallback>{getInitials(user.email)}</AvatarFallback>
+                  <AvatarFallback>{getInitials(user.email, user.branchName)}</AvatarFallback>
                 </Avatar>
                 <div className="ml-2 text-left group-data-[collapsible=icon]:hidden">
-                  <p className="text-sm font-medium leading-none">{user.email}</p>
+                  <p className="text-sm font-medium leading-none">{user.role === 'staff' && user.branchName ? user.branchName : user.email}</p>
                   <p className="text-xs leading-none text-muted-foreground capitalize">{user.role}</p>
                 </div>
               </Button>
@@ -250,10 +252,11 @@ export function AppShell({ children, userRole }: AppShellProps) {
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{user.email}</p>
+                  <p className="text-sm font-medium leading-none">{user.role === 'staff' && user.branchName ? user.branchName : user.email}</p>
                   <p className="text-xs leading-none text-muted-foreground capitalize">
                     {user.role}
                   </p>
+                  {user.role === 'staff' && <p className="text-xs leading-none text-muted-foreground">{user.email}</p>}
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -269,7 +272,6 @@ export function AppShell({ children, userRole }: AppShellProps) {
       <SidebarInset className="flex flex-col">
         <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 md:justify-end">
           <SidebarTrigger className="md:hidden" />
-          {/* Placeholder for breadcrumbs or page title if needed */}
         </header>
         <main className="flex-1 overflow-auto p-4 sm:px-6 sm:py-0 md:gap-8">
           {children}

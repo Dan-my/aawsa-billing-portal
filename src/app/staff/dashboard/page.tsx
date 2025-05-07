@@ -1,17 +1,21 @@
+
 "use client";
 
+import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart as BarChartIcon, PieChart as PieChartIcon, TrendingUp, Users } from 'lucide-react'; // Aliased chart icons
-import { ResponsiveContainer, BarChart, PieChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Bar } from 'recharts'; // BarChart, PieChart, Bar are recharts components
+import { BarChart as BarChartIcon, PieChart as PieChartIcon, TrendingUp, Users } from 'lucide-react'; 
+import { ResponsiveContainer, BarChart, PieChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Bar } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+
+interface User {
+  email: string;
+  role: "admin" | "staff";
+  branchName?: string;
+}
 
 const billsData = [
   { name: 'Paid Bills', value: 85, fill: 'hsl(var(--chart-2))' },
   { name: 'Unpaid Bills', value: 15, fill: 'hsl(var(--destructive))' },
-];
-
-const customerData = [
-  { name: 'Your Customers', value: 250, fill: 'hsl(var(--chart-1))' },
 ];
 
 const monthlyPerformanceData = [
@@ -28,7 +32,22 @@ const chartConfig = {
 } satisfies import("@/components/ui/chart").ChartConfig;
 
 export default function StaffDashboardPage() {
-  const branchName = "Kality Branch"; // This would typically come from user data
+  const [branchName, setBranchName] = React.useState<string>("Your Branch");
+
+  React.useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const parsedUser: User = JSON.parse(storedUser);
+        if (parsedUser.role === "staff" && parsedUser.branchName) {
+          setBranchName(parsedUser.branchName);
+        }
+      } catch (e) {
+        console.error("Failed to parse user from localStorage", e);
+        // Fallback or error handling if needed
+      }
+    }
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -62,7 +81,7 @@ export default function StaffDashboardPage() {
 
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Customers in Your Branch</CardTitle>
+            <CardTitle className="text-sm font-medium">Customers in {branchName}</CardTitle>
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -91,8 +110,8 @@ export default function StaffDashboardPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Monthly Billing Performance</CardTitle>
-          <CardDescription>Paid vs. Unpaid bills over the last few months.</CardDescription>
+          <CardTitle>Monthly Billing Performance ({branchName})</CardTitle>
+          <CardDescription>Paid vs. Unpaid bills over the last few months in your branch.</CardDescription>
         </CardHeader>
         <CardContent className="h-[300px]">
           <ChartContainer config={chartConfig} className="w-full h-full">

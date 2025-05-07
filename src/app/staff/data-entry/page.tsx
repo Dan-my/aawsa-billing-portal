@@ -1,3 +1,7 @@
+
+"use client";
+
+import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -5,8 +9,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UploadCloud, FileText } from "lucide-react";
 
+interface User {
+  email: string;
+  role: "admin" | "staff";
+  branchName?: string;
+}
+
 export default function StaffDataEntryPage() {
-  const branchName = "Kality Branch"; // This would typically come from user data
+  const [branchName, setBranchName] = React.useState<string>("Your Branch");
+
+  React.useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const parsedUser: User = JSON.parse(storedUser);
+        if (parsedUser.role === "staff" && parsedUser.branchName) {
+          setBranchName(parsedUser.branchName);
+        }
+      } catch (e) {
+        console.error("Failed to parse user from localStorage", e);
+      }
+    }
+  }, []);
 
   return (
     <div className="space-y-6">

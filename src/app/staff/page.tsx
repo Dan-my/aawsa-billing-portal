@@ -1,5 +1,10 @@
-"use client";
 
+"use client";
+// This page now effectively acts as a redirect or placeholder for /staff/dashboard
+// The actual dashboard content is in /staff/dashboard/page.tsx
+// This component will fetch branchName and use it in its display.
+
+import * as React from "react";
 import {
   Card,
   CardContent,
@@ -7,28 +12,30 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PieChart as PieChartIcon, TrendingUp, Users, BarChart as BarChartIcon } from "lucide-react"; // Aliased chart icons
+import { PieChart as PieChartIcon, TrendingUp, Users, BarChart as BarChartIcon } from "lucide-react";
 import {
   PieChart,
   Pie,
   Cell,
   ResponsiveContainer,
-  BarChart, // Recharts BarChart
+  BarChart, 
   XAxis,
   YAxis,
   Tooltip,
   Legend,
-  Bar, // Recharts Bar
+  Bar, 
 } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+
+interface User {
+  email: string;
+  role: "admin" | "staff";
+  branchName?: string;
+}
 
 const billsData = [
   { name: 'Paid Bills', value: 85, fill: 'hsl(var(--chart-2))' },
   { name: 'Unpaid Bills', value: 15, fill: 'hsl(var(--destructive))' },
-];
-
-const customerData = [ // This data is not used in the current chart, but kept for potential future use
-  { name: 'Your Customers', value: 250, fill: 'hsl(var(--chart-1))' },
 ];
 
 const monthlyPerformanceData = [
@@ -44,8 +51,24 @@ const chartConfig = {
   customers: { label: "Customers", color: "hsl(var(--chart-1))"},
 } satisfies import("@/components/ui/chart").ChartConfig;
 
-export default function StaffDashboardPage() {
-  const branchName = "Kality Branch"; // This would typically come from user data
+export default function StaffPage() { // Renamed from StaffDashboardPage to avoid conflict if this was the old dashboard
+  const [branchName, setBranchName] = React.useState<string>("Your Branch");
+
+  React.useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const parsedUser: User = JSON.parse(storedUser);
+        if (parsedUser.role === "staff" && parsedUser.branchName) {
+          setBranchName(parsedUser.branchName);
+        }
+      } catch (e) {
+        console.error("Failed to parse user from localStorage", e);
+      }
+    }
+     // If this page is meant to be the dashboard, it should redirect or render the dashboard content.
+    // For now, it just mirrors the dashboard's visual structure for consistency.
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -79,7 +102,7 @@ export default function StaffDashboardPage() {
 
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Customers in Your Branch</CardTitle>
+            <CardTitle className="text-sm font-medium">Customers in {branchName}</CardTitle>
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -108,8 +131,8 @@ export default function StaffDashboardPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Monthly Billing Performance</CardTitle>
-          <CardDescription>Paid vs. Unpaid bills over the last few months.</CardDescription>
+          <CardTitle>Monthly Billing Performance ({branchName})</CardTitle>
+          <CardDescription>Paid vs. Unpaid bills over the last few months in your branch.</CardDescription>
         </CardHeader>
         <CardContent className="h-[300px]">
           <ChartContainer config={chartConfig} className="w-full h-full">

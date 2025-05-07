@@ -25,7 +25,7 @@ import {
 } from "@/app/admin/data-entry/customer-data-entry-types"; // Re-use admin schema
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card"; // Keep Card structure for consistency
-import { addCustomer as addCustomerToStore, getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, initializeCustomers } from "@/lib/data-store";
+import { addCustomer as addCustomerToStore, getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, initializeCustomers, getCustomers } from "@/lib/data-store";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import { TARIFF_RATE } from "@/app/admin/individual-customers/individual-customer-types";
 import { initialBulkMeters as defaultInitialBulkMeters } from "@/app/admin/bulk-meters/page";

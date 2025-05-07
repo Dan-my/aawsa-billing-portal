@@ -306,7 +306,7 @@ export function IndividualCustomerDataEntryForm() {
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>Reading Month *</FormLabel>
-                      <DatePicker
+ <DatePicker
                         date={field.value ? parse(field.value, "yyyy-MM", new Date()) : undefined}
                         setDate={(selectedDate) => {
                           field.onChange(selectedDate ? format(selectedDate, "yyyy-MM") : "");

@@ -27,7 +27,12 @@ const notifyBranchListeners = () => branchListeners.forEach(listener => listener
 // Initializer functions
 export const initializeCustomers = (initialData: IndividualCustomer[]) => {
   if (!initialCustomersLoaded || customers.length === 0) {
-    customers = [...initialData];
+    const savedCustomers = localStorage.getItem('customers');
+    if (savedCustomers) {
+      customers = JSON.parse(savedCustomers);
+    } else {
+      customers = [...initialData];
+    }
     initialCustomersLoaded = true;
     notifyCustomerListeners();
   }
@@ -35,7 +40,12 @@ export const initializeCustomers = (initialData: IndividualCustomer[]) => {
 
 export const initializeBulkMeters = (initialData: BulkMeter[]) => {
   if (!initialBulkMetersLoaded || bulkMeters.length === 0) {
-    bulkMeters = [...initialData];
+    const savedBulkMeters = localStorage.getItem('bulkMeters');
+    if (savedBulkMeters) {
+      bulkMeters = JSON.parse(savedBulkMeters);
+    } else {
+      bulkMeters = [...initialData];
+    }
     initialBulkMetersLoaded = true;
     notifyBulkMeterListeners();
   }
@@ -43,7 +53,12 @@ export const initializeBulkMeters = (initialData: BulkMeter[]) => {
 
 export const initializeBranches = (initialData: Branch[]) => { // Added branch initializer
   if (!initialBranchesLoaded || branches.length === 0) {
-    branches = [...initialData];
+    const savedBranches = localStorage.getItem('branches');
+    if (savedBranches) {
+ branches = JSON.parse(savedBranches);
+    } else {
+ branches = [...initialData];
+    }
     initialBranchesLoaded = true;
     notifyBranchListeners();
   }
@@ -62,12 +77,14 @@ export const addCustomer = (customerData: Omit<IndividualCustomer, 'id'>) => {
     id: `cust_${Date.now().toString()}_${Math.random().toString(36).substring(2, 7)}`,
   };
   customers = [newCustomer, ...customers];
+  localStorage.setItem('customers', JSON.stringify(customers));
   notifyCustomerListeners();
   return newCustomer;
 };
 
 export const updateCustomer = (updatedCustomer: IndividualCustomer) => {
   customers = customers.map(c => c.id === updatedCustomer.id ? updatedCustomer : c);
+  localStorage.setItem('customers', JSON.stringify(customers));
   notifyCustomerListeners();
 };
 
@@ -83,6 +100,7 @@ export const addBulkMeter = (bulkMeterData: Omit<BulkMeter, 'id'>) => {
     id: `bm_${Date.now().toString()}_${Math.random().toString(36).substring(2, 7)}`,
   };
   bulkMeters = [newBulkMeter, ...bulkMeters];
+  localStorage.setItem('bulkMeters', JSON.stringify(bulkMeters));
   notifyBulkMeterListeners();
   return newBulkMeter;
 };
@@ -104,6 +122,7 @@ export const addBranch = (branchData: Omit<Branch, 'id'>) => {
     id: `br_${Date.now().toString()}_${Math.random().toString(36).substring(2, 7)}`,
   };
   branches = [newBranch, ...branches];
+  localStorage.setItem('branches', JSON.stringify(branches));
   notifyBranchListeners();
   return newBranch;
 };

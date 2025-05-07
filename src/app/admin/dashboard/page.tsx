@@ -13,7 +13,6 @@ import { getBulkMeters, subscribeToBulkMeters, initializeBulkMeters } from "@/li
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 import { initialBulkMeters } from "../bulk-meters/page";
 
-
 const totalBillsData = [
   { status: 'Paid', count: 1250, fill: 'hsl(var(--chart-1))' }, 
   { status: 'Unpaid', count: 350, fill: 'hsl(var(--chart-2))' }, 
@@ -43,11 +42,11 @@ const waterUsageTrendData = [
 ];
 
 const chartConfig = {
-  paid: { label: "Paid", color: "hsl(var(--chart-1))" }, 
-  unpaid: { label: "Unpaid", color: "hsl(var(--chart-2))" }, 
-  bulkMeters: { label: "Bulk Meters", color: "hsl(var(--chart-1))" }, 
-  individualCustomers: { label: "Individual Customers", color: "hsl(var(--chart-2))" }, 
-  waterUsage: { label: "Water Usage (m³)", color: "hsl(var(--chart-1))" }, 
+  paid: { label: "Paid", color: "hsl(var(--chart-1))" },
+  unpaid: { label: "Unpaid", color: "hsl(var(--chart-2))" },
+  bulkMeters: { label: "Bulk Meters", color: "hsl(var(--chart-1))" },
+  individualCustomers: { label: "Individual Customers", color: "hsl(var(--chart-2))" },
+  waterUsage: { label: "Water Usage (m³)", color: "hsl(var(--chart-1))" },
 } satisfies import("@/components/ui/chart").ChartConfig;
 
 
@@ -60,11 +59,11 @@ export default function AdminDashboardPage() {
     if (getBulkMeters().length === 0) {
       initializeBulkMeters(initialBulkMeters);
     }
-    
+
     const updateBulkMeterCount = (meters: BulkMeter[]) => {
       setTotalBulkMeters(meters.length);
     };
-    
+
     updateBulkMeterCount(getBulkMeters()); // Initial count
     const unsubscribe = subscribeToBulkMeters(updateBulkMeterCount);
     return () => unsubscribe();
@@ -74,7 +73,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-      
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -89,7 +88,7 @@ export default function AdminDashboardPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie data={totalBillsData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={50} label>
-                       {totalBillsData.map((entry, index) => (
+                      {totalBillsData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.fill} />
                       ))}
                     </Pie>
@@ -114,7 +113,7 @@ export default function AdminDashboardPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie data={customerCountData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={30} outerRadius={50} paddingAngle={2} label>
-                       {customerCountData.map((entry, index) => (
+                      {customerCountData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.fill} />
                       ))}
                     </Pie>
@@ -134,7 +133,7 @@ export default function AdminDashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{totalBulkMeters}</div>
             <p className="text-xs text-muted-foreground">Total registered bulk meters</p>
-             <div className="h-[120px] mt-4 flex items-center justify-center">
+            <div className="h-[120px] mt-4 flex items-center justify-center">
                 <Gauge className="h-16 w-16 text-primary opacity-50" />
             </div>
           </CardContent>
@@ -149,7 +148,7 @@ export default function AdminDashboardPage() {
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Link href="/admin/bulk-meters" passHref>
                 <Button variant="outline" className="w-full justify-start p-4 h-auto">
-                    <Gauge className="mr-3 h-6 w-6 text-primary" />
+ <Gauge className="mr-3 h-6 w-6 text-primary" />
                     <div>
                         <p className="font-semibold text-base">View Bulk Meters</p>
                         <p className="text-xs text-muted-foreground">Manage all bulk water meters.</p>
@@ -157,7 +156,7 @@ export default function AdminDashboardPage() {
                     <ArrowRight className="ml-auto h-5 w-5 text-muted-foreground" />
                 </Button>
             </Link>
-            <Link href="/admin/individual-customers" passHref>
+             <Link href="/admin/individual-customers" passHref>
                 <Button variant="outline" className="w-full justify-start p-4 h-auto">
                     <Users className="mr-3 h-6 w-6 text-primary" />
                     <div>
@@ -212,8 +211,8 @@ export default function AdminDashboardPage() {
                     <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                     <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
                     <Legend />
-                    <Bar dataKey="paid" stackId="a" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} /> 
-                    <Bar dataKey="unpaid" stackId="a" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+ <Bar dataKey="paid" stackId="a" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+ <Bar dataKey="unpaid" stackId="a" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -227,7 +226,7 @@ export default function AdminDashboardPage() {
               <CardTitle>Overall Water Usage Trend</CardTitle>
               <CardDescription>Monthly water consumption across all meters.</CardDescription>
             </div>
-             <Button variant="outline" size="sm" onClick={() => setShowWaterUsageTable(!showWaterUsageTable)}>
+            <Button variant="outline" size="sm" onClick={() => setShowWaterUsageTable(!showWaterUsageTable)}>
               {showWaterUsageTable ? <TrendingUp className="mr-2 h-4 w-4" /> : <TableIcon className="mr-2 h-4 w-4" />}
               {showWaterUsageTable ? "View Chart" : "View Table"}
             </Button>
@@ -259,7 +258,7 @@ export default function AdminDashboardPage() {
                     <XAxis dataKey="month" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                     <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                     <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
-                    <Legend />
+ <Legend />
                     <Line type="monotone" dataKey="usage" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--chart-1))", stroke: "hsl(var(--background))" }} activeDot={{ r:6, fill: "hsl(var(--chart-1))", stroke: "hsl(var(--background))"}} name={chartConfig.waterUsage.label} />
                   </LineChart>
                 </ResponsiveContainer>

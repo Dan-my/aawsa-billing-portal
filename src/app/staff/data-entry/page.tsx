@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UploadCloud, FileText, User, Users } from "lucide-react"; 
 import { StaffIndividualCustomerEntryForm } from "./staff-individual-customer-entry-form";
 import { StaffBulkMeterEntryForm } from "./staff-bulk-meter-entry-form";
-import { Button } from "@/components/ui/button";
+
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
@@ -100,10 +100,15 @@ export default function StaffDataEntryPage() {
                 <UploadCloud className="mr-2 h-4 w-4" /> Upload CSV
               </Button>
               <div className="mt-2 text-sm text-muted-foreground">
-                <p>Ensure your CSV file follows the specified format for {branchName}. <a href="/path-to-branch-csv-template.csv" className="text-primary hover:underline" download>Download template</a>.</p>
+                <p>Ensure your CSV file follows the specified format for {branchName}.</p>
+                <p className="mt-1">Templates for download:</p>
+                <ul className="list-disc list-inside ml-4">
+                  <li><a href="/path-to-individual-customer-csv-template.csv" className="text-primary hover:underline" download>Individual Customer Template</a></li>
+                  <li><a href="/path-to-bulk-meter-csv-template.csv" className="text-primary hover:underline" download>Bulk Meter Template</a></li>
+                </ul>
               </div>
-              <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
-                Branch-specific CSV upload and processing functionality coming soon.
+              <div className="mt-4 p-4 border rounded-md bg-muted/50 text-sm text-muted-foreground">
+                Please note: Ensure your CSV file has a column indicating whether the entry is for an individual customer or a bulk meter. The system will process entries based on this column and the provided templates.
               </div>
             </CardContent>
           </Card>

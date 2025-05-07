@@ -1,12 +1,14 @@
-
 "use client";
 
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UploadCloud, FileText, User, Users } from "lucide-react"; // User for individual, Users for bulk/group
+import { UploadCloud, FileText, User, Users } from "lucide-react"; 
 import { StaffIndividualCustomerEntryForm } from "./staff-individual-customer-entry-form";
 import { StaffBulkMeterEntryForm } from "./staff-bulk-meter-entry-form";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 
 interface UserSession {
   email: string;
@@ -15,6 +17,7 @@ interface UserSession {
 }
 
 export default function StaffDataEntryPage() {
+  const { toast } = useToast();
   const [branchName, setBranchName] = React.useState<string>("Your Branch");
   const [activeFormTab, setActiveFormTab] = React.useState("individualStaff");
 
@@ -31,6 +34,14 @@ export default function StaffDataEntryPage() {
       }
     }
   }, []);
+
+  const handleCsvUpload = () => {
+    toast({
+      title: "Feature Not Implemented",
+      description: "CSV upload functionality is coming soon for your branch.",
+      variant: "default", 
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -81,12 +92,11 @@ export default function StaffDataEntryPage() {
               <CardDescription>Upload meter readings in bulk for your branch using a CSV file.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* CSV Upload components from original file - can be refined later */}
                <div className="grid w-full max-w-sm items-center gap-1.5">
                 <label htmlFor="csv-file-staff">CSV File</label>
                 <Input id="csv-file-staff" type="file" accept=".csv" />
               </div>
-              <Button>
+              <Button onClick={handleCsvUpload}>
                 <UploadCloud className="mr-2 h-4 w-4" /> Upload CSV
               </Button>
               <div className="mt-2 text-sm text-muted-foreground">
@@ -102,4 +112,3 @@ export default function StaffDataEntryPage() {
     </div>
   );
 }
-

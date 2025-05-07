@@ -1,29 +1,146 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+
+"use client";
+
+import * as React from "react";
+import { PlusCircle, User, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import type { IndividualCustomer, IndividualCustomerStatus } from "./individual-customer-types";
+import { IndividualCustomerFormDialog } from "./individual-customer-form-dialog";
+import { IndividualCustomerTable } from "./individual-customer-table";
+import { mockBulkMeters } from "@/app/admin/data-entry/customer-data-entry-types"; // For dropdown and display
+
+const initialCustomers: IndividualCustomer[] = [
+  { id: "cust001", name: "Abebe Bikila", customerKeyNumber: "CUST001", contractNumber: "CON001", customerType: "Domestic", bookNumber: "B001", ordinal: 1, meterSize: 0.5, meterNumber: "MTR001", previousReading: 100, currentReading: 120, month: "2023-11", specificArea: "Kebele 1, House 101", location: "Bole", ward: "Woreda 3", sewerageConnection: "Yes", status: "Active", assignedBulkMeterId: "bm_kality_001" },
+  { id: "cust002", name: "Fatuma Roba", customerKeyNumber: "CUST002", contractNumber: "CON002", customerType: "Domestic", bookNumber: "B001", ordinal: 2, meterSize: 0.5, meterNumber: "MTR002", previousReading: 200, currentReading: 250, month: "2023-11", specificArea: "Kebele 2, House 202", location: "Kality", ward: "Woreda 5", sewerageConnection: "No", status: "Active" },
+  { id: "cust003", name: "Haile Gebrselassie", customerKeyNumber: "CUST003", contractNumber: "CON003", customerType: "Non-domestic", bookNumber: "B002", ordinal: 1, meterSize: 1, meterNumber: "MTR003", previousReading: 500, currentReading: 600, month: "2023-11", specificArea: "Industrial Area, Plot 3", location: "Megenagna", ward: "Woreda 7", sewerageConnection: "Yes", status: "Inactive", assignedBulkMeterId: "bm_megenagna_commercial_003"},
+];
+
+// Type for form submission, merging IndividualCustomer (excluding id) with optional id and required status.
+type IndividualCustomerFormData = Omit<IndividualCustomer, 'id'> & { id?: string; status: IndividualCustomerStatus };
 
 export default function IndividualCustomersPage() {
+  const { toast } = useToast();
+  const [customers, setCustomers] = React.useState<IndividualCustomer[]>(initialCustomers);
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const [selectedCustomer, setSelectedCustomer] = React.useState<IndividualCustomer | null>(null);
+  const [customerToDelete, setCustomerToDelete] = React.useState<IndividualCustomer | null>(null);
+
+  const handleAddCustomer = () => {
+    setSelectedCustomer(null);
+    setIsFormOpen(true);
+  };
+
+  const handleEditCustomer = (customer: IndividualCustomer) => {
+    setSelectedCustomer(customer);
+    setIsFormOpen(true);
+  };
+
+  const handleDeleteCustomer = (customer: IndividualCustomer) => {
+    setCustomerToDelete(customer);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (customerToDelete) {
+      setCustomers(customers.filter(c => c.id !== customerToDelete.id));
+      toast({ title: "Customer Deleted", description: `${customerToDelete.name} has been removed.` });
+      setCustomerToDelete(null);
+    }
+    setIsDeleteDialogOpen(false);
+  };
+
+  const handleSubmitCustomer = (data: IndividualCustomerFormData) => {
+    if (selectedCustomer) {
+      // Edit existing customer
+      setCustomers(customers.map(c => c.id === selectedCustomer.id ? { ...selectedCustomer, ...data } : c));
+      toast({ title: "Customer Updated", description: `${data.name} has been updated.` });
+    } else {
+      // Add new customer
+      const newCustomer: IndividualCustomer = { ...data, id: Date.now().toString() };
+      setCustomers([newCustomer, ...customers]);
+      toast({ title: "Customer Added", description: `${newCustomer.name} has been added.` });
+    }
+    setIsFormOpen(false);
+    setSelectedCustomer(null);
+  };
+
+  const filteredCustomers = customers.filter(customer =>
+    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    customer.customerKeyNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    customer.meterNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    customer.location.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
         <h1 className="text-3xl font-bold">Individual Customers Management</h1>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" /> Add New Customer
-        </Button>
+        <div className="flex gap-2 w-full md:w-auto">
+           <div className="relative flex-grow md:flex-grow-0">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search customers..."
+              className="pl-8 w-full md:w-[250px]"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Button onClick={handleAddCustomer}>
+            <PlusCircle className="mr-2 h-4 w-4" /> Add New Customer
+          </Button>
+        </div>
       </div>
+
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Customer List</CardTitle>
           <CardDescription>View, edit, and manage individual customer information.</CardDescription>
         </CardHeader>
         <CardContent>
-          <p>Individual customer data table will be displayed here. This will include CRUD operations functionality.</p>
-          {/* Placeholder for table */}
-          <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
-            Individual customer data table coming soon.
-          </div>
+           {customers.length === 0 && !searchTerm ? (
+             <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
+                No customers found. Click "Add New Customer" to get started. <User className="inline-block ml-2 h-5 w-5" />
+             </div>
+          ) : (
+            <IndividualCustomerTable
+              data={filteredCustomers}
+              onEdit={handleEditCustomer}
+              onDelete={handleDeleteCustomer}
+              bulkMetersList={mockBulkMeters} // Pass mock data for display
+            />
+          )}
         </CardContent>
       </Card>
+
+      <IndividualCustomerFormDialog
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        onSubmit={handleSubmitCustomer}
+        defaultValues={selectedCustomer}
+        // bulkMeters={mockBulkMeters} // Pass if dynamic selection is needed
+      />
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the customer {customerToDelete?.name}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setCustomerToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -26,14 +26,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
-  baseIndividualCustomerDataSchema, // Changed from individualCustomerDataEntrySchema
+  baseIndividualCustomerDataSchema, 
   customerTypes, 
   sewerageConnections,
 } from "@/app/admin/data-entry/customer-data-entry-types";
 import type { IndividualCustomer } from "./individual-customer-types";
 import { individualCustomerStatuses } from "./individual-customer-types";
-import { getBulkMeters, subscribeToBulkMeters } from "@/lib/data-store"; // Import data store functions
+import { getBulkMeters, subscribeToBulkMeters } from "@/lib/data-store"; 
 
+const NONE_BULK_METER_ID = "_NONE_";
 
 // Extend the base schema from data entry to include status for management purposes
 const individualCustomerFormObjectSchema = baseIndividualCustomerDataSchema.extend({
@@ -54,7 +55,7 @@ interface IndividualCustomerFormDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: IndividualCustomerFormValues) => void;
   defaultValues?: IndividualCustomer | null;
-  bulkMeters?: { id: string; name: string }[]; // This will now be populated from the store via props
+  bulkMeters?: { id: string; name: string }[];
 }
 
 export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, defaultValues, bulkMeters: propBulkMeters }: IndividualCustomerFormDialogProps) {
@@ -84,11 +85,10 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
   });
 
   React.useEffect(() => {
-    // If propBulkMeters is not provided initially or is empty, fetch from store and subscribe
     if (!propBulkMeters || propBulkMeters.length === 0) {
         setDynamicBulkMeters(getBulkMeters().map(bm => ({ id: bm.id, name: bm.name })));
     } else {
-         setDynamicBulkMeters(propBulkMeters); // Use provided props if available
+         setDynamicBulkMeters(propBulkMeters); 
     }
 
     const unsubscribe = subscribeToBulkMeters((updatedBulkMeters) => {
@@ -105,7 +105,8 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         meterSize: defaultValues.meterSize ?? undefined,
         previousReading: defaultValues.previousReading ?? undefined,
         currentReading: defaultValues.currentReading ?? undefined,
-        assignedBulkMeterId: defaultValues.assignedBulkMeterId || undefined,
+        // If assignedBulkMeterId is undefined or an empty string from data, map it to NONE_BULK_METER_ID for the select, or keep the ID.
+        assignedBulkMeterId: defaultValues.assignedBulkMeterId ? defaultValues.assignedBulkMeterId : (defaultValues.assignedBulkMeterId === undefined || defaultValues.assignedBulkMeterId === '' ? undefined : defaultValues.assignedBulkMeterId),
       });
     } else {
       form.reset({
@@ -124,14 +125,18 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         location: "",
         ward: "",
         sewerageConnection: undefined,
-        assignedBulkMeterId: undefined,
+        assignedBulkMeterId: undefined, // For new, it's unselected
         status: undefined,
       });
     }
   }, [defaultValues, form, open]);
 
   const handleSubmit = (data: IndividualCustomerFormValues) => {
-    onSubmit(data);
+    const processedData = {
+      ...data,
+      assignedBulkMeterId: data.assignedBulkMeterId === NONE_BULK_METER_ID ? undefined : data.assignedBulkMeterId,
+    };
+    onSubmit(processedData);
     onOpenChange(false);
   };
 
@@ -376,7 +381,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">None (Standalone)</SelectItem>
+                        <SelectItem value={NONE_BULK_METER_ID}>None (Standalone)</SelectItem>
                         {dynamicBulkMeters.map((bm) => (
                           <SelectItem key={bm.id} value={bm.id}>{bm.name}</SelectItem>
                         ))}
@@ -422,3 +427,4 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
     </Dialog>
   );
 }
+

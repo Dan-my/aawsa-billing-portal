@@ -22,7 +22,6 @@ import {
   type IndividualCustomerDataEntryFormValues,
   customerTypes,
   sewerageConnections,
-  // mockBulkMeters_DEPRECATED, // No longer using static mock data
 } from "./customer-data-entry-types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,6 +30,7 @@ import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 import { initialBulkMeters as defaultInitialBulkMeters } from "../bulk-meters/page";
 import { initialCustomers as defaultInitialCustomers } from "../individual-customers/page";
 
+const NONE_BULK_METER_ID = "_NONE_";
 
 export function IndividualCustomerDataEntryForm() {
   const { toast } = useToast();
@@ -71,13 +71,18 @@ export function IndividualCustomerDataEntryForm() {
   });
 
   function onSubmit(data: IndividualCustomerDataEntryFormValues) {
+    const processedData = {
+      ...data,
+      assignedBulkMeterId: data.assignedBulkMeterId === NONE_BULK_METER_ID ? undefined : data.assignedBulkMeterId,
+    };
+
     // Add status to the data before sending to store, as store expects it for addCustomer
-    const customerDataForStore = { ...data, status: "Active" } as const; // Default to Active for new entries
+    const customerDataForStore = { ...processedData, status: "Active" } as const; // Default to Active for new entries
     
     addCustomerToStore(customerDataForStore);
     toast({
       title: "Data Entry Submitted",
-      description: `Data for individual customer ${data.name} has been successfully recorded.`,
+      description: `Data for individual customer ${processedData.name} has been successfully recorded.`,
     });
     form.reset(); // Reset form after successful submission
   }
@@ -316,7 +321,7 @@ export function IndividualCustomerDataEntryForm() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">None (Standalone)</SelectItem>
+                          <SelectItem value={NONE_BULK_METER_ID}>None (Standalone)</SelectItem>
                           {availableBulkMeters.map((bm) => (
                             <SelectItem key={bm.id} value={bm.id}>{bm.name}</SelectItem>
                           ))}
@@ -339,3 +344,4 @@ export function IndividualCustomerDataEntryForm() {
     </ScrollArea>
   );
 }
+

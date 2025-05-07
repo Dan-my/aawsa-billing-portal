@@ -26,10 +26,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
-  individualCustomerDataEntrySchema, 
+  baseIndividualCustomerDataSchema, // Changed from individualCustomerDataEntrySchema
   customerTypes, 
-  sewerageConnections, 
-  // mockBulkMeters_DEPRECATED, // No longer using static mock data here
+  sewerageConnections,
 } from "@/app/admin/data-entry/customer-data-entry-types";
 import type { IndividualCustomer } from "./individual-customer-types";
 import { individualCustomerStatuses } from "./individual-customer-types";
@@ -37,9 +36,16 @@ import { getBulkMeters, subscribeToBulkMeters } from "@/lib/data-store"; // Impo
 
 
 // Extend the base schema from data entry to include status for management purposes
-const individualCustomerFormSchema = individualCustomerDataEntrySchema.extend({
+const individualCustomerFormObjectSchema = baseIndividualCustomerDataSchema.extend({
   status: z.enum(individualCustomerStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
 });
+
+// Re-apply the refinement to the extended schema
+const individualCustomerFormSchema = individualCustomerFormObjectSchema.refine(data => data.currentReading >= data.previousReading, {
+  message: "Current Reading must be greater than or equal to Previous Reading.",
+  path: ["currentReading"],
+});
+
 
 type IndividualCustomerFormValues = z.infer<typeof individualCustomerFormSchema>;
 

@@ -7,8 +7,8 @@ export type CustomerType = (typeof customerTypes)[number];
 export const sewerageConnections = ["Yes", "No"] as const;
 export type SewerageConnection = (typeof sewerageConnections)[number];
 
-// Schema for Individual Customer Data Entry
-export const individualCustomerDataEntrySchema = z.object({
+// Base Schema for Individual Customer Data (without refinement)
+export const baseIndividualCustomerDataSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   customerKeyNumber: z.string().min(1, { message: "Customer Key Number is required." }),
   contractNumber: z.string().min(1, { message: "Contract Number is required." }),
@@ -25,15 +25,19 @@ export const individualCustomerDataEntrySchema = z.object({
   ward: z.string().min(1, { message: "Ward / Woreda is required." }),
   sewerageConnection: z.enum(sewerageConnections, { errorMap: () => ({ message: "Please select Sewerage Connection status." }) }),
   assignedBulkMeterId: z.string().optional().describe("The ID of the bulk meter this individual customer is assigned to."),
-}).refine(data => data.currentReading >= data.previousReading, {
+});
+
+// Schema for Individual Customer Data Entry (with refinement)
+export const individualCustomerDataEntrySchema = baseIndividualCustomerDataSchema.refine(data => data.currentReading >= data.previousReading, {
   message: "Current Reading must be greater than or equal to Previous Reading.",
   path: ["currentReading"],
 });
 
 export type IndividualCustomerDataEntryFormValues = z.infer<typeof individualCustomerDataEntrySchema>;
 
-// Schema for Bulk Meter Data Entry
-export const bulkMeterDataEntrySchema = z.object({
+
+// Base Schema for Bulk Meter Data (without refinement)
+export const baseBulkMeterDataSchema = z.object({
   name: z.string().min(2, { message: "Bulk meter name must be at least 2 characters." }),
   customerKeyNumber: z.string().min(1, { message: "Customer Key Number is required." }),
   contractNumber: z.string().min(1, { message: "Contract Number is required." }),
@@ -47,7 +51,10 @@ export const bulkMeterDataEntrySchema = z.object({
   ward: z.string().min(1, { message: "Ward / Woreda is required." }),
   // Bulk meters do not typically have customerType or sewerageConnection in the same way individuals do.
   // These are attributes of the individual connections supplied by the bulk meter.
-}).refine(data => data.currentReading >= data.previousReading, {
+});
+
+// Schema for Bulk Meter Data Entry (with refinement)
+export const bulkMeterDataEntrySchema = baseBulkMeterDataSchema.refine(data => data.currentReading >= data.previousReading, {
   message: "Current Reading must be greater than or equal to Previous Reading.",
   path: ["currentReading"],
 });

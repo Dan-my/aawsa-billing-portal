@@ -25,15 +25,22 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { bulkMeterDataEntrySchema } from "@/app/admin/data-entry/customer-data-entry-types";
+import { baseBulkMeterDataSchema } from "@/app/admin/data-entry/customer-data-entry-types";
 import type { BulkMeter } from "./bulk-meter-types";
 import { bulkMeterStatuses } from "./bulk-meter-types";
 // No direct store imports needed here if onSubmit in page.tsx handles it.
 
 // Extend the base schema from data entry to include status for management purposes
-const bulkMeterFormSchema = bulkMeterDataEntrySchema.extend({
+const bulkMeterFormObjectSchema = baseBulkMeterDataSchema.extend({
   status: z.enum(bulkMeterStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
 });
+
+// Re-apply the refinement to the extended schema
+const bulkMeterFormSchema = bulkMeterFormObjectSchema.refine(data => data.currentReading >= data.previousReading, {
+  message: "Current Reading must be greater than or equal to Previous Reading.",
+  path: ["currentReading"],
+});
+
 
 type BulkMeterFormValues = z.infer<typeof bulkMeterFormSchema>;
 

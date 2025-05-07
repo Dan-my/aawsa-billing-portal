@@ -20,15 +20,16 @@ import {
   deleteCustomer as deleteCustomerFromStore,
   subscribeToBulkMeters,
   subscribeToCustomers,
+  initializeBulkMeters, // Added
+  initializeCustomers,  // Added
 } from "@/lib/data-store";
 import type { BulkMeter, BulkMeterStatus } from "../bulk-meter-types";
 import type { IndividualCustomer, IndividualCustomerStatus, PaymentStatus } from "../../individual-customers/individual-customer-types";
+import { TARIFF_RATE } from "../../individual-customers/individual-customer-types"; // Import TARIFF_RATE
 import { BulkMeterFormDialog } from "../bulk-meter-form-dialog";
 import { IndividualCustomerFormDialog } from "../../individual-customers/individual-customer-form-dialog";
-import { initialBulkMeters } from "../page"; // For fallback if store is empty
-import { initialCustomers } from "../../individual-customers/page"; // for fallback
-
-const TARIFF_RATE = 5.50; // ETB per m³
+import { initialBulkMeters as defaultInitialBulkMeters } from "../page"; 
+import { initialCustomers as defaultInitialCustomers } from "../../individual-customers/page"; 
 
 type BulkMeterFormData = Omit<BulkMeter, 'id'> & { id?: string; status: BulkMeterStatus };
 type IndividualCustomerFormData = Omit<IndividualCustomer, 'id' | 'calculatedBill'> & { id?: string; status: IndividualCustomerStatus; paymentStatus: PaymentStatus };
@@ -53,19 +54,15 @@ export default function BulkMeterDetailsPage() {
   const [isCustomerDeleteDialogOpen, setIsCustomerDeleteDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
-    // Initialize stores if they are empty (e.g., on direct page load/refresh)
-    // This ensures data is available for direct links or refreshes.
-    if (getBulkMeters().length === 0 && initialBulkMeters.length > 0) {
-      initialBulkMeters.forEach(bm => updateBulkMeterInStore(bm)); // Using update to ensure listeners fire if any are already set up
+    // Initialize stores if they are empty
+    if (getBulkMeters().length === 0) {
+      initializeBulkMeters(defaultInitialBulkMeters);
     }
-    if (getCustomers().length === 0 && initialCustomers.length > 0) {
-      initialCustomers.forEach(c => updateCustomerInStore(c));
+    if (getCustomers().length === 0) {
+      initializeCustomers(defaultInitialCustomers);
     }
-
-    // A flag to track if data stores are considered initialized for the purpose of "not found" logic.
-    // This prevents premature redirection if initial data seeding is still in progress or stores are legitimately empty.
-    let storesConsideredInitialized = (getBulkMeters().length > 0 || initialBulkMeters.length === 0) &&
-                                   (getCustomers().length > 0 || initialCustomers.length === 0);
+    
+    let storesConsideredInitialized = getBulkMeters().length > 0 && getCustomers().length > 0;
 
     const updateLocalStateFromStores = () => {
       const currentGlobalMeters = getBulkMeters();
@@ -78,21 +75,17 @@ export default function BulkMeterDetailsPage() {
         const associated = currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId);
         setAssociatedCustomers(associated);
       } else {
-        // Only redirect if stores are considered initialized and the item isn't found.
-        if (storesConsideredInitialized) {
+        if (storesConsideredInitialized) { // Only redirect if stores were populated and item not found
           toast({ title: "Bulk Meter Not Found", description: "This bulk meter may not exist or has been deleted.", variant: "destructive" });
           router.push("/admin/bulk-meters");
         }
-        // Otherwise, bulkMeter remains null, and the loading UI (if (!bulkMeter) block) shows.
       }
     };
 
-    updateLocalStateFromStores(); // Initial attempt to set data based on current store state
+    updateLocalStateFromStores(); 
 
-    // This function will be called by subscriptions, marking stores as initialized
-    // and then re-evaluating the local state.
     const handleStoresUpdate = () => {
-      storesConsideredInitialized = true; // Once a subscription fires, assume stores are in a ready state
+      storesConsideredInitialized = true; 
       updateLocalStateFromStores();
     };
     

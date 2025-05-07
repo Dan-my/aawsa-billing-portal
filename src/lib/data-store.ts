@@ -1,30 +1,32 @@
 
 import type { ReactNode } from 'react';
-import type { IndividualCustomer, IndividualCustomerStatus, PaymentStatus } from '@/app/admin/individual-customers/individual-customer-types';
-import type { BulkMeter, BulkMeterStatus } from '@/app/admin/bulk-meters/bulk-meter-types';
-
-// It's better to define initial data here or fetch from a common source
-// For now, we'll let the pages provide their initial data if the store is empty.
+import type { IndividualCustomer } from '@/app/admin/individual-customers/individual-customer-types';
+import type { BulkMeter } from '@/app/admin/bulk-meters/bulk-meter-types';
+import type { Branch } from '@/app/admin/branches/branch-types';
 
 // State
 let customers: IndividualCustomer[] = [];
 let bulkMeters: BulkMeter[] = [];
+let branches: Branch[] = []; // Added branches state
+
 let initialCustomersLoaded = false;
 let initialBulkMetersLoaded = false;
-
+let initialBranchesLoaded = false; // Added flag for branches
 
 // Listeners
 type Listener<T> = (data: T[]) => void;
 const customerListeners: Set<Listener<IndividualCustomer>> = new Set();
 const bulkMeterListeners: Set<Listener<BulkMeter>> = new Set();
+const branchListeners: Set<Listener<Branch>> = new Set(); // Added branch listeners
 
 // Notify functions
 const notifyCustomerListeners = () => customerListeners.forEach(listener => listener([...customers]));
 const notifyBulkMeterListeners = () => bulkMeterListeners.forEach(listener => listener([...bulkMeters]));
+const notifyBranchListeners = () => branchListeners.forEach(listener => listener([...branches])); // Added branch notify function
 
 // Initializer functions
 export const initializeCustomers = (initialData: IndividualCustomer[]) => {
-  if (!initialCustomersLoaded || customers.length === 0) { // Also re-init if empty
+  if (!initialCustomersLoaded || customers.length === 0) {
     customers = [...initialData];
     initialCustomersLoaded = true;
     notifyCustomerListeners();
@@ -32,10 +34,18 @@ export const initializeCustomers = (initialData: IndividualCustomer[]) => {
 };
 
 export const initializeBulkMeters = (initialData: BulkMeter[]) => {
-  if (!initialBulkMetersLoaded || bulkMeters.length === 0) { // Also re-init if empty
+  if (!initialBulkMetersLoaded || bulkMeters.length === 0) {
     bulkMeters = [...initialData];
     initialBulkMetersLoaded = true;
     notifyBulkMeterListeners();
+  }
+};
+
+export const initializeBranches = (initialData: Branch[]) => { // Added branch initializer
+  if (!initialBranchesLoaded || branches.length === 0) {
+    branches = [...initialData];
+    initialBranchesLoaded = true;
+    notifyBranchListeners();
   }
 };
 
@@ -43,12 +53,13 @@ export const initializeBulkMeters = (initialData: BulkMeter[]) => {
 // Getters
 export const getCustomers = (): IndividualCustomer[] => [...customers];
 export const getBulkMeters = (): BulkMeter[] => [...bulkMeters];
+export const getBranches = (): Branch[] => [...branches]; // Added branch getter
 
 // Actions for Individual Customers
 export const addCustomer = (customerData: Omit<IndividualCustomer, 'id'>) => {
   const newCustomer: IndividualCustomer = {
     ...customerData,
-    id: `cust_${Date.now().toString()}_${Math.random().toString(36).substring(2, 7)}`, // More unique ID
+    id: `cust_${Date.now().toString()}_${Math.random().toString(36).substring(2, 7)}`,
   };
   customers = [newCustomer, ...customers];
   notifyCustomerListeners();
@@ -69,7 +80,7 @@ export const deleteCustomer = (customerId: string) => {
 export const addBulkMeter = (bulkMeterData: Omit<BulkMeter, 'id'>) => {
    const newBulkMeter: BulkMeter = {
     ...bulkMeterData,
-    id: `bm_${Date.now().toString()}_${Math.random().toString(36).substring(2, 7)}`, // More unique ID
+    id: `bm_${Date.now().toString()}_${Math.random().toString(36).substring(2, 7)}`,
   };
   bulkMeters = [newBulkMeter, ...bulkMeters];
   notifyBulkMeterListeners();
@@ -86,19 +97,49 @@ export const deleteBulkMeter = (bulkMeterId: string) => {
   notifyBulkMeterListeners();
 };
 
+// Actions for Branches
+export const addBranch = (branchData: Omit<Branch, 'id'>) => {
+  const newBranch: Branch = {
+    ...branchData,
+    id: `br_${Date.now().toString()}_${Math.random().toString(36).substring(2, 7)}`,
+  };
+  branches = [newBranch, ...branches];
+  notifyBranchListeners();
+  return newBranch;
+};
+
+export const updateBranch = (updatedBranch: Branch) => {
+  branches = branches.map(b => b.id === updatedBranch.id ? updatedBranch : b);
+  notifyBranchListeners();
+};
+
+export const deleteBranch = (branchId: string) => {
+  branches = branches.filter(b => b.id !== branchId);
+  notifyBranchListeners();
+};
+
+
 // Subscribe functions
 export const subscribeToCustomers = (listener: Listener<IndividualCustomer>): (() => void) => {
   customerListeners.add(listener);
-  listener([...customers]); // Immediately notify with current data
-  return () => { // Unsubscribe
+  listener([...customers]); 
+  return () => { 
     customerListeners.delete(listener);
   };
 };
 
 export const subscribeToBulkMeters = (listener: Listener<BulkMeter>): (() => void) => {
   bulkMeterListeners.add(listener);
-  listener([...bulkMeters]); // Immediately notify with current data
-  return () => { // Unsubscribe
+  listener([...bulkMeters]); 
+  return () => { 
     bulkMeterListeners.delete(listener);
+  };
+};
+
+export const subscribeToBranches = (listener: Listener<Branch>): (() => void) => { // Added branch subscription
+  branchListeners.add(listener);
+  listener([...branches]);
+  return () => {
+    branchListeners.delete(listener);
   };
 };

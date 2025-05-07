@@ -24,3 +24,5 @@ export type IndividualCustomer = z.infer<typeof individualCustomerDataEntrySchem
   calculatedBill: number; 
 };
 
+export const TARIFF_RATE = 5.50; // ETB per m³
+

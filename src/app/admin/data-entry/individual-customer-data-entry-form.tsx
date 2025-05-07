@@ -26,7 +26,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 import { addCustomer as addCustomerToStore, getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, initializeCustomers } from "@/lib/data-store";
-import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
+import type { IndividualCustomer } from "../individual-customers/individual-customer-types"; // For Omit type
+import { TARIFF_RATE } from "../individual-customers/individual-customer-types"; // Import TARIFF_RATE
 import { initialBulkMeters as defaultInitialBulkMeters } from "../bulk-meters/page";
 import { initialCustomers as defaultInitialCustomers } from "../individual-customers/page";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -72,17 +73,22 @@ export function IndividualCustomerDataEntryForm() {
   });
 
   function onSubmit(data: IndividualCustomerDataEntryFormValues) {
-    const processedData = { ...data };
+    const usage = data.currentReading - data.previousReading;
+    const calculatedBill = usage * TARIFF_RATE;
 
-    // Add status to the data before sending to store, as store expects it for addCustomer
-    const customerDataForStore = { ...processedData, status: "Active" } as const; // Default to Active for new entries
+    const customerDataForStore: Omit<IndividualCustomer, 'id'> = {
+      ...data,
+      status: "Active", 
+      paymentStatus: "Unpaid", 
+      calculatedBill: calculatedBill,
+    };
     
     addCustomerToStore(customerDataForStore);
     toast({
       title: "Data Entry Submitted",
-      description: `Data for individual customer ${processedData.name} has been successfully recorded.`,
+      description: `Data for individual customer ${data.name} has been successfully recorded.`,
     });
-    form.reset(); // Reset form after successful submission
+    form.reset(); 
   }
 
   return (
@@ -108,6 +114,7 @@ export function IndividualCustomerDataEntryForm() {
                           {availableBulkMeters.map((bm) => (
                             <SelectItem key={bm.id} value={bm.id}>{bm.name}</SelectItem>
                           ))}
+                           {availableBulkMeters.length === 0 && <SelectItem value="loading-bms" disabled>Loading bulk meters...</SelectItem>}
                         </SelectContent>
                       </Select>
                       <FormDescription>If this customer's meter is sub-metered under a bulk meter.</FormDescription>

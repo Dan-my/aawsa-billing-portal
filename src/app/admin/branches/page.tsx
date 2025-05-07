@@ -11,8 +11,16 @@ import { useToast } from "@/hooks/use-toast";
 import type { Branch } from "./branch-types";
 import { BranchFormDialog } from "./branch-form-dialog";
 import { BranchTable } from "./branch-table";
+import { 
+  getBranches, 
+  addBranch as addBranchToStore, 
+  updateBranch as updateBranchInStore, 
+  deleteBranch as deleteBranchFromStore,
+  subscribeToBranches,
+  initializeBranches
+} from "@/lib/data-store";
 
-const initialBranches: Branch[] = [
+const initialBranchesData: Branch[] = [
   { id: "1", name: "Kality Branch", location: "Kality Sub-City, Woreda 05", contactPerson: "Abebe Kebede", contactPhone: "0911123456", status: "Active" },
   { id: "2", name: "Bole Branch", location: "Bole Sub-City, Near Airport", contactPerson: "Chaltu Lemma", contactPhone: "0912987654", status: "Active" },
   { id: "3", name: "Piassa Branch", location: "Arada Sub-City, Piassa", contactPerson: "Yosef Tadesse", contactPhone: "0913112233", status: "Inactive" },
@@ -21,12 +29,18 @@ const initialBranches: Branch[] = [
 
 export default function BranchesPage() {
   const { toast } = useToast();
-  const [branches, setBranches] = React.useState<Branch[]>(initialBranches);
+  const [branches, setBranches] = React.useState<Branch[]>(getBranches());
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [selectedBranch, setSelectedBranch] = React.useState<Branch | null>(null);
   const [branchToDelete, setBranchToDelete] = React.useState<Branch | null>(null);
+
+  React.useEffect(() => {
+    initializeBranches(initialBranchesData); // Initialize if store is empty
+    const unsubscribe = subscribeToBranches(setBranches);
+    return () => unsubscribe();
+  }, []);
 
   const handleAddBranch = () => {
     setSelectedBranch(null);
@@ -45,7 +59,7 @@ export default function BranchesPage() {
 
   const confirmDelete = () => {
     if (branchToDelete) {
-      setBranches(branches.filter(b => b.id !== branchToDelete.id));
+      deleteBranchFromStore(branchToDelete.id);
       toast({ title: "Branch Deleted", description: `${branchToDelete.name} has been removed.` });
       setBranchToDelete(null);
     }
@@ -53,15 +67,16 @@ export default function BranchesPage() {
   };
 
   const handleSubmitBranch = (data: Omit<Branch, 'id'> & { id?: string }) => {
-    if (selectedBranch) {
+    if (selectedBranch && data.id) {
       // Edit existing branch
-      setBranches(branches.map(b => b.id === selectedBranch.id ? { ...b, ...data, id: selectedBranch.id } : b));
+      updateBranchInStore({ ...selectedBranch, ...data, id: selectedBranch.id });
       toast({ title: "Branch Updated", description: `${data.name} has been updated.` });
     } else {
       // Add new branch
-      const newBranch: Branch = { ...data, id: Date.now().toString() };
-      setBranches([newBranch, ...branches]);
-      toast({ title: "Branch Added", description: `${newBranch.name} has been added.` });
+      const newBranchData = { ...data } as Omit<Branch, 'id'>; // Cast to ensure no ID is passed for new branch creation
+      delete (newBranchData as any).id; // Explicitly remove id property if present
+      addBranchToStore(newBranchData);
+      toast({ title: "Branch Added", description: `${data.name} has been added.` });
     }
     setIsFormOpen(false);
     setSelectedBranch(null);

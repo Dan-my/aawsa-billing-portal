@@ -92,7 +92,7 @@ export function IndividualCustomerDataEntryForm() {
   }
 
   return (
-    <ScrollArea className="h-[calc(100vh-220px)] md:h-[calc(100vh-200px)]">
+    <ScrollArea className="h-[calc(100vh-280px)]"> {/* Adjusted height */}
       <Card className="shadow-lg w-full">
         <CardContent className="pt-6">
           <Form {...form}>
@@ -167,7 +167,7 @@ export function IndividualCustomerDataEntryForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Customer Type *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select customer type" />
@@ -363,7 +363,7 @@ export function IndividualCustomerDataEntryForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Sewerage Connection *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select sewerage connection status" />

@@ -69,7 +69,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
   }
 
   return (
-    <ScrollArea className="h-auto max-h-[calc(100vh-300px)]"> {/* Adjusted height */}
+    <ScrollArea className="h-[calc(100vh-380px)]"> {/* Adjusted height */}
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-1">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

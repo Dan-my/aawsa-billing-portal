@@ -64,7 +64,7 @@ export function BulkMeterDataEntryForm() {
   }
 
   return (
-    <ScrollArea className="h-[calc(100vh-220px)] md:h-[calc(100vh-200px)]">
+    <ScrollArea className="h-[calc(100vh-280px)]"> {/* Adjusted height */}
       <Card className="shadow-lg w-full">
         <CardContent className="pt-6">
           <Form {...form}>
@@ -260,3 +260,4 @@ export function BulkMeterDataEntryForm() {
     </ScrollArea>
   );
 }
+

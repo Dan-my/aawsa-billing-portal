@@ -9,6 +9,9 @@ import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { getBulkMeters, subscribeToBulkMeters, initializeBulkMeters } from "@/lib/data-store";
+import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
+import { initialBulkMeters } from "../bulk-meters/page";
 
 
 const totalBillsData = [
@@ -51,6 +54,22 @@ const chartConfig = {
 export default function AdminDashboardPage() {
   const [showBranchPerformanceTable, setShowBranchPerformanceTable] = React.useState(false);
   const [showWaterUsageTable, setShowWaterUsageTable] = React.useState(false);
+  const [totalBulkMeters, setTotalBulkMeters] = React.useState<number>(0);
+
+  React.useEffect(() => {
+    if (getBulkMeters().length === 0) {
+      initializeBulkMeters(initialBulkMeters);
+    }
+    
+    const updateBulkMeterCount = (meters: BulkMeter[]) => {
+      setTotalBulkMeters(meters.length);
+    };
+    
+    updateBulkMeterCount(getBulkMeters()); // Initial count
+    const unsubscribe = subscribeToBulkMeters(updateBulkMeterCount);
+    return () => unsubscribe();
+  }, []);
+
 
   return (
     <div className="space-y-6">
@@ -109,14 +128,14 @@ export default function AdminDashboardPage() {
 
          <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Branches</CardTitle>
-            <Building className="h-5 w-5 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total Bulk Meters</CardTitle>
+            <Gauge className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">5</div>
-            <p className="text-xs text-muted-foreground">Currently operational branches</p>
+            <div className="text-2xl font-bold">{totalBulkMeters}</div>
+            <p className="text-xs text-muted-foreground">Total registered bulk meters</p>
              <div className="h-[120px] mt-4 flex items-center justify-center">
-                <Building className="h-16 w-16 text-primary opacity-50" />
+                <Gauge className="h-16 w-16 text-primary opacity-50" />
             </div>
           </CardContent>
         </Card>

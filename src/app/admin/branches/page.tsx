@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -9,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { Branch } from "./branch-types";
-import { BranchFormDialog } from "./branch-form-dialog";
+import { BranchFormDialog, type BranchFormValues } from "./branch-form-dialog"; // Import BranchFormValues
 import { BranchTable } from "./branch-table";
 import { 
   getBranches, 
@@ -66,16 +65,22 @@ export default function BranchesPage() {
     setIsDeleteDialogOpen(false);
   };
 
-  const handleSubmitBranch = (data: Omit<Branch, 'id'> & { id?: string }) => {
-    if (selectedBranch && data.id) {
+  const handleSubmitBranch = (data: BranchFormValues) => {
+    if (selectedBranch) {
       // Edit existing branch
-      updateBranchInStore({ ...selectedBranch, ...data, id: selectedBranch.id });
+      const updatedBranchData: Branch = {
+        id: selectedBranch.id, // Keep original ID
+        name: data.name,
+        location: data.location,
+        contactPerson: data.contactPerson,
+        contactPhone: data.contactPhone,
+        status: data.status,
+      };
+      updateBranchInStore(updatedBranchData);
       toast({ title: "Branch Updated", description: `${data.name} has been updated.` });
     } else {
       // Add new branch
-      const newBranchData = { ...data } as Omit<Branch, 'id'>; // Cast to ensure no ID is passed for new branch creation
-      delete (newBranchData as any).id; // Explicitly remove id property if present
-      addBranchToStore(newBranchData);
+      addBranchToStore(data); // data (BranchFormValues) matches Omit<Branch, 'id'>
       toast({ title: "Branch Added", description: `${data.name} has been added.` });
     }
     setIsFormOpen(false);
@@ -153,3 +158,4 @@ export default function BranchesPage() {
     </div>
   );
 }
+

@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -20,19 +19,16 @@ import {
   deleteCustomer as deleteCustomerFromStore,
   subscribeToBulkMeters,
   subscribeToCustomers,
-  initializeBulkMeters, // Added
-  initializeCustomers,  // Added
+  initializeBulkMeters, 
+  initializeCustomers,  
 } from "@/lib/data-store";
-import type { BulkMeter, BulkMeterStatus } from "../bulk-meter-types";
-import type { IndividualCustomer, IndividualCustomerStatus, PaymentStatus } from "../../individual-customers/individual-customer-types";
-import { TARIFF_RATE } from "../../individual-customers/individual-customer-types"; // Import TARIFF_RATE
-import { BulkMeterFormDialog } from "../bulk-meter-form-dialog";
-import { IndividualCustomerFormDialog } from "../../individual-customers/individual-customer-form-dialog";
+import type { BulkMeter } from "../bulk-meter-types";
+import type { IndividualCustomer } from "../../individual-customers/individual-customer-types";
+import { TARIFF_RATE } from "../../individual-customers/individual-customer-types"; 
+import { BulkMeterFormDialog, type BulkMeterFormValues } from "../bulk-meter-form-dialog"; // Import BulkMeterFormValues
+import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "../../individual-customers/individual-customer-form-dialog"; // Import IndividualCustomerFormValues
 import { initialBulkMeters as defaultInitialBulkMeters } from "../page"; 
 import { initialCustomers as defaultInitialCustomers } from "../../individual-customers/page"; 
-
-type BulkMeterFormData = Omit<BulkMeter, 'id'> & { id?: string; status: BulkMeterStatus };
-type IndividualCustomerFormData = Omit<IndividualCustomer, 'id' | 'calculatedBill'> & { id?: string; status: IndividualCustomerStatus; paymentStatus: PaymentStatus };
 
 
 export default function BulkMeterDetailsPage() {
@@ -54,7 +50,6 @@ export default function BulkMeterDetailsPage() {
   const [isCustomerDeleteDialogOpen, setIsCustomerDeleteDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
-    // Initialize stores if they are empty
     if (getBulkMeters().length === 0) {
       initializeBulkMeters(defaultInitialBulkMeters);
     }
@@ -75,7 +70,7 @@ export default function BulkMeterDetailsPage() {
         const associated = currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId);
         setAssociatedCustomers(associated);
       } else {
-        if (storesConsideredInitialized) { // Only redirect if stores were populated and item not found
+        if (storesConsideredInitialized) { 
           toast({ title: "Bulk Meter Not Found", description: "This bulk meter may not exist or has been deleted.", variant: "destructive" });
           router.push("/admin/bulk-meters");
         }
@@ -110,9 +105,10 @@ export default function BulkMeterDetailsPage() {
     }
     setIsBulkMeterDeleteDialogOpen(false);
   };
-  const handleSubmitBulkMeterForm = (data: BulkMeterFormData) => {
+  const handleSubmitBulkMeterForm = (data: BulkMeterFormValues) => {
     if (bulkMeter) {
-        updateBulkMeterInStore({ ...bulkMeter, ...data, id: bulkMeter.id});
+        const updatedBulkMeter: BulkMeter = { ...bulkMeter, ...data, id: bulkMeter.id };
+        updateBulkMeterInStore(updatedBulkMeter);
         toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
     }
     setIsBulkMeterFormOpen(false);
@@ -135,13 +131,20 @@ export default function BulkMeterDetailsPage() {
     setCustomerToDelete(null);
     setIsCustomerDeleteDialogOpen(false);
   };
-  const handleSubmitCustomerForm = (data: IndividualCustomerFormData) => {
-    const usage = data.currentReading - data.previousReading;
-    const calculatedBill = usage * TARIFF_RATE;
-    const customerDataWithBill: IndividualCustomer = { ...data, calculatedBill, id: selectedCustomer!.id };
-    
-    updateCustomerInStore(customerDataWithBill);
-    toast({ title: "Customer Updated", description: `${data.name} has been updated.` });
+  const handleSubmitCustomerForm = (data: IndividualCustomerFormValues) => {
+    if (selectedCustomer) {
+      const usage = data.currentReading - data.previousReading;
+      const calculatedBill = usage * TARIFF_RATE;
+      const updatedCustomerData: IndividualCustomer = { 
+          ...selectedCustomer, // Spread existing customer data first
+          ...data, // Then spread form values which will overwrite relevant fields
+          id: selectedCustomer.id, // Ensure ID is preserved
+          calculatedBill 
+      };
+      
+      updateCustomerInStore(updatedCustomerData);
+      toast({ title: "Customer Updated", description: `${data.name} has been updated.` });
+    }
     
     setIsCustomerFormOpen(false);
     setSelectedCustomer(null);
@@ -298,13 +301,12 @@ export default function BulkMeterDetailsPage() {
       </AlertDialog>
 
       {/* Individual Customer Edit/Delete Dialogs */}
-      {selectedCustomer && bulkMeter && ( // Ensure bulkMeter is not null for context
+      {selectedCustomer && bulkMeter && ( 
           <IndividualCustomerFormDialog
             open={isCustomerFormOpen}
             onOpenChange={setIsCustomerFormOpen}
             onSubmit={handleSubmitCustomerForm}
             defaultValues={selectedCustomer}
-            // Pass current bulk meter only for context, useful if the form needs its ID/name
             bulkMeters={[{id: bulkMeter.id, name: bulkMeter.name}]} 
           />
       )}

@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -8,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import type { BulkMeter, BulkMeterStatus } from "./bulk-meter-types";
-import { BulkMeterFormDialog } from "./bulk-meter-form-dialog";
+import type { BulkMeter } from "./bulk-meter-types";
+import { BulkMeterFormDialog, type BulkMeterFormValues } from "./bulk-meter-form-dialog"; // Import BulkMeterFormValues
 import { BulkMeterTable } from "./bulk-meter-table";
 import { 
   getBulkMeters, 
@@ -25,8 +24,6 @@ export const initialBulkMeters: BulkMeter[] = [
   { id: "bm002", name: "Bole Airport Feeder", customerKeyNumber: "BMB002", contractNumber: "BMC002", meterSize: 4, meterNumber: "MTR-BM-002", previousReading: 25000, currentReading: 26500, month: "2023-11", specificArea: "Airport Cargo", location: "Bole", ward: "Woreda 1", status: "Active" },
   { id: "bm003", name: "Megenagna Res. Supply", customerKeyNumber: "BMM003", contractNumber: "BMC003", meterSize: 2.5, meterNumber: "MTR-BM-003", previousReading: 5000, currentReading: 5200, month: "2023-11", specificArea: "Block 10", location: "Megenagna", ward: "Woreda 8", status: "Maintenance" },
 ];
-
-type BulkMeterFormData = Omit<BulkMeter, 'id'> & { id?: string; status: BulkMeterStatus };
 
 
 export default function BulkMetersPage() {
@@ -68,14 +65,16 @@ export default function BulkMetersPage() {
     setIsDeleteDialogOpen(false);
   };
 
-  const handleSubmitBulkMeter = (data: BulkMeterFormData) => {
-    if (selectedBulkMeter && data.id) {
-      updateBulkMeterInStore({ ...selectedBulkMeter, ...data, id: selectedBulkMeter.id });
+  const handleSubmitBulkMeter = (data: BulkMeterFormValues) => {
+    if (selectedBulkMeter) {
+      const updatedBulkMeterData: BulkMeter = {
+        id: selectedBulkMeter.id,
+        ...data, // Spread form values
+      };
+      updateBulkMeterInStore(updatedBulkMeterData);
       toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
     } else {
-      const newBulkMeterData = { ...data } as Omit<BulkMeter, 'id'>;
-      delete (newBulkMeterData as any).id;
-      addBulkMeterToStore(newBulkMeterData);
+      addBulkMeterToStore(data); // data (BulkMeterFormValues) matches Omit<BulkMeter, 'id'>
       toast({ title: "Bulk Meter Added", description: `${data.name} has been added.` });
     }
     setIsFormOpen(false);
@@ -154,3 +153,4 @@ export default function BulkMetersPage() {
     </div>
   );
 }
+

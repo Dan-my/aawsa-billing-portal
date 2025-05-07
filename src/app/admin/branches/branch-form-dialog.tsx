@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -36,7 +35,7 @@ const formSchema = z.object({
   status: z.enum(branchStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
 });
 
-type BranchFormValues = z.infer<typeof formSchema>;
+export type BranchFormValues = z.infer<typeof formSchema>; // Export the type
 
 interface BranchFormDialogProps {
   open: boolean;
@@ -151,7 +150,7 @@ export function BranchFormDialog({ open, onOpenChange, onSubmit, defaultValues }
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value || undefined}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select status" />
@@ -179,3 +178,4 @@ export function BranchFormDialog({ open, onOpenChange, onSubmit, defaultValues }
     </Dialog>
   );
 }
+

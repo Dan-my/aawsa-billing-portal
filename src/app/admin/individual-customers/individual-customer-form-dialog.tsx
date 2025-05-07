@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -30,28 +29,25 @@ import {
   customerTypes, 
   sewerageConnections,
 } from "@/app/admin/data-entry/customer-data-entry-types";
-import type { IndividualCustomer, PaymentStatus } from "./individual-customer-types"; // Added PaymentStatus
-import { individualCustomerStatuses, paymentStatuses } from "./individual-customer-types"; // Added paymentStatuses
+import type { IndividualCustomer } from "./individual-customer-types"; 
+import { individualCustomerStatuses, paymentStatuses } from "./individual-customer-types"; 
 import { getBulkMeters, subscribeToBulkMeters } from "@/lib/data-store"; 
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse } from "date-fns";
 
 
-// Extend the base schema from data entry to include status and paymentStatus for management purposes
 const individualCustomerFormObjectSchema = baseIndividualCustomerDataSchema.extend({
   status: z.enum(individualCustomerStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
   paymentStatus: z.enum(paymentStatuses, { errorMap: () => ({ message: "Please select a valid payment status."}) }),
-  // calculatedBill is derived, not part of the form input for editing, but will be part of the type
 });
 
-// Re-apply the refinement to the extended schema
 const individualCustomerFormSchema = individualCustomerFormObjectSchema.refine(data => data.currentReading >= data.previousReading, {
   message: "Current Reading must be greater than or equal to Previous Reading.",
   path: ["currentReading"],
 });
 
 
-type IndividualCustomerFormValues = z.infer<typeof individualCustomerFormSchema>;
+export type IndividualCustomerFormValues = z.infer<typeof individualCustomerFormSchema>; // Export the type
 
 interface IndividualCustomerFormDialogProps {
   open: boolean;
@@ -84,13 +80,19 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
       sewerageConnection: undefined,
       assignedBulkMeterId: undefined,
       status: undefined,
-      paymentStatus: undefined, // Added
+      paymentStatus: undefined,
     },
   });
 
   React.useEffect(() => {
     if (!propBulkMeters || propBulkMeters.length === 0) {
-        setDynamicBulkMeters(getBulkMeters().map(bm => ({ id: bm.id, name: bm.name })));
+        const fetchedBms = getBulkMeters().map(bm => ({ id: bm.id, name: bm.name }));
+        setDynamicBulkMeters(fetchedBms);
+        if (fetchedBms.length === 0 && open) { // Only if dialog is open and no BMs initially
+            // Optionally, you can add a toast or log here if no bulk meters are available
+            // This helps in debugging if the bulk meter list is expected but empty.
+            console.warn("IndividualCustomerFormDialog: No bulk meters available on mount.");
+        }
     } else {
          setDynamicBulkMeters(propBulkMeters); 
     }
@@ -99,7 +101,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
       setDynamicBulkMeters(updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
     });
     return () => unsubscribe();
-  }, [propBulkMeters]);
+  }, [propBulkMeters, open]); // Added `open` to re-check if dialog opens and propBulkMeters are still empty
 
   React.useEffect(() => {
     if (defaultValues) {
@@ -109,8 +111,8 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         meterSize: defaultValues.meterSize ?? undefined,
         previousReading: defaultValues.previousReading ?? undefined,
         currentReading: defaultValues.currentReading ?? undefined,
-        assignedBulkMeterId: defaultValues.assignedBulkMeterId,
-        paymentStatus: defaultValues.paymentStatus ?? undefined, // Added
+        assignedBulkMeterId: defaultValues.assignedBulkMeterId, // Ensure this is set
+        paymentStatus: defaultValues.paymentStatus ?? undefined, 
       });
     } else {
       form.reset({
@@ -131,14 +133,13 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         sewerageConnection: undefined,
         assignedBulkMeterId: undefined, 
         status: undefined,
-        paymentStatus: undefined, // Added
+        paymentStatus: undefined, 
       });
     }
   }, [defaultValues, form, open]);
 
   const handleSubmit = (data: IndividualCustomerFormValues) => {
-    const processedData = { ...data };
-    onSubmit(processedData);
+    onSubmit(data); // Pass validated data directly
     onOpenChange(false);
   };
 
@@ -160,7 +161,11 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Assign to Bulk Meter *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
+                    <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value || undefined} 
+                        defaultValue={field.value || undefined}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a bulk meter" />
@@ -170,7 +175,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                         {dynamicBulkMeters.map((bm) => (
                           <SelectItem key={bm.id} value={bm.id}>{bm.name}</SelectItem>
                         ))}
-                        {dynamicBulkMeters.length === 0 && <SelectItem value="loading" disabled>Loading bulk meters...</SelectItem>}
+                        {dynamicBulkMeters.length === 0 && <SelectItem value="no-bms-available" disabled>No bulk meters available</SelectItem>}
                       </SelectContent>
                     </Select>
                     <FormDescription>If this customer's meter is sub-metered under a bulk meter.</FormDescription>
@@ -223,7 +228,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Customer Type *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select customer type" />
@@ -421,7 +426,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Sewerage Connection *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select sewerage connection status" />
@@ -443,7 +448,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Customer Status *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select customer status" />
@@ -465,7 +470,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Bill Payment Status *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select payment status" />

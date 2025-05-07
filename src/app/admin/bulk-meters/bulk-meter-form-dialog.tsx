@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -44,7 +43,7 @@ const bulkMeterFormSchema = bulkMeterFormObjectSchema.refine(data => data.curren
 });
 
 
-type BulkMeterFormValues = z.infer<typeof bulkMeterFormSchema>;
+export type BulkMeterFormValues = z.infer<typeof bulkMeterFormSchema>; // Export the type
 
 interface BulkMeterFormDialogProps {
   open: boolean;
@@ -76,7 +75,6 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
     if (defaultValues) {
       form.reset({
         ...defaultValues,
-        // Ensure numeric fields are correctly set or reset if they are undefined/null in defaultValues
         meterSize: defaultValues.meterSize ?? undefined,
         previousReading: defaultValues.previousReading ?? undefined,
         currentReading: defaultValues.currentReading ?? undefined,
@@ -302,7 +300,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select status" />
@@ -331,3 +329,4 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
     </Dialog>
   );
 }
+

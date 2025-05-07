@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -8,11 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import type { IndividualCustomer, IndividualCustomerStatus, PaymentStatus } from "./individual-customer-types";
-import { TARIFF_RATE } from "./individual-customer-types"; // Import TARIFF_RATE
-import { IndividualCustomerFormDialog } from "./individual-customer-form-dialog";
+import type { IndividualCustomer } from "./individual-customer-types";
+import { TARIFF_RATE } from "./individual-customer-types"; 
+import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "./individual-customer-form-dialog"; // Import IndividualCustomerFormValues
 import { IndividualCustomerTable } from "./individual-customer-table";
-// import { mockBulkMeters_DEPRECATED as staticMockBulkMeters } from "@/app/admin/data-entry/customer-data-entry-types";
 import { 
   getCustomers, 
   addCustomer as addCustomerToStore, 
@@ -24,10 +22,10 @@ import {
   subscribeToBulkMeters,
   initializeBulkMeters,
 } from "@/lib/data-store";
-import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
+// import type { BulkMeter } from "../bulk-meters/bulk-meter-types"; // Not directly used here, but good for context
 import { initialBulkMeters as defaultInitialBulkMeters } from "../bulk-meters/page";
-import { initialCustomers as defaultInitialCustomers } from "../../individual-customers/page"; 
-
+// The local initialCustomers is now the default, we'll rename the import for clarity if needed, or ensure it aligns.
+// For this example, we assume 'initialCustomers' defined here is the one to use for initialization.
 
 export const initialCustomers: IndividualCustomer[] = [
   { id: "cust001", name: "Abebe Bikila", customerKeyNumber: "CUST001", contractNumber: "CON001", customerType: "Domestic", bookNumber: "B001", ordinal: 1, meterSize: 0.5, meterNumber: "MTR001", previousReading: 100, currentReading: 120, month: "2023-11", specificArea: "Kebele 1, House 101", location: "Bole", ward: "Woreda 3", sewerageConnection: "Yes", status: "Active", assignedBulkMeterId: "bm001", paymentStatus: "Paid", calculatedBill: (120-100) * TARIFF_RATE },
@@ -35,8 +33,6 @@ export const initialCustomers: IndividualCustomer[] = [
   { id: "cust003", name: "Haile Gebrselassie", customerKeyNumber: "CUST003", contractNumber: "CON003", customerType: "Non-domestic", bookNumber: "B002", ordinal: 1, meterSize: 1, meterNumber: "MTR003", previousReading: 500, currentReading: 600, month: "2023-11", specificArea: "Industrial Area, Plot 3", location: "Megenagna", ward: "Woreda 7", sewerageConnection: "Yes", status: "Inactive", assignedBulkMeterId: "bm003", paymentStatus: "Paid", calculatedBill: (600-500) * TARIFF_RATE},
 ];
 
-// Type for form submission, merging IndividualCustomer (excluding id) with optional id and required status.
-type IndividualCustomerFormData = Omit<IndividualCustomer, 'id' | 'calculatedBill'> & { id?: string; status: IndividualCustomerStatus; paymentStatus: PaymentStatus };
 
 export default function IndividualCustomersPage() {
   const { toast } = useToast();
@@ -52,13 +48,12 @@ export default function IndividualCustomersPage() {
     if (getBulkMeters().length === 0) {
       initializeBulkMeters(defaultInitialBulkMeters);
     }
-    // Update bulkMetersList from the store whenever it changes
     const unsubscribeBulkMeters = subscribeToBulkMeters((updatedBulkMeters) => {
       setBulkMetersList(updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
     });
 
     if (getCustomers().length === 0) {
-       initializeCustomers(initialCustomers);
+       initializeCustomers(initialCustomers); // Use the locally defined initialCustomers
     }
     const unsubscribeCustomers = subscribeToCustomers(setCustomers);
     
@@ -92,26 +87,25 @@ export default function IndividualCustomersPage() {
     setIsDeleteDialogOpen(false);
   };
 
-  const handleSubmitCustomer = (data: IndividualCustomerFormData) => {
+  const handleSubmitCustomer = (data: IndividualCustomerFormValues) => {
     const usage = data.currentReading - data.previousReading;
     const calculatedBill = usage * TARIFF_RATE;
     
     if (selectedCustomer) { 
-      const customerDataWithBill: IndividualCustomer = { 
-        ...data, 
+      const updatedCustomerData: IndividualCustomer = { 
+        id: selectedCustomer.id, // Keep original ID
+        ...data, // Spread form values
         calculatedBill,
-        id: selectedCustomer.id 
       };
-      updateCustomerInStore(customerDataWithBill);
+      updateCustomerInStore(updatedCustomerData);
       toast({ title: "Customer Updated", description: `${data.name} has been updated.` });
     } else {
       // For new customer
-      const newCustomerDataForStore: Omit<IndividualCustomer, 'id'> = {
-        ...data,
+      const newCustomerData: Omit<IndividualCustomer, 'id'> = {
+        ...data, // Spread form values
         calculatedBill,
-        // id is handled by addCustomerToStore
       };
-      addCustomerToStore(newCustomerDataForStore); 
+      addCustomerToStore(newCustomerData); 
       toast({ title: "Customer Added", description: `${data.name} has been added.` });
     }
     setIsFormOpen(false);

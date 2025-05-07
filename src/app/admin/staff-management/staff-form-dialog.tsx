@@ -29,19 +29,19 @@ import { Label } from "@/components/ui/label";
 
 const staffRoles: StaffRole[] = ['Manager', 'Cashier', 'Technician', 'Support', 'Data Entry Clerk', 'Admin Assistant'];
 const staffStatuses: StaffStatus[] = ['Active', 'Inactive', 'On Leave'];
-const availableBranches = ["Kality Branch", "Central Branch", "North Branch", "South Branch", "East Branch", "West Branch"]; // Mock branches
+const availableBranches = ["Kality Branch", "Central Branch", "North Branch", "South Branch", "East Branch", "West Branch", "Bole Branch", "Piassa Branch", "Megenagna Branch"]; // Added more mock branches for consistency
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  email: z.string().email({ message: "Invalid email address." }),
+  email: z.string().email({ message: "Invalid email address." }).regex(/^[a-zA-Z0-9._%+-]+@aawsa\.com$/, { message: "Email must be a valid @aawsa.com address (e.g. kality@aawsa.com)"}),
+  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
   role: z.enum(staffRoles, { errorMap: () => ({ message: "Please select a valid role."}) }),
   branch: z.string().min(1, { message: "Branch is required." }),
   status: z.enum(staffStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
   phone: z.string().optional(),
-  // hireDate: z.string().optional(), // Can be added with a date picker
 });
 
-type StaffFormValues = z.infer<typeof formSchema>;
+export type StaffFormValues = z.infer<typeof formSchema>;
 
 interface StaffFormDialogProps {
   open: boolean;
@@ -56,9 +56,10 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
     defaultValues: {
       name: "",
       email: "",
-      role: undefined, // Set to undefined for placeholder to work
+      password: "",
+      role: undefined,
       branch: "",
-      status: undefined, // Set to undefined for placeholder to work
+      status: undefined,
       phone: "",
     },
   });
@@ -68,6 +69,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
       form.reset({
         name: defaultValues.name,
         email: defaultValues.email,
+        password: defaultValues.password || "", // Default to empty string if not set, but should be required on add
         role: defaultValues.role,
         branch: defaultValues.branch,
         status: defaultValues.status,
@@ -77,17 +79,18 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
       form.reset({
         name: "",
         email: "",
+        password: "",
         role: undefined,
         branch: "",
         status: undefined,
         phone: "",
       });
     }
-  }, [defaultValues, form, open]); // Added open to reset form when dialog re-opens for new entry
+  }, [defaultValues, form, open]);
 
   const handleSubmit = (data: StaffFormValues) => {
     onSubmit(data);
-    onOpenChange(false); // Close dialog after submit
+    onOpenChange(false); 
   };
 
   return (
@@ -119,9 +122,22 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>Email (Login ID)</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="e.g., john.doe@example.com" {...field} />
+                    <Input type="email" placeholder="e.g., kality@aawsa.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="••••••••" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -146,7 +162,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Role</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a role" />
@@ -168,7 +184,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Branch</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a branch" />
@@ -190,7 +206,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select status" />
@@ -218,3 +234,4 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
     </Dialog>
   );
 }
+

@@ -9,24 +9,46 @@ import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { StaffMember } from "./staff-types";
-import { StaffFormDialog } from "./staff-form-dialog";
+import { StaffFormDialog, type StaffFormValues } from "./staff-form-dialog";
 import { StaffTable } from "./staff-table";
 
+const STAFF_STORAGE_KEY = "aawsa-staff-members";
+
 const initialStaffMembers: StaffMember[] = [
-  { id: "1", name: "Alice Wonderland", email: "alice@example.com", role: "Manager", branch: "Kality Branch", status: "Active" },
-  { id: "2", name: "Bob The Builder", email: "bob@example.com", role: "Technician", branch: "Central Branch", status: "Active" },
-  { id: "3", name: "Charlie Brown", email: "charlie@example.com", role: "Cashier", branch: "Kality Branch", status: "Inactive" },
-  { id: "4", name: "Diana Prince", email: "diana@example.com", role: "Support", branch: "North Branch", status: "Active" },
+  { id: "1", name: "Alice Kality", email: "kality@aawsa.com", password: "password", role: "Manager", branch: "Kality Branch", status: "Active" },
+  { id: "2", name: "Bob Central", email: "central@aawsa.com", password: "password", role: "Technician", branch: "Central Branch", status: "Active" },
+  { id: "3", name: "Charlie Bole", email: "bole@aawsa.com", password: "password", role: "Cashier", branch: "Bole Branch", status: "Inactive" },
+  { id: "4", name: "Diana North", email: "north@aawsa.com", password: "password", role: "Support", branch: "North Branch", status: "Active" },
 ];
 
 export default function StaffManagementPage() {
   const { toast } = useToast();
-  const [staffMembers, setStaffMembers] = React.useState<StaffMember[]>(initialStaffMembers);
+  const [staffMembers, setStaffMembers] = React.useState<StaffMember[]>(() => {
+    if (typeof window !== 'undefined') {
+      const storedStaff = localStorage.getItem(STAFF_STORAGE_KEY);
+      if (storedStaff) {
+        try {
+          return JSON.parse(storedStaff);
+        } catch (e) {
+          console.error("Failed to parse staff from localStorage", e);
+          // Fallback to initial if parsing fails
+        }
+      }
+    }
+    return initialStaffMembers;
+  });
+  
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [selectedStaff, setSelectedStaff] = React.useState<StaffMember | null>(null);
   const [staffToDelete, setStaffToDelete] = React.useState<StaffMember | null>(null);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(staffMembers));
+    }
+  }, [staffMembers]);
 
   const handleAddStaff = () => {
     setSelectedStaff(null);
@@ -45,22 +67,24 @@ export default function StaffManagementPage() {
 
   const confirmDelete = () => {
     if (staffToDelete) {
-      setStaffMembers(staffMembers.filter(s => s.id !== staffToDelete.id));
+      setStaffMembers(prevStaff => prevStaff.filter(s => s.id !== staffToDelete.id));
       toast({ title: "Staff Deleted", description: `${staffToDelete.name} has been removed.` });
       setStaffToDelete(null);
     }
     setIsDeleteDialogOpen(false);
   };
 
-  const handleSubmitStaff = (data: Omit<StaffMember, 'id'> & { id?: string }) => {
+  const handleSubmitStaff = (data: StaffFormValues) => {
     if (selectedStaff) {
       // Edit existing staff
-      setStaffMembers(staffMembers.map(s => s.id === selectedStaff.id ? { ...s, ...data, id: selectedStaff.id } : s));
+      setStaffMembers(prevStaff => prevStaff.map(s => 
+        s.id === selectedStaff.id ? { ...s, ...data, id: selectedStaff.id } : s
+      ));
       toast({ title: "Staff Updated", description: `${data.name} has been updated.` });
     } else {
       // Add new staff
       const newStaff: StaffMember = { ...data, id: Date.now().toString() };
-      setStaffMembers([newStaff, ...staffMembers]);
+      setStaffMembers(prevStaff => [newStaff, ...prevStaff]);
       toast({ title: "Staff Added", description: `${newStaff.name} has been added.` });
     }
     setIsFormOpen(false);
@@ -138,3 +162,6 @@ export default function StaffManagementPage() {
     </div>
   );
 }
+
+// Export initial staff members for AuthForm or other components if needed as a fallback
+export { initialStaffMembers as fallbackInitialStaffMembers, STAFF_STORAGE_KEY };

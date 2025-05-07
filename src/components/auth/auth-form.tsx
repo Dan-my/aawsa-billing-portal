@@ -19,6 +19,10 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Droplets } from "lucide-react";
+import type { StaffMember } from "@/app/admin/staff-management/staff-types";
+// Import fallback and storage key
+import { fallbackInitialStaffMembers, STAFF_STORAGE_KEY } from "@/app/admin/staff-management/page";
+
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -27,15 +31,34 @@ const formSchema = z.object({
 
 type UserRole = "admin" | "staff";
 
-interface User {
+interface UserSessionData {
   email: string;
   role: UserRole;
-  branchName?: string; // Added for staff
+  branchName?: string; 
 }
 
 export function AuthForm() {
   const router = useRouter();
   const { toast } = useToast();
+  const [allStaffMembers, setAllStaffMembers] = React.useState<StaffMember[]>(fallbackInitialStaffMembers);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedStaffJson = localStorage.getItem(STAFF_STORAGE_KEY);
+      if (storedStaffJson) {
+        try {
+          const storedStaff = JSON.parse(storedStaffJson);
+          if (Array.isArray(storedStaff)) {
+            setAllStaffMembers(storedStaff);
+          }
+        } catch (e) {
+          console.error("Failed to parse staff from localStorage for auth:", e);
+          // Keep fallback if parsing fails
+        }
+      }
+    }
+  }, []);
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -48,45 +71,45 @@ export function AuthForm() {
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     const { email, password } = values;
 
-    if (password === "password") { // Dummy password check
-      let user: User | null = null;
-      let redirectTo = "";
+    let userSession: UserSessionData | null = null;
+    let redirectTo = "";
 
-      if (email === "admin@aawsa.com") {
-        user = { email, role: "admin" };
-        redirectTo = "/admin/dashboard";
-      } else if (email.endsWith("@aawsa.com") && email !== "admin@aawsa.com") {
-        // Staff login based on branch name convention: [branchname]@aawsa.com
-        const emailParts = email.split("@");
-        const branchIdentifier = emailParts[0];
-        
-        // Convert identifier to a displayable branch name (e.g., "kality" -> "Kality Branch")
-        // This is a simple conversion; a real app might look up branch details.
-        const branchName = branchIdentifier.charAt(0).toUpperCase() + branchIdentifier.slice(1) + " Branch";
-        
-        user = { email, role: "staff", branchName };
-        redirectTo = "/staff/dashboard";
-      }
+    if (email === "admin@aawsa.com" && password === "password") {
+      userSession = { email, role: "admin" };
+      redirectTo = "/admin/dashboard";
+    } else {
+      // Check against staff members
+      const staffUser = allStaffMembers.find(staff => staff.email.toLowerCase() === email.toLowerCase());
 
-      if (user) {
-        localStorage.setItem("user", JSON.stringify(user));
-        toast({
-          title: "Login Successful",
-          description: `Welcome, ${user.role === 'admin' ? user.email : user.branchName}! Redirecting...`,
-        });
-        window.location.assign(redirectTo); // Use assign for full page reload to ensure middleware/layout effects
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Login Failed",
-          description: "Invalid email or password. Use 'admin@aawsa.com' or '[branchname]@aawsa.com' (e.g. kality@aawsa.com) with password 'password'.",
-        });
+      if (staffUser) {
+        if (staffUser.password === password) {
+          if (staffUser.status === "Active") {
+            userSession = { email: staffUser.email, role: "staff", branchName: staffUser.branch };
+            redirectTo = "/staff/dashboard";
+          } else {
+            toast({
+              variant: "destructive",
+              title: "Login Failed",
+              description: "Your account is not active. Please contact an administrator.",
+            });
+            return;
+          }
+        }
       }
+    }
+
+    if (userSession) {
+      localStorage.setItem("user", JSON.stringify(userSession));
+      toast({
+        title: "Login Successful",
+        description: `Welcome, ${userSession.role === 'admin' ? userSession.email : userSession.branchName}! Redirecting...`,
+      });
+      window.location.assign(redirectTo);
     } else {
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: "Invalid email or password. Use 'admin@aawsa.com' or '[branchname]@aawsa.com' (e.g. kality@aawsa.com) with password 'password'.",
+        description: "Invalid email or password. Admin: admin@aawsa.com. Staff: use your assigned email (e.g., kality@aawsa.com). Default password is 'password'.",
       });
     }
   };
@@ -136,10 +159,11 @@ export function AuthForm() {
             </form>
           </Form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            Use admin@aawsa.com or [branchname]@aawsa.com (e.g. kality@aawsa.com) with password 'password'.
+            Admin: admin@aawsa.com. Staff: use assigned email (e.g. kality@aawsa.com). Default password is 'password'.
           </p>
         </CardContent>
       </Card>
     </div>
   );
 }
+

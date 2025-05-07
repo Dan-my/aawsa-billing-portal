@@ -26,7 +26,7 @@ import type { IndividualCustomer, IndividualCustomerStatus, PaymentStatus } from
 import { BulkMeterFormDialog } from "../bulk-meter-form-dialog";
 import { IndividualCustomerFormDialog } from "../../individual-customers/individual-customer-form-dialog";
 import { initialBulkMeters } from "../page"; // For fallback if store is empty
-import { initialCustomers } from "../../individual-customers/page"; // for fallback and bulk meter list
+import { initialCustomers } from "../../individual-customers/page"; // for fallback
 
 const TARIFF_RATE = 5.50; // ETB per m³
 
@@ -42,10 +42,7 @@ export default function BulkMeterDetailsPage() {
 
   const [bulkMeter, setBulkMeter] = React.useState<BulkMeter | null>(null);
   const [associatedCustomers, setAssociatedCustomers] = React.useState<IndividualCustomer[]>([]);
-  const [allCustomers, setAllCustomers] = React.useState<IndividualCustomer[]>(getCustomers()); // To find associated ones
-  const [allBulkMeters, setAllBulkMeters] = React.useState<BulkMeter[]>(getBulkMeters());
-
-
+  
   // Dialog states
   const [isBulkMeterFormOpen, setIsBulkMeterFormOpen] = React.useState(false);
   const [isBulkMeterDeleteDialogOpen, setIsBulkMeterDeleteDialogOpen] = React.useState(false);
@@ -56,35 +53,51 @@ export default function BulkMeterDetailsPage() {
   const [isCustomerDeleteDialogOpen, setIsCustomerDeleteDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
-    const currentBulkMeter = allBulkMeters.find(bm => bm.id === bulkMeterId);
-    setBulkMeter(currentBulkMeter || null);
-    
-    const currentAssociatedCustomers = allCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId);
-    setAssociatedCustomers(currentAssociatedCustomers);
-
-  }, [bulkMeterId, allBulkMeters, allCustomers]);
-
-
-  React.useEffect(() => {
-    const unsubscribeBM = subscribeToBulkMeters((updatedBulkMeters) => {
-        setAllBulkMeters(updatedBulkMeters);
-        const currentBM = updatedBulkMeters.find(bm => bm.id === bulkMeterId);
-        if (!currentBM) { // If bulk meter was deleted elsewhere
-            toast({ title: "Bulk Meter Not Found", description: "This bulk meter may have been deleted.", variant: "destructive"});
-            router.push("/admin/bulk-meters");
-        } else {
-            setBulkMeter(currentBM);
-        }
-    });
-    const unsubscribeCust = subscribeToCustomers(setAllCustomers);
-
-    // Initialize if store is empty (e.g., on first load/refresh)
+    // Initialize stores if they are empty (e.g., on direct page load/refresh)
+    // This ensures data is available for direct links or refreshes.
     if (getBulkMeters().length === 0 && initialBulkMeters.length > 0) {
-        initialBulkMeters.forEach(bm => updateBulkMeterInStore(bm)); // Using update to ensure listeners fire
+      initialBulkMeters.forEach(bm => updateBulkMeterInStore(bm)); // Using update to ensure listeners fire if any are already set up
     }
     if (getCustomers().length === 0 && initialCustomers.length > 0) {
-        initialCustomers.forEach(c => updateCustomerInStore(c));
+      initialCustomers.forEach(c => updateCustomerInStore(c));
     }
+
+    // A flag to track if data stores are considered initialized for the purpose of "not found" logic.
+    // This prevents premature redirection if initial data seeding is still in progress or stores are legitimately empty.
+    let storesConsideredInitialized = (getBulkMeters().length > 0 || initialBulkMeters.length === 0) &&
+                                   (getCustomers().length > 0 || initialCustomers.length === 0);
+
+    const updateLocalStateFromStores = () => {
+      const currentGlobalMeters = getBulkMeters();
+      const currentGlobalCustomers = getCustomers();
+
+      const foundBM = currentGlobalMeters.find(bm => bm.id === bulkMeterId);
+      
+      if (foundBM) {
+        setBulkMeter(foundBM);
+        const associated = currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId);
+        setAssociatedCustomers(associated);
+      } else {
+        // Only redirect if stores are considered initialized and the item isn't found.
+        if (storesConsideredInitialized) {
+          toast({ title: "Bulk Meter Not Found", description: "This bulk meter may not exist or has been deleted.", variant: "destructive" });
+          router.push("/admin/bulk-meters");
+        }
+        // Otherwise, bulkMeter remains null, and the loading UI (if (!bulkMeter) block) shows.
+      }
+    };
+
+    updateLocalStateFromStores(); // Initial attempt to set data based on current store state
+
+    // This function will be called by subscriptions, marking stores as initialized
+    // and then re-evaluating the local state.
+    const handleStoresUpdate = () => {
+      storesConsideredInitialized = true; // Once a subscription fires, assume stores are in a ready state
+      updateLocalStateFromStores();
+    };
+    
+    const unsubscribeBM = subscribeToBulkMeters(handleStoresUpdate);
+    const unsubscribeCust = subscribeToCustomers(handleStoresUpdate);
 
     return () => {
       unsubscribeBM();
@@ -236,7 +249,6 @@ export default function BulkMeterDetailsPage() {
                           {customer.paymentStatus === 'Paid' ? <CheckCircle className="mr-1 h-3.5 w-3.5"/> : <XCircle className="mr-1 h-3.5 w-3.5"/>}
                           {customer.paymentStatus}
                         </Badge>
-                         <span className="text-xs text-muted-foreground ml-1"> (ETB {customer.calculatedBill.toFixed(2)})</span>
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -293,13 +305,14 @@ export default function BulkMeterDetailsPage() {
       </AlertDialog>
 
       {/* Individual Customer Edit/Delete Dialogs */}
-      {selectedCustomer && (
+      {selectedCustomer && bulkMeter && ( // Ensure bulkMeter is not null for context
           <IndividualCustomerFormDialog
             open={isCustomerFormOpen}
             onOpenChange={setIsCustomerFormOpen}
             onSubmit={handleSubmitCustomerForm}
             defaultValues={selectedCustomer}
-            bulkMeters={[{id: bulkMeter.id, name: bulkMeter.name}]} // Pass current bulk meter only for context
+            // Pass current bulk meter only for context, useful if the form needs its ID/name
+            bulkMeters={[{id: bulkMeter.id, name: bulkMeter.name}]} 
           />
       )}
       <AlertDialog open={isCustomerDeleteDialogOpen} onOpenChange={setIsCustomerDeleteDialogOpen}>
@@ -320,3 +333,4 @@ export default function BulkMeterDetailsPage() {
     </div>
   );
 }
+

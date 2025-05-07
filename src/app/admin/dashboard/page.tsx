@@ -1,12 +1,14 @@
 
 "use client";
 
+import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart as BarChartIcon, PieChart as PieChartIcon, LineChart as LineChartIcon, Building, Users, Gauge, ArrowRight } from 'lucide-react'; // Added Building, Users, Gauge, ArrowRight, aliased chart icons
+import { BarChart as BarChartIcon, PieChart as PieChartIcon, LineChart as LineChartIcon, Building, Users, Gauge, ArrowRight, TableIcon, BarChartBig } from 'lucide-react'; 
 import { ResponsiveContainer, BarChart, PieChart, LineChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Line, Bar } from 'recharts'; 
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'; 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 
 const totalBillsData = [
@@ -47,6 +49,8 @@ const chartConfig = {
 
 
 export default function AdminDashboardPage() {
+  const [showBranchPerformanceTable, setShowBranchPerformanceTable] = React.useState(false);
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Admin Dashboard</h1>
@@ -148,23 +152,52 @@ export default function AdminDashboardPage() {
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Branch Performance (Paid vs Unpaid)</CardTitle>
-            <CardDescription>Comparison of bills status across branches.</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div>
+              <CardTitle>Branch Performance (Paid vs Unpaid)</CardTitle>
+              <CardDescription>Comparison of bills status across branches.</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setShowBranchPerformanceTable(!showBranchPerformanceTable)}>
+              {showBranchPerformanceTable ? <BarChartBig className="mr-2 h-4 w-4" /> : <TableIcon className="mr-2 h-4 w-4" />}
+              {showBranchPerformanceTable ? "View Chart" : "View Table"}
+            </Button>
           </CardHeader>
           <CardContent className="h-[300px]">
-            <ChartContainer config={chartConfig} className="w-full h-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={branchPerformanceData}>
-                  <XAxis dataKey="branch" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
-                  <Legend />
-                  <Bar dataKey="paid" stackId="a" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="unpaid" stackId="a" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
+            {showBranchPerformanceTable ? (
+              <div className="overflow-auto h-full">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Branch</TableHead>
+                      <TableHead className="text-right">Paid</TableHead>
+                      <TableHead className="text-right">Unpaid</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {branchPerformanceData.map((item) => (
+                      <TableRow key={item.branch}>
+                        <TableCell className="font-medium">{item.branch}</TableCell>
+                        <TableCell className="text-right text-accent">{item.paid}</TableCell>
+                        <TableCell className="text-right text-destructive">{item.unpaid}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <ChartContainer config={chartConfig} className="w-full h-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={branchPerformanceData}>
+                    <XAxis dataKey="branch" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                    <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
+                    <Legend />
+                    <Bar dataKey="paid" stackId="a" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="unpaid" stackId="a" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            )}
           </CardContent>
         </Card>
 

@@ -6,7 +6,6 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import {
-  Home,
   Users,
   Settings,
   BarChart2,
@@ -22,6 +21,8 @@ import {
   ChevronRight,
   UploadCloud,
   Gauge, 
+  User, // Added for individual customer icon
+  Upload, // Added for CSV upload icon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,7 +54,7 @@ import { useToast } from "@/hooks/use-toast";
 import Image from 'next/image';
 
 
-interface User {
+interface UserSession {
   email: string;
   role: "admin" | "staff";
   branchName?: string; // Added for staff
@@ -71,7 +72,15 @@ const adminNavItems = [
       { href: "/admin/individual-customers", icon: Users, label: "Customers" },
     ],
   },
-  { href: "/admin/data-entry", icon: FileText, label: "Data Entry" },
+  { 
+    label: "Data Entry", 
+    icon: FileText, 
+    subItems: [
+      { href: "/admin/data-entry#individual-manual", icon: User, label: "Individual (Manual)" },
+      { href: "/admin/data-entry#bulk-manual", icon: Gauge, label: "Bulk Meter (Manual)" },
+      { href: "/admin/data-entry#csv-upload", icon: Upload, label: "CSV Upload" },
+    ]
+  },
   { href: "/admin/reports", icon: BarChart2, label: "Reports" },
   { href: "/admin/settings", icon: Settings, label: "Settings" },
 ];
@@ -79,7 +88,15 @@ const adminNavItems = [
 const staffNavItems = [
   { href: "/staff/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/staff/meter-readings", icon: ClipboardList, label: "Meter Readings" },
-  { href: "/staff/data-entry", icon: UploadCloud, label: "Data Entry" },
+  { 
+    label: "Data Entry", 
+    icon: UploadCloud, 
+    subItems: [
+      { href: "/staff/data-entry#individual-manual", icon: User, label: "Individual (Manual)" },
+      { href: "/staff/data-entry#bulk-manual", icon: Gauge, label: "Bulk Meter (Manual)" },
+      { href: "/staff/data-entry#csv-upload", icon: Upload, label: "CSV Upload" },
+    ]
+  },
 ];
 
 interface AppShellProps {
@@ -89,16 +106,29 @@ interface AppShellProps {
 
 function CollapsibleSidebarMenuItem({ item, currentPath }: { item: NavItemWithSubItems; currentPath: string }) {
   const { open: sidebarOpen } = useSidebar();
+  // Parent item is active if currentPath (pathname + hash) starts with any subItem's href (pathname + hash)
+  // or if currentPath (pathname + hash) starts with the item's own href (for non-expandable items)
+  const isParentActive = item.href ? currentPath.startsWith(item.href) : 
+                         item.subItems?.some(sub => currentPath.startsWith(sub.href.split('#')[0]) && (sub.href.includes('#') ? currentPath.includes(sub.href.split('#')[1]) : true));
+
   const [isOpen, setIsOpen] = React.useState(
     item.subItems?.some(sub => currentPath.startsWith(sub.href)) || false
   );
+  
+  React.useEffect(() => {
+     // Open section if a sub-item is active
+    if (item.subItems?.some(sub => currentPath.startsWith(sub.href))) {
+      setIsOpen(true);
+    }
+  }, [currentPath, item.subItems]);
+
 
   if (!item.subItems || item.subItems.length === 0) {
     return (
       <SidebarMenuItem>
         <Link href={item.href || "#"} legacyBehavior passHref>
           <SidebarMenuButton
-            isActive={currentPath === item.href || (item.href && currentPath.startsWith(item.href))}
+            isActive={currentPath.startsWith(item.href || " ")}
             tooltip={sidebarOpen ? undefined : item.label}
           >
             <item.icon />
@@ -115,7 +145,7 @@ function CollapsibleSidebarMenuItem({ item, currentPath }: { item: NavItemWithSu
         onClick={() => setIsOpen(!isOpen)}
         className="justify-between"
         tooltip={sidebarOpen ? undefined : item.label}
-        isActive={item.subItems?.some(sub => currentPath.startsWith(sub.href))}
+        isActive={isParentActive}
       >
         <div className="flex items-center gap-2">
           <item.icon />
@@ -128,7 +158,7 @@ function CollapsibleSidebarMenuItem({ item, currentPath }: { item: NavItemWithSu
           {item.subItems.map((subItem) => (
             <SidebarMenuSubItem key={subItem.href}>
               <Link href={subItem.href} legacyBehavior passHref>
-                <SidebarMenuSubButton isActive={currentPath.startsWith(subItem.href)}>
+                <SidebarMenuSubButton isActive={currentPath === subItem.href}>
                   <subItem.icon className="h-3.5 w-3.5 mr-1.5" />
                   <span>{subItem.label}</span>
                 </SidebarMenuSubButton>
@@ -154,14 +184,28 @@ export function AppShell({ children, userRole }: AppShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
-  const [user, setUser] = React.useState<User | null>(null);
+  const [user, setUser] = React.useState<UserSession | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [currentHash, setCurrentHash] = React.useState("");
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCurrentHash(window.location.hash);
+      const handleHashChange = () => {
+        setCurrentHash(window.location.hash);
+      };
+      window.addEventListener('hashchange', handleHashChange, { passive: true });
+      return () => {
+        window.removeEventListener('hashchange', handleHashChange);
+      };
+    }
+  }, []);
 
   React.useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
-        const parsedUser: User = JSON.parse(storedUser);
+        const parsedUser: UserSession = JSON.parse(storedUser);
         if (parsedUser.role === userRole) {
           setUser(parsedUser);
         } else {
@@ -187,6 +231,7 @@ export function AppShell({ children, userRole }: AppShellProps) {
   };
 
   const navItems = userRole === "admin" ? adminNavItems : staffNavItems;
+  const fullCurrentPath = pathname + currentHash;
 
   if (isLoading) {
     return (
@@ -230,7 +275,7 @@ export function AppShell({ children, userRole }: AppShellProps) {
         <SidebarContent>
           <SidebarMenu>
             {navItems.map((item) => (
-              <CollapsibleSidebarMenuItem key={item.label} item={item} currentPath={pathname} />
+              <CollapsibleSidebarMenuItem key={item.label} item={item} currentPath={fullCurrentPath} />
             ))}
           </SidebarMenu>
         </SidebarContent>

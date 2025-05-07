@@ -24,18 +24,16 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { StaffMember, StaffRole, StaffStatus } from "./staff-types";
+import type { StaffMember, StaffStatus } from "./staff-types";
 import { Label } from "@/components/ui/label";
 
-const staffRoles: StaffRole[] = ['Manager', 'Cashier', 'Technician', 'Support', 'Data Entry Clerk', 'Admin Assistant'];
 const staffStatuses: StaffStatus[] = ['Active', 'Inactive', 'On Leave'];
-const availableBranches = ["Kality Branch", "Central Branch", "North Branch", "South Branch", "East Branch", "West Branch", "Bole Branch", "Piassa Branch", "Megenagna Branch"]; // Added more mock branches for consistency
+const availableBranches = ["Kality Branch", "Central Branch", "North Branch", "South Branch", "East Branch", "West Branch", "Bole Branch", "Piassa Branch", "Megenagna Branch"];
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   email: z.string().email({ message: "Invalid email address." }).regex(/^[a-zA-Z0-9._%+-]+@aawsa\.com$/, { message: "Email must be a valid @aawsa.com address (e.g. kality@aawsa.com)"}),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
-  role: z.enum(staffRoles, { errorMap: () => ({ message: "Please select a valid role."}) }),
   branch: z.string().min(1, { message: "Branch is required." }),
   status: z.enum(staffStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
   phone: z.string().optional(),
@@ -57,7 +55,6 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
       name: "",
       email: "",
       password: "",
-      role: undefined,
       branch: "",
       status: undefined,
       phone: "",
@@ -69,8 +66,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
       form.reset({
         name: defaultValues.name,
         email: defaultValues.email,
-        password: defaultValues.password || "", // Default to empty string if not set, but should be required on add
-        role: defaultValues.role,
+        password: defaultValues.password || "", 
         branch: defaultValues.branch,
         status: defaultValues.status,
         phone: defaultValues.phone || "",
@@ -80,7 +76,6 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
         name: "",
         email: "",
         password: "",
-        role: undefined,
         branch: "",
         status: undefined,
         phone: "",
@@ -152,28 +147,6 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
                   <FormControl>
                     <Input type="tel" placeholder="e.g., +251 91 123 4567" {...field} />
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Role</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a role" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {staffRoles.map(role => (
-                        <SelectItem key={role} value={role}>{role}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

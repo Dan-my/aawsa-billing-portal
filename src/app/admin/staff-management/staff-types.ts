@@ -1,5 +1,5 @@
 
-export type StaffRole = 'Manager' | 'Cashier' | 'Technician' | 'Support' | 'Data Entry Clerk' | 'Admin Assistant';
+
 export type StaffStatus = 'Active' | 'Inactive' | 'On Leave';
 
 export interface StaffMember {
@@ -7,7 +7,6 @@ export interface StaffMember {
   name: string;
   email: string; // This will be the login identifier, e.g., kality@aawsa.com
   password?: string; // Password for the staff member
-  role: StaffRole;
   branch: string; // Branch name, e.g., "Kality Branch"
   status: StaffStatus;
   phone?: string; // Optional

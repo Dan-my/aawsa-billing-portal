@@ -44,7 +44,6 @@ export function StaffTable({ data, onEdit, onDelete }: StaffTableProps) {
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
-            <TableHead>Role</TableHead>
             <TableHead>Branch</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
@@ -55,7 +54,6 @@ export function StaffTable({ data, onEdit, onDelete }: StaffTableProps) {
             <TableRow key={staff.id}>
               <TableCell className="font-medium">{staff.name}</TableCell>
               <TableCell>{staff.email}</TableCell>
-              <TableCell>{staff.role}</TableCell>
               <TableCell>{staff.branch}</TableCell>
               <TableCell>
                 <Badge variant={staff.status === 'Active' ? 'default' : staff.status === 'Inactive' ? 'destructive' : 'secondary'}>
@@ -91,3 +89,4 @@ export function StaffTable({ data, onEdit, onDelete }: StaffTableProps) {
     </div>
   );
 }
+

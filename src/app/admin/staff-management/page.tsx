@@ -15,10 +15,10 @@ import { StaffTable } from "./staff-table";
 const STAFF_STORAGE_KEY = "aawsa-staff-members";
 
 const initialStaffMembers: StaffMember[] = [
-  { id: "1", name: "Alice Kality", email: "kality@aawsa.com", password: "password", role: "Manager", branch: "Kality Branch", status: "Active" },
-  { id: "2", name: "Bob Central", email: "central@aawsa.com", password: "password", role: "Technician", branch: "Central Branch", status: "Active" },
-  { id: "3", name: "Charlie Bole", email: "bole@aawsa.com", password: "password", role: "Cashier", branch: "Bole Branch", status: "Inactive" },
-  { id: "4", name: "Diana North", email: "north@aawsa.com", password: "password", role: "Support", branch: "North Branch", status: "Active" },
+  { id: "1", name: "Alice Kality", email: "kality@aawsa.com", password: "password", branch: "Kality Branch", status: "Active" },
+  { id: "2", name: "Bob Central", email: "central@aawsa.com", password: "password", branch: "Central Branch", status: "Active" },
+  { id: "3", name: "Charlie Bole", email: "bole@aawsa.com", password: "password", branch: "Bole Branch", status: "Inactive" },
+  { id: "4", name: "Diana North", email: "north@aawsa.com", password: "password", branch: "North Branch", status: "Active" },
 ];
 
 export default function StaffManagementPage() {
@@ -83,7 +83,12 @@ export default function StaffManagementPage() {
       toast({ title: "Staff Updated", description: `${data.name} has been updated.` });
     } else {
       // Add new staff
-      const newStaff: StaffMember = { ...data, id: Date.now().toString() };
+      // Ensure password is included, as it's required in StaffFormValues but optional in StaffMember type
+      const newStaff: StaffMember = { 
+        ...data, 
+        id: Date.now().toString(),
+        password: data.password, // Explicitly include password from form values
+      };
       setStaffMembers(prevStaff => [newStaff, ...prevStaff]);
       toast({ title: "Staff Added", description: `${newStaff.name} has been added.` });
     }
@@ -121,7 +126,7 @@ export default function StaffManagementPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Staff List</CardTitle>
-          <CardDescription>Manage staff accounts, roles, and branch assignments.</CardDescription>
+          <CardDescription>Manage staff accounts and branch assignments.</CardDescription>
         </CardHeader>
         <CardContent>
           {staffMembers.length === 0 && !searchTerm ? (
@@ -165,3 +170,4 @@ export default function StaffManagementPage() {
 
 // Export initial staff members for AuthForm or other components if needed as a fallback
 export { initialStaffMembers as fallbackInitialStaffMembers, STAFF_STORAGE_KEY };
+

@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart as BarChartIcon, PieChart as PieChartIcon, LineChart as LineChartIcon, Building, Users, Gauge, ArrowRight, TableIcon, BarChartBig } from 'lucide-react'; 
+import { BarChart as BarChartIcon, PieChart as PieChartIcon, LineChart as LineChartIcon, Building, Users, Gauge, ArrowRight, TableIcon, BarChartBig, TrendingUp } from 'lucide-react'; 
 import { ResponsiveContainer, BarChart, PieChart, LineChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Line, Bar } from 'recharts'; 
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'; 
 import Link from "next/link";
@@ -50,6 +50,7 @@ const chartConfig = {
 
 export default function AdminDashboardPage() {
   const [showBranchPerformanceTable, setShowBranchPerformanceTable] = React.useState(false);
+  const [showWaterUsageTable, setShowWaterUsageTable] = React.useState(false);
 
   return (
     <div className="space-y-6">
@@ -202,25 +203,53 @@ export default function AdminDashboardPage() {
         </Card>
 
         <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Overall Water Usage Trend</CardTitle>
-            <CardDescription>Monthly water consumption across all meters.</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div>
+              <CardTitle>Overall Water Usage Trend</CardTitle>
+              <CardDescription>Monthly water consumption across all meters.</CardDescription>
+            </div>
+             <Button variant="outline" size="sm" onClick={() => setShowWaterUsageTable(!showWaterUsageTable)}>
+              {showWaterUsageTable ? <TrendingUp className="mr-2 h-4 w-4" /> : <TableIcon className="mr-2 h-4 w-4" />}
+              {showWaterUsageTable ? "View Chart" : "View Table"}
+            </Button>
           </CardHeader>
           <CardContent className="h-[300px]">
-            <ChartContainer config={chartConfig} className="w-full h-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={waterUsageTrendData}>
-                  <XAxis dataKey="month" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
-                  <Legend />
-                  <Line type="monotone" dataKey="usage" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--chart-1))", stroke: "hsl(var(--background))" }} activeDot={{ r:6, fill: "hsl(var(--chart-1))", stroke: "hsl(var(--background))"}} name="Water Usage (m³)" />
-                </LineChart>
-              </ResponsiveContainer>
-            </ChartContainer>
+             {showWaterUsageTable ? (
+                <div className="overflow-auto h-full">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Month</TableHead>
+                      <TableHead className="text-right">Water Usage (m³)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {waterUsageTrendData.map((item) => (
+                      <TableRow key={item.month}>
+                        <TableCell className="font-medium">{item.month}</TableCell>
+                        <TableCell className="text-right text-primary">{item.usage.toLocaleString()}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+             ) : (
+              <ChartContainer config={chartConfig} className="w-full h-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={waterUsageTrendData}>
+                    <XAxis dataKey="month" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                    <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
+                    <Legend />
+                    <Line type="monotone" dataKey="usage" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--chart-1))", stroke: "hsl(var(--background))" }} activeDot={{ r:6, fill: "hsl(var(--chart-1))", stroke: "hsl(var(--background))"}} name={chartConfig.waterUsage.label} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+             )}
           </CardContent>
         </Card>
       </div>
     </div>
   );
 }
+

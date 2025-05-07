@@ -32,7 +32,6 @@ import { initialCustomers as defaultInitialCustomers } from "../individual-custo
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse } from "date-fns";
 
-const NONE_BULK_METER_ID = "_NONE_";
 
 export function IndividualCustomerDataEntryForm() {
   const { toast } = useToast();
@@ -73,10 +72,7 @@ export function IndividualCustomerDataEntryForm() {
   });
 
   function onSubmit(data: IndividualCustomerDataEntryFormValues) {
-    const processedData = {
-      ...data,
-      assignedBulkMeterId: data.assignedBulkMeterId === NONE_BULK_METER_ID ? undefined : data.assignedBulkMeterId,
-    };
+    const processedData = { ...data };
 
     // Add status to the data before sending to store, as store expects it for addCustomer
     const customerDataForStore = { ...processedData, status: "Active" } as const; // Default to Active for new entries
@@ -319,15 +315,14 @@ export function IndividualCustomerDataEntryForm() {
                   name="assignedBulkMeterId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Assign to Bulk Meter (Optional)</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormLabel>Assign to Bulk Meter *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a bulk meter" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value={NONE_BULK_METER_ID}>None (Standalone)</SelectItem>
                           {availableBulkMeters.map((bm) => (
                             <SelectItem key={bm.id} value={bm.id}>{bm.name}</SelectItem>
                           ))}
@@ -350,3 +345,4 @@ export function IndividualCustomerDataEntryForm() {
     </ScrollArea>
   );
 }
+

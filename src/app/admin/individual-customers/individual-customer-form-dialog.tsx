@@ -36,7 +36,6 @@ import { getBulkMeters, subscribeToBulkMeters } from "@/lib/data-store";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse } from "date-fns";
 
-const NONE_BULK_METER_ID = "_NONE_";
 
 // Extend the base schema from data entry to include status for management purposes
 const individualCustomerFormObjectSchema = baseIndividualCustomerDataSchema.extend({
@@ -107,7 +106,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         meterSize: defaultValues.meterSize ?? undefined,
         previousReading: defaultValues.previousReading ?? undefined,
         currentReading: defaultValues.currentReading ?? undefined,
-        assignedBulkMeterId: defaultValues.assignedBulkMeterId ? defaultValues.assignedBulkMeterId : (defaultValues.assignedBulkMeterId === undefined || defaultValues.assignedBulkMeterId === '' ? undefined : defaultValues.assignedBulkMeterId),
+        assignedBulkMeterId: defaultValues.assignedBulkMeterId, // Will be a string as it's now mandatory
       });
     } else {
       form.reset({
@@ -133,10 +132,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
   }, [defaultValues, form, open]);
 
   const handleSubmit = (data: IndividualCustomerFormValues) => {
-    const processedData = {
-      ...data,
-      assignedBulkMeterId: data.assignedBulkMeterId === NONE_BULK_METER_ID ? undefined : data.assignedBulkMeterId,
-    };
+    const processedData = { ...data };
     onSubmit(processedData);
     onOpenChange(false);
   };
@@ -378,15 +374,14 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                 name="assignedBulkMeterId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Assign to Bulk Meter (Optional)</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                    <FormLabel>Assign to Bulk Meter *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a bulk meter" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value={NONE_BULK_METER_ID}>None (Standalone)</SelectItem>
                         {dynamicBulkMeters.map((bm) => (
                           <SelectItem key={bm.id} value={bm.id}>{bm.name}</SelectItem>
                         ))}
@@ -432,3 +427,4 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
     </Dialog>
   );
 }
+

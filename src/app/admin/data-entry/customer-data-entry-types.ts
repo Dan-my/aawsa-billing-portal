@@ -24,7 +24,7 @@ export const baseIndividualCustomerDataSchema = z.object({
   location: z.string().min(1, { message: "Location / Sub-City is required." }),
   ward: z.string().min(1, { message: "Ward / Woreda is required." }),
   sewerageConnection: z.enum(sewerageConnections, { errorMap: () => ({ message: "Please select Sewerage Connection status." }) }),
-  assignedBulkMeterId: z.string().optional().describe("The ID of the bulk meter this individual customer is assigned to."),
+  assignedBulkMeterId: z.string({ required_error: "Assigning to a bulk meter is required." }).describe("The ID of the bulk meter this individual customer is assigned to."),
 });
 
 // Schema for Individual Customer Data Entry (with refinement)
@@ -64,3 +64,4 @@ export type BulkMeterDataEntryFormValues = z.infer<typeof bulkMeterDataEntrySche
 // The static list `mockBulkMeters` has been removed as dynamic data from the store is now used.
 // The type definition is kept as it might be used by props or other type definitions.
 export type MockBulkMeter = { id: string; name: string };
+

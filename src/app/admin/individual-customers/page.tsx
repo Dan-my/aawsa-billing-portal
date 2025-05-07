@@ -29,7 +29,7 @@ import { initialBulkMeters as defaultInitialBulkMeters } from "../bulk-meters/pa
 
 export const initialCustomers: IndividualCustomer[] = [
   { id: "cust001", name: "Abebe Bikila", customerKeyNumber: "CUST001", contractNumber: "CON001", customerType: "Domestic", bookNumber: "B001", ordinal: 1, meterSize: 0.5, meterNumber: "MTR001", previousReading: 100, currentReading: 120, month: "2023-11", specificArea: "Kebele 1, House 101", location: "Bole", ward: "Woreda 3", sewerageConnection: "Yes", status: "Active", assignedBulkMeterId: "bm001" },
-  { id: "cust002", name: "Fatuma Roba", customerKeyNumber: "CUST002", contractNumber: "CON002", customerType: "Domestic", bookNumber: "B001", ordinal: 2, meterSize: 0.5, meterNumber: "MTR002", previousReading: 200, currentReading: 250, month: "2023-11", specificArea: "Kebele 2, House 202", location: "Kality", ward: "Woreda 5", sewerageConnection: "No", status: "Active" },
+  { id: "cust002", name: "Fatuma Roba", customerKeyNumber: "CUST002", contractNumber: "CON002", customerType: "Domestic", bookNumber: "B001", ordinal: 2, meterSize: 0.5, meterNumber: "MTR002", previousReading: 200, currentReading: 250, month: "2023-11", specificArea: "Kebele 2, House 202", location: "Kality", ward: "Woreda 5", sewerageConnection: "No", status: "Active", assignedBulkMeterId: "bm002" }, // Ensure this one has a valid ID from initialBulkMeters
   { id: "cust003", name: "Haile Gebrselassie", customerKeyNumber: "CUST003", contractNumber: "CON003", customerType: "Non-domestic", bookNumber: "B002", ordinal: 1, meterSize: 1, meterNumber: "MTR003", previousReading: 500, currentReading: 600, month: "2023-11", specificArea: "Industrial Area, Plot 3", location: "Megenagna", ward: "Woreda 7", sewerageConnection: "Yes", status: "Inactive", assignedBulkMeterId: "bm003"},
 ];
 
@@ -47,9 +47,14 @@ export default function IndividualCustomersPage() {
   const [customerToDelete, setCustomerToDelete] = React.useState<IndividualCustomer | null>(null);
 
   React.useEffect(() => {
-    initializeCustomers(initialCustomers);
-    // Initialize bulk meters if not already, to ensure dropdowns can populate
-    initializeBulkMeters(defaultInitialBulkMeters);
+    // Initialize bulk meters first if not already, to ensure dropdowns can populate
+    // and initialCustomers can reference valid bulk meter IDs.
+    if (getBulkMeters().length === 0) {
+      initializeBulkMeters(defaultInitialBulkMeters);
+    }
+    if (getCustomers().length === 0) {
+       initializeCustomers(initialCustomers);
+    }
 
 
     const unsubscribeCustomers = subscribeToCustomers(setCustomers);
@@ -176,3 +181,4 @@ export default function IndividualCustomersPage() {
     </div>
   );
 }
+

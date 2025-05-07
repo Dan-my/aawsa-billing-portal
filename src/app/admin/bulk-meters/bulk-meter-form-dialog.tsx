@@ -162,7 +162,17 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                   <FormItem>
                     <FormLabel>Meter Size (inch) *</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.1" placeholder="e.g., 2.0" {...field} value={field.value ?? ""} onChange={e => field.onChange(parseFloat(e.target.value) || undefined)} />
+                      <Input 
+                        type="number" 
+                        step="0.1" 
+                        placeholder="e.g., 2.0" 
+                        {...field} 
+                        value={field.value ?? ""} 
+                        onChange={e => {
+                          const val = e.target.value;
+                          field.onChange(val === "" ? undefined : parseFloat(val));
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -188,7 +198,17 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                   <FormItem>
                     <FormLabel>Initial Previous Reading *</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="e.g., 1000.00" {...field} value={field.value ?? ""} onChange={e => field.onChange(parseFloat(e.target.value) || undefined)} />
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        placeholder="e.g., 1000.00" 
+                        {...field} 
+                        value={field.value ?? ""} 
+                        onChange={e => {
+                          const val = e.target.value;
+                          field.onChange(val === "" ? undefined : parseFloat(val));
+                        }}
+                      />
                     </FormControl>
                      <FormDescription>For new meters, this is the starting reading (often 0).</FormDescription>
                     <FormMessage />
@@ -202,7 +222,17 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                   <FormItem>
                     <FormLabel>Initial Current Reading *</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="e.g., 1000.50" {...field} value={field.value ?? ""} onChange={e => field.onChange(parseFloat(e.target.value) || undefined)} />
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        placeholder="e.g., 1000.50" 
+                        {...field} 
+                        value={field.value ?? ""} 
+                        onChange={e => {
+                          const val = e.target.value;
+                          field.onChange(val === "" ? undefined : parseFloat(val));
+                        }}
+                      />
                     </FormControl>
                     <FormDescription>The reading at the time of registration or first use.</FormDescription>
                     <FormMessage />

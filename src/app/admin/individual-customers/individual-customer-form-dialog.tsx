@@ -253,7 +253,16 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Ordinal *</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="e.g., 1" {...field} value={field.value ?? ""} onChange={e => field.onChange(parseInt(e.target.value,10) || undefined)} />
+                      <Input 
+                        type="number" 
+                        placeholder="e.g., 1" 
+                        {...field} 
+                        value={field.value ?? ""} 
+                        onChange={e => {
+                          const val = e.target.value;
+                          field.onChange(val === "" ? undefined : parseInt(val, 10));
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -266,7 +275,17 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Meter Size (inch) *</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.1" placeholder="e.g., 0.5" {...field} value={field.value ?? ""} onChange={e => field.onChange(parseFloat(e.target.value) || undefined)}/>
+                      <Input 
+                        type="number" 
+                        step="0.1" 
+                        placeholder="e.g., 0.5" 
+                        {...field} 
+                        value={field.value ?? ""} 
+                        onChange={e => {
+                          const val = e.target.value;
+                          field.onChange(val === "" ? undefined : parseFloat(val));
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -292,7 +311,17 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Initial Previous Reading *</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="e.g., 100.00" {...field} value={field.value ?? ""} onChange={e => field.onChange(parseFloat(e.target.value) || undefined)} />
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        placeholder="e.g., 100.00" 
+                        {...field} 
+                        value={field.value ?? ""} 
+                        onChange={e => {
+                          const val = e.target.value;
+                          field.onChange(val === "" ? undefined : parseFloat(val));
+                        }}
+                      />
                     </FormControl>
                     <FormDescription>For new customers, this is the starting reading (often 0).</FormDescription>
                     <FormMessage />
@@ -306,7 +335,17 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Initial Current Reading *</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="e.g., 100.50" {...field} value={field.value ?? ""} onChange={e => field.onChange(parseFloat(e.target.value) || undefined)} />
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        placeholder="e.g., 100.50" 
+                        {...field} 
+                        value={field.value ?? ""} 
+                        onChange={e => {
+                          const val = e.target.value;
+                          field.onChange(val === "" ? undefined : parseFloat(val));
+                        }}
+                      />
                     </FormControl>
                      <FormDescription>The reading at the time of registration or first use.</FormDescription>
                     <FormMessage />

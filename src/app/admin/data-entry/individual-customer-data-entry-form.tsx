@@ -196,7 +196,16 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Ordinal *</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="e.g., 1" {...field} onChange={e => field.onChange(parseInt(e.target.value,10) || undefined)} />
+                        <Input 
+                          type="number" 
+                          placeholder="e.g., 1" 
+                          {...field} 
+                          value={field.value ?? ""}
+                          onChange={e => {
+                            const val = e.target.value;
+                            field.onChange(val === "" ? undefined : parseInt(val, 10));
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -209,7 +218,17 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Meter Size (inch) *</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.1" placeholder="e.g., 0.5" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || undefined)}/>
+                        <Input 
+                          type="number" 
+                          step="0.1" 
+                          placeholder="e.g., 0.5" 
+                          {...field} 
+                          value={field.value ?? ""}
+                          onChange={e => {
+                            const val = e.target.value;
+                            field.onChange(val === "" ? undefined : parseFloat(val));
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -235,7 +254,17 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Previous Reading *</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.01" placeholder="e.g., 100.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || undefined)} />
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          placeholder="e.g., 100.00" 
+                          {...field} 
+                          value={field.value ?? ""}
+                          onChange={e => {
+                            const val = e.target.value;
+                            field.onChange(val === "" ? undefined : parseFloat(val));
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -248,7 +277,17 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Current Reading *</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.01" placeholder="e.g., 120.50" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || undefined)} />
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          placeholder="e.g., 120.50" 
+                          {...field} 
+                          value={field.value ?? ""}
+                          onChange={e => {
+                            const val = e.target.value;
+                            field.onChange(val === "" ? undefined : parseFloat(val));
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

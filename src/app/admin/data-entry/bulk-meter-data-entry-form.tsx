@@ -116,7 +116,17 @@ export function BulkMeterDataEntryForm() {
                     <FormItem>
                       <FormLabel>Meter Size (inch) *</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.1" placeholder="e.g., 2.0" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || undefined)} />
+                        <Input 
+                          type="number" 
+                          step="0.1" 
+                          placeholder="e.g., 2.0" 
+                          {...field} 
+                          value={field.value ?? ""}
+                          onChange={e => {
+                            const val = e.target.value;
+                            field.onChange(val === "" ? undefined : parseFloat(val));
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -142,7 +152,17 @@ export function BulkMeterDataEntryForm() {
                     <FormItem>
                       <FormLabel>Previous Reading *</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.01" placeholder="e.g., 1000.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || undefined)} />
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          placeholder="e.g., 1000.00" 
+                          {...field} 
+                          value={field.value ?? ""}
+                          onChange={e => {
+                            const val = e.target.value;
+                            field.onChange(val === "" ? undefined : parseFloat(val));
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -155,7 +175,17 @@ export function BulkMeterDataEntryForm() {
                     <FormItem>
                       <FormLabel>Current Reading *</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.01" placeholder="e.g., 1500.50" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || undefined)} />
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          placeholder="e.g., 1500.50" 
+                          {...field} 
+                          value={field.value ?? ""}
+                          onChange={e => {
+                            const val = e.target.value;
+                            field.onChange(val === "" ? undefined : parseFloat(val));
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

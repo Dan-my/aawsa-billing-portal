@@ -27,11 +27,11 @@ body {
     --border: 210 20% 89.8%;
     --input: 210 20% 89.8%;
     --ring: 211 100% 50%; /* Blue */
-    --chart-1: 211 100% 50%; /* Blue */
-    --chart-2: 145 63% 42%; /* Green */
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --chart-1: 180 70% 45%; /* Cyan */
+    --chart-2: 210 15% 65%; /* Gray */
+    --chart-3: 30 80% 55%; /* Orange */
+    --chart-4: 280 65% 60%; /* Purple */
+    --chart-5: 340 75% 55%; /* Pink */
     --radius: 0.5rem;
     --sidebar-background: 210 20% 94%; /* Slightly darker gray for sidebar */
     --sidebar-foreground: 210 50% 10%;
@@ -62,11 +62,11 @@ body {
     --border: 210 20% 14.9%;
     --input: 210 20% 14.9%;
     --ring: 211 100% 60%; /* Lighter Blue */
-    --chart-1: 211 100% 60%; /* Lighter Blue */
-    --chart-2: 145 53% 52%; /* Lighter Green */
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --chart-1: 180 70% 55%; /* Cyan - slightly lighter for dark mode */
+    --chart-2: 210 15% 50%; /* Gray - slightly darker/more visible for dark mode */
+    --chart-3: 30 80% 60%; /* Orange - slightly lighter for dark mode */
+    --chart-4: 280 65% 65%; /* Purple - slightly lighter for dark mode */
+    --chart-5: 340 75% 60%; /* Pink - slightly lighter for dark mode */
     --sidebar-background: 210 20% 10%; 
     --sidebar-foreground: 210 20% 95.9%;
     --sidebar-primary: 211 100% 60%; /* Lighter Blue */

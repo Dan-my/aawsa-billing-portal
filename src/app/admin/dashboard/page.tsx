@@ -15,13 +15,13 @@ import { initialBulkMeters } from "../bulk-meters/page";
 
 
 const totalBillsData = [
-  { status: 'Paid', count: 1250, fill: 'hsl(var(--chart-2))' },
-  { status: 'Unpaid', count: 350, fill: 'hsl(var(--destructive))' },
+  { status: 'Paid', count: 1250, fill: 'hsl(var(--chart-1))' }, // Cyan
+  { status: 'Unpaid', count: 350, fill: 'hsl(var(--chart-2))' }, // Gray
 ];
 
 const customerCountData = [
-  { name: 'Bulk Meters', value: 150, fill: 'hsl(var(--chart-1))' },
-  { name: 'Individual Customers', value: 12030, fill: 'hsl(var(--chart-4))' },
+  { name: 'Bulk Meters', value: 150, fill: 'hsl(var(--chart-1))' }, // Cyan
+  { name: 'Individual Customers', value: 12030, fill: 'hsl(var(--chart-2))' }, // Gray
 ];
 
 const branchPerformanceData = [
@@ -43,11 +43,11 @@ const waterUsageTrendData = [
 ];
 
 const chartConfig = {
-  paid: { label: "Paid", color: "hsl(var(--chart-2))" },
-  unpaid: { label: "Unpaid", color: "hsl(var(--destructive))" },
-  bulkMeters: { label: "Bulk Meters", color: "hsl(var(--chart-1))" },
-  individualCustomers: { label: "Individual Customers", color: "hsl(var(--chart-4))" },
-  waterUsage: { label: "Water Usage (m³)", color: "hsl(var(--chart-1))" },
+  paid: { label: "Paid", color: "hsl(var(--chart-1))" }, // Cyan
+  unpaid: { label: "Unpaid", color: "hsl(var(--chart-2))" }, // Gray
+  bulkMeters: { label: "Bulk Meters", color: "hsl(var(--chart-1))" }, // Cyan
+  individualCustomers: { label: "Individual Customers", color: "hsl(var(--chart-2))" }, // Gray
+  waterUsage: { label: "Water Usage (m³)", color: "hsl(var(--chart-1))" }, // Cyan
 } satisfies import("@/components/ui/chart").ChartConfig;
 
 
@@ -197,8 +197,8 @@ export default function AdminDashboardPage() {
                     {branchPerformanceData.map((item) => (
                       <TableRow key={item.branch}>
                         <TableCell className="font-medium">{item.branch}</TableCell>
-                        <TableCell className="text-right text-accent">{item.paid}</TableCell>
-                        <TableCell className="text-right text-destructive">{item.unpaid}</TableCell>
+                        <TableCell className="text-right" style={{color: chartConfig.paid.color }}>{item.paid}</TableCell>
+                        <TableCell className="text-right" style={{color: chartConfig.unpaid.color }}>{item.unpaid}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -212,8 +212,8 @@ export default function AdminDashboardPage() {
                     <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                     <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
                     <Legend />
-                    <Bar dataKey="paid" stackId="a" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="unpaid" stackId="a" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="paid" stackId="a" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} /> 
+                    <Bar dataKey="unpaid" stackId="a" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -246,7 +246,7 @@ export default function AdminDashboardPage() {
                     {waterUsageTrendData.map((item) => (
                       <TableRow key={item.month}>
                         <TableCell className="font-medium">{item.month}</TableCell>
-                        <TableCell className="text-right text-primary">{item.usage.toLocaleString()}</TableCell>
+                        <TableCell className="text-right" style={{color: chartConfig.waterUsage.color}}>{item.usage.toLocaleString()}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

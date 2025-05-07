@@ -14,8 +14,8 @@ interface User {
 }
 
 const billsData = [
-  { name: 'Paid Bills', value: 85, fill: 'hsl(var(--chart-2))' },
-  { name: 'Unpaid Bills', value: 15, fill: 'hsl(var(--destructive))' },
+  { name: 'Paid Bills', value: 85, fill: 'hsl(var(--chart-1))' }, // Cyan
+  { name: 'Unpaid Bills', value: 15, fill: 'hsl(var(--chart-2))' }, // Gray
 ];
 
 const monthlyPerformanceData = [
@@ -26,9 +26,9 @@ const monthlyPerformanceData = [
 ];
 
 const chartConfig = {
-  paid: { label: "Paid", color: "hsl(var(--chart-2))" },
-  unpaid: { label: "Unpaid", color: "hsl(var(--destructive))" },
-  customers: { label: "Customers", color: "hsl(var(--chart-1))"},
+  paid: { label: "Paid", color: "hsl(var(--chart-1))" }, // Cyan
+  unpaid: { label: "Unpaid", color: "hsl(var(--chart-2))" }, // Gray
+  customers: { label: "Customers", color: "hsl(var(--chart-1))"}, // Cyan
 } satisfies import("@/components/ui/chart").ChartConfig;
 
 export default function StaffDashboardPage() {
@@ -121,8 +121,8 @@ export default function StaffDashboardPage() {
                 <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
                 <Legend />
-                <Bar dataKey="paid" stackId="a" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="unpaid" stackId="a" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="paid" stackId="a" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="unpaid" stackId="a" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </ChartContainer>

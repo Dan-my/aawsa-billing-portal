@@ -1,7 +1,7 @@
 
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/layout/app-shell";
-import { SidebarNav, type NavItemGroup } from "@/components/layout/sidebar-nav";
+import { SidebarNav, type NavItemGroup } from "@/components/layout/sidebar-nav"; // Corrected import
 import {
   LayoutDashboard,
   Users,

@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -72,6 +71,9 @@ export function IndividualCustomerDataEntryForm() {
     },
   });
 
+  const assignedBulkMeterIdValue = form.watch("assignedBulkMeterId");
+  const isOtherFieldsDisabled = !assignedBulkMeterIdValue;
+
   function onSubmit(data: IndividualCustomerDataEntryFormValues) {
     const usage = data.currentReading - data.previousReading;
     const calculatedBill = usage * TARIFF_RATE;
@@ -129,7 +131,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Customer Name *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., John Doe" {...field} />
+                        <Input placeholder="e.g., John Doe" {...field} disabled={isOtherFieldsDisabled} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -142,7 +144,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Customer Key Number *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., CUST12345" {...field} />
+                        <Input placeholder="e.g., CUST12345" {...field} disabled={isOtherFieldsDisabled} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -155,7 +157,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Contract Number *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., CONTR67890" {...field} />
+                        <Input placeholder="e.g., CONTR67890" {...field} disabled={isOtherFieldsDisabled} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -167,7 +169,12 @@ export function IndividualCustomerDataEntryForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Customer Type *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value || undefined} 
+                        defaultValue={field.value || undefined}
+                        disabled={isOtherFieldsDisabled}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select customer type" />
@@ -190,7 +197,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Book Number *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., BK001" {...field} />
+                        <Input placeholder="e.g., BK001" {...field} disabled={isOtherFieldsDisabled} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -212,6 +219,7 @@ export function IndividualCustomerDataEntryForm() {
                             const val = e.target.value;
                             field.onChange(val === "" ? undefined : parseInt(val, 10));
                           }}
+                          disabled={isOtherFieldsDisabled}
                         />
                       </FormControl>
                       <FormMessage />
@@ -235,6 +243,7 @@ export function IndividualCustomerDataEntryForm() {
                             const val = e.target.value;
                             field.onChange(val === "" ? undefined : parseFloat(val));
                           }}
+                          disabled={isOtherFieldsDisabled}
                         />
                       </FormControl>
                       <FormMessage />
@@ -248,7 +257,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Meter Number *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., MTR123XYZ" {...field} />
+                        <Input placeholder="e.g., MTR123XYZ" {...field} disabled={isOtherFieldsDisabled} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -271,6 +280,7 @@ export function IndividualCustomerDataEntryForm() {
                             const val = e.target.value;
                             field.onChange(val === "" ? undefined : parseFloat(val));
                           }}
+                          disabled={isOtherFieldsDisabled}
                         />
                       </FormControl>
                       <FormMessage />
@@ -294,6 +304,7 @@ export function IndividualCustomerDataEntryForm() {
                             const val = e.target.value;
                             field.onChange(val === "" ? undefined : parseFloat(val));
                           }}
+                          disabled={isOtherFieldsDisabled}
                         />
                       </FormControl>
                       <FormMessage />
@@ -306,12 +317,13 @@ export function IndividualCustomerDataEntryForm() {
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>Reading Month *</FormLabel>
- <DatePicker
+                       <DatePicker
                         date={field.value ? parse(field.value, "yyyy-MM", new Date()) : undefined}
                         setDate={(selectedDate) => {
                           field.onChange(selectedDate ? format(selectedDate, "yyyy-MM") : "");
                         }}
                         placeholder="Select reading month"
+                        disabledTrigger={isOtherFieldsDisabled}
                       />
                       <FormDescription>Select the month and year of the reading.</FormDescription>
                       <FormMessage />
@@ -325,7 +337,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Specific Area *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Kebele 05, House No 123" {...field} />
+                        <Input placeholder="e.g., Kebele 05, House No 123" {...field} disabled={isOtherFieldsDisabled} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -338,7 +350,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Location / Sub-City *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Bole Sub-City" {...field} />
+                        <Input placeholder="e.g., Bole Sub-City" {...field} disabled={isOtherFieldsDisabled} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -351,7 +363,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Ward / Woreda *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Woreda 03" {...field} />
+                        <Input placeholder="e.g., Woreda 03" {...field} disabled={isOtherFieldsDisabled} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -363,7 +375,12 @@ export function IndividualCustomerDataEntryForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Sewerage Connection *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value || undefined} 
+                        defaultValue={field.value || undefined}
+                        disabled={isOtherFieldsDisabled}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select sewerage connection status" />
@@ -381,7 +398,7 @@ export function IndividualCustomerDataEntryForm() {
                 />
               </div>
 
-              <Button type="submit" className="w-full md:w-auto" disabled={form.formState.isSubmitting}>
+              <Button type="submit" className="w-full md:w-auto" disabled={form.formState.isSubmitting || isOtherFieldsDisabled}>
                 {form.formState.isSubmitting ? "Submitting..." : "Submit Individual Customer Reading"}
               </Button>
             </form>
@@ -391,4 +408,3 @@ export function IndividualCustomerDataEntryForm() {
     </ScrollArea>
   );
 }
-

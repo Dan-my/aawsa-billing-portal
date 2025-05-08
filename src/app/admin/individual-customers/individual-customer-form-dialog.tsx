@@ -84,13 +84,14 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
     },
   });
 
+  const assignedBulkMeterIdValue = form.watch("assignedBulkMeterId");
+  const isOtherFieldsDisabled = !assignedBulkMeterIdValue && !defaultValues; // Only disable if new entry and no bulk meter selected
+
   React.useEffect(() => {
     if (!propBulkMeters || propBulkMeters.length === 0) {
         const fetchedBms = getBulkMeters().map(bm => ({ id: bm.id, name: bm.name }));
         setDynamicBulkMeters(fetchedBms);
-        if (fetchedBms.length === 0 && open) { // Only if dialog is open and no BMs initially
-            // Optionally, you can add a toast or log here if no bulk meters are available
-            // This helps in debugging if the bulk meter list is expected but empty.
+        if (fetchedBms.length === 0 && open) { 
             console.warn("IndividualCustomerFormDialog: No bulk meters available on mount.");
         }
     } else {
@@ -101,7 +102,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
       setDynamicBulkMeters(updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
     });
     return () => unsubscribe();
-  }, [propBulkMeters, open]); // Added `open` to re-check if dialog opens and propBulkMeters are still empty
+  }, [propBulkMeters, open]); 
 
   React.useEffect(() => {
     if (defaultValues) {
@@ -111,7 +112,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         meterSize: defaultValues.meterSize ?? undefined,
         previousReading: defaultValues.previousReading ?? undefined,
         currentReading: defaultValues.currentReading ?? undefined,
-        assignedBulkMeterId: defaultValues.assignedBulkMeterId, // Ensure this is set
+        assignedBulkMeterId: defaultValues.assignedBulkMeterId, 
         paymentStatus: defaultValues.paymentStatus ?? undefined, 
       });
     } else {
@@ -139,7 +140,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
   }, [defaultValues, form, open]);
 
   const handleSubmit = (data: IndividualCustomerFormValues) => {
-    onSubmit(data); // Pass validated data directly
+    onSubmit(data); 
     onOpenChange(false);
   };
 
@@ -165,6 +166,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                         onValueChange={field.onChange} 
                         value={field.value || undefined} 
                         defaultValue={field.value || undefined}
+                        disabled={!!defaultValues} // Cannot change bulk meter assignment when editing for now
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -178,7 +180,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                         {dynamicBulkMeters.length === 0 && <SelectItem value="no-bms-available" disabled>No bulk meters available</SelectItem>}
                       </SelectContent>
                     </Select>
-                    <FormDescription>If this customer's meter is sub-metered under a bulk meter.</FormDescription>
+                    <FormDescription>If this customer's meter is sub-metered under a bulk meter. Cannot be changed after creation.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -190,7 +192,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Customer Name *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., John Doe" {...field} />
+                      <Input placeholder="e.g., John Doe" {...field} disabled={isOtherFieldsDisabled} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -203,7 +205,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Customer Key Number *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., CUST12345" {...field} />
+                      <Input placeholder="e.g., CUST12345" {...field} disabled={isOtherFieldsDisabled} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -216,7 +218,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Contract Number *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., CONTR67890" {...field} />
+                      <Input placeholder="e.g., CONTR67890" {...field} disabled={isOtherFieldsDisabled} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -228,7 +230,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Customer Type *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
+                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined} disabled={isOtherFieldsDisabled}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select customer type" />
@@ -251,7 +253,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Book Number *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., BK001" {...field} />
+                      <Input placeholder="e.g., BK001" {...field} disabled={isOtherFieldsDisabled} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -273,6 +275,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                           const val = e.target.value;
                           field.onChange(val === "" ? undefined : parseInt(val, 10));
                         }}
+                        disabled={isOtherFieldsDisabled}
                       />
                     </FormControl>
                     <FormMessage />
@@ -296,6 +299,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                           const val = e.target.value;
                           field.onChange(val === "" ? undefined : parseFloat(val));
                         }}
+                        disabled={isOtherFieldsDisabled}
                       />
                     </FormControl>
                     <FormMessage />
@@ -309,7 +313,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Meter Number *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., MTR123XYZ" {...field} />
+                      <Input placeholder="e.g., MTR123XYZ" {...field} disabled={isOtherFieldsDisabled} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -332,6 +336,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                           const val = e.target.value;
                           field.onChange(val === "" ? undefined : parseFloat(val));
                         }}
+                        disabled={isOtherFieldsDisabled}
                       />
                     </FormControl>
                     <FormDescription>For new customers, this is the starting reading (often 0).</FormDescription>
@@ -356,6 +361,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                           const val = e.target.value;
                           field.onChange(val === "" ? undefined : parseFloat(val));
                         }}
+                        disabled={isOtherFieldsDisabled}
                       />
                     </FormControl>
                      <FormDescription>The reading at the time of registration or first use.</FormDescription>
@@ -375,6 +381,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                           field.onChange(selectedDate ? format(selectedDate, "yyyy-MM") : "");
                         }}
                         placeholder="Select initial reading month"
+                        disabledTrigger={isOtherFieldsDisabled}
                       />
                      <FormDescription>Month of the initial readings above.</FormDescription>
                     <FormMessage />
@@ -388,7 +395,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Specific Area *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Kebele 05, House No 123" {...field} />
+                      <Input placeholder="e.g., Kebele 05, House No 123" {...field} disabled={isOtherFieldsDisabled} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -401,7 +408,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Location / Sub-City *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Bole Sub-City" {...field} />
+                      <Input placeholder="e.g., Bole Sub-City" {...field} disabled={isOtherFieldsDisabled} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -414,7 +421,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Ward / Woreda *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Woreda 03" {...field} />
+                      <Input placeholder="e.g., Woreda 03" {...field} disabled={isOtherFieldsDisabled} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -426,7 +433,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Sewerage Connection *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
+                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined} disabled={isOtherFieldsDisabled}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select sewerage connection status" />
@@ -448,7 +455,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Customer Status *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
+                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined} disabled={isOtherFieldsDisabled}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select customer status" />
@@ -470,7 +477,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Bill Payment Status *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
+                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined} disabled={isOtherFieldsDisabled}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select payment status" />
@@ -490,7 +497,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit">
+              <Button type="submit" disabled={isOtherFieldsDisabled && !defaultValues}>
                 {defaultValues ? "Save Changes" : "Add Customer"}
               </Button>
             </DialogFooter>
@@ -500,4 +507,3 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
     </Dialog>
   );
 }
-

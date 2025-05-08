@@ -1,7 +1,7 @@
 
 import type { ReactNode } from "react";
 import { AppShell } from "../../components/layout/app-shell"; 
-import { SidebarNav, type NavItemGroup } from "../../components/layout/sidebar-nav"; 
+import { SidebarNav, type NavItemGroup } from "../../components/ui/sidebar"; 
 import {
   LayoutDashboard,
   Users,
@@ -12,6 +12,7 @@ import {
   UserCog,
   Gauge,
   ClipboardList,
+  UploadCloud, // Added back as it was previously in AppShell imports
 } from "lucide-react";
 
 const adminSidebarNavItems: NavItemGroup[] = [
@@ -39,6 +40,8 @@ const adminSidebarNavItems: NavItemGroup[] = [
     items: [
       { title: "Data Entry", href: "/admin/data-entry", icon: FileText },
       { title: "Reports", href: "/admin/reports", icon: BarChart2 },
+      // Example of adding a new Data Entry option if CSV upload needs a separate link
+      // { title: "CSV Upload", href: "/admin/data-entry/csv-upload", icon: UploadCloud },
     ],
   },
   {
@@ -52,4 +55,3 @@ const adminSidebarNavItems: NavItemGroup[] = [
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return <AppShell userRole="admin" sidebar={<SidebarNav items={adminSidebarNavItems} />} >{children}</AppShell>;
 }
-

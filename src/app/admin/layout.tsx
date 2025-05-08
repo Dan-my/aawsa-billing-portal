@@ -12,7 +12,7 @@ import {
   UserCog,
   Gauge,
   ClipboardList,
-  UploadCloud, // Added back as it was previously in AppShell imports
+  UploadCloud,
 } from "lucide-react";
 
 const adminSidebarNavItems: NavItemGroup[] = [
@@ -40,8 +40,6 @@ const adminSidebarNavItems: NavItemGroup[] = [
     items: [
       { title: "Data Entry", href: "/admin/data-entry", icon: FileText },
       { title: "Reports", href: "/admin/reports", icon: BarChart2 },
-      // Example of adding a new Data Entry option if CSV upload needs a separate link
-      // { title: "CSV Upload", href: "/admin/data-entry/csv-upload", icon: UploadCloud },
     ],
   },
   {

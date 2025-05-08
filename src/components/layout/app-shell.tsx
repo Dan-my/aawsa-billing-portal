@@ -80,7 +80,7 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal" }: AppHeaderC
             <DropdownMenuContent align="end">
               <DropdownMenuLabel className="truncate max-w-[200px]">{user.email}</DropdownMenuLabel>
               <DropdownMenuLabel className="text-xs text-muted-foreground font-normal -mt-2">
-                Role: {user.role === 'staff' && user.branchName ? `${user.role} (${user.branchName})` : user.role}
+                Role: {user.role === 'staff' && user.branchName ? `Staff (${user.branchName})` : user.role.charAt(0).toUpperCase() + user.role.slice(1)}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout}>
@@ -112,19 +112,21 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
         const parsedUser: User = JSON.parse(storedUserJson);
         
         if (parsedUser.role !== userRole) {
-          // Role mismatch, clear stored user and redirect to login
           localStorage.removeItem('user');
           router.push('/');
           return;
         }
 
-        // Check if the current path matches the user's role dashboard, if not, redirect
         const expectedPathPrefix = `/${parsedUser.role}`;
         const expectedDashboardPath = `${expectedPathPrefix}/dashboard`;
 
-        if (pathname !== '/' && !pathname.startsWith(expectedPathPrefix)) {
-          router.push(expectedDashboardPath);
-          return;
+        if (pathname !== '/' && !pathname.startsWith(expectedPathPrefix) && pathname !== expectedDashboardPath && !pathname.startsWith(expectedDashboardPath + '/')) {
+           // If the current path isn't the login page, isn't the expected dashboard, or a sub-path of dashboard, redirect.
+           // This handles cases where user might be on /admin but should be /admin/dashboard, or on /admin/some-other-page.
+          if (pathname !== expectedDashboardPath) { // Avoid redirect loop if already on dashboard
+            router.push(expectedDashboardPath);
+            return;
+          }
         }
         
         setUser(parsedUser);
@@ -136,7 +138,6 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
         return;
       }
     } else if (pathname !== '/') { 
-      // No user stored and not on login page, redirect to login
       router.push('/');
     }
 
@@ -173,36 +174,30 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
     );
   }
 
-  // If on login page (pathname is '/'), render children directly without AppShell structure
   if (pathname === '/') {
       return <>{children}</>;
   }
   
-  // If user is not yet set (still verifying) or does not match role for non-login pages, show loading/verification
-  // This ensures that AppShell structure (sidebar, header) is not rendered prematurely or for unauthorized access attempts
   if (!user && pathname !== '/') {
     return (
          <div className="flex min-h-screen items-center justify-center bg-background">
-            <p>Verifying session...</p> {/* Or a more sophisticated loader */}
+            <p>Verifying session...</p>
          </div>
     );
   }
 
-  // Render AppShell structure only if user is verified and on a protected page
   return (
     <SidebarProvider defaultOpen>
       <Sidebar side="left" variant="sidebar" collapsible="icon" className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
         <SidebarHeader className="p-2">
-          {/* Header content can be minimal if appName is in AppHeaderContent */}
         </SidebarHeader>
         <SidebarContent>
           {sidebar}
         </SidebarContent>
         <SidebarFooter>
-          {/* Footer can be empty or have version info, etc. */}
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset> {/* This will contain the header and the main content area */}
+      <SidebarInset> 
         <AppHeaderContent user={user} appName={appName} />
         <main className="flex-1 p-4 sm:p-6 space-y-6 bg-background">
           {children}

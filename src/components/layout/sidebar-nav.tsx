@@ -44,7 +44,8 @@ interface SidebarNavProps {
 function NavItemLink({ item, pathname }: { item: NavItem; pathname: string }) {
   const IconComponent = item.icon;
   const { state: sidebarState } = useSidebar();
-  const isActive = item.matcher ? item.matcher(pathname, item.href) : pathname === item.href || (item.href !== '/' && pathname.startsWith(`${item.href}/`));
+  const isActive = item.matcher ? item.matcher(pathname, item.href) : pathname === item.href || (item.href !== '/' && pathname.startsWith(`${item.href}/`) && (pathname.length === item.href.length || pathname[item.href.length] === '/'));
+
 
   return (
     <Link href={item.href} passHref legacyBehavior>
@@ -73,21 +74,26 @@ function CollapsibleNavItem({ item, pathname }: { item: NavItem; pathname: strin
   const IconComponent = item.icon;
   const { state: sidebarState } = useSidebar();
 
-  // A parent is active if any of its children are active or if the path starts with the parent's href (and it's not just the root)
-  const isChildActive = item.items?.some(subItem => 
-    subItem.matcher ? subItem.matcher(pathname, subItem.href) : (pathname === subItem.href || (subItem.href !== '/' && pathname.startsWith(`${subItem.href}/`)))
-  ) ?? false;
+  const isChildActiveRecursive = (items: NavItem[]): boolean => {
+    return items.some(subItem => {
+      const isActiveDirectly = subItem.matcher ? subItem.matcher(pathname, subItem.href) : (pathname === subItem.href || (subItem.href !== '/' && pathname.startsWith(`${subItem.href}/`) && (pathname.length === subItem.href.length || pathname[subItem.href.length] === '/')));
+      if (isActiveDirectly) return true;
+      if (subItem.items) return isChildActiveRecursive(subItem.items);
+      return false;
+    });
+  };
   
-  const isDirectlyActive = (item.href !== '/' && pathname.startsWith(`${item.href}/`));
+  const isChildActive = item.items ? isChildActiveRecursive(item.items) : false;
+  const isDirectlyActive = (item.href !== '/' && pathname.startsWith(`${item.href}/`) && (pathname.length === item.href.length || pathname[item.href.length] === '/'));
   const isParentActive = isChildActive || isDirectlyActive;
 
   const [isOpen, setIsOpen] = React.useState(isParentActive);
 
   React.useEffect(() => {
     if (sidebarState === 'collapsed') {
-      setIsOpen(false); // Collapse submenus when sidebar collapses
+      setIsOpen(false); 
     } else if (isParentActive && !isOpen) {
-      setIsOpen(true); // Open if active and sidebar is expanded
+      setIsOpen(true); 
     }
   }, [pathname, isParentActive, isOpen, sidebarState]);
 
@@ -117,9 +123,9 @@ function CollapsibleNavItem({ item, pathname }: { item: NavItem; pathname: strin
               <Link href={subItem.href} passHref legacyBehavior>
                 <SidebarMenuSubButton
                     asChild
-                    isActive={subItem.matcher ? subItem.matcher(pathname, subItem.href) : (pathname === subItem.href || (subItem.href !== '/' && pathname.startsWith(`${subItem.href}/`)))}
+                    isActive={subItem.matcher ? subItem.matcher(pathname, subItem.href) : (pathname === subItem.href || (subItem.href !== '/' && pathname.startsWith(`${subItem.href}/`) && (pathname.length === subItem.href.length || pathname[subItem.href.length] === '/')))}
                     className={cn(
-                        (subItem.matcher ? subItem.matcher(pathname, subItem.href) : (pathname === subItem.href || (subItem.href !== '/' && pathname.startsWith(`${subItem.href}/`)))) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium hover:bg-sidebar-accent/90"
+                        (subItem.matcher ? subItem.matcher(pathname, subItem.href) : (pathname === subItem.href || (subItem.href !== '/' && pathname.startsWith(`${subItem.href}/`) && (pathname.length === subItem.href.length || pathname[subItem.href.length] === '/')))) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium hover:bg-sidebar-accent/90"
                     )}
                 >
                   <a>

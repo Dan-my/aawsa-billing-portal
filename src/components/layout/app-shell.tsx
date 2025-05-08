@@ -204,3 +204,4 @@ export function AppShell({ userRole, sidebar, children }: AppShellProps) {
     </SidebarProvider>
   );
 }
+

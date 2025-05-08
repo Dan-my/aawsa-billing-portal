@@ -53,3 +53,4 @@ const adminSidebarNavItems: NavItemGroup[] = [
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return <AppShell userRole="admin" sidebar={<SidebarNav items={adminSidebarNavItems} />} >{children}</AppShell>;
 }
+

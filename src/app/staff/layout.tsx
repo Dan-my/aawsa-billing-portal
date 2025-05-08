@@ -27,3 +27,4 @@ const staffSidebarNavItems: NavItemGroup[] = [
 export default function StaffLayout({ children }: { children: ReactNode }) {
   return <AppShell userRole="staff" sidebar={<SidebarNav items={staffSidebarNavItems} />} >{children}</AppShell>;
 }
+

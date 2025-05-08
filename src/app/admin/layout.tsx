@@ -1,7 +1,7 @@
 
 import type { ReactNode } from "react";
-import { AppShell } from "@/components/layout/app-shell";
-import { SidebarNav, type NavItemGroup } from "@/components/layout/sidebar-nav"; // Corrected path
+import { AppShell } from "../../components/layout/app-shell"; // Changed to relative path
+import { SidebarNav, type NavItemGroup } from "@/components/layout/sidebar-nav"; 
 import {
   LayoutDashboard,
   Users,
@@ -50,5 +50,5 @@ const adminSidebarNavItems: NavItemGroup[] = [
 
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  return <AppShell userRole="admin" sidebar={<SidebarNav items={adminSidebarNavItems} />} />;
+  return <AppShell userRole="admin" sidebar={<SidebarNav items={adminSidebarNavItems} />} >{children}</AppShell>;
 }

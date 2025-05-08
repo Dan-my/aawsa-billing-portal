@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -16,14 +15,15 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import * as icons from 'lucide-react'; // Import all icons
+import type { LucideProps } from 'lucide-react'; // For type consistency if needed elsewhere, though not directly for iconName
 import * as React from 'react';
 
 
 export interface NavItem {
   title: string;
   href: string;
-  icon?: LucideIcon;
+  iconName?: keyof typeof icons; // Changed from icon: LucideIcon to iconName: string
   disabled?: boolean;
   external?: boolean;
   label?: string;
@@ -42,7 +42,7 @@ interface SidebarNavProps {
 }
 
 function NavItemLink({ item, pathname }: { item: NavItem; pathname: string }) {
-  const IconComponent = item.icon;
+  const IconComponent = item.iconName ? icons[item.iconName] : null; // Use iconName
   const { state: sidebarState } = useSidebar();
   const isActive = item.matcher ? item.matcher(pathname, item.href) : pathname === item.href || (item.href !== '/' && pathname.startsWith(`${item.href}/`) && (pathname.length === item.href.length || pathname[item.href.length] === '/'));
 
@@ -71,7 +71,7 @@ function NavItemLink({ item, pathname }: { item: NavItem; pathname: string }) {
 }
 
 function CollapsibleNavItem({ item, pathname }: { item: NavItem; pathname: string }) {
-  const IconComponent = item.icon;
+  const IconComponent = item.iconName ? icons[item.iconName] : null; // Use iconName
   const { state: sidebarState } = useSidebar();
 
   const isChildActiveRecursive = (items: NavItem[]): boolean => {
@@ -84,7 +84,7 @@ function CollapsibleNavItem({ item, pathname }: { item: NavItem; pathname: strin
   };
   
   const isChildActive = item.items ? isChildActiveRecursive(item.items) : false;
-  const isDirectlyActive = (item.href !== '/' && pathname.startsWith(`${item.href}/`) && (pathname.length === item.href.length || pathname[item.href.length] === '/'));
+  const isDirectlyActive = (item.href !== '/' && pathname.startsWith(`${item.href}/`) && (pathname.length === item.href.length || pathname[subItem.href.length] === '/'));
   const isParentActive = isChildActive || isDirectlyActive;
 
   const [isOpen, setIsOpen] = React.useState(isParentActive);
@@ -118,24 +118,27 @@ function CollapsibleNavItem({ item, pathname }: { item: NavItem; pathname: strin
       </SidebarMenuButton>
       {isOpen && sidebarState === 'expanded' && item.items && (
         <SidebarMenuSub>
-          {item.items.map((subItem) => (
-            <SidebarMenuSubItem key={subItem.href}>
-              <Link href={subItem.href} passHref legacyBehavior>
-                <SidebarMenuSubButton
-                    asChild
-                    isActive={subItem.matcher ? subItem.matcher(pathname, subItem.href) : (pathname === subItem.href || (subItem.href !== '/' && pathname.startsWith(`${subItem.href}/`) && (pathname.length === subItem.href.length || pathname[subItem.href.length] === '/')))}
-                    className={cn(
-                        (subItem.matcher ? subItem.matcher(pathname, subItem.href) : (pathname === subItem.href || (subItem.href !== '/' && pathname.startsWith(`${subItem.href}/`) && (pathname.length === subItem.href.length || pathname[subItem.href.length] === '/')))) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium hover:bg-sidebar-accent/90"
-                    )}
-                >
-                  <a>
-                    {subItem.icon && <subItem.icon className="h-4 w-4 mr-1.5 flex-shrink-0" />}
-                    {subItem.title}
-                  </a>
-                </SidebarMenuSubButton>
-              </Link>
-            </SidebarMenuSubItem>
-          ))}
+          {item.items.map((subItem) => {
+            const SubIconComponent = subItem.iconName ? icons[subItem.iconName as keyof typeof icons] : null;
+            return (
+              <SidebarMenuSubItem key={subItem.href}>
+                <Link href={subItem.href} passHref legacyBehavior>
+                  <SidebarMenuSubButton
+                      asChild
+                      isActive={subItem.matcher ? subItem.matcher(pathname, subItem.href) : (pathname === subItem.href || (subItem.href !== '/' && pathname.startsWith(`${subItem.href}/`) && (pathname.length === subItem.href.length || pathname[subItem.href.length] === '/')))}
+                      className={cn(
+                          (subItem.matcher ? subItem.matcher(pathname, subItem.href) : (pathname === subItem.href || (subItem.href !== '/' && pathname.startsWith(`${subItem.href}/`) && (pathname.length === subItem.href.length || pathname[subItem.href.length] === '/')))) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium hover:bg-sidebar-accent/90"
+                      )}
+                  >
+                    <a>
+                      {SubIconComponent && <SubIconComponent className="h-4 w-4 mr-1.5 flex-shrink-0" />}
+                      {subItem.title}
+                    </a>
+                  </SidebarMenuSubButton>
+                </Link>
+              </SidebarMenuSubItem>
+            );
+          })}
         </SidebarMenuSub>
       )}
     </>

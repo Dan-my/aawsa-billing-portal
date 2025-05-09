@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -44,7 +43,9 @@ interface SidebarNavProps {
 
 function NavItemLink({ item, pathname }: { item: NavItem; pathname: string }) {
   const IconComponent = item.iconName ? icons[item.iconName] : null;
-  const { state: sidebarState } = useSidebar();
+  const { state: sidebarState, isMobile } = useSidebar();
+  const currentDisplayState = isMobile ? (sidebarState === "mobile" ? "expanded" : "collapsed") : sidebarState;
+
   const isActive = item.matcher ? item.matcher(pathname, item.href) : pathname === item.href || (item.href !== '/' && pathname.startsWith(`${item.href}/`) && (pathname.length === item.href.length || pathname[item.href.length] === '/'));
 
 
@@ -55,18 +56,16 @@ function NavItemLink({ item, pathname }: { item: NavItem; pathname: string }) {
         disabled={item.disabled}
         className={cn(
           "w-full justify-start",
-          // These specific styles are applied here to match the original look
-          // The SidebarMenuButton variants might have defaults, but these take precedence due to `cn` merging
           isActive && "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/90 hover:text-sidebar-accent-foreground",
           !isActive && "hover:bg-sidebar-accent/50"
         )}
-        tooltip={sidebarState === 'collapsed' ? item.title : undefined}
+        tooltip={currentDisplayState === 'collapsed' && !isMobile ? item.title : undefined}
         target={item.external ? '_blank' : undefined}
         rel={item.external ? 'noopener noreferrer' : undefined}
       >
         {IconComponent && <IconComponent className="h-5 w-5" />}
-        <span className={cn("truncate", sidebarState === 'collapsed' && 'sr-only')}>{item.title}</span>
-        {item.label && sidebarState === 'expanded' && <span className="ml-auto text-xs text-muted-foreground">{item.label}</span>}
+        <span className={cn("truncate", currentDisplayState === 'collapsed' && !isMobile && 'sr-only')}>{item.title}</span>
+        {item.label && currentDisplayState === 'expanded' && <span className="ml-auto text-xs text-muted-foreground">{item.label}</span>}
       </SidebarMenuButton>
     </Link>
   );
@@ -74,7 +73,9 @@ function NavItemLink({ item, pathname }: { item: NavItem; pathname: string }) {
 
 function CollapsibleNavItem({ item, pathname }: { item: NavItem; pathname: string }) {
   const IconComponent = item.iconName ? icons[item.iconName] : null; 
-  const { state: sidebarState } = useSidebar();
+  const { state: sidebarState, isMobile } = useSidebar();
+  const currentDisplayState = isMobile ? (sidebarState === "mobile" ? "expanded" : "collapsed") : sidebarState;
+
 
   const isChildActiveRecursive = (items: NavItem[]): boolean => {
     return items.some(subItem => {
@@ -85,9 +86,8 @@ function CollapsibleNavItem({ item, pathname }: { item: NavItem; pathname: strin
     });
   };
   
-  // Check if any child item is active OR if the parent item itself matches (e.g. /settings page for Settings group)
   const isAnyChildActive = item.items ? isChildActiveRecursive(item.items) : false;
-  const isParentItemActive = item.matcher ? item.matcher(pathname, item.href) : (pathname === item.href || (item.href !== '/' && pathname.startsWith(`${item.href}/`) && (pathname.length === item.href.length || pathname[item.href.length] === '/')));
+  const isParentItemActive = item.matcher ? item.matcher(pathname, item.href) : (pathname === item.href || (item.href !== '/' && pathname.startsWith(`${item.href}/`) && (pathname.length === item.href.length || pathname[subItem.href.length] === '/')));
   
   const isEffectivelyActive = isAnyChildActive || isParentItemActive;
 
@@ -95,34 +95,33 @@ function CollapsibleNavItem({ item, pathname }: { item: NavItem; pathname: strin
   const [isOpen, setIsOpen] = React.useState(isEffectivelyActive);
 
   React.useEffect(() => {
-    if (sidebarState === 'collapsed') {
+    if (currentDisplayState === 'collapsed' && !isMobile) {
       setIsOpen(false); 
-    } else if (isEffectivelyActive && !isOpen) { // Auto-open if a child is active and not already open
+    } else if (isEffectivelyActive && !isOpen && currentDisplayState === 'expanded') { 
       setIsOpen(true); 
     }
-  }, [pathname, isEffectivelyActive, isOpen, sidebarState]);
+  }, [pathname, isEffectivelyActive, isOpen, currentDisplayState, isMobile]);
 
 
   return (
     <>
       <SidebarMenuButton
         onClick={() => {
-            if (sidebarState === 'expanded') setIsOpen(!isOpen);
+            if (currentDisplayState === 'expanded') setIsOpen(!isOpen);
         }}
-        // isActive is for styling the button itself if it's the "active" parent
-        isActive={isEffectivelyActive && !isOpen} // Style as active if it's the current section but closed
+        isActive={isEffectivelyActive && !isOpen} 
         className={cn(
             "w-full justify-start", 
             isEffectivelyActive && !isOpen && "bg-sidebar-accent/70 text-sidebar-accent-foreground hover:bg-sidebar-accent/60",
-            isOpen && sidebarState === 'expanded' && "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/90"
+            isOpen && currentDisplayState === 'expanded' && "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/90"
         )}
-        tooltip={sidebarState === 'collapsed' ? item.title : undefined}
+        tooltip={currentDisplayState === 'collapsed' && !isMobile ? item.title : undefined}
       >
         {IconComponent && <IconComponent className="h-5 w-5" />}
-        <span className={cn("truncate", sidebarState === 'collapsed' && 'sr-only')}>{item.title}</span>
-        {sidebarState === 'expanded' && (isOpen ? <ChevronDown className="ml-auto h-4 w-4" /> : <ChevronRight className="ml-auto h-4 w-4" />)}
+        <span className={cn("truncate", currentDisplayState === 'collapsed' && !isMobile && 'sr-only')}>{item.title}</span>
+        {currentDisplayState === 'expanded' && (isOpen ? <ChevronDown className="ml-auto h-4 w-4" /> : <ChevronRight className="ml-auto h-4 w-4" />)}
       </SidebarMenuButton>
-      {isOpen && sidebarState === 'expanded' && item.items && (
+      {isOpen && currentDisplayState === 'expanded' && item.items && (
         <SidebarMenuSub>
           {item.items.map((subItem) => {
             const SubIconComponent = subItem.iconName ? icons[subItem.iconName as keyof typeof icons] : null;
@@ -154,7 +153,9 @@ function CollapsibleNavItem({ item, pathname }: { item: NavItem; pathname: strin
 
 export function SidebarNav({ items, className }: SidebarNavProps) {
   const pathname = usePathname();
-  const { state: sidebarState } = useSidebar();
+  const { state: sidebarState, isMobile } = useSidebar();
+  const currentDisplayState = isMobile ? (sidebarState === "mobile" ? "expanded" : "collapsed") : sidebarState;
+
 
   if (!items?.length) {
     return null;
@@ -165,7 +166,7 @@ export function SidebarNav({ items, className }: SidebarNavProps) {
       {items.map((group, index) => (
         <SidebarGroup key={group.title || index} className="p-0">
           {group.title && (
-            <SidebarGroupLabel className={cn(sidebarState === 'collapsed' ? 'hidden' : 'px-2 py-1 text-xs font-semibold text-sidebar-foreground/70', 'transition-opacity duration-200')}>
+            <SidebarGroupLabel className={cn(currentDisplayState === 'collapsed' && !isMobile ? 'hidden' : 'px-2 py-1 text-xs font-semibold text-sidebar-foreground/70', 'transition-opacity duration-200')}>
               {group.title}
             </SidebarGroupLabel>
           )}
@@ -185,4 +186,3 @@ export function SidebarNav({ items, className }: SidebarNavProps) {
     </nav>
   );
 }
-

@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -40,28 +39,23 @@ export function SidebarProvider({ children, defaultOpen = true }: SidebarProvide
 
   React.useEffect(() => {
     if (isMobile) {
-      setState("collapsed") // Always collapse on mobile initially or when switching to mobile
+      setState("collapsed") 
     } else {
-      // Restore to defaultOpen if not mobile and was previously mobile or if state needs reset
       setState(defaultOpen ? "expanded" : "collapsed")
     }
   }, [isMobile, defaultOpen])
   
   const toggleSidebar = () => {
     if (isMobile) {
-        // On mobile, toggle effectively means open/close the overlay aspect,
-        // but the state for desktop might remain 'collapsed'.
-        // This part might need more nuanced handling if mobile uses a drawer.
-        // For now, let's assume mobile primarily uses a 'collapsed' visual style.
         setState(prev => prev === "expanded" ? "collapsed" : "expanded")
     } else {
-        setState(prev => prev === "expanded" ? "collapsed" : "collapsed")
+        setState(prev => prev === "expanded" ? "collapsed" : "expanded")
     }
   }
 
 
   const contextValue: SidebarContextValue = {
-    state: isMobile ? "mobile" : state,
+    state: isMobile ? (state === "expanded" ? "mobile" : "collapsed") : state, // Refined mobile state
     setState,
     toggleSidebar,
     isMobile,
@@ -83,9 +77,9 @@ const sidebarVariants = cva(
         sidebar: "border-r border-sidebar-border bg-sidebar text-sidebar-foreground",
       },
       state: {
-        expanded: "w-64", // Standard width for expanded sidebar
-        collapsed: "w-16", // Width for collapsed sidebar (icons only)
-        mobile: "w-64", // Width for mobile overlay, if used differently
+        expanded: "w-64", 
+        collapsed: "w-16", 
+        mobile: "w-64", 
       },
       collapsible: {
         true: "",
@@ -94,9 +88,9 @@ const sidebarVariants = cva(
     },
     compoundVariants: [
        {
-        collapsible: "icon" as unknown as boolean, // workaround for cva typing
+        collapsible: "icon" as unknown as boolean, 
         state: "collapsed",
-        className: "w-16", // Icon-only collapsed state
+        className: "w-16", 
       },
     ],
     defaultVariants: {
@@ -114,16 +108,22 @@ interface SidebarProps extends React.HTMLAttributes<HTMLDivElement>, VariantProp
 const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
   ({ className, variant, collapsible, children, ...props }, ref) => {
     const { state: sidebarState, isMobile } = useSidebar()
-    const effectiveState = isMobile ? "mobile" : sidebarState;
-
+    
+    let currentVisualState: "expanded" | "collapsed" | "mobile" = "expanded";
+    if (isMobile) {
+      currentVisualState = sidebarState === "mobile" ? "mobile" : "collapsed"; // mobile state means expanded overlay
+    } else {
+      currentVisualState = sidebarState as "expanded" | "collapsed";
+    }
+    
 
     return (
       <aside
         ref={ref}
         className={cn(
-            sidebarVariants({ variant, state: effectiveState, collapsible: collapsible as boolean }), 
-            isMobile && effectiveState === "expanded" && "shadow-xl", // For mobile overlay shadow
-            isMobile && effectiveState === "collapsed" && "-translate-x-full", // Hide when collapsed on mobile
+            sidebarVariants({ variant, state: currentVisualState, collapsible: collapsible as boolean }), 
+            isMobile && currentVisualState === "mobile" && "shadow-xl", 
+            isMobile && currentVisualState === "collapsed" && "-translate-x-full", 
             className)}
         data-collapsible={collapsible === "icon" ? "icon" : collapsible}
         {...props}
@@ -138,13 +138,14 @@ Sidebar.displayName = "Sidebar"
 
 const SidebarHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
     ({ className, ...props }, ref) => {
-    const { state } = useSidebar();
+    const { state, isMobile } = useSidebar();
+    const currentDisplayState = isMobile ? (state === "mobile" ? "expanded" : "collapsed") : state;
     return (
         <div
         ref={ref}
         className={cn(
             "flex items-center justify-between p-3",
-            state === "collapsed" && "justify-center",
+            currentDisplayState === "collapsed" && !isMobile && "justify-center",
             className
         )}
         {...props}
@@ -165,11 +166,12 @@ SidebarContent.displayName = "SidebarContent"
 
 const SidebarFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => {
-    const { state } = useSidebar()
+    const { state, isMobile } = useSidebar();
+    const currentDisplayState = isMobile ? (state === "mobile" ? "expanded" : "collapsed") : state;
     return (
         <div
         ref={ref}
-        className={cn("p-3 mt-auto", state === "collapsed" && "p-2", className)}
+        className={cn("p-3 mt-auto", currentDisplayState === "collapsed" && !isMobile && "p-2", className)}
         {...props}
         />
     )
@@ -181,7 +183,9 @@ SidebarFooter.displayName = "SidebarFooter"
 const SidebarTrigger = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, children, ...props }, ref) => {
     const { toggleSidebar, state, isMobile } = useSidebar()
-    if (isMobile) return null; // Trigger might be handled by a different button in mobile header
+    if (isMobile && state !== "mobile") return null; // Show trigger only when mobile sidebar is open or if it's for desktop
+
+    const effectiveState = isMobile ? state === "mobile" ? "expanded" : "collapsed" : state;
 
     return (
       <TooltipProvider delayDuration={0}>
@@ -193,14 +197,14 @@ const SidebarTrigger = React.forwardRef<HTMLButtonElement, ButtonProps>(
                 size="icon"
                 className={cn("h-8 w-8", className)}
                 onClick={toggleSidebar}
-                aria-label={state === "expanded" ? "Collapse sidebar" : "Expand sidebar"}
+                aria-label={effectiveState === "expanded" ? "Collapse sidebar" : "Expand sidebar"}
                 {...props}
             >
-                {children || (state === "expanded" ? <ChevronLeft /> : <ChevronRight />) }
+                {children || (effectiveState === "expanded" ? <ChevronLeft /> : <ChevronRight />) }
             </Button>
           </TooltipTrigger>
           <TooltipContent side="right" sideOffset={5}>
-            {state === "expanded" ? "Collapse" : "Expand"}
+            {effectiveState === "expanded" ? "Collapse" : "Expand"}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -214,13 +218,11 @@ const SidebarInset = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLD
   ({ className, children, ...props }, ref) => {
     const { state, isMobile } = useSidebar();
     
-    // When sidebar is icon-only collapsed, apply ml-16. Otherwise, apply ml-64 for expanded or default collapsed.
-    // On mobile, no margin is applied as the sidebar might be an overlay or hidden.
     const marginLeftClass = isMobile 
       ? "" 
       : state === "collapsed" 
-        ? "sm:ml-16" // Collapsed state (icon only)
-        : "sm:ml-64"; // Expanded state
+        ? "sm:ml-16" 
+        : "sm:ml-64"; 
 
     return (
       <div
@@ -239,13 +241,15 @@ SidebarInset.displayName = "SidebarInset";
 // Menu Components
 const SidebarGroup = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => {
-    const { state } = useSidebar()
+    const { state, isMobile } = useSidebar()
+    const currentDisplayState = isMobile ? (state === "mobile" ? "expanded" : "collapsed") : state;
+
     return (
       <div
         ref={ref}
         className={cn(
           "flex flex-col",
-          state === "expanded" ? "gap-1 p-2" : "gap-1 p-1 items-center",
+          currentDisplayState === "expanded" ? "gap-1 p-2" : "gap-1 p-1 items-center",
           className
         )}
         {...props}
@@ -258,8 +262,9 @@ SidebarGroup.displayName = "SidebarGroup"
 
 const SidebarGroupLabel = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
   ({ className, ...props }, ref) => {
-    const { state } = useSidebar()
-    if (state === "collapsed") return null
+    const { state, isMobile } = useSidebar()
+    const currentDisplayState = isMobile ? (state === "mobile" ? "expanded" : "collapsed") : state;
+    if (currentDisplayState === "collapsed" && !isMobile) return null
 
     return (
       <p
@@ -296,31 +301,34 @@ interface SidebarMenuButtonProps extends ButtonProps {
 
 const SidebarMenuButton = React.forwardRef<HTMLButtonElement, SidebarMenuButtonProps>(
   ({ className, variant = "ghost", size = "default", isActive, tooltip, children, ...props }, ref) => {
-    const { state } = useSidebar();
+    const { state, isMobile } = useSidebar();
+    const currentDisplayState = isMobile ? (state === "mobile" ? "expanded" : "collapsed") : state;
+    const isLink = !!props.href;
 
-    const content = (
+    const buttonElement = (
       <Button
         ref={ref}
-        variant={isActive ? "secondary" : variant} // Use 'secondary' for active state to match original design
-        size={state === "collapsed" ? "icon" : size}
+        variant={isActive ? "secondary" : variant}
+        size={currentDisplayState === "collapsed" && !isMobile ? "icon" : size}
         className={cn(
           "w-full justify-start gap-2",
-          state === "collapsed" && "h-9 w-9",
-          isActive && "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/90", // Active styles
-          !isActive && "hover:bg-sidebar-accent/50", // Hover styles for non-active
+          currentDisplayState === "collapsed" && !isMobile && "h-9 w-9",
+          isActive && "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/90",
+          !isActive && "hover:bg-sidebar-accent/50",
           className
         )}
         {...props}
+        asChild={isLink}
       >
-        {children}
+        {isLink ? <a>{children}</a> : <>{children}</>}
       </Button>
     );
 
-    if (state === "collapsed" && tooltip) {
+    if (currentDisplayState === "collapsed" && !isMobile && tooltip) {
       return (
         <TooltipProvider delayDuration={0}>
           <Tooltip>
-            <TooltipTrigger asChild>{content}</TooltipTrigger>
+            <TooltipTrigger asChild>{buttonElement}</TooltipTrigger>
             <TooltipContent side="right" sideOffset={5} className="bg-popover text-popover-foreground">
               {tooltip}
             </TooltipContent>
@@ -328,7 +336,7 @@ const SidebarMenuButton = React.forwardRef<HTMLButtonElement, SidebarMenuButtonP
         </TooltipProvider>
       );
     }
-    return content;
+    return buttonElement;
   }
 );
 SidebarMenuButton.displayName = "SidebarMenuButton";
@@ -336,8 +344,9 @@ SidebarMenuButton.displayName = "SidebarMenuButton";
 
 const SidebarMenuSub = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => {
-    const { state } = useSidebar()
-    if (state === "collapsed") return null
+    const { state, isMobile } = useSidebar()
+    const currentDisplayState = isMobile ? (state === "mobile" ? "expanded" : "collapsed") : state;
+    if (currentDisplayState === "collapsed" && !isMobile) return null
 
     return (
       <div
@@ -359,19 +368,25 @@ const SidebarMenuSubItem = React.forwardRef<HTMLLIElement, React.HTMLAttributes<
 SidebarMenuSubItem.displayName = "SidebarMenuSubItem"
 
 const SidebarMenuSubButton = React.forwardRef<HTMLButtonElement, ButtonProps & {isActive?: boolean}>(
-  ({ className, variant = "ghost", size = "sm", isActive, ...props }, ref) => (
-    <Button
-      ref={ref}
-      variant={isActive ? "secondary" : variant}
-      size={size}
-      className={cn(
-        "w-full justify-start gap-2",
-        isActive && "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/90",
-         !isActive && "hover:bg-sidebar-accent/50",
-        className)}
-      {...props}
-    />
-  )
+  ({ className, variant = "ghost", size = "sm", isActive, children, ...props }, ref) => {
+    const isLink = !!props.href;
+    return (
+      <Button
+        ref={ref}
+        variant={isActive ? "secondary" : variant}
+        size={size}
+        className={cn(
+          "w-full justify-start gap-2",
+          isActive && "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/90",
+          !isActive && "hover:bg-sidebar-accent/50",
+          className)}
+        {...props}
+        asChild={isLink}
+      >
+        {isLink ? <a>{children}</a> : <>{children}</>}
+      </Button>
+    );
+  }
 )
 SidebarMenuSubButton.displayName = "SidebarMenuSubButton"
 

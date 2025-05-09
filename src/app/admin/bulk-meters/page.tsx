@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { BulkMeter } from "./bulk-meter-types";
-import { BulkMeterFormDialog, type BulkMeterFormValues } from "./bulk-meter-form-dialog"; // Import BulkMeterFormValues
+import { BulkMeterFormDialog, type BulkMeterFormValues } from "./bulk-meter-form-dialog"; 
 import { BulkMeterTable } from "./bulk-meter-table";
 import { 
   getBulkMeters, 
@@ -69,13 +69,13 @@ export default function BulkMetersPage() {
     if (selectedBulkMeter) {
       const updatedBulkMeterData: BulkMeter = {
         id: selectedBulkMeter.id,
-        ...data, // Spread form values
-        paymentStatus: selectedBulkMeter.paymentStatus, // Preserve existing payment status on edit
+        ...data, // data from BulkMeterFormValues already includes paymentStatus
       };
       updateBulkMeterInStore(updatedBulkMeterData);
       toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
     } else {
-      // For new bulk meter, paymentStatus defaults to 'Unpaid' in addBulkMeterToStore
+      // For new bulk meter, data from BulkMeterFormValues includes paymentStatus
+      // addBulkMeterToStore uses this or its internal default if not provided.
       addBulkMeterToStore(data); 
       toast({ title: "Bulk Meter Added", description: `${data.name} has been added.` });
     }

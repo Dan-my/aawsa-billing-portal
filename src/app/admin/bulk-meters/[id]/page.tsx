@@ -1,9 +1,8 @@
-
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Droplets, Edit, Trash2, MoreHorizontal, User, CheckCircle, XCircle, FileEdit } from "lucide-react";
+import { Droplets, Edit, Trash2, MoreHorizontal, User, CheckCircle, XCircle, FileEdit, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -24,10 +23,10 @@ import {
   initializeCustomers,  
 } from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meter-types";
-import type { IndividualCustomer } from "../../individual-customers/individual-customer-types";
+import type { IndividualCustomer, PaymentStatus } from "../../individual-customers/individual-customer-types";
 import { TARIFF_RATE } from "../../individual-customers/individual-customer-types"; 
-import { BulkMeterFormDialog, type BulkMeterFormValues } from "../bulk-meter-form-dialog"; // Import BulkMeterFormValues
-import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "../../individual-customers/individual-customer-form-dialog"; // Import IndividualCustomerFormValues
+import { BulkMeterFormDialog, type BulkMeterFormValues } from "../bulk-meter-form-dialog";
+import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "../../individual-customers/individual-customer-form-dialog";
 import { initialBulkMeters as defaultInitialBulkMeters } from "../page"; 
 import { initialCustomers as defaultInitialCustomers } from "../../individual-customers/page"; 
 
@@ -37,7 +36,6 @@ export default function BulkMeterDetailsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const bulkMeterId = params.id as string;
-  const [bulkMeterPaymentStatus, setBulkMeterPaymentStatus] = useState<'Paid' | 'Unpaid'>('Unpaid');
  
   const [bulkMeter, setBulkMeter] = useState<BulkMeter | null>(null);
   const [associatedCustomers, setAssociatedCustomers] = useState<IndividualCustomer[]>([]);
@@ -69,7 +67,6 @@ export default function BulkMeterDetailsPage() {
       
       if (foundBM) {
         setBulkMeter(foundBM);
-        setBulkMeterPaymentStatus(foundBM.paymentStatus || 'Unpaid'); // Initialize status
         const associated = currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId);
         setAssociatedCustomers(associated);
       } else {
@@ -110,11 +107,23 @@ export default function BulkMeterDetailsPage() {
   };
   const handleSubmitBulkMeterForm = (data: BulkMeterFormValues) => {
     if (bulkMeter) {
-        const updatedBulkMeter: BulkMeter = { ...bulkMeter, ...data, id: bulkMeter.id, paymentStatus: bulkMeter.paymentStatus }; // ensure paymentStatus is preserved
+        // Ensure data includes paymentStatus from the form
+        const updatedBulkMeter: BulkMeter = { ...bulkMeter, ...data, id: bulkMeter.id };
         updateBulkMeterInStore(updatedBulkMeter);
+        setBulkMeter(updatedBulkMeter); // Update local state
         toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
     }
     setIsBulkMeterFormOpen(false);
+  };
+
+  const handleToggleBulkMeterPaymentStatus = () => {
+    if (bulkMeter) {
+      const newStatus: PaymentStatus = bulkMeter.paymentStatus === 'Paid' ? 'Unpaid' : 'Paid';
+      const updatedBulkMeter: BulkMeter = { ...bulkMeter, paymentStatus: newStatus };
+      updateBulkMeterInStore(updatedBulkMeter);
+      setBulkMeter(updatedBulkMeter); // Optimistically update UI
+      toast({ title: "Payment Status Updated", description: `${bulkMeter.name} payment status set to ${newStatus}.` });
+    }
   };
 
   // Individual Customer Actions
@@ -151,6 +160,17 @@ export default function BulkMeterDetailsPage() {
     
     setIsCustomerFormOpen(false);
     setSelectedCustomer(null);
+  };
+
+  const handleToggleCustomerPaymentStatus = (customerId: string) => {
+    const customer = associatedCustomers.find(c => c.id === customerId);
+    if (customer) {
+      const newStatus: PaymentStatus = customer.paymentStatus === 'Paid' ? 'Unpaid' : 'Paid';
+      const updatedCustomer: IndividualCustomer = { ...customer, paymentStatus: newStatus };
+      updateCustomerInStore(updatedCustomer);
+      // The subscription to customers store will update associatedCustomers
+      toast({ title: "Payment Status Updated", description: `${customer.name}'s payment status set to ${newStatus}.` });
+    }
   };
 
 
@@ -207,10 +227,21 @@ export default function BulkMeterDetailsPage() {
               <strong className="font-semibold">Difference Bill:</strong> ETB {differenceBill.toFixed(2)}
             </p>
           </div>
-           <div>
-             <p className={bulkMeterPaymentStatus === 'Paid' ? "text-green-600" : "text-destructive"}>
-                <strong className="font-semibold">Payment Status:</strong> {bulkMeterPaymentStatus}
-            </p>
+           <div className="flex items-center gap-2">
+             <strong className="font-semibold">Payment Status:</strong>
+             <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleToggleBulkMeterPaymentStatus}
+                className="p-0 h-auto"
+                aria-label={`Toggle payment status for ${bulkMeter.name}`}
+              >
+                <Badge variant={bulkMeter.paymentStatus === 'Paid' ? 'default' : 'destructive'} className="cursor-pointer hover:opacity-80">
+                  {bulkMeter.paymentStatus === 'Paid' ? <CheckCircle className="mr-1 h-3.5 w-3.5"/> : <XCircle className="mr-1 h-3.5 w-3.5"/>}
+                  {bulkMeter.paymentStatus}
+                  <RefreshCcw className="ml-1.5 h-3 w-3 opacity-70 group-hover:opacity-100" />
+                </Badge>
+              </Button>
            </div>
         </CardContent>
       </Card>
@@ -235,7 +266,7 @@ export default function BulkMeterDetailsPage() {
                   <TableHead>Curr. Read</TableHead>
                   <TableHead>Usage (m³)</TableHead>
                   <TableHead>Calculated Bill (ETB)</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Payment Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -251,10 +282,19 @@ export default function BulkMeterDetailsPage() {
                       <TableCell>{usage.toFixed(2)} m³</TableCell>
                       <TableCell className="text-accent">ETB {customer.calculatedBill.toFixed(2)}</TableCell>
                       <TableCell>
-                        <Badge variant={customer.paymentStatus === 'Paid' ? 'default' : 'destructive'} className="whitespace-nowrap">
-                          {customer.paymentStatus === 'Paid' ? <CheckCircle className="mr-1 h-3.5 w-3.5"/> : <XCircle className="mr-1 h-3.5 w-3.5"/>}
-                          {customer.paymentStatus}
-                        </Badge>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleToggleCustomerPaymentStatus(customer.id)}
+                            className="p-0 h-auto group"
+                            aria-label={`Toggle payment status for ${customer.name}`}
+                        >
+                            <Badge variant={customer.paymentStatus === 'Paid' ? 'default' : 'destructive'} className="whitespace-nowrap cursor-pointer hover:opacity-80">
+                            {customer.paymentStatus === 'Paid' ? <CheckCircle className="mr-1 h-3.5 w-3.5"/> : <XCircle className="mr-1 h-3.5 w-3.5"/>}
+                            {customer.paymentStatus}
+                            <RefreshCcw className="ml-1.5 h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity" />
+                            </Badge>
+                        </Button>
                       </TableCell>
                        <TableCell className="text-right">
                         <DropdownMenu>
@@ -340,5 +380,3 @@ export default function BulkMeterDetailsPage() {
     </div>
   );
 }
-
-    

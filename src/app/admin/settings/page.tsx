@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Save, AlertTriangle, Info, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { TARIFF_RATES_BY_TYPE } from "@/app/admin/individual-customers/individual-customer-types";
+import { NON_DOMESTIC_FLAT_RATE } from "@/app/admin/individual-customers/individual-customer-types";
 
 const APP_NAME_KEY = "aawsa-app-name";
 const CURRENCY_KEY = "aawsa-default-currency";
@@ -43,11 +43,12 @@ export default function AdminSettingsPage() {
     if (storedBillingCycleDay) setBillingCycleDay(storedBillingCycleDay);
     if (storedEnableOverdueReminders) setEnableOverdueReminders(storedEnableOverdueReminders === "true");
     
-    // Apply dark mode on initial load if enabled
-    if (storedDarkMode === "true") {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    if (typeof document !== 'undefined') {
+      if (storedDarkMode === "true") {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
     }
   }, []);
 
@@ -62,12 +63,13 @@ export default function AdminSettingsPage() {
       title: "Settings Saved",
       description: "Your application settings have been updated.",
     });
-
-    document.title = appName;
-    if (enableDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    if (typeof document !== 'undefined') {
+        document.title = appName;
+        if (enableDarkMode) {
+        document.documentElement.classList.add('dark');
+        } else {
+        document.documentElement.classList.remove('dark');
+        }
     }
   };
   
@@ -151,20 +153,20 @@ export default function AdminSettingsPage() {
           <div className="p-4 border rounded-md bg-muted/20">
             <div className="flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-primary" />
-              <h3 className="font-semibold">Current Tariff Rates</h3>
+              <h3 className="font-semibold">Current Tariff Information</h3>
             </div>
             <div className="mt-2 space-y-1">
               <p className="text-sm">
-                <span className="font-medium">Domestic:</span>
-                <span className="ml-2 font-mono text-accent">{defaultCurrency} {TARIFF_RATES_BY_TYPE.Domestic.toFixed(2)} / m³</span>
+                <span className="font-medium">Domestic Customers:</span>
+                <span className="ml-2 text-accent">Progressive tariff structure (details in calculation logic).</span>
               </p>
               <p className="text-sm">
-                <span className="font-medium">Non-domestic:</span>
-                <span className="ml-2 font-mono text-accent">{defaultCurrency} {TARIFF_RATES_BY_TYPE["Non-domestic"].toFixed(2)} / m³</span>
+                <span className="font-medium">Non-domestic Customers:</span>
+                <span className="ml-2 font-mono text-accent">{defaultCurrency} {NON_DOMESTIC_FLAT_RATE.toFixed(2)} / m³</span>
               </p>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              These rates are currently managed centrally. Contact system administrators for changes.
+              Tariff details are managed centrally. Contact system administrators for changes to the underlying rates or structure.
             </p>
           </div>
 

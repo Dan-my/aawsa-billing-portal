@@ -24,8 +24,8 @@ import {
   initializeCustomers,  
 } from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meter-types";
-import type { IndividualCustomer, PaymentStatus, CustomerType } from "../../individual-customers/individual-customer-types";
-import { getTariffRate, TARIFF_RATES_BY_TYPE } from "../../individual-customers/individual-customer-types"; 
+import type { IndividualCustomer, PaymentStatus, CustomerType, SewerageConnection } from "../../individual-customers/individual-customer-types";
+import { calculateBill, NON_DOMESTIC_FLAT_RATE } from "../../individual-customers/individual-customer-types"; 
 import { BulkMeterFormDialog, type BulkMeterFormValues } from "../bulk-meter-form-dialog";
 import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "../../individual-customers/individual-customer-form-dialog";
 import { initialBulkMeters as defaultInitialBulkMeters } from "../page"; 
@@ -41,7 +41,6 @@ export default function BulkMeterDetailsPage() {
   const [bulkMeter, setBulkMeter] = useState<BulkMeter | null>(null);
   const [associatedCustomers, setAssociatedCustomers] = useState<IndividualCustomer[]>([]);
   
- // Dialog states
   const [isBulkMeterFormOpen, setIsBulkMeterFormOpen] = React.useState(false);
   const [isBulkMeterDeleteDialogOpen, setIsBulkMeterDeleteDialogOpen] = React.useState(false);
   
@@ -51,6 +50,7 @@ export default function BulkMeterDetailsPage() {
   const [isCustomerDeleteDialogOpen, setIsCustomerDeleteDialogOpen] = React.useState(false);
 
   useEffect(() => {
+    let isMounted = true;
     if (getBulkMeters().length === 0) {
       initializeBulkMeters(defaultInitialBulkMeters);
     }
@@ -61,6 +61,7 @@ export default function BulkMeterDetailsPage() {
     let storesConsideredInitialized = getBulkMeters().length > 0 && getCustomers().length > 0;
 
     const updateLocalStateFromStores = () => {
+      if (!isMounted) return;
       const currentGlobalMeters = getBulkMeters();
       const currentGlobalCustomers = getCustomers();
 
@@ -89,13 +90,13 @@ export default function BulkMeterDetailsPage() {
     const unsubscribeCust = subscribeToCustomers(handleStoresUpdate);
 
     return () => {
+      isMounted = false;
       unsubscribeBM();
       unsubscribeCust();
     };
   }, [bulkMeterId, router, toast]);
 
 
-  // Bulk Meter Actions
   const handleEditBulkMeter = () => setIsBulkMeterFormOpen(true);
   const handleDeleteBulkMeter = () => setIsBulkMeterDeleteDialogOpen(true);
   const confirmDeleteBulkMeter = () => {
@@ -108,10 +109,9 @@ export default function BulkMeterDetailsPage() {
   };
   const handleSubmitBulkMeterForm = (data: BulkMeterFormValues) => {
     if (bulkMeter) {
-        // Ensure data includes paymentStatus from the form
         const updatedBulkMeter: BulkMeter = { ...bulkMeter, ...data, id: bulkMeter.id };
         updateBulkMeterInStore(updatedBulkMeter);
-        setBulkMeter(updatedBulkMeter); // Update local state
+        setBulkMeter(updatedBulkMeter); 
         toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
     }
     setIsBulkMeterFormOpen(false);
@@ -122,12 +122,11 @@ export default function BulkMeterDetailsPage() {
       const newStatus: PaymentStatus = bulkMeter.paymentStatus === 'Paid' ? 'Unpaid' : 'Paid';
       const updatedBulkMeter: BulkMeter = { ...bulkMeter, paymentStatus: newStatus };
       updateBulkMeterInStore(updatedBulkMeter);
-      setBulkMeter(updatedBulkMeter); // Optimistically update UI
+      setBulkMeter(updatedBulkMeter); 
       toast({ title: "Payment Status Updated", description: `${bulkMeter.name} payment status set to ${newStatus}.` });
     }
   };
 
-  // Individual Customer Actions
   const handleEditCustomer = (customer: IndividualCustomer) => {
     setSelectedCustomer(customer);
     setIsCustomerFormOpen(true);
@@ -147,8 +146,8 @@ export default function BulkMeterDetailsPage() {
   const handleSubmitCustomerForm = (data: IndividualCustomerFormValues) => {
     if (selectedCustomer) {
       const usage = data.currentReading - data.previousReading;
-      const tariff = getTariffRate(data.customerType as CustomerType);
-      const calculatedBill = usage * tariff;
+      // The calculateBill function now handles domestic progressive and non-domestic flat rates.
+      const calculatedBill = calculateBill(usage, data.customerType as CustomerType, data.sewerageConnection as SewerageConnection);
       const updatedCustomerData: IndividualCustomer = { 
           ...selectedCustomer, 
           ...data, 
@@ -170,7 +169,6 @@ export default function BulkMeterDetailsPage() {
       const newStatus: PaymentStatus = customer.paymentStatus === 'Paid' ? 'Unpaid' : 'Paid';
       const updatedCustomer: IndividualCustomer = { ...customer, paymentStatus: newStatus };
       updateCustomerInStore(updatedCustomer);
-      // The subscription to customers store will update associatedCustomers
       toast({ title: "Payment Status Updated", description: `${customer.name}'s payment status set to ${newStatus}.` });
     }
   };
@@ -181,10 +179,13 @@ export default function BulkMeterDetailsPage() {
   }
 
   const bulkUsage = bulkMeter.currentReading - bulkMeter.previousReading;
-  // Use the Domestic rate for bulk meter's own bill calculation for consistency with previous behavior
-  const totalBulkBill = bulkUsage * TARIFF_RATES_BY_TYPE.Domestic; 
+  // Bulk meter itself is billed at a flat rate (e.g., non-domestic or a specific bulk rate)
+  // Assuming NON_DOMESTIC_FLAT_RATE for bulk meter's own bill as per previous flat rate logic
+  // If bulk meters have their own complex tariff, this would need adjustment.
+  const totalBulkBill = bulkUsage * NON_DOMESTIC_FLAT_RATE; 
   
   const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + (cust.currentReading - cust.previousReading), 0);
+  // Sum of already calculated bills for individual customers
   const totalIndividualBill = associatedCustomers.reduce((sum, cust) => sum + cust.calculatedBill, 0);
 
   const differenceUsage = bulkUsage - totalIndividualUsage;
@@ -216,7 +217,7 @@ export default function BulkMeterDetailsPage() {
           <div>
             <p><strong className="font-semibold">Meter No:</strong> {bulkMeter.meterNumber}</p>
             <p><strong className="font-semibold">Month:</strong> {bulkMeter.month}</p>
-             <p className="text-primary"><strong className="font-semibold">Total Bulk Bill:</strong> ETB {totalBulkBill.toFixed(2)}</p>
+             <p className="text-primary"><strong className="font-semibold">Total Bulk Bill (Flat Rate):</strong> ETB {totalBulkBill.toFixed(2)}</p>
           </div>
           <div>
             <p><strong className="font-semibold">Customer Key:</strong> {bulkMeter.customerKeyNumber}</p>
@@ -227,7 +228,7 @@ export default function BulkMeterDetailsPage() {
           </div>
           <div>
             <p className={differenceBill < 0 ? "text-destructive" : "text-accent"}>
-              <strong className="font-semibold">Difference Bill:</strong> ETB {differenceBill.toFixed(2)}
+              <strong className="font-semibold">Difference Bill (vs Sum of Indiv.):</strong> ETB {differenceBill.toFixed(2)}
             </p>
           </div>
            <div className="flex items-center gap-2">
@@ -265,8 +266,6 @@ export default function BulkMeterDetailsPage() {
                 <TableRow>
                   <TableHead>Customer Name</TableHead>
                   <TableHead>Meter No.</TableHead>
-                  <TableHead>Prev. Read</TableHead>
-                  <TableHead>Curr. Read</TableHead>
                   <TableHead>Usage (m³)</TableHead>
                   <TableHead>Calculated Bill (ETB)</TableHead>
                   <TableHead>Payment Status</TableHead>
@@ -280,9 +279,7 @@ export default function BulkMeterDetailsPage() {
                     <TableRow key={customer.id}>
                       <TableCell className="font-medium">{customer.name}</TableCell>
                       <TableCell>{customer.meterNumber}</TableCell>
-                      <TableCell>{customer.previousReading.toFixed(2)}</TableCell>
-                      <TableCell>{customer.currentReading.toFixed(2)}</TableCell>
-                      <TableCell>{usage.toFixed(2)} m³</TableCell>
+                      <TableCell>{usage.toFixed(2)}</TableCell>
                       <TableCell className="text-accent">ETB {customer.calculatedBill.toFixed(2)}</TableCell>
                       <TableCell>
                         <Button
@@ -330,7 +327,6 @@ export default function BulkMeterDetailsPage() {
         </CardContent>
       </Card>
 
-      {/* Bulk Meter Edit Dialog */}
       {bulkMeter && (
           <BulkMeterFormDialog
             open={isBulkMeterFormOpen}
@@ -355,7 +351,6 @@ export default function BulkMeterDetailsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Individual Customer Edit/Delete Dialogs */}
       {selectedCustomer && bulkMeter && ( 
           <IndividualCustomerFormDialog
             open={isCustomerFormOpen}

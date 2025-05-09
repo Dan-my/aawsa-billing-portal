@@ -21,19 +21,17 @@ import {
   type IndividualCustomerDataEntryFormValues,
   customerTypes,
   sewerageConnections,
-} from "@/app/admin/data-entry/customer-data-entry-types"; // Re-use admin schema
+} from "@/app/admin/data-entry/customer-data-entry-types"; 
 import { ScrollArea } from "@/components/ui/scroll-area";
-// import { Card, CardContent } from "@/components/ui/card"; // Keep Card structure for consistency
 import { addCustomer as addCustomerToStore, getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, initializeCustomers, getCustomers } from "@/lib/data-store";
-import type { IndividualCustomer, CustomerType } from "@/app/admin/individual-customers/individual-customer-types";
-import { getTariffRate } from "@/app/admin/individual-customers/individual-customer-types";
+import type { IndividualCustomer, CustomerType, SewerageConnection } from "@/app/admin/individual-customers/individual-customer-types";
 import { initialBulkMeters as defaultInitialBulkMeters } from "@/app/admin/bulk-meters/page";
 import { initialCustomers as defaultInitialCustomers } from "@/app/admin/individual-customers/page";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse } from "date-fns";
 
 interface StaffIndividualCustomerEntryFormProps {
-  branchName: string; // To potentially filter customers or for display
+  branchName: string; 
 }
 
 export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividualCustomerEntryFormProps) {
@@ -43,21 +41,29 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
 
 
   React.useEffect(() => {
-    // Ensure stores are initialized if not already
-    if (getCustomers().length === 0) initializeCustomers(defaultInitialCustomers);
     if (getBulkMeters().length === 0) initializeBulkMeters(defaultInitialBulkMeters);
+    if (getCustomers().length === 0) initializeCustomers(defaultInitialCustomers);
     
     const fetchedBms = getBulkMeters().map(bm => ({ id: bm.id, name: bm.name }));
     setAvailableBulkMeters(fetchedBms);
-     if (fetchedBms.length > 0 && form.getValues("assignedBulkMeterId")) {
-      setIsBulkMeterSelected(true);
+    
+    const currentAssignedBulkMeterId = form.getValues("assignedBulkMeterId");
+    if (fetchedBms.length > 0 && currentAssignedBulkMeterId) {
+        setIsBulkMeterSelected(true);
+    } else if (fetchedBms.length === 0) {
+        setIsBulkMeterSelected(false);
     }
 
     const unsubscribe = subscribeToBulkMeters((updatedBulkMeters) => {
-      setAvailableBulkMeters(updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
+      const newBms = updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name }));
+      setAvailableBulkMeters(newBms);
+      if (newBms.length === 0) {
+        setIsBulkMeterSelected(false);
+      }
     });
     return () => unsubscribe();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // form dependency removed
 
   const form = useForm<IndividualCustomerDataEntryFormValues>({
     resolver: zodResolver(individualCustomerDataEntrySchema),
@@ -74,7 +80,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
       currentReading: undefined,
       month: "", 
       specificArea: "",
-      location: "", // Could be pre-filled based on branchName if logic allows
+      location: "", 
       ward: "",
       sewerageConnection: undefined,
       assignedBulkMeterId: undefined,
@@ -84,15 +90,16 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
   React.useEffect(() => {
     const subscription = form.watch((value, { name }) => {
       if (name === "assignedBulkMeterId") {
-        setIsBulkMeterSelected(!!value.assignedBulkMeterId);
+        setIsBulkMeterSelected(!!value.assignedBulkMeterId && availableBulkMeters.length > 0);
       }
     });
     return () => subscription.unsubscribe();
-  }, [form]);
+  }, [form, availableBulkMeters]);
 
   function onSubmit(data: IndividualCustomerDataEntryFormValues) {
-     // Type assertion for addCustomerToStore
-    const customerDataForStore = data as Omit<IndividualCustomer, 'id' | 'calculatedBill' | 'paymentStatus'> & { customerType: CustomerType, currentReading: number, previousReading: number, status: any };
+    const customerDataForStore = {
+        ...data,
+    } as Omit<IndividualCustomer, 'id' | 'calculatedBill' | 'paymentStatus' | 'status'> & { customerType: CustomerType, currentReading: number, previousReading: number, sewerageConnection: SewerageConnection };
     
     addCustomerToStore(customerDataForStore);
     toast({
@@ -108,7 +115,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
   };
 
   return (
-    <ScrollArea className="h-[calc(100vh-380px)]"> {/* Adjusted height */}
+    <ScrollArea className="h-[calc(100vh-380px)]"> 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-1">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -121,10 +128,10 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                   <Select 
                      onValueChange={(value) => {
                         field.onChange(value);
-                        setIsBulkMeterSelected(!!value);
+                        setIsBulkMeterSelected(!!value && availableBulkMeters.length > 0);
                      }} 
-                    value={field.value || undefined} 
-                    defaultValue={field.value || undefined}
+                    value={field.value || ""} 
+                    defaultValue={field.value || ""}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -132,10 +139,10 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                       {availableBulkMeters.length === 0 && <SelectItem value="no-bms-staff" disabled>No bulk meters available</SelectItem>}
                       {availableBulkMeters.map((bm) => (
                         <SelectItem key={bm.id} value={bm.id}>{bm.name}</SelectItem>
                       ))}
-                       {availableBulkMeters.length === 0 && <SelectItem value="loading-bms-staff" disabled>Loading bulk meters...</SelectItem>}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -189,13 +196,13 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                   <FormLabel>Customer Type *</FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
-                    value={field.value || undefined} 
-                    defaultValue={field.value || undefined}
+                    value={field.value || ""} 
+                    defaultValue={field.value || ""}
                     disabled={!isBulkMeterSelected}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Select customer type" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -389,13 +396,13 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                   <FormLabel>Sewerage Connection *</FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
-                    value={field.value || undefined} 
-                    defaultValue={field.value || undefined}
+                    value={field.value || ""} 
+                    defaultValue={field.value || ""}
                     disabled={!isBulkMeterSelected}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Select sewerage status"/>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>

@@ -25,8 +25,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 import { addCustomer as addCustomerToStore, getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, initializeCustomers } from "@/lib/data-store";
-import type { IndividualCustomer, CustomerType } from "../individual-customers/individual-customer-types"; // For Omit type
-import { getTariffRate } from "../individual-customers/individual-customer-types"; // Import getTariffRate
+import type { IndividualCustomer, CustomerType, SewerageConnection } from "../individual-customers/individual-customer-types"; 
 import { initialBulkMeters as defaultInitialBulkMeters } from "../bulk-meters/page";
 import { initialCustomers as defaultInitialCustomers } from "../individual-customers/page";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -39,21 +38,31 @@ export function IndividualCustomerDataEntryForm() {
   const [isBulkMeterSelected, setIsBulkMeterSelected] = React.useState(false);
 
   React.useEffect(() => {
-    // Ensure stores are initialized
-    initializeCustomers(defaultInitialCustomers);
-    initializeBulkMeters(defaultInitialBulkMeters);
+    if (getBulkMeters().length === 0) initializeBulkMeters(defaultInitialBulkMeters);
+    if (getCustomers().length === 0) initializeCustomers(defaultInitialCustomers);
     
     const fetchedBms = getBulkMeters().map(bm => ({ id: bm.id, name: bm.name }));
     setAvailableBulkMeters(fetchedBms);
-    if (fetchedBms.length > 0 && form.getValues("assignedBulkMeterId")) {
-      setIsBulkMeterSelected(true);
+    
+    // Check if a bulk meter is already selected (e.g. from form state persistence or default values)
+    const currentAssignedBulkMeterId = form.getValues("assignedBulkMeterId");
+    if (fetchedBms.length > 0 && currentAssignedBulkMeterId) {
+        setIsBulkMeterSelected(true);
+    } else if (fetchedBms.length === 0) {
+        setIsBulkMeterSelected(false); // Ensure fields are disabled if no BMs
     }
 
+
     const unsubscribe = subscribeToBulkMeters((updatedBulkMeters) => {
-      setAvailableBulkMeters(updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
+      const newBms = updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name }));
+      setAvailableBulkMeters(newBms);
+       if (newBms.length === 0) { // If BMs become empty, disable fields
+        setIsBulkMeterSelected(false);
+      }
     });
     return () => unsubscribe();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // form dependency removed to avoid re-running fetch on every form change
 
   const form = useForm<IndividualCustomerDataEntryFormValues>({
     resolver: zodResolver(individualCustomerDataEntrySchema),
@@ -68,7 +77,7 @@ export function IndividualCustomerDataEntryForm() {
       meterNumber: "",
       previousReading: undefined,
       currentReading: undefined,
-      month: "", // YYYY-MM string
+      month: "", 
       specificArea: "",
       location: "",
       ward: "",
@@ -80,16 +89,17 @@ export function IndividualCustomerDataEntryForm() {
   React.useEffect(() => {
     const subscription = form.watch((value, { name }) => {
       if (name === "assignedBulkMeterId") {
-        setIsBulkMeterSelected(!!value.assignedBulkMeterId);
+        setIsBulkMeterSelected(!!value.assignedBulkMeterId && availableBulkMeters.length > 0);
       }
     });
     return () => subscription.unsubscribe();
-  }, [form]);
+  }, [form, availableBulkMeters]);
 
 
   function onSubmit(data: IndividualCustomerDataEntryFormValues) {
-    // Type assertion for addCustomerToStore
-    const customerDataForStore = data as Omit<IndividualCustomer, 'id' | 'calculatedBill' | 'paymentStatus'> & { customerType: CustomerType, currentReading: number, previousReading: number, status: any };
+    const customerDataForStore = {
+        ...data,
+    } as Omit<IndividualCustomer, 'id' | 'calculatedBill' | 'paymentStatus' | 'status'> & { customerType: CustomerType, currentReading: number, previousReading: number, sewerageConnection: SewerageConnection };
     
     addCustomerToStore(customerDataForStore);
     toast({
@@ -105,7 +115,7 @@ export function IndividualCustomerDataEntryForm() {
   };
 
   return (
-    <ScrollArea className="h-[calc(100vh-280px)]"> {/* Adjusted height */}
+    <ScrollArea className="h-[calc(100vh-280px)]"> 
       <Card className="shadow-lg w-full">
         <CardContent className="pt-6">
           <Form {...form}>
@@ -120,10 +130,10 @@ export function IndividualCustomerDataEntryForm() {
                       <Select 
                         onValueChange={(value) => {
                           field.onChange(value);
-                          setIsBulkMeterSelected(!!value);
+                          setIsBulkMeterSelected(!!value && availableBulkMeters.length > 0);
                         }} 
-                        value={field.value || undefined} 
-                        defaultValue={field.value || undefined}
+                        value={field.value || ""} 
+                        defaultValue={field.value || ""}
                        >
                         <FormControl>
                           <SelectTrigger>
@@ -131,10 +141,10 @@ export function IndividualCustomerDataEntryForm() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                           {availableBulkMeters.length === 0 && <SelectItem value="no-bms" disabled>No bulk meters available</SelectItem>}
                           {availableBulkMeters.map((bm) => (
                             <SelectItem key={bm.id} value={bm.id}>{bm.name}</SelectItem>
                           ))}
-                           {availableBulkMeters.length === 0 && <SelectItem value="loading-bms" disabled>Loading bulk meters...</SelectItem>}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -188,13 +198,13 @@ export function IndividualCustomerDataEntryForm() {
                       <FormLabel>Customer Type *</FormLabel>
                       <Select 
                         onValueChange={field.onChange} 
-                        value={field.value || undefined} 
-                        defaultValue={field.value || undefined}
+                        value={field.value || ""} 
+                        defaultValue={field.value || ""}
                         disabled={!isBulkMeterSelected}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue />
+                            <SelectValue placeholder="Select customer type"/>
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -388,13 +398,13 @@ export function IndividualCustomerDataEntryForm() {
                       <FormLabel>Sewerage Connection *</FormLabel>
                       <Select 
                         onValueChange={field.onChange} 
-                        value={field.value || undefined} 
-                        defaultValue={field.value || undefined}
+                        value={field.value || ""} 
+                        defaultValue={field.value || ""}
                         disabled={!isBulkMeterSelected}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue />
+                            <SelectValue placeholder="Select sewerage status"/>
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>

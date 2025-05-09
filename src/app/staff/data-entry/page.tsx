@@ -7,15 +7,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, UploadCloud } from "lucide-react";
 import { StaffBulkMeterEntryForm } from "./staff-bulk-meter-entry-form";
 import { StaffIndividualCustomerEntryForm } from "./staff-individual-customer-entry-form";
-import { CsvUploadSection } from "@/app/admin/data-entry/csv-upload-section"; // Re-use admin component
+import { CsvUploadSection } from "@/app/admin/data-entry/csv-upload-section"; 
 import { 
   bulkMeterDataEntrySchema, 
   individualCustomerDataEntrySchema,
   type BulkMeterDataEntryFormValues,
   type IndividualCustomerDataEntryFormValues
-} from "@/app/admin/data-entry/customer-data-entry-types"; // Re-use admin types
+} from "@/app/admin/data-entry/customer-data-entry-types"; 
 import { addBulkMeter, addCustomer, initializeBulkMeters, initializeCustomers, getBulkMeters, getCustomers } from "@/lib/data-store";
-import { getTariffRate, type CustomerType } from "@/app/admin/individual-customers/individual-customer-types";
+import type { CustomerType, SewerageConnection } from "@/app/admin/individual-customers/individual-customer-types";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import { initialBulkMeters as defaultInitialBulkMeters } from "@/app/admin/bulk-meters/page";
@@ -46,7 +46,6 @@ export default function StaffDataEntryPage() {
         console.error("Failed to parse user from localStorage", e);
       }
     }
-    // Initialize data stores if they are empty
      if (getBulkMeters().length === 0) {
         initializeBulkMeters(defaultInitialBulkMeters);
     }
@@ -59,16 +58,16 @@ export default function StaffDataEntryPage() {
   const handleBulkMeterCsvUpload = (data: BulkMeterDataEntryFormValues) => {
     const bulkMeterDataForStore: Omit<BulkMeter, 'id'> = {
       ...data,
-      // Potentially use branchName for location if applicable, or add a branch field to bulk meter
-      // location: data.location || branchName, 
       status: "Active",
-      paymentStatus: "Unpaid", // Default payment status
+      paymentStatus: "Unpaid", 
     };
     addBulkMeter(bulkMeterDataForStore);
   };
 
   const handleIndividualCustomerCsvUpload = (data: IndividualCustomerDataEntryFormValues) => {
-    const customerDataForStore = data as Omit<IndividualCustomer, 'id' | 'calculatedBill' | 'paymentStatus'> & { customerType: CustomerType, currentReading: number, previousReading: number, status: any };
+     const customerDataForStore = {
+        ...data,
+    } as Omit<IndividualCustomer, 'id' | 'calculatedBill' | 'paymentStatus' | 'status'> & { customerType: CustomerType, currentReading: number, previousReading: number, sewerageConnection: SewerageConnection };
     addCustomer(customerDataForStore);
   };
 
@@ -117,8 +116,7 @@ export default function StaffDataEntryPage() {
               <CardHeader>
                 <CardTitle>Bulk Meter CSV Upload</CardTitle>
                 <CardDescription>
-                  Upload a CSV file to add multiple bulk meters for {branchName}. Ensure your CSV matches the required format.
-                  Expected columns: {bulkMeterCsvHeaders.join(', ')}.
+                  Upload a CSV file to add multiple bulk meters for {branchName}.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -135,8 +133,7 @@ export default function StaffDataEntryPage() {
               <CardHeader>
                 <CardTitle>Individual Customer CSV Upload</CardTitle>
                 <CardDescription>
-                  Upload a CSV file to add multiple individual customers for {branchName}. Ensure your CSV matches the required format.
-                  Expected columns: {individualCustomerCsvHeaders.join(', ')}.
+                  Upload a CSV file to add multiple individual customers for {branchName}.
                 </CardDescription>
               </CardHeader>
               <CardContent>

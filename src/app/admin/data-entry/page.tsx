@@ -15,8 +15,8 @@ import {
   type BulkMeterDataEntryFormValues,
   type IndividualCustomerDataEntryFormValues
 } from "./customer-data-entry-types";
-import { addBulkMeter, addCustomer, initializeBulkMeters, initializeCustomers } from "@/lib/data-store";
-import { getTariffRate, type CustomerType } from "../individual-customers/individual-customer-types";
+import { addBulkMeter, addCustomer, initializeBulkMeters, initializeCustomers, getBulkMeters, getCustomers } from "@/lib/data-store";
+import type { CustomerType, SewerageConnection } from "../individual-customers/individual-customer-types";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
 import { initialBulkMeters } from "../bulk-meters/page";
@@ -32,29 +32,24 @@ export default function AdminDataEntryPage() {
   const [selectedEntryType, setSelectedEntryType] = React.useState<DataEntryType>("manual-individual");
 
   React.useEffect(() => {
-    initializeBulkMeters(initialBulkMeters);
-    initializeCustomers(initialCustomers);
+    if (getBulkMeters().length === 0) initializeBulkMeters(initialBulkMeters);
+    if (getCustomers().length === 0) initializeCustomers(initialCustomers);
   }, []);
 
   const handleBulkMeterCsvUpload = (data: BulkMeterDataEntryFormValues) => {
     const bulkMeterDataForStore: Omit<BulkMeter, 'id'> = {
       ...data,
-      status: "Active", // Default status for CSV upload
-      paymentStatus: "Unpaid", // Default payment status for CSV upload
+      status: "Active", 
+      paymentStatus: "Unpaid", 
     };
     addBulkMeter(bulkMeterDataForStore);
   };
 
   const handleIndividualCustomerCsvUpload = (data: IndividualCustomerDataEntryFormValues) => {
-    const usage = data.currentReading - data.previousReading;
-    const tariff = getTariffRate(data.customerType as CustomerType);
-    const calculatedBill = usage * tariff;
-
-    const customerDataForStore: Omit<IndividualCustomer, 'id' | 'calculatedBill' | 'paymentStatus' | 'status'> & { customerType: CustomerType, currentReading: number, previousReading: number } = {
-      ...data,
-    };
-     // Casting to the expected type for addCustomer which now calculates bill and sets defaults
-    addCustomer(customerDataForStore as Omit<IndividualCustomer, 'id' | 'calculatedBill' | 'paymentStatus'> & { customerType: CustomerType, currentReading: number, previousReading: number, status:any });
+     const customerDataForStore = {
+        ...data,
+    } as Omit<IndividualCustomer, 'id' | 'calculatedBill' | 'paymentStatus' | 'status'> & { customerType: CustomerType, currentReading: number, previousReading: number, sewerageConnection: SewerageConnection };
+    addCustomer(customerDataForStore);
   };
 
 
@@ -112,14 +107,13 @@ export default function AdminDataEntryPage() {
             <CardHeader>
               <CardTitle>Bulk Meter CSV Upload</CardTitle>
               <CardDescription>
-                Upload a CSV file to add multiple bulk meters. Ensure your CSV matches the required format.
-                Expected columns: {bulkMeterCsvHeaders.join(', ')}.
+                Upload a CSV file to add multiple bulk meters.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <CsvUploadSection
                 entryType="bulk"
-                schema={bulkMeterDataEntrySchema} // This schema is for form values, ensure it matches CSV structure or adapt
+                schema={bulkMeterDataEntrySchema} 
                 addRecordFunction={handleBulkMeterCsvUpload}
                 expectedHeaders={bulkMeterCsvHeaders}
               />
@@ -130,14 +124,13 @@ export default function AdminDataEntryPage() {
             <CardHeader>
               <CardTitle>Individual Customer CSV Upload</CardTitle>
               <CardDescription>
-                Upload a CSV file to add multiple individual customers. Ensure your CSV matches the required format.
-                Expected columns: {individualCustomerCsvHeaders.join(', ')}.
+                Upload a CSV file to add multiple individual customers.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <CsvUploadSection
                 entryType="individual"
-                schema={individualCustomerDataEntrySchema} // This schema is for form values
+                schema={individualCustomerDataEntrySchema} 
                 addRecordFunction={handleIndividualCustomerCsvUpload}
                 expectedHeaders={individualCustomerCsvHeaders}
               />

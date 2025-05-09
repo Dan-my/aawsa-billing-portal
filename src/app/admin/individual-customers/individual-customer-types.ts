@@ -23,8 +23,17 @@ export type IndividualCustomer = z.infer<typeof baseIndividualCustomerDataSchema
   calculatedBill: number;
 };
 
-// For non-domestic customers and bulk meter's own billing (if applicable as flat rate)
-export const NON_DOMESTIC_FLAT_RATE = 7.50; // ETB per m³
+// Non-domestic tariff tiers
+interface NonDomesticTariffTier {
+  limit: number; // Upper limit of the tier (m³)
+  rate: number;  // Rate for this tier (ETB/m³)
+}
+
+export const nonDomesticTariffTiers: NonDomesticTariffTier[] = [
+  { limit: 200, rate: 30.00 },       // Tier 1: 0 - 200 m³
+  { limit: Infinity, rate: 40.00 },  // Tier 2: Above 200 m³
+];
+
 
 const DOMESTIC_METER_RENT = 15;
 const DOMESTIC_SEWERAGE_RATE_PER_M3 = 6.25;
@@ -38,7 +47,7 @@ interface DomesticTariffTier {
   cumulativeCharge?: number; // Max charge from previous tiers
 }
 
-const domesticTariffTiers: DomesticTariffTier[] = [
+export const domesticTariffTiers: DomesticTariffTier[] = [
   { limit: 5, rate: 10.21 },
   { limit: 14, rate: 17.87 },
   { limit: 23, rate: 33.19 },
@@ -48,19 +57,19 @@ const domesticTariffTiers: DomesticTariffTier[] = [
   { limit: Infinity, rate: 81.71 }, // For consumption above 50 M3
 ];
 
-// Pre-calculate cumulative values for faster calculation
-let accumulatedUsage = 0;
-let accumulatedCharge = 0;
+// Pre-calculate cumulative values for domestic tariff
+let accumulatedDomesticUsage = 0;
+let accumulatedDomesticCharge = 0;
 for (const tier of domesticTariffTiers) {
-  if (tier.limit !== Infinity && tier.limit - accumulatedUsage > 0) {
-    tier.cumulativeUsage = accumulatedUsage;
-    tier.cumulativeCharge = accumulatedCharge;
-    const usageInTier = tier.limit - accumulatedUsage;
-    accumulatedCharge += usageInTier * tier.rate;
-    accumulatedUsage = tier.limit;
+  if (tier.limit !== Infinity && tier.limit - accumulatedDomesticUsage > 0) {
+    tier.cumulativeUsage = accumulatedDomesticUsage;
+    tier.cumulativeCharge = accumulatedDomesticCharge;
+    const usageInTier = tier.limit - accumulatedDomesticUsage;
+    accumulatedDomesticCharge += usageInTier * tier.rate;
+    accumulatedDomesticUsage = tier.limit;
   } else if (tier.limit === Infinity) {
-    tier.cumulativeUsage = accumulatedUsage; // Usage up to the start of this "infinity" tier
-    tier.cumulativeCharge = accumulatedCharge; // Charge up to the start of this "infinity" tier
+    tier.cumulativeUsage = accumulatedDomesticUsage; 
+    tier.cumulativeCharge = accumulatedDomesticCharge; 
   }
 }
 
@@ -84,6 +93,23 @@ function calculateDomesticBaseWaterCharge(usage: number): number {
   return totalCharge;
 }
 
+function calculateNonDomesticBill(usage: number): number {
+  if (usage <= 0) return 0;
+  let totalCharge = 0;
+
+  if (usage <= nonDomesticTariffTiers[0].limit) { // Tier 1: 0 - 200 m³
+    totalCharge = usage * nonDomesticTariffTiers[0].rate;
+  } else { // Tier 2: Above 200 m³
+    // Charge for the first 200 m³
+    totalCharge = nonDomesticTariffTiers[0].limit * nonDomesticTariffTiers[0].rate;
+    // Charge for the remaining usage
+    const remainingUsage = usage - nonDomesticTariffTiers[0].limit;
+    totalCharge += remainingUsage * nonDomesticTariffTiers[1].rate;
+  }
+  return totalCharge;
+}
+
+
 export function calculateBill(
   usage: number, 
   customerType: CustomerType, 
@@ -92,7 +118,7 @@ export function calculateBill(
   if (usage < 0) usage = 0; // Ensure usage is not negative
 
   if (customerType === "Non-domestic") {
-    return usage * NON_DOMESTIC_FLAT_RATE;
+    return parseFloat(calculateNonDomesticBill(usage).toFixed(2));
   }
 
   // Domestic customer calculation
@@ -108,23 +134,17 @@ export function calculateBill(
   return parseFloat(totalBill.toFixed(2)); // Return rounded to 2 decimal places
 }
 
-// This function is now superseded by calculateBill for bill calculation.
-// It's kept here if TARIFF_RATES_BY_TYPE is used elsewhere for display or flat rate purposes.
+
 export const TARIFF_RATES_BY_TYPE = {
   Domestic: null, // Domestic is progressive, not a single rate.
-  "Non-domestic": NON_DOMESTIC_FLAT_RATE,
+  "Non-domestic": null, // Non-domestic is now also progressive.
 } as const;
 
 /**
- * @deprecated Use calculateBill for actual bill calculation. This function might be misleading for domestic customers.
- * Returns a flat rate for non-domestic or a placeholder for domestic.
+ * @deprecated Use calculateBill for actual bill calculation. This function might be misleading as both customer types now use progressive tariffs.
+ * Returns null for both types as they are progressive.
  */
 export function getTariffRate(customerType: CustomerType): number | null {
-  if (customerType === "Domestic") {
-    // Domestic has a progressive tariff, so a single rate isn't representative.
-    // This function should ideally not be used for domestic bill calculation.
-    console.warn("getTariffRate called for Domestic customer. Use calculateBill for accurate progressive billing.");
-    return null; 
-  }
-  return TARIFF_RATES_BY_TYPE[customerType as "Non-domestic"];
+  console.warn(`getTariffRate called for ${customerType} customer. Use calculateBill for accurate progressive billing. This function will return null.`);
+  return null;
 }

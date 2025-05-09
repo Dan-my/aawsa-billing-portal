@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Save, AlertTriangle, Info, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { NON_DOMESTIC_FLAT_RATE } from "@/app/admin/individual-customers/individual-customer-types";
+import { nonDomesticTariffTiers, domesticTariffTiers } from "@/app/admin/individual-customers/individual-customer-types";
 
 const APP_NAME_KEY = "aawsa-app-name";
 const CURRENCY_KEY = "aawsa-default-currency";
@@ -155,17 +155,29 @@ export default function AdminSettingsPage() {
               <DollarSign className="h-5 w-5 text-primary" />
               <h3 className="font-semibold">Current Tariff Information</h3>
             </div>
-            <div className="mt-2 space-y-1">
-              <p className="text-sm">
-                <span className="font-medium">Domestic Customers:</span>
-                <span className="ml-2 text-accent">Progressive tariff structure (details in calculation logic).</span>
-              </p>
-              <p className="text-sm">
-                <span className="font-medium">Non-domestic Customers:</span>
-                <span className="ml-2 font-mono text-accent">{defaultCurrency} {NON_DOMESTIC_FLAT_RATE.toFixed(2)} / m³</span>
-              </p>
+            <div className="mt-2 space-y-2">
+              <div>
+                <p className="text-sm font-medium">Domestic Customers:</p>
+                <ul className="list-disc list-inside text-sm text-accent pl-2">
+                  {domesticTariffTiers.map((tier, index) => (
+                    <li key={`domestic-tier-${index}`}>
+                      {tier.cumulativeUsage !== undefined && tier.cumulativeUsage > 0 ? `${tier.cumulativeUsage + 1}` : '0'} - {tier.limit === Infinity ? 'Above' : tier.limit} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Non-domestic Customers:</p>
+                 <ul className="list-disc list-inside text-sm text-accent pl-2">
+                  {nonDomesticTariffTiers.map((tier, index) => (
+                    <li key={`nondomestic-tier-${index}`}>
+                      {index === 0 ? `0 - ${tier.limit}` : `Above ${nonDomesticTariffTiers[index-1].limit}`} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="text-xs text-muted-foreground mt-3">
               Tariff details are managed centrally. Contact system administrators for changes to the underlying rates or structure.
             </p>
           </div>

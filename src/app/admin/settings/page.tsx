@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -10,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Save, AlertTriangle, Info, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { nonDomesticTariffTiers, domesticTariffTiers } from "@/app/admin/individual-customers/individual-customer-types";
+import { domesticTariffTiers, NonDomesticTariffInfo } from "@/app/admin/individual-customers/individual-customer-types";
 
 const APP_NAME_KEY = "aawsa-app-name";
 const CURRENCY_KEY = "aawsa-default-currency";
@@ -164,16 +165,19 @@ export default function AdminSettingsPage() {
                       {tier.cumulativeUsage !== undefined && tier.cumulativeUsage > 0 ? `${tier.cumulativeUsage + 1}` : '0'} - {tier.limit === Infinity ? 'Above' : tier.limit} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
                     </li>
                   ))}
+                   <li>+ 1% Maintenance Fee (on water charge)</li>
+                   <li>+ 7% Sanitation Fee (on water charge)</li>
+                   <li>+ {defaultCurrency} {15.00.toFixed(2)} Meter Rent</li>
+                   <li>+ Sewerage: {defaultCurrency} {6.25.toFixed(2)} / m³ (if applicable)</li>
                 </ul>
               </div>
               <div>
                 <p className="text-sm font-medium">Non-domestic Customers:</p>
                  <ul className="list-disc list-inside text-sm text-accent pl-2">
-                  {nonDomesticTariffTiers.map((tier, index) => (
-                    <li key={`nondomestic-tier-${index}`}>
-                      {index === 0 ? `0 - ${tier.limit}` : `Above ${nonDomesticTariffTiers[index-1].limit}`} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
-                    </li>
-                  ))}
+                    <li>Water Charge: {defaultCurrency} {NonDomesticTariffInfo.waterRatePerM3.toFixed(2)} / m³</li>
+                    <li>Sanitation: {(NonDomesticTariffInfo.sanitationPercentage * 100).toFixed(0)}% of Water Charge</li>
+                    <li>Meter Rent: {defaultCurrency} {NonDomesticTariffInfo.meterRent.toFixed(2)}</li>
+                    <li>Sewerage: {defaultCurrency} {NonDomesticTariffInfo.sewerageRatePerM3.toFixed(2)} / m³ (if applicable)</li>
                 </ul>
               </div>
             </div>
@@ -203,3 +207,4 @@ export default function AdminSettingsPage() {
     </div>
   );
 }
+

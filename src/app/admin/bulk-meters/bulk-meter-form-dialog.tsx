@@ -27,13 +27,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { baseBulkMeterDataSchema } from "@/app/admin/data-entry/customer-data-entry-types";
 import type { BulkMeter } from "./bulk-meter-types";
 import { bulkMeterStatuses } from "./bulk-meter-types";
+import { paymentStatuses } from "../individual-customers/individual-customer-types"; // Import paymentStatuses
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse } from "date-fns";
 
 
-// Extend the base schema from data entry to include status for management purposes
+// Extend the base schema from data entry to include status and paymentStatus for management purposes
 const bulkMeterFormObjectSchema = baseBulkMeterDataSchema.extend({
   status: z.enum(bulkMeterStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
+  paymentStatus: z.enum(paymentStatuses, { errorMap: () => ({ message: "Please select a valid payment status."}) }),
 });
 
 // Re-apply the refinement to the extended schema
@@ -68,6 +70,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
       location: "",
       ward: "",
       status: undefined,
+      paymentStatus: "Unpaid", // Default payment status
     },
   });
 
@@ -78,6 +81,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
         meterSize: defaultValues.meterSize ?? undefined,
         previousReading: defaultValues.previousReading ?? undefined,
         currentReading: defaultValues.currentReading ?? undefined,
+        paymentStatus: defaultValues.paymentStatus ?? "Unpaid",
       });
     } else {
       form.reset({
@@ -93,6 +97,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
         location: "",
         ward: "",
         status: undefined,
+        paymentStatus: "Unpaid",
       });
     }
   }, [defaultValues, form, open]);
@@ -316,6 +321,28 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                   </FormItem>
                 )}
               />
+               <FormField
+                control={form.control}
+                name="paymentStatus"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Payment Status *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select payment status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {paymentStatuses.map(status => (
+                          <SelectItem key={status} value={status}>{status}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -329,4 +356,3 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
     </Dialog>
   );
 }
-

@@ -20,9 +20,9 @@ import {
 } from "@/lib/data-store";
 
 export const initialBulkMeters: BulkMeter[] = [
-  { id: "bm001", name: "Kality Industrial Meter", customerKeyNumber: "BMK001", contractNumber: "BMC001", meterSize: 3, meterNumber: "MTR-BM-001", previousReading: 10000, currentReading: 10500, month: "2023-11", specificArea: "Ind. Zone A", location: "Kality", ward: "Woreda 5", status: "Active" },
-  { id: "bm002", name: "Bole Airport Feeder", customerKeyNumber: "BMB002", contractNumber: "BMC002", meterSize: 4, meterNumber: "MTR-BM-002", previousReading: 25000, currentReading: 26500, month: "2023-11", specificArea: "Airport Cargo", location: "Bole", ward: "Woreda 1", status: "Active" },
-  { id: "bm003", name: "Megenagna Res. Supply", customerKeyNumber: "BMM003", contractNumber: "BMC003", meterSize: 2.5, meterNumber: "MTR-BM-003", previousReading: 5000, currentReading: 5200, month: "2023-11", specificArea: "Block 10", location: "Megenagna", ward: "Woreda 8", status: "Maintenance" },
+  { id: "bm001", name: "Kality Industrial Meter", customerKeyNumber: "BMK001", contractNumber: "BMC001", meterSize: 3, meterNumber: "MTR-BM-001", previousReading: 10000, currentReading: 10500, month: "2023-11", specificArea: "Ind. Zone A", location: "Kality", ward: "Woreda 5", status: "Active", paymentStatus: "Paid" },
+  { id: "bm002", name: "Bole Airport Feeder", customerKeyNumber: "BMB002", contractNumber: "BMC002", meterSize: 4, meterNumber: "MTR-BM-002", previousReading: 25000, currentReading: 26500, month: "2023-11", specificArea: "Airport Cargo", location: "Bole", ward: "Woreda 1", status: "Active", paymentStatus: "Unpaid" },
+  { id: "bm003", name: "Megenagna Res. Supply", customerKeyNumber: "BMM003", contractNumber: "BMC003", meterSize: 2.5, meterNumber: "MTR-BM-003", previousReading: 5000, currentReading: 5200, month: "2023-11", specificArea: "Block 10", location: "Megenagna", ward: "Woreda 8", status: "Maintenance", paymentStatus: "Paid" },
 ];
 
 
@@ -70,11 +70,13 @@ export default function BulkMetersPage() {
       const updatedBulkMeterData: BulkMeter = {
         id: selectedBulkMeter.id,
         ...data, // Spread form values
+        paymentStatus: selectedBulkMeter.paymentStatus, // Preserve existing payment status on edit
       };
       updateBulkMeterInStore(updatedBulkMeterData);
       toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
     } else {
-      addBulkMeterToStore(data); // data (BulkMeterFormValues) matches Omit<BulkMeter, 'id'>
+      // For new bulk meter, paymentStatus defaults to 'Unpaid' in addBulkMeterToStore
+      addBulkMeterToStore(data); 
       toast({ title: "Bulk Meter Added", description: `${data.name} has been added.` });
     }
     setIsFormOpen(false);
@@ -153,4 +155,3 @@ export default function BulkMetersPage() {
     </div>
   );
 }
-

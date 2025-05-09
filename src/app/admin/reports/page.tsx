@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from "react";
+import * as XLSX from 'xlsx';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, FileSpreadsheet, AlertCircle } from "lucide-react";
@@ -19,32 +20,52 @@ interface ReportType {
   id: string;
   name: string;
   description: string;
-  headers?: string[]; // For CSV/XLSX export
+  headers?: string[]; // For XLSX export
   getData?: () => any[]; // Function to fetch data for the report
 }
 
-const arrayToCsv = (data: any[], headers: string[]): string => {
-  const csvRows = [];
-  csvRows.push(headers.join(',')); // Add header row
+const arrayToXlsxBlob = (data: any[], headers: string[]): Blob => {
+  const worksheetData = [
+    headers, // First row is headers
+    ...data.map(row => headers.map(header => row[header] ?? '')),
+  ];
 
-  for (const row of data) {
-    const values = headers.map(header => {
-      const val = row[header];
-      // Ensure value is stringified, handle undefined/null as empty string
-      const stringVal = (val === undefined || val === null) ? '' : String(val);
-      // Escape double quotes by doubling them, then wrap the entire field in double quotes
-      const escaped = stringVal.replace(/"/g, '""');
-      return `"${escaped}"`;
-    });
-    csvRows.push(values.join(','));
+  const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(worksheetData);
+
+  // Apply bold styling to header cells (first row)
+  const range = XLSX.utils.decode_range(ws['!ref']!);
+  for (let C = range.s.c; C <= range.e.c; ++C) {
+    const address = XLSX.utils.encode_cell({ r: 0, c: C });
+    if (!ws[address]) { // If cell doesn't exist (e.g. empty header), create it
+        XLSX.utils.sheet_add_aoa(ws, [[headers[C] || '']], { origin: address });
+    }
+    ws[address].s = { font: { bold: true } };
   }
-  return csvRows.join('\n');
+
+  // Calculate column widths based on header and data content
+  const colWidths = headers.map((header, colIndex) => {
+    let maxLength = (header || '').length;
+    for (const dataRow of worksheetData.slice(1)) { // Skip header row
+      const cellValue = dataRow[colIndex];
+      if (cellValue != null) {
+        maxLength = Math.max(maxLength, String(cellValue).length);
+      }
+    }
+    return { wch: Math.min(maxLength + 2, 60) }; // Add padding, max width 60
+  });
+  ws['!cols'] = colWidths;
+
+  const wb: XLSX.WorkBook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  return new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 };
 
-const downloadFile = (content: string, fileName: string, mimeType: string) => {
-  const blob = new Blob([content], { type: mimeType });
+
+const downloadFile = (content: Blob, fileName: string) => {
   const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
+  link.href = URL.createObjectURL(content);
   link.download = fileName;
   document.body.appendChild(link);
   link.click();
@@ -56,7 +77,7 @@ const downloadFile = (content: string, fileName: string, mimeType: string) => {
 const availableReports: ReportType[] = [
   {
     id: "customer-data-export",
-    name: "Customer Data Export (CSV)",
+    name: "Customer Data Export (XLSX)",
     description: "Download a comprehensive list of all individual customers, including their details and meter information.",
     headers: [
       "id", "name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal",
@@ -67,7 +88,7 @@ const availableReports: ReportType[] = [
   },
   {
     id: "bulk-meter-data-export",
-    name: "Bulk Meter Data Export (CSV)",
+    name: "Bulk Meter Data Export (XLSX)",
     description: "Download a comprehensive list of all bulk meters, including their details and readings.",
     headers: [
       "id", "name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber",
@@ -140,9 +161,9 @@ export default function AdminReportsPage() {
         return;
       }
 
-      const csvData = arrayToCsv(data, selectedReport.headers);
-      const fileName = `${selectedReport.id}_${new Date().toISOString().split('T')[0]}.csv`;
-      downloadFile(csvData, fileName, 'text/csv;charset=utf-8;');
+      const xlsxBlob = arrayToXlsxBlob(data, selectedReport.headers);
+      const fileName = `${selectedReport.id}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      downloadFile(xlsxBlob, fileName);
       
       toast({
         title: "Report Generated",
@@ -222,7 +243,7 @@ export default function AdminReportsPage() {
           {selectedReport && selectedReport.getData && (
             <Button onClick={handleGenerateReport} disabled={isGenerating || !selectedReportId}>
               <Download className="mr-2 h-4 w-4" />
-              {isGenerating ? "Generating..." : `Generate & Download ${selectedReport.name.replace(" (CSV)", "").replace(" (Coming Soon)", "")}`}
+              {isGenerating ? "Generating..." : `Generate & Download ${selectedReport.name.replace(" (XLSX)", "").replace(" (Coming Soon)", "")}`}
             </Button>
           )}
 

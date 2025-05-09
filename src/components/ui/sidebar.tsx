@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -555,29 +556,29 @@ const sidebarMenuButtonVariants = cva(
 
 
 const SidebarMenuButton = React.forwardRef<
-  HTMLElement, // Use HTMLElement for polymorphic component ref
-  React.HTMLAttributes<HTMLElement> & { // Use HTMLAttributes for general props
+  HTMLElement, 
+  React.HTMLAttributes<HTMLElement> & {
     asChild?: boolean;
     isActive?: boolean;
     tooltip?: string | React.ComponentProps<typeof TooltipContent>;
-    href?: string; // Add href prop
+    href?: string;
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
     {
-      asChild = false,
+      asChild: propAsChild, 
       isActive = false,
       variant = "default",
       size = "default",
       tooltip,
       className,
       children,
-      href, // Destructure href
-      ...props // Other props like target, rel will be in here
+      href, 
+      ...rest 
     },
     ref
   ) => {
-    const Comp = asChild ? Slot : (href ? "a" : "button"); // Render 'a' if href is present
+    const Comp = propAsChild ? Slot : (href ? "a" : "button");
     const { isMobile, state } = useSidebar();
 
     const buttonEl = (
@@ -586,9 +587,9 @@ const SidebarMenuButton = React.forwardRef<
         data-sidebar="menu-button"
         data-size={size}
         data-active={isActive}
-        className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
-        href={href} // Pass href to Comp
-        {...props} // Pass other props (target, rel, etc.)
+        className={cn(sidebarMenuButtonVariants({ variant, size, className }))}
+        href={href} 
+        {...rest} 
       >
         {children}
       </Comp>
@@ -724,15 +725,15 @@ const SidebarMenuSubItem = React.forwardRef<
 SidebarMenuSubItem.displayName = "SidebarMenuSubItem"
 
 const SidebarMenuSubButton = React.forwardRef<
-  HTMLElement, // Use HTMLElement for polymorphic component ref
-  React.HTMLAttributes<HTMLElement> & { // Use HTMLAttributes for general props
+  HTMLElement, 
+  React.HTMLAttributes<HTMLElement> & {
     asChild?: boolean;
     size?: "sm" | "default";
     isActive?: boolean;
-    href?: string; // Add href prop
+    href?: string; 
   }
->(({ asChild = false, size = "default", isActive, className, children, href, ...props }, ref) => {
-  const Comp = asChild ? Slot : (href ? "a" : "button"); // Default to 'a' if href is present
+>(({ asChild: propAsChild, size = "default", isActive, className, children, href, ...rest }, ref) => {
+  const Comp = propAsChild ? Slot : (href ? "a" : "button");
 
   return (
     <Comp
@@ -748,8 +749,8 @@ const SidebarMenuSubButton = React.forwardRef<
         "group-data-[collapsible=icon]:hidden",
         className
       )}
-      href={href} // Pass href to Comp
-      {...props} // Pass other props
+      href={href}
+      {...rest} 
     >
         {children}
     </Comp>
@@ -783,3 +784,4 @@ export {
   SidebarTrigger,
   useSidebar,
 }
+

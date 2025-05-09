@@ -25,7 +25,7 @@ import {
 } from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meter-types";
 import type { IndividualCustomer, PaymentStatus, CustomerType, SewerageConnection } from "../../individual-customers/individual-customer-types";
-import { calculateBill, NON_DOMESTIC_FLAT_RATE } from "../../individual-customers/individual-customer-types"; 
+import { calculateBill } from "../../individual-customers/individual-customer-types"; 
 import { BulkMeterFormDialog, type BulkMeterFormValues } from "../bulk-meter-form-dialog";
 import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "../../individual-customers/individual-customer-form-dialog";
 import { initialBulkMeters as defaultInitialBulkMeters } from "../page"; 
@@ -146,7 +146,6 @@ export default function BulkMeterDetailsPage() {
   const handleSubmitCustomerForm = (data: IndividualCustomerFormValues) => {
     if (selectedCustomer) {
       const usage = data.currentReading - data.previousReading;
-      // The calculateBill function now handles domestic progressive and non-domestic flat rates.
       const calculatedBill = calculateBill(usage, data.customerType as CustomerType, data.sewerageConnection as SewerageConnection);
       const updatedCustomerData: IndividualCustomer = { 
           ...selectedCustomer, 
@@ -179,13 +178,25 @@ export default function BulkMeterDetailsPage() {
   }
 
   const bulkUsage = bulkMeter.currentReading - bulkMeter.previousReading;
-  // Bulk meter itself is billed at a flat rate (e.g., non-domestic or a specific bulk rate)
-  // Assuming NON_DOMESTIC_FLAT_RATE for bulk meter's own bill as per previous flat rate logic
-  // If bulk meters have their own complex tariff, this would need adjustment.
-  const totalBulkBill = bulkUsage * NON_DOMESTIC_FLAT_RATE; 
+  
+  let effectiveBulkMeterCustomerType: CustomerType = "Non-domestic"; 
+  let effectiveBulkMeterSewerageConnection: SewerageConnection = "No"; 
+
+  if (associatedCustomers.length > 0) {
+    const hasNonDomesticCustomer = associatedCustomers.some(c => c.customerType === "Non-domestic");
+    if (!hasNonDomesticCustomer) { // All are domestic
+      effectiveBulkMeterCustomerType = "Domestic";
+      // For bulk meter itself, if considered "Domestic" for tariff, assume "No" sewerage.
+      // This avoids double-counting sewerage which is typically an end-user premise characteristic.
+      effectiveBulkMeterSewerageConnection = "No"; 
+    }
+    // If hasNonDomesticCustomer is true, it remains "Non-domestic" (and sewerage "No", though not used for non-domestic bill)
+  }
+  // If associatedCustomers.length is 0, it defaults to "Non-domestic", "No" due to initial values.
+
+  const totalBulkBill = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection);
   
   const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + (cust.currentReading - cust.previousReading), 0);
-  // Sum of already calculated bills for individual customers
   const totalIndividualBill = associatedCustomers.reduce((sum, cust) => sum + cust.calculatedBill, 0);
 
   const differenceUsage = bulkUsage - totalIndividualUsage;
@@ -217,7 +228,7 @@ export default function BulkMeterDetailsPage() {
           <div>
             <p><strong className="font-semibold">Meter No:</strong> {bulkMeter.meterNumber}</p>
             <p><strong className="font-semibold">Month:</strong> {bulkMeter.month}</p>
-             <p className="text-primary"><strong className="font-semibold">Total Bulk Bill (Flat Rate):</strong> ETB {totalBulkBill.toFixed(2)}</p>
+             <p className="text-primary"><strong className="font-semibold">Total Bulk Bill (Tariff: {effectiveBulkMeterCustomerType}):</strong> ETB {totalBulkBill.toFixed(2)}</p>
           </div>
           <div>
             <p><strong className="font-semibold">Customer Key:</strong> {bulkMeter.customerKeyNumber}</p>
@@ -378,3 +389,4 @@ export default function BulkMeterDetailsPage() {
     </div>
   );
 }
+

@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -7,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -54,7 +54,8 @@ export function BulkMeterDataEntryForm() {
   function onSubmit(data: BulkMeterDataEntryFormValues) {
     const bulkMeterDataForStore: Omit<BulkMeter, 'id'> = { 
       ...data, 
-      status: "Active" // Default to Active status for new entries
+      status: "Active", // Default to Active status for new entries
+      paymentStatus: "Unpaid", // Default to Unpaid for new entries
     };
     
     addBulkMeterToStore(bulkMeterDataForStore);
@@ -79,7 +80,7 @@ export function BulkMeterDataEntryForm() {
                     <FormItem>
                       <FormLabel>Bulk Meter Name / Identifier *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Kality Industrial Zone Meter 1" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -92,7 +93,7 @@ export function BulkMeterDataEntryForm() {
                     <FormItem>
                       <FormLabel>Customer Key Number *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., BULKCUST001" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -105,7 +106,7 @@ export function BulkMeterDataEntryForm() {
                     <FormItem>
                       <FormLabel>Contract Number *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., BULKCONTR001" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -121,7 +122,6 @@ export function BulkMeterDataEntryForm() {
                         <Input 
                           type="number" 
                           step="0.1" 
-                          placeholder="e.g., 2.0" 
                           {...field} 
                           value={field.value ?? ""}
                           onChange={e => {
@@ -141,7 +141,7 @@ export function BulkMeterDataEntryForm() {
                     <FormItem>
                       <FormLabel>Meter Number *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., BULKMTR789" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -157,7 +157,6 @@ export function BulkMeterDataEntryForm() {
                         <Input 
                           type="number" 
                           step="0.01" 
-                          placeholder="e.g., 1000.00" 
                           {...field} 
                           value={field.value ?? ""}
                           onChange={e => {
@@ -180,7 +179,6 @@ export function BulkMeterDataEntryForm() {
                         <Input 
                           type="number" 
                           step="0.01" 
-                          placeholder="e.g., 1500.50" 
                           {...field} 
                           value={field.value ?? ""}
                           onChange={e => {
@@ -204,9 +202,7 @@ export function BulkMeterDataEntryForm() {
                         setDate={(selectedDate) => {
                           field.onChange(selectedDate ? format(selectedDate, "yyyy-MM") : "");
                         }}
-                        placeholder="Select reading month"
                       />
-                      <FormDescription>Enter the month and year of the reading.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -218,7 +214,7 @@ export function BulkMeterDataEntryForm() {
                     <FormItem>
                       <FormLabel>Specific Area *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Kality Zone 1, Block A" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -231,7 +227,7 @@ export function BulkMeterDataEntryForm() {
                     <FormItem>
                       <FormLabel>Location / Sub-City *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Kality Sub-City" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -244,7 +240,7 @@ export function BulkMeterDataEntryForm() {
                     <FormItem>
                       <FormLabel>Ward / Woreda *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Woreda 05" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

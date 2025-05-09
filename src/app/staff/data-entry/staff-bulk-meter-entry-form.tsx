@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -55,9 +54,10 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
 
   function onSubmit(data: BulkMeterDataEntryFormValues) {
     // Staff entries default to Active status
-    const bulkMeterDataForStore: Omit<BulkMeter, 'id' | 'status'> & { status: 'Active' | 'Maintenance' | 'Decommissioned'} = { 
+    const bulkMeterDataForStore: Omit<BulkMeter, 'id' | 'status' | 'paymentStatus'> & { status: 'Active' | 'Maintenance' | 'Decommissioned'; paymentStatus: 'Paid' | 'Unpaid' } = { 
         ...data, 
-        status: "Active" 
+        status: "Active",
+        paymentStatus: "Unpaid" // Default payment status for new entries
     };
     
     addBulkMeterToStore(bulkMeterDataForStore as Omit<BulkMeter, 'id'>); // Type assertion matches store function
@@ -80,7 +80,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
                 <FormItem>
                   <FormLabel>Bulk Meter Name / Identifier *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Bole Airport Feeder BM" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -93,7 +93,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
                 <FormItem>
                   <FormLabel>Customer Key Number *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., BULKKEY789" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -106,7 +106,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
                 <FormItem>
                   <FormLabel>Contract Number *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., BULKCONTRACT456" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -122,7 +122,6 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
                     <Input 
                       type="number" 
                       step="0.1" 
-                      placeholder="e.g., 3.0" 
                       {...field} 
                       value={field.value ?? ""}
                       onChange={e => {
@@ -142,7 +141,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
                 <FormItem>
                   <FormLabel>Meter Number *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., BMTR9012" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -158,7 +157,6 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
                     <Input 
                       type="number" 
                       step="0.01" 
-                      placeholder="e.g., 25000.00" 
                       {...field} 
                       value={field.value ?? ""}
                       onChange={e => {
@@ -181,7 +179,6 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
                     <Input 
                       type="number" 
                       step="0.01" 
-                      placeholder="e.g., 26500.75" 
                       {...field} 
                       value={field.value ?? ""}
                       onChange={e => {
@@ -205,9 +202,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
                     setDate={(selectedDate) => {
                       field.onChange(selectedDate ? format(selectedDate, "yyyy-MM") : "");
                     }}
-                    placeholder="Select reading month"
                   />
-                  <FormDescription>Month and year of the reading.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -219,7 +214,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
                 <FormItem>
                   <FormLabel>Specific Area *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Airport Cargo Zone" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -232,7 +227,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
                 <FormItem>
                   <FormLabel>Location / Sub-City *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Bole Sub-City" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -245,7 +240,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
                 <FormItem>
                   <FormLabel>Ward / Woreda *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Woreda 01" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

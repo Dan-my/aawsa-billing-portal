@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -16,12 +17,11 @@ import {
 interface DatePickerProps {
   date: Date | undefined;
   setDate: (date: Date | undefined) => void;
-  placeholder?: string;
   disabled?: (date: Date) => boolean; // For disabling specific dates in the calendar
   disabledTrigger?: boolean; // For disabling the trigger button itself
 }
 
-export function DatePicker({ date, setDate, placeholder = "Pick a date", disabled, disabledTrigger }: DatePickerProps) {
+export function DatePicker({ date, setDate, disabled, disabledTrigger }: DatePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
 
   const handleDateSelect = (selectedDay: Date | undefined) => {
@@ -41,7 +41,7 @@ export function DatePicker({ date, setDate, placeholder = "Pick a date", disable
           disabled={disabledTrigger} // Use the disabledTrigger prop here
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "yyyy-MM") : <span>{placeholder}</span>}
+          {date ? format(date, "yyyy-MM") : <span>Select a month</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
@@ -59,3 +59,4 @@ export function DatePicker({ date, setDate, placeholder = "Pick a date", disable
     </Popover>
   )
 }
+

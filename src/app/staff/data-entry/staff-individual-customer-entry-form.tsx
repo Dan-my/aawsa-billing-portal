@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -7,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -108,7 +108,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                   <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a bulk meter" />
+                        <SelectValue />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -118,7 +118,6 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                        {availableBulkMeters.length === 0 && <SelectItem value="loading-bms-staff" disabled>Loading bulk meters...</SelectItem>}
                     </SelectContent>
                   </Select>
-                  <FormDescription>Customer's sub-meter under a bulk meter.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -130,7 +129,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Customer Name *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Almaz Bekele" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -143,7 +142,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Customer Key Number *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., CUST56789" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -156,7 +155,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Contract Number *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., CONTR00123" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -175,7 +174,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select customer type" />
+                        <SelectValue />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -195,7 +194,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Book Number *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., BK789" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -210,7 +209,6 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                   <FormControl>
                     <Input 
                       type="number" 
-                      placeholder="e.g., 3" 
                       {...field} 
                       value={field.value ?? ""}
                       onChange={e => {
@@ -233,7 +231,6 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                     <Input 
                       type="number" 
                       step="0.1" 
-                      placeholder="e.g., 0.75" 
                       {...field} 
                       value={field.value ?? ""}
                       onChange={e => {
@@ -253,7 +250,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Meter Number *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., MTRIND456" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -269,7 +266,6 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                     <Input 
                       type="number" 
                       step="0.01" 
-                      placeholder="e.g., 50.00" 
                       {...field} 
                       value={field.value ?? ""}
                       onChange={e => {
@@ -292,7 +288,6 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                     <Input 
                       type="number" 
                       step="0.01" 
-                      placeholder="e.g., 65.25" 
                       {...field} 
                       value={field.value ?? ""}
                       onChange={e => {
@@ -316,9 +311,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                     setDate={(selectedDate) => {
                       field.onChange(selectedDate ? format(selectedDate, "yyyy-MM") : "");
                     }}
-                    placeholder="Select reading month"
                   />
-                  <FormDescription>Month and year of the reading.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -330,7 +323,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Specific Area *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Kebele 02, House No 45B" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -343,7 +336,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Location / Sub-City *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Arada Sub-City" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -356,7 +349,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Ward / Woreda *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Woreda 10" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -375,7 +368,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select sewerage status" />
+                        <SelectValue />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>

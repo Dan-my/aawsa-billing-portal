@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -7,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -106,7 +106,7 @@ export function IndividualCustomerDataEntryForm() {
                       <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a bulk meter" />
+                            <SelectValue />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -116,7 +116,6 @@ export function IndividualCustomerDataEntryForm() {
                            {availableBulkMeters.length === 0 && <SelectItem value="loading-bms" disabled>Loading bulk meters...</SelectItem>}
                         </SelectContent>
                       </Select>
-                      <FormDescription>If this customer's meter is sub-metered under a bulk meter.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -128,7 +127,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Customer Name *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., John Doe" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -141,7 +140,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Customer Key Number *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., CUST12345" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -154,7 +153,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Contract Number *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., CONTR67890" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -173,7 +172,7 @@ export function IndividualCustomerDataEntryForm() {
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select customer type" />
+                            <SelectValue />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -193,7 +192,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Book Number *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., BK001" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -208,7 +207,6 @@ export function IndividualCustomerDataEntryForm() {
                       <FormControl>
                         <Input 
                           type="number" 
-                          placeholder="e.g., 1" 
                           {...field} 
                           value={field.value ?? ""}
                           onChange={e => {
@@ -231,7 +229,6 @@ export function IndividualCustomerDataEntryForm() {
                         <Input 
                           type="number" 
                           step="0.1" 
-                          placeholder="e.g., 0.5" 
                           {...field} 
                           value={field.value ?? ""}
                           onChange={e => {
@@ -251,7 +248,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Meter Number *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., MTR123XYZ" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -267,7 +264,6 @@ export function IndividualCustomerDataEntryForm() {
                         <Input 
                           type="number" 
                           step="0.01" 
-                          placeholder="e.g., 100.00" 
                           {...field} 
                           value={field.value ?? ""}
                           onChange={e => {
@@ -290,7 +286,6 @@ export function IndividualCustomerDataEntryForm() {
                         <Input 
                           type="number" 
                           step="0.01" 
-                          placeholder="e.g., 120.50" 
                           {...field} 
                           value={field.value ?? ""}
                           onChange={e => {
@@ -314,9 +309,7 @@ export function IndividualCustomerDataEntryForm() {
                         setDate={(selectedDate) => {
                           field.onChange(selectedDate ? format(selectedDate, "yyyy-MM") : "");
                         }}
-                        placeholder="Select reading month"
                       />
-                      <FormDescription>Select the month and year of the reading.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -328,7 +321,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Specific Area *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Kebele 05, House No 123" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -341,7 +334,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Location / Sub-City *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Bole Sub-City" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -354,7 +347,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Ward / Woreda *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Woreda 03" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -373,7 +366,7 @@ export function IndividualCustomerDataEntryForm() {
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select sewerage connection status" />
+                            <SelectValue />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>

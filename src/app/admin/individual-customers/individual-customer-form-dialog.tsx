@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -16,7 +17,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -167,7 +167,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a bulk meter" />
+                          <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -177,7 +177,6 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                         {dynamicBulkMeters.length === 0 && <SelectItem value="no-bms-available" disabled>No bulk meters available</SelectItem>}
                       </SelectContent>
                     </Select>
-                    <FormDescription>If this customer's meter is sub-metered under a bulk meter. Cannot be changed after creation.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -189,7 +188,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Customer Name *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., John Doe" {...field} />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -202,7 +201,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Customer Key Number *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., CUST12345" {...field} />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -215,7 +214,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Contract Number *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., CONTR67890" {...field} />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -230,7 +229,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                     <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select customer type" />
+                          <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -250,7 +249,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Book Number *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., BK001" {...field} />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -265,7 +264,6 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                     <FormControl>
                       <Input 
                         type="number" 
-                        placeholder="e.g., 1" 
                         {...field} 
                         value={field.value ?? ""} 
                         onChange={e => {
@@ -288,7 +286,6 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                       <Input 
                         type="number" 
                         step="0.1" 
-                        placeholder="e.g., 0.5" 
                         {...field} 
                         value={field.value ?? ""} 
                         onChange={e => {
@@ -308,7 +305,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Meter Number *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., MTR123XYZ" {...field} />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -324,7 +321,6 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                       <Input 
                         type="number" 
                         step="0.01" 
-                        placeholder="e.g., 100.00" 
                         {...field} 
                         value={field.value ?? ""} 
                         onChange={e => {
@@ -333,7 +329,6 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                         }}
                       />
                     </FormControl>
-                    <FormDescription>For new customers, this is the starting reading (often 0).</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -348,7 +343,6 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                       <Input 
                         type="number" 
                         step="0.01" 
-                        placeholder="e.g., 100.50" 
                         {...field} 
                         value={field.value ?? ""} 
                         onChange={e => {
@@ -357,7 +351,6 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                         }}
                       />
                     </FormControl>
-                     <FormDescription>The reading at the time of registration or first use.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -373,9 +366,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                         setDate={(selectedDate) => {
                           field.onChange(selectedDate ? format(selectedDate, "yyyy-MM") : "");
                         }}
-                        placeholder="Select initial reading month"
                       />
-                     <FormDescription>Month of the initial readings above.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -387,7 +378,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Specific Area *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Kebele 05, House No 123" {...field} />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -400,7 +391,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Location / Sub-City *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Bole Sub-City" {...field} />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -413,7 +404,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Ward / Woreda *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Woreda 03" {...field} />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -428,7 +419,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                     <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select sewerage connection status" />
+                          <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -450,7 +441,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                     <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select customer status" />
+                          <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -472,7 +463,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                     <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select payment status" />
+                          <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { AppShell } from "@/components/layout/app-shell"; 
 import { SidebarNav, type NavItemGroup } from "@/components/layout/sidebar-nav"; 
 import {
-  LayoutDashboard, // These imports are fine here for type reference, but will be strings in NavItem
+  LayoutDashboard, 
   FileText,
   ClipboardList,
 } from "lucide-react";

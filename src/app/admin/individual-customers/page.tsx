@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -7,8 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import type { IndividualCustomer } from "./individual-customer-types";
-import { TARIFF_RATE } from "./individual-customer-types"; 
+import type { IndividualCustomer, CustomerType } from "./individual-customer-types";
+import { getTariffRate, TARIFF_RATES_BY_TYPE } from "./individual-customer-types"; 
 import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "./individual-customer-form-dialog"; // Import IndividualCustomerFormValues
 import { IndividualCustomerTable } from "./individual-customer-table";
 import { 
@@ -28,9 +29,9 @@ import { initialBulkMeters as defaultInitialBulkMeters } from "../bulk-meters/pa
 // For this example, we assume 'initialCustomers' defined here is the one to use for initialization.
 
 export const initialCustomers: IndividualCustomer[] = [
-  { id: "cust001", name: "Abebe Bikila", customerKeyNumber: "CUST001", contractNumber: "CON001", customerType: "Domestic", bookNumber: "B001", ordinal: 1, meterSize: 0.5, meterNumber: "MTR001", previousReading: 100, currentReading: 120, month: "2023-11", specificArea: "Kebele 1, House 101", location: "Bole", ward: "Woreda 3", sewerageConnection: "Yes", status: "Active", assignedBulkMeterId: "bm001", paymentStatus: "Paid", calculatedBill: (120-100) * TARIFF_RATE },
-  { id: "cust002", name: "Fatuma Roba", customerKeyNumber: "CUST002", contractNumber: "CON002", customerType: "Domestic", bookNumber: "B001", ordinal: 2, meterSize: 0.5, meterNumber: "MTR002", previousReading: 200, currentReading: 250, month: "2023-11", specificArea: "Kebele 2, House 202", location: "Kality", ward: "Woreda 5", sewerageConnection: "No", status: "Active", assignedBulkMeterId: "bm002", paymentStatus: "Unpaid", calculatedBill: (250-200) * TARIFF_RATE }, 
-  { id: "cust003", name: "Haile Gebrselassie", customerKeyNumber: "CUST003", contractNumber: "CON003", customerType: "Non-domestic", bookNumber: "B002", ordinal: 1, meterSize: 1, meterNumber: "MTR003", previousReading: 500, currentReading: 600, month: "2023-11", specificArea: "Industrial Area, Plot 3", location: "Megenagna", ward: "Woreda 7", sewerageConnection: "Yes", status: "Inactive", assignedBulkMeterId: "bm003", paymentStatus: "Paid", calculatedBill: (600-500) * TARIFF_RATE},
+  { id: "cust001", name: "Abebe Bikila", customerKeyNumber: "CUST001", contractNumber: "CON001", customerType: "Domestic", bookNumber: "B001", ordinal: 1, meterSize: 0.5, meterNumber: "MTR001", previousReading: 100, currentReading: 120, month: "2023-11", specificArea: "Kebele 1, House 101", location: "Bole", ward: "Woreda 3", sewerageConnection: "Yes", status: "Active", assignedBulkMeterId: "bm001", paymentStatus: "Paid", calculatedBill: (120-100) * TARIFF_RATES_BY_TYPE.Domestic },
+  { id: "cust002", name: "Fatuma Roba", customerKeyNumber: "CUST002", contractNumber: "CON002", customerType: "Domestic", bookNumber: "B001", ordinal: 2, meterSize: 0.5, meterNumber: "MTR002", previousReading: 200, currentReading: 250, month: "2023-11", specificArea: "Kebele 2, House 202", location: "Kality", ward: "Woreda 5", sewerageConnection: "No", status: "Active", assignedBulkMeterId: "bm002", paymentStatus: "Unpaid", calculatedBill: (250-200) * TARIFF_RATES_BY_TYPE.Domestic }, 
+  { id: "cust003", name: "Haile Gebrselassie", customerKeyNumber: "CUST003", contractNumber: "CON003", customerType: "Non-domestic", bookNumber: "B002", ordinal: 1, meterSize: 1, meterNumber: "MTR003", previousReading: 500, currentReading: 600, month: "2023-11", specificArea: "Industrial Area, Plot 3", location: "Megenagna", ward: "Woreda 7", sewerageConnection: "Yes", status: "Inactive", assignedBulkMeterId: "bm003", paymentStatus: "Paid", calculatedBill: (600-500) * TARIFF_RATES_BY_TYPE["Non-domestic"]},
 ];
 
 
@@ -89,7 +90,8 @@ export default function IndividualCustomersPage() {
 
   const handleSubmitCustomer = (data: IndividualCustomerFormValues) => {
     const usage = data.currentReading - data.previousReading;
-    const calculatedBill = usage * TARIFF_RATE;
+    const tariff = getTariffRate(data.customerType as CustomerType);
+    const calculatedBill = usage * tariff;
     
     if (selectedCustomer) { 
       const updatedCustomerData: IndividualCustomer = { 
@@ -104,8 +106,13 @@ export default function IndividualCustomersPage() {
       const newCustomerData: Omit<IndividualCustomer, 'id'> = {
         ...data, // Spread form values
         calculatedBill,
+        status: data.status || 'Active', // Ensure status is set
+        paymentStatus: data.paymentStatus || 'Unpaid', // Ensure paymentStatus is set
       };
-      addCustomerToStore(newCustomerData); 
+      // The addCustomerToStore function now derives status and paymentStatus if not explicitly passed by form
+      // but form values should ideally provide them.
+      // The Omit type for addCustomerToStore is specific, so we cast to fit its new signature.
+      addCustomerToStore(newCustomerData as Omit<IndividualCustomer, 'id' | 'calculatedBill' | 'paymentStatus'> & { customerType: CustomerType, currentReading: number, previousReading: number}); 
       toast({ title: "Customer Added", description: `${data.name} has been added.` });
     }
     setIsFormOpen(false);
@@ -186,4 +193,3 @@ export default function IndividualCustomersPage() {
     </div>
   );
 }
-

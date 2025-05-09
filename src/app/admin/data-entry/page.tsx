@@ -16,7 +16,7 @@ import {
   type IndividualCustomerDataEntryFormValues
 } from "./customer-data-entry-types";
 import { addBulkMeter, addCustomer, initializeBulkMeters, initializeCustomers } from "@/lib/data-store";
-import { TARIFF_RATE } from "../individual-customers/individual-customer-types";
+import { getTariffRate, type CustomerType } from "../individual-customers/individual-customer-types";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
 import { initialBulkMeters } from "../bulk-meters/page";
@@ -39,21 +39,22 @@ export default function AdminDataEntryPage() {
   const handleBulkMeterCsvUpload = (data: BulkMeterDataEntryFormValues) => {
     const bulkMeterDataForStore: Omit<BulkMeter, 'id'> = {
       ...data,
-      status: "Active" 
+      status: "Active", // Default status for CSV upload
+      paymentStatus: "Unpaid", // Default payment status for CSV upload
     };
     addBulkMeter(bulkMeterDataForStore);
   };
 
   const handleIndividualCustomerCsvUpload = (data: IndividualCustomerDataEntryFormValues) => {
     const usage = data.currentReading - data.previousReading;
-    const calculatedBill = usage * TARIFF_RATE;
-    const customerDataForStore: Omit<IndividualCustomer, 'id'> = {
+    const tariff = getTariffRate(data.customerType as CustomerType);
+    const calculatedBill = usage * tariff;
+
+    const customerDataForStore: Omit<IndividualCustomer, 'id' | 'calculatedBill' | 'paymentStatus' | 'status'> & { customerType: CustomerType, currentReading: number, previousReading: number } = {
       ...data,
-      status: "Active",
-      paymentStatus: "Unpaid",
-      calculatedBill,
     };
-    addCustomer(customerDataForStore);
+     // Casting to the expected type for addCustomer which now calculates bill and sets defaults
+    addCustomer(customerDataForStore as Omit<IndividualCustomer, 'id' | 'calculatedBill' | 'paymentStatus'> & { customerType: CustomerType, currentReading: number, previousReading: number, status:any });
   };
 
 
@@ -87,9 +88,6 @@ export default function AdminDataEntryPage() {
         <Card className="shadow-lg mt-4">
           <CardHeader>
             <CardTitle>Individual Customer Data Entry</CardTitle>
-            <CardDescription>
-              Manually enter data for a new individual customer. Ensure all required fields are filled accurately.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <IndividualCustomerDataEntryForm />
@@ -101,9 +99,6 @@ export default function AdminDataEntryPage() {
         <Card className="shadow-lg mt-4">
           <CardHeader>
             <CardTitle>Bulk Meter Data Entry</CardTitle>
-            <CardDescription>
-              Manually enter data for a new bulk meter. This is typically for large supply points.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <BulkMeterDataEntryForm />
@@ -124,7 +119,7 @@ export default function AdminDataEntryPage() {
             <CardContent>
               <CsvUploadSection
                 entryType="bulk"
-                schema={bulkMeterDataEntrySchema}
+                schema={bulkMeterDataEntrySchema} // This schema is for form values, ensure it matches CSV structure or adapt
                 addRecordFunction={handleBulkMeterCsvUpload}
                 expectedHeaders={bulkMeterCsvHeaders}
               />
@@ -142,7 +137,7 @@ export default function AdminDataEntryPage() {
             <CardContent>
               <CsvUploadSection
                 entryType="individual"
-                schema={individualCustomerDataEntrySchema}
+                schema={individualCustomerDataEntrySchema} // This schema is for form values
                 addRecordFunction={handleIndividualCustomerCsvUpload}
                 expectedHeaders={individualCustomerCsvHeaders}
               />

@@ -25,8 +25,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 // import { Card, CardContent } from "@/components/ui/card"; // Keep Card structure for consistency
 import { addCustomer as addCustomerToStore, getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, initializeCustomers, getCustomers } from "@/lib/data-store";
-import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
-import { TARIFF_RATE } from "@/app/admin/individual-customers/individual-customer-types";
+import type { IndividualCustomer, CustomerType } from "@/app/admin/individual-customers/individual-customer-types";
+import { getTariffRate } from "@/app/admin/individual-customers/individual-customer-types";
 import { initialBulkMeters as defaultInitialBulkMeters } from "@/app/admin/bulk-meters/page";
 import { initialCustomers as defaultInitialCustomers } from "@/app/admin/individual-customers/page";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -39,13 +39,20 @@ interface StaffIndividualCustomerEntryFormProps {
 export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividualCustomerEntryFormProps) {
   const { toast } = useToast();
   const [availableBulkMeters, setAvailableBulkMeters] = React.useState<{id: string, name: string}[]>([]);
+  const [isBulkMeterSelected, setIsBulkMeterSelected] = React.useState(false);
+
 
   React.useEffect(() => {
     // Ensure stores are initialized if not already
     if (getCustomers().length === 0) initializeCustomers(defaultInitialCustomers);
     if (getBulkMeters().length === 0) initializeBulkMeters(defaultInitialBulkMeters);
     
-    setAvailableBulkMeters(getBulkMeters().map(bm => ({ id: bm.id, name: bm.name })));
+    const fetchedBms = getBulkMeters().map(bm => ({ id: bm.id, name: bm.name }));
+    setAvailableBulkMeters(fetchedBms);
+     if (fetchedBms.length > 0 && form.getValues("assignedBulkMeterId")) {
+      setIsBulkMeterSelected(true);
+    }
+
     const unsubscribe = subscribeToBulkMeters((updatedBulkMeters) => {
       setAvailableBulkMeters(updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
     });
@@ -74,17 +81,18 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
     },
   });
 
-  function onSubmit(data: IndividualCustomerDataEntryFormValues) {
-    const usage = data.currentReading - data.previousReading;
-    const calculatedBill = usage * TARIFF_RATE;
+  React.useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === "assignedBulkMeterId") {
+        setIsBulkMeterSelected(!!value.assignedBulkMeterId);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
 
-    // Staff entries default to Active and Unpaid
-    const customerDataForStore: Omit<IndividualCustomer, 'id'> = {
-      ...data,
-      status: "Active", 
-      paymentStatus: "Unpaid", 
-      calculatedBill: calculatedBill,
-    };
+  function onSubmit(data: IndividualCustomerDataEntryFormValues) {
+     // Type assertion for addCustomerToStore
+    const customerDataForStore = data as Omit<IndividualCustomer, 'id' | 'calculatedBill' | 'paymentStatus'> & { customerType: CustomerType, currentReading: number, previousReading: number, status: any };
     
     addCustomerToStore(customerDataForStore);
     toast({
@@ -92,7 +100,12 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
       description: `Data for customer ${data.name} (Branch: ${branchName}) has been recorded.`,
     });
     form.reset(); 
+    setIsBulkMeterSelected(false);
   }
+
+  const commonFormFieldProps = {
+    disabled: !isBulkMeterSelected,
+  };
 
   return (
     <ScrollArea className="h-[calc(100vh-380px)]"> {/* Adjusted height */}
@@ -105,10 +118,17 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Assign to Bulk Meter *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
+                  <Select 
+                     onValueChange={(value) => {
+                        field.onChange(value);
+                        setIsBulkMeterSelected(!!value);
+                     }} 
+                    value={field.value || undefined} 
+                    defaultValue={field.value || undefined}
+                  >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Select a bulk meter first"/>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -129,7 +149,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Customer Name *</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} {...commonFormFieldProps} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -142,7 +162,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Customer Key Number *</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} {...commonFormFieldProps} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -155,7 +175,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Contract Number *</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} {...commonFormFieldProps} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -171,6 +191,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                     onValueChange={field.onChange} 
                     value={field.value || undefined} 
                     defaultValue={field.value || undefined}
+                    disabled={!isBulkMeterSelected}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -194,7 +215,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Book Number *</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} {...commonFormFieldProps} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -215,6 +236,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                         const val = e.target.value;
                         field.onChange(val === "" ? undefined : parseInt(val, 10));
                       }}
+                      {...commonFormFieldProps}
                     />
                   </FormControl>
                   <FormMessage />
@@ -237,6 +259,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                         const val = e.target.value;
                         field.onChange(val === "" ? undefined : parseFloat(val));
                       }}
+                      {...commonFormFieldProps}
                     />
                   </FormControl>
                   <FormMessage />
@@ -250,7 +273,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Meter Number *</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} {...commonFormFieldProps} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -272,6 +295,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                         const val = e.target.value;
                         field.onChange(val === "" ? undefined : parseFloat(val));
                       }}
+                      {...commonFormFieldProps}
                     />
                   </FormControl>
                   <FormMessage />
@@ -294,6 +318,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                         const val = e.target.value;
                         field.onChange(val === "" ? undefined : parseFloat(val));
                       }}
+                      {...commonFormFieldProps}
                     />
                   </FormControl>
                   <FormMessage />
@@ -311,6 +336,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                     setDate={(selectedDate) => {
                       field.onChange(selectedDate ? format(selectedDate, "yyyy-MM") : "");
                     }}
+                    disabledTrigger={!isBulkMeterSelected}
                   />
                   <FormMessage />
                 </FormItem>
@@ -323,7 +349,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Specific Area *</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} {...commonFormFieldProps} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -336,7 +362,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Location / Sub-City *</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} {...commonFormFieldProps} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -349,7 +375,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Ward / Woreda *</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} {...commonFormFieldProps} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -365,6 +391,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                     onValueChange={field.onChange} 
                     value={field.value || undefined} 
                     defaultValue={field.value || undefined}
+                    disabled={!isBulkMeterSelected}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -383,7 +410,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
             />
           </div>
 
-          <Button type="submit" className="w-full md:w-auto" disabled={form.formState.isSubmitting}>
+          <Button type="submit" className="w-full md:w-auto" disabled={form.formState.isSubmitting || !isBulkMeterSelected}>
             {form.formState.isSubmitting ? "Submitting..." : "Submit Individual Customer Data"}
           </Button>
         </form>
@@ -391,4 +418,3 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
     </ScrollArea>
   );
 }
-

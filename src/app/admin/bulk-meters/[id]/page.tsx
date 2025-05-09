@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -23,8 +24,8 @@ import {
   initializeCustomers,  
 } from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meter-types";
-import type { IndividualCustomer, PaymentStatus } from "../../individual-customers/individual-customer-types";
-import { TARIFF_RATE } from "../../individual-customers/individual-customer-types"; 
+import type { IndividualCustomer, PaymentStatus, CustomerType } from "../../individual-customers/individual-customer-types";
+import { getTariffRate, TARIFF_RATES_BY_TYPE } from "../../individual-customers/individual-customer-types"; 
 import { BulkMeterFormDialog, type BulkMeterFormValues } from "../bulk-meter-form-dialog";
 import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "../../individual-customers/individual-customer-form-dialog";
 import { initialBulkMeters as defaultInitialBulkMeters } from "../page"; 
@@ -146,7 +147,8 @@ export default function BulkMeterDetailsPage() {
   const handleSubmitCustomerForm = (data: IndividualCustomerFormValues) => {
     if (selectedCustomer) {
       const usage = data.currentReading - data.previousReading;
-      const calculatedBill = usage * TARIFF_RATE;
+      const tariff = getTariffRate(data.customerType as CustomerType);
+      const calculatedBill = usage * tariff;
       const updatedCustomerData: IndividualCustomer = { 
           ...selectedCustomer, 
           ...data, 
@@ -179,7 +181,8 @@ export default function BulkMeterDetailsPage() {
   }
 
   const bulkUsage = bulkMeter.currentReading - bulkMeter.previousReading;
-  const totalBulkBill = bulkUsage * TARIFF_RATE;
+  // Use the Domestic rate for bulk meter's own bill calculation for consistency with previous behavior
+  const totalBulkBill = bulkUsage * TARIFF_RATES_BY_TYPE.Domestic; 
   
   const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + (cust.currentReading - cust.previousReading), 0);
   const totalIndividualBill = associatedCustomers.reduce((sum, cust) => sum + cust.calculatedBill, 0);

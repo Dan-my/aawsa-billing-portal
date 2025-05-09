@@ -1,6 +1,7 @@
 
 import type { ReactNode } from 'react';
-import type { IndividualCustomer } from '@/app/admin/individual-customers/individual-customer-types';
+import type { IndividualCustomer, CustomerType } from '@/app/admin/individual-customers/individual-customer-types';
+import { getTariffRate } from '@/app/admin/individual-customers/individual-customer-types';
 import type { BulkMeter } from '@/app/admin/bulk-meters/bulk-meter-types';
 import type { Branch } from '@/app/admin/branches/branch-types';
 
@@ -20,9 +21,19 @@ const bulkMeterListeners: Set<Listener<BulkMeter>> = new Set();
 const branchListeners: Set<Listener<Branch>> = new Set(); // Added branch listeners
 
 // Notify functions
-const notifyCustomerListeners = () => customerListeners.forEach(listener => listener([...customers]));
-const notifyBulkMeterListeners = () => bulkMeterListeners.forEach(listener => listener([...bulkMeters]));
-const notifyBranchListeners = () => branchListeners.forEach(listener => listener([...branches])); // Added branch notify function
+const notifyCustomerListeners = () => {
+  localStorage.setItem('customers', JSON.stringify(customers));
+  customerListeners.forEach(listener => listener([...customers]));
+}
+const notifyBulkMeterListeners = () => {
+  localStorage.setItem('bulkMeters', JSON.stringify(bulkMeters));
+  bulkMeterListeners.forEach(listener => listener([...bulkMeters]));
+}
+const notifyBranchListeners = () => {
+  localStorage.setItem('branches', JSON.stringify(branches));
+  branchListeners.forEach(listener => listener([...branches])); // Added branch notify function
+}
+
 
 // Initializer functions
 export const initializeCustomers = (initialData: IndividualCustomer[]) => {
@@ -32,6 +43,7 @@ export const initializeCustomers = (initialData: IndividualCustomer[]) => {
       customers = JSON.parse(savedCustomers);
     } else {
       customers = [...initialData];
+      localStorage.setItem('customers', JSON.stringify(customers));
     }
     initialCustomersLoaded = true;
     notifyCustomerListeners();
@@ -45,6 +57,7 @@ export const initializeBulkMeters = (initialData: BulkMeter[]) => {
       bulkMeters = JSON.parse(savedBulkMeters);
     } else {
       bulkMeters = [...initialData];
+      localStorage.setItem('bulkMeters', JSON.stringify(bulkMeters));
     }
     initialBulkMetersLoaded = true;
     notifyBulkMeterListeners();
@@ -58,6 +71,7 @@ export const initializeBranches = (initialData: Branch[]) => { // Added branch i
  branches = JSON.parse(savedBranches);
     } else {
  branches = [...initialData];
+ localStorage.setItem('branches', JSON.stringify(branches));
     }
     initialBranchesLoaded = true;
     notifyBranchListeners();
@@ -71,21 +85,25 @@ export const getBulkMeters = (): BulkMeter[] => [...bulkMeters];
 export const getBranches = (): Branch[] => [...branches]; // Added branch getter
 
 // Actions for Individual Customers
-export const addCustomer = (customerData: Omit<IndividualCustomer, 'id'>) => {
+export const addCustomer = (customerData: Omit<IndividualCustomer, 'id' | 'calculatedBill' | 'paymentStatus'> & { customerType: CustomerType, currentReading: number, previousReading: number} ) => {
+  const usage = customerData.currentReading - customerData.previousReading;
+  const tariff = getTariffRate(customerData.customerType);
+  const calculatedBill = usage * tariff;
+
   const newCustomer: IndividualCustomer = {
     ...customerData,
     id: `cust_${Date.now().toString()}_${Math.random().toString(36).substring(2, 7)}`,
     paymentStatus: 'Unpaid', // Default status
+    calculatedBill,
+    status: 'Active', // Default status
   };
   customers = [newCustomer, ...customers];
-  localStorage.setItem('customers', JSON.stringify(customers));
   notifyCustomerListeners();
   return newCustomer;
 };
 
 export const updateCustomer = (updatedCustomer: IndividualCustomer) => {
   customers = customers.map(c => c.id === updatedCustomer.id ? updatedCustomer : c);
-  localStorage.setItem('customers', JSON.stringify(customers));
   notifyCustomerListeners();
 };
 
@@ -99,10 +117,10 @@ export const addBulkMeter = (bulkMeterData: Omit<BulkMeter, 'id'>) => {
    const newBulkMeter: BulkMeter = {
     ...bulkMeterData,
     id: `bm_${Date.now().toString()}_${Math.random().toString(36).substring(2, 7)}`,
-    paymentStatus: 'Unpaid', // Default status
+    paymentStatus: bulkMeterData.paymentStatus || 'Unpaid', 
+    status: bulkMeterData.status || 'Active',
   };
   bulkMeters = [newBulkMeter, ...bulkMeters];
-  localStorage.setItem('bulkMeters', JSON.stringify(bulkMeters));
   notifyBulkMeterListeners();
   return newBulkMeter;
 };
@@ -114,6 +132,14 @@ export const updateBulkMeter = (updatedBulkMeter: BulkMeter) => {
 
 export const deleteBulkMeter = (bulkMeterId: string) => {
   bulkMeters = bulkMeters.filter(bm => bm.id !== bulkMeterId);
+  // Also unassign this bulk meter from any customers
+  customers = customers.map(c => {
+    if (c.assignedBulkMeterId === bulkMeterId) {
+      return { ...c, assignedBulkMeterId: "" }; // Or some other placeholder indicating unassigned
+    }
+    return c;
+  });
+  notifyCustomerListeners(); // Notify customer changes too
   notifyBulkMeterListeners();
 };
 
@@ -124,7 +150,6 @@ export const addBranch = (branchData: Omit<Branch, 'id'>) => {
     id: `br_${Date.now().toString()}_${Math.random().toString(36).substring(2, 7)}`,
   };
   branches = [newBranch, ...branches];
-  localStorage.setItem('branches', JSON.stringify(branches));
   notifyBranchListeners();
   return newBranch;
 };

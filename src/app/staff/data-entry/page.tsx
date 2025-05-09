@@ -15,7 +15,7 @@ import {
   type IndividualCustomerDataEntryFormValues
 } from "@/app/admin/data-entry/customer-data-entry-types"; // Re-use admin types
 import { addBulkMeter, addCustomer, initializeBulkMeters, initializeCustomers, getBulkMeters, getCustomers } from "@/lib/data-store";
-import { TARIFF_RATE } from "@/app/admin/individual-customers/individual-customer-types";
+import { getTariffRate, type CustomerType } from "@/app/admin/individual-customers/individual-customer-types";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import { initialBulkMeters as defaultInitialBulkMeters } from "@/app/admin/bulk-meters/page";
@@ -61,22 +61,14 @@ export default function StaffDataEntryPage() {
       ...data,
       // Potentially use branchName for location if applicable, or add a branch field to bulk meter
       // location: data.location || branchName, 
-      status: "Active"
+      status: "Active",
+      paymentStatus: "Unpaid", // Default payment status
     };
     addBulkMeter(bulkMeterDataForStore);
   };
 
   const handleIndividualCustomerCsvUpload = (data: IndividualCustomerDataEntryFormValues) => {
-    const usage = data.currentReading - data.previousReading;
-    const calculatedBill = usage * TARIFF_RATE;
-    const customerDataForStore: Omit<IndividualCustomer, 'id'> = {
-      ...data,
-      // Potentially use branchName for location if applicable
-      // location: data.location || branchName,
-      status: "Active",
-      paymentStatus: "Unpaid",
-      calculatedBill,
-    };
+    const customerDataForStore = data as Omit<IndividualCustomer, 'id' | 'calculatedBill' | 'paymentStatus'> & { customerType: CustomerType, currentReading: number, previousReading: number, status: any };
     addCustomer(customerDataForStore);
   };
 
@@ -101,7 +93,6 @@ export default function StaffDataEntryPage() {
           <Card className="shadow-lg mt-4">
             <CardHeader>
               <CardTitle>Individual Customer Data Entry</CardTitle>
-              <CardDescription>Manually enter data for a new individual customer in {branchName}.</CardDescription>
             </CardHeader>
             <CardContent>
               <StaffIndividualCustomerEntryForm branchName={branchName} />
@@ -113,7 +104,6 @@ export default function StaffDataEntryPage() {
           <Card className="shadow-lg mt-4">
             <CardHeader>
               <CardTitle>Bulk Meter Data Entry</CardTitle>
-              <CardDescription>Manually enter data for a new bulk meter in {branchName}.</CardDescription>
             </CardHeader>
             <CardContent>
               <StaffBulkMeterEntryForm branchName={branchName} />

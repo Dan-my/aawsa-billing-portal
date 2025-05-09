@@ -24,5 +24,14 @@ export type IndividualCustomer = z.infer<typeof baseIndividualCustomerDataSchema
   calculatedBill: number;
 };
 
-export const TARIFF_RATE = 5.50; // ETB per m³
+export const TARIFF_RATE = 5.50; // ETB per m³ // Kept for reference or default bulk scenarios
+
+export const TARIFF_RATES_BY_TYPE = {
+  Domestic: 5.50, // ETB per m³
+  "Non-domestic": 7.50, // ETB per m³
+} as const;
+
+export function getTariffRate(customerType: keyof typeof TARIFF_RATES_BY_TYPE): number {
+  return TARIFF_RATES_BY_TYPE[customerType] || TARIFF_RATES_BY_TYPE.Domestic; // Fallback to domestic if type is somehow invalid
+}
 

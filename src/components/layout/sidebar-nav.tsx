@@ -15,15 +15,15 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import * as icons from 'lucide-react'; // Import all icons
-import type { LucideProps } from 'lucide-react'; // For type consistency if needed elsewhere, though not directly for iconName
+import * as icons from 'lucide-react'; 
+import type { LucideProps } from 'lucide-react'; 
 import * as React from 'react';
 
 
 export interface NavItem {
   title: string;
   href: string;
-  iconName?: keyof typeof icons; // Changed from icon: LucideIcon to iconName: string
+  iconName?: keyof typeof icons; 
   disabled?: boolean;
   external?: boolean;
   label?: string;
@@ -42,36 +42,37 @@ interface SidebarNavProps {
 }
 
 function NavItemLink({ item, pathname }: { item: NavItem; pathname: string }) {
-  const IconComponent = item.iconName ? icons[item.iconName] : null; // Use iconName
+  const IconComponent = item.iconName ? icons[item.iconName] : null;
   const { state: sidebarState } = useSidebar();
   const isActive = item.matcher ? item.matcher(pathname, item.href) : pathname === item.href || (item.href !== '/' && pathname.startsWith(`${item.href}/`) && (pathname.length === item.href.length || pathname[item.href.length] === '/'));
 
 
   return (
-    <Link href={item.href} passHref legacyBehavior>
+    <Link href={item.href} passHref asChild>
       <SidebarMenuButton
-        asChild
         isActive={isActive}
         disabled={item.disabled}
         className={cn(
           "w-full justify-start",
+          // These specific styles are applied here to match the original look
+          // The SidebarMenuButton variants might have defaults, but these take precedence due to `cn` merging
           isActive && "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/90 hover:text-sidebar-accent-foreground",
           !isActive && "hover:bg-sidebar-accent/50"
         )}
         tooltip={sidebarState === 'collapsed' ? item.title : undefined}
+        target={item.external ? '_blank' : undefined}
+        rel={item.external ? 'noopener noreferrer' : undefined}
       >
-        <a target={item.external ? '_blank' : undefined} rel={item.external ? 'noopener noreferrer' : undefined}>
-          {IconComponent && <IconComponent className="h-5 w-5" />}
-          <span className={cn("truncate", sidebarState === 'collapsed' && 'sr-only')}>{item.title}</span>
-          {item.label && sidebarState === 'expanded' && <span className="ml-auto text-xs text-muted-foreground">{item.label}</span>}
-        </a>
+        {IconComponent && <IconComponent className="h-5 w-5" />}
+        <span className={cn("truncate", sidebarState === 'collapsed' && 'sr-only')}>{item.title}</span>
+        {item.label && sidebarState === 'expanded' && <span className="ml-auto text-xs text-muted-foreground">{item.label}</span>}
       </SidebarMenuButton>
     </Link>
   );
 }
 
 function CollapsibleNavItem({ item, pathname }: { item: NavItem; pathname: string }) {
-  const IconComponent = item.iconName ? icons[item.iconName] : null; // Use iconName
+  const IconComponent = item.iconName ? icons[item.iconName] : null; 
   const { state: sidebarState } = useSidebar();
 
   const isChildActiveRecursive = (items: NavItem[]): boolean => {
@@ -83,19 +84,22 @@ function CollapsibleNavItem({ item, pathname }: { item: NavItem; pathname: strin
     });
   };
   
-  const isChildActive = item.items ? isChildActiveRecursive(item.items) : false;
-  const isDirectlyActive = (item.href !== '/' && pathname.startsWith(`${item.href}/`) && (pathname.length === item.href.length || pathname[subItem.href.length] === '/'));
-  const isParentActive = isChildActive || isDirectlyActive;
+  // Check if any child item is active OR if the parent item itself matches (e.g. /settings page for Settings group)
+  const isAnyChildActive = item.items ? isChildActiveRecursive(item.items) : false;
+  const isParentItemActive = item.matcher ? item.matcher(pathname, item.href) : (pathname === item.href || (item.href !== '/' && pathname.startsWith(`${item.href}/`) && (pathname.length === item.href.length || pathname[item.href.length] === '/')));
+  
+  const isEffectivelyActive = isAnyChildActive || isParentItemActive;
 
-  const [isOpen, setIsOpen] = React.useState(isParentActive);
+
+  const [isOpen, setIsOpen] = React.useState(isEffectivelyActive);
 
   React.useEffect(() => {
     if (sidebarState === 'collapsed') {
       setIsOpen(false); 
-    } else if (isParentActive && !isOpen) {
+    } else if (isEffectivelyActive && !isOpen) { // Auto-open if a child is active and not already open
       setIsOpen(true); 
     }
-  }, [pathname, isParentActive, isOpen, sidebarState]);
+  }, [pathname, isEffectivelyActive, isOpen, sidebarState]);
 
 
   return (
@@ -104,10 +108,11 @@ function CollapsibleNavItem({ item, pathname }: { item: NavItem; pathname: strin
         onClick={() => {
             if (sidebarState === 'expanded') setIsOpen(!isOpen);
         }}
-        isActive={isParentActive && !isOpen}
+        // isActive is for styling the button itself if it's the "active" parent
+        isActive={isEffectivelyActive && !isOpen} // Style as active if it's the current section but closed
         className={cn(
             "w-full justify-start", 
-            isParentActive && !isOpen && "bg-sidebar-accent/70 text-sidebar-accent-foreground hover:bg-sidebar-accent/60",
+            isEffectivelyActive && !isOpen && "bg-sidebar-accent/70 text-sidebar-accent-foreground hover:bg-sidebar-accent/60",
             isOpen && sidebarState === 'expanded' && "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/90"
         )}
         tooltip={sidebarState === 'collapsed' ? item.title : undefined}
@@ -120,20 +125,20 @@ function CollapsibleNavItem({ item, pathname }: { item: NavItem; pathname: strin
         <SidebarMenuSub>
           {item.items.map((subItem) => {
             const SubIconComponent = subItem.iconName ? icons[subItem.iconName as keyof typeof icons] : null;
+            const isSubItemActive = subItem.matcher ? subItem.matcher(pathname, subItem.href) : (pathname === subItem.href || (subItem.href !== '/' && pathname.startsWith(`${subItem.href}/`) && (pathname.length === subItem.href.length || pathname[subItem.href.length] === '/')));
             return (
               <SidebarMenuSubItem key={subItem.href}>
-                <Link href={subItem.href} passHref legacyBehavior>
+                <Link href={subItem.href} passHref asChild>
                   <SidebarMenuSubButton
-                      asChild
-                      isActive={subItem.matcher ? subItem.matcher(pathname, subItem.href) : (pathname === subItem.href || (subItem.href !== '/' && pathname.startsWith(`${subItem.href}/`) && (pathname.length === subItem.href.length || pathname[subItem.href.length] === '/')))}
+                      isActive={isSubItemActive}
                       className={cn(
-                          (subItem.matcher ? subItem.matcher(pathname, subItem.href) : (pathname === subItem.href || (subItem.href !== '/' && pathname.startsWith(`${subItem.href}/`) && (pathname.length === subItem.href.length || pathname[subItem.href.length] === '/')))) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium hover:bg-sidebar-accent/90"
+                          isSubItemActive && "bg-sidebar-accent text-sidebar-accent-foreground font-medium hover:bg-sidebar-accent/90"
                       )}
                   >
-                    <a>
+                    <>
                       {SubIconComponent && <SubIconComponent className="h-4 w-4 mr-1.5 flex-shrink-0" />}
                       {subItem.title}
-                    </a>
+                    </>
                   </SidebarMenuSubButton>
                 </Link>
               </SidebarMenuSubItem>

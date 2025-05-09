@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -556,11 +555,12 @@ const sidebarMenuButtonVariants = cva(
 
 
 const SidebarMenuButton = React.forwardRef<
-  HTMLButtonElement,
-  React.ComponentProps<"button"> & {
-    asChild?: boolean
-    isActive?: boolean
-    tooltip?: string | React.ComponentProps<typeof TooltipContent>
+  HTMLElement, // Use HTMLElement for polymorphic component ref
+  React.HTMLAttributes<HTMLElement> & { // Use HTMLAttributes for general props
+    asChild?: boolean;
+    isActive?: boolean;
+    tooltip?: string | React.ComponentProps<typeof TooltipContent>;
+    href?: string; // Add href prop
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
@@ -571,50 +571,51 @@ const SidebarMenuButton = React.forwardRef<
       size = "default",
       tooltip,
       className,
-      children, // Added children prop
-      ...props
+      children,
+      href, // Destructure href
+      ...props // Other props like target, rel will be in here
     },
     ref
   ) => {
-    const Comp = asChild ? Slot : "button"
-    const { isMobile, state } = useSidebar()
+    const Comp = asChild ? Slot : (href ? "a" : "button"); // Render 'a' if href is present
+    const { isMobile, state } = useSidebar();
 
-    const buttonContent = (
+    const buttonEl = (
       <Comp
-        ref={ref}
+        ref={ref} 
         data-sidebar="menu-button"
-        data-size={size} // ensure size is passed if used by variants
+        data-size={size}
         data-active={isActive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
-        {...props}
+        href={href} // Pass href to Comp
+        {...props} // Pass other props (target, rel, etc.)
       >
         {children}
       </Comp>
-    )
+    );
 
     if (!tooltip) {
-      return buttonContent
+      return buttonEl;
     }
 
-    const tooltipProps: React.ComponentProps<typeof TooltipContent> = 
-        typeof tooltip === "string" ? { children: tooltip } : tooltip;
-
+    const tooltipProps: React.ComponentProps<typeof TooltipContent> =
+      typeof tooltip === "string" ? { children: tooltip } : tooltip;
 
     return (
       <Tooltip>
-        <TooltipTrigger asChild>{buttonContent}</TooltipTrigger>
+        <TooltipTrigger asChild>{buttonEl}</TooltipTrigger>
         <TooltipContent
           side="right"
           align="center"
-          sideOffset={6} // Give a bit more space
+          sideOffset={6}
           className="text-xs"
           hidden={state !== "collapsed" || isMobile}
           {...tooltipProps}
         />
       </Tooltip>
-    )
+    );
   }
-)
+);
 SidebarMenuButton.displayName = "SidebarMenuButton"
 
 const SidebarMenuAction = React.forwardRef<
@@ -723,14 +724,15 @@ const SidebarMenuSubItem = React.forwardRef<
 SidebarMenuSubItem.displayName = "SidebarMenuSubItem"
 
 const SidebarMenuSubButton = React.forwardRef<
-  HTMLAnchorElement, // Changed to anchor for Link compatibility
-  React.ComponentProps<"a"> & {
-    asChild?: boolean
-    size?: "sm" | "default" // Adjusted sizes
-    isActive?: boolean
+  HTMLElement, // Use HTMLElement for polymorphic component ref
+  React.HTMLAttributes<HTMLElement> & { // Use HTMLAttributes for general props
+    asChild?: boolean;
+    size?: "sm" | "default";
+    isActive?: boolean;
+    href?: string; // Add href prop
   }
->(({ asChild = false, size = "default", isActive, className, children, ...props }, ref) => {
-  const Comp = asChild ? Slot : "a"
+>(({ asChild = false, size = "default", isActive, className, children, href, ...props }, ref) => {
+  const Comp = asChild ? Slot : (href ? "a" : "button"); // Default to 'a' if href is present
 
   return (
     <Comp
@@ -746,7 +748,8 @@ const SidebarMenuSubButton = React.forwardRef<
         "group-data-[collapsible=icon]:hidden",
         className
       )}
-      {...props}
+      href={href} // Pass href to Comp
+      {...props} // Pass other props
     >
         {children}
     </Comp>

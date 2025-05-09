@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -48,7 +49,7 @@ function NavItemLink({ item, pathname }: { item: NavItem; pathname: string }) {
 
 
   return (
-    <Link href={item.href} passHref asChild>
+    <Link href={item.href} asChild>
       <SidebarMenuButton
         isActive={isActive}
         disabled={item.disabled}
@@ -128,7 +129,7 @@ function CollapsibleNavItem({ item, pathname }: { item: NavItem; pathname: strin
             const isSubItemActive = subItem.matcher ? subItem.matcher(pathname, subItem.href) : (pathname === subItem.href || (subItem.href !== '/' && pathname.startsWith(`${subItem.href}/`) && (pathname.length === subItem.href.length || pathname[subItem.href.length] === '/')));
             return (
               <SidebarMenuSubItem key={subItem.href}>
-                <Link href={subItem.href} passHref asChild>
+                <Link href={subItem.href} asChild>
                   <SidebarMenuSubButton
                       isActive={isSubItemActive}
                       className={cn(
@@ -184,3 +185,4 @@ export function SidebarNav({ items, className }: SidebarNavProps) {
     </nav>
   );
 }
+

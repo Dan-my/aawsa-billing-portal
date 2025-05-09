@@ -4,60 +4,157 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileSpreadsheet } from "lucide-react";
+import { Download, FileSpreadsheet, AlertCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { getCustomers, getBulkMeters, initializeCustomers, initializeBulkMeters } from "@/lib/data-store";
+import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
+import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
+import { initialCustomers } from "../individual-customers/page";
+import { initialBulkMeters } from "../bulk-meters/page";
+import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert"; // Renamed to avoid conflict
 
 interface ReportType {
   id: string;
   name: string;
   description: string;
+  headers?: string[]; // For CSV/XLSX export
+  getData?: () => any[]; // Function to fetch data for the report
 }
+
+const arrayToCsv = (data: any[], headers: string[]): string => {
+  const csvRows = [];
+  csvRows.push(headers.join(',')); // Add header row
+
+  for (const row of data) {
+    const values = headers.map(header => {
+      const escaped = ('' + (row[header] === undefined || row[header] === null ? '' : row[header])).replace(/"/g, '""'); // Escape double quotes
+      return `"${escaped}"`; // Quote all fields
+    });
+    csvRows.push(values.join(','));
+  }
+  return csvRows.join('\n');
+};
+
+const downloadFile = (content: string, fileName: string, mimeType: string) => {
+  const blob = new Blob([content], { type: mimeType });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+};
+
 
 const availableReports: ReportType[] = [
   {
+    id: "customer-data-export",
+    name: "Customer Data Export (XLSX/CSV)",
+    description: "Download a comprehensive list of all individual customers, including their details and meter information.",
+    headers: [
+      "id", "name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal",
+      "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea",
+      "location", "ward", "sewerageConnection", "assignedBulkMeterId", "status", "paymentStatus", "calculatedBill"
+    ],
+    getData: () => getCustomers(),
+  },
+  {
+    id: "bulk-meter-data-export",
+    name: "Bulk Meter Data Export (XLSX/CSV)",
+    description: "Download a comprehensive list of all bulk meters, including their details and readings.",
+    headers: [
+      "id", "name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber",
+      "previousReading", "currentReading", "month", "specificArea", "location", "ward", "status", "paymentStatus"
+    ],
+    getData: () => getBulkMeters(),
+  },
+  {
     id: "billing-summary",
-    name: "Billing Summary Report",
+    name: "Billing Summary Report (Coming Soon)",
     description: "Summary of paid and unpaid bills for a selected period. Includes totals, payment rates, and overdue amounts.",
   },
   {
     id: "water-usage",
-    name: "Water Usage Report",
+    name: "Water Usage Report (Coming Soon)",
     description: "Detailed water consumption report by customer type, branch, or geographical area. Helps identify trends and anomalies.",
   },
   {
-    id: "customer-data",
-    name: "Customer Data Report",
-    description: "Comprehensive list of customers, including contact details, meter information, and account status.",
-  },
-  {
     id: "payment-history",
-    name: "Payment History Report",
+    name: "Payment History Report (Coming Soon)",
     description: "Detailed log of all payments received, filterable by date, customer, or payment method.",
   },
   {
     id: "meter-reading-accuracy",
-    name: "Meter Reading Accuracy Report",
+    name: "Meter Reading Accuracy Report (Coming Soon)",
     description: "Analysis of meter reading consistency and potential discrepancies, highlighting meters needing inspection.",
   },
 ];
 
 export default function AdminReportsPage() {
+  const { toast } = useToast();
   const [selectedReportId, setSelectedReportId] = React.useState<string | undefined>(undefined);
   const [isGenerating, setIsGenerating] = React.useState(false);
+
+  React.useEffect(() => {
+    // Ensure data stores are initialized
+    if (getCustomers().length === 0) {
+      initializeCustomers(initialCustomers);
+    }
+    if (getBulkMeters().length === 0) {
+      initializeBulkMeters(initialBulkMeters);
+    }
+  }, []);
 
   const selectedReport = availableReports.find(report => report.id === selectedReportId);
 
   const handleGenerateReport = () => {
     if (!selectedReport) return;
+
+    if (!selectedReport.getData || !selectedReport.headers) {
+      toast({
+        variant: "destructive",
+        title: "Report Not Implemented",
+        description: `${selectedReport.name} is not available for download yet.`,
+      });
+      return;
+    }
+
     setIsGenerating(true);
-    // Simulate report generation
     console.log(`Generating ${selectedReport.name}...`);
-    setTimeout(() => {
+
+    try {
+      const data = selectedReport.getData();
+      if (!data || data.length === 0) {
+        toast({
+          title: "No Data",
+          description: `No data available to generate ${selectedReport.name}.`,
+        });
+        setIsGenerating(false);
+        return;
+      }
+
+      const csvData = arrayToCsv(data, selectedReport.headers);
+      const fileName = `${selectedReport.id}_${new Date().toISOString().split('T')[0]}.xlsx`; // Simulate XLSX
+      downloadFile(csvData, fileName, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      
+      toast({
+        title: "Report Generated",
+        description: `${selectedReport.name} has been downloaded as ${fileName}.`,
+      });
+
+    } catch (error) {
+      console.error("Error generating report:", error);
+      toast({
+        variant: "destructive",
+        title: "Error Generating Report",
+        description: "An unexpected error occurred while generating the report.",
+      });
+    } finally {
       setIsGenerating(false);
-      // Here you would typically trigger a download or display the report
-      alert(`${selectedReport.name} generated (simulated).`);
-    }, 2000);
+    }
   };
 
   return (
@@ -68,7 +165,7 @@ export default function AdminReportsPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Report Generation</CardTitle>
-          <CardDescription>Select a report type and configure options to generate your desired report.</CardDescription>
+          <CardDescription>Select a report type to generate and download.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
@@ -79,7 +176,7 @@ export default function AdminReportsPage() {
               </SelectTrigger>
               <SelectContent>
                 {availableReports.map((report) => (
-                  <SelectItem key={report.id} value={report.id}>
+                  <SelectItem key={report.id} value={report.id} disabled={!report.getData}>
                     <div className="flex items-center gap-2">
                       <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
                       {report.name}
@@ -97,21 +194,31 @@ export default function AdminReportsPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">{selectedReport.description}</p>
-                {/* Add date pickers or other filters here as needed */}
-                <div className="mt-4 space-y-2">
-                  <Label>Report Filters (Coming Soon)</Label>
-                  <div className="p-4 border rounded-md text-sm text-muted-foreground">
-                    Date range selectors, branch filters, etc., will appear here based on the selected report type.
+                {!selectedReport.getData && (
+                   <Alert variant="default" className="mt-4 border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30">
+                     <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                     <AlertTitle className="text-blue-700 dark:text-blue-300">Coming Soon</AlertTitle>
+                     <UIAlertDescription className="text-blue-600 dark:text-blue-400">
+                         This report is currently under development and will be available in a future update.
+                     </UIAlertDescription>
+                   </Alert>
+                )}
+                 {selectedReport.getData && (
+                  <div className="mt-4 space-y-2">
+                    <Label>Report Filters (Coming Soon)</Label>
+                    <div className="p-4 border rounded-md text-sm text-muted-foreground">
+                      Date range selectors, branch filters, etc., will appear here based on the selected report type. For now, the export contains all available data.
+                    </div>
                   </div>
-                </div>
+                 )}
               </CardContent>
             </Card>
           )}
 
-          {selectedReport && (
+          {selectedReport && selectedReport.getData && (
             <Button onClick={handleGenerateReport} disabled={isGenerating || !selectedReportId}>
               <Download className="mr-2 h-4 w-4" />
-              {isGenerating ? "Generating..." : `Generate ${selectedReport.name}`}
+              {isGenerating ? "Generating..." : `Generate & Download ${selectedReport.name.replace(" (XLSX/CSV)", "").replace(" (Coming Soon)", "")}`}
             </Button>
           )}
 
@@ -125,3 +232,4 @@ export default function AdminReportsPage() {
     </div>
   );
 }
+

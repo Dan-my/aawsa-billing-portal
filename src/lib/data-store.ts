@@ -75,6 +75,7 @@ export const addCustomer = (customerData: Omit<IndividualCustomer, 'id'>) => {
   const newCustomer: IndividualCustomer = {
     ...customerData,
     id: `cust_${Date.now().toString()}_${Math.random().toString(36).substring(2, 7)}`,
+    paymentStatus: 'Unpaid', // Default status
   };
   customers = [newCustomer, ...customers];
   localStorage.setItem('customers', JSON.stringify(customers));
@@ -98,6 +99,7 @@ export const addBulkMeter = (bulkMeterData: Omit<BulkMeter, 'id'>) => {
    const newBulkMeter: BulkMeter = {
     ...bulkMeterData,
     id: `bm_${Date.now().toString()}_${Math.random().toString(36).substring(2, 7)}`,
+    paymentStatus: 'Unpaid', // Default status
   };
   bulkMeters = [newBulkMeter, ...bulkMeters];
   localStorage.setItem('bulkMeters', JSON.stringify(bulkMeters));

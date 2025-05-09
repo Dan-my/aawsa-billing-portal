@@ -74,10 +74,6 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
     },
   });
 
-  const assignedBulkMeterIdValue = form.watch("assignedBulkMeterId");
-  const isOtherFieldsDisabled = !assignedBulkMeterIdValue;
-
-
   function onSubmit(data: IndividualCustomerDataEntryFormValues) {
     const usage = data.currentReading - data.previousReading;
     const calculatedBill = usage * TARIFF_RATE;
@@ -134,7 +130,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Customer Name *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Almaz Bekele" {...field} disabled={isOtherFieldsDisabled} />
+                    <Input placeholder="e.g., Almaz Bekele" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -147,7 +143,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Customer Key Number *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., CUST56789" {...field} disabled={isOtherFieldsDisabled} />
+                    <Input placeholder="e.g., CUST56789" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -160,7 +156,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Contract Number *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., CONTR00123" {...field} disabled={isOtherFieldsDisabled} />
+                    <Input placeholder="e.g., CONTR00123" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -176,7 +172,6 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                     onValueChange={field.onChange} 
                     value={field.value || undefined} 
                     defaultValue={field.value || undefined}
-                    disabled={isOtherFieldsDisabled}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -200,7 +195,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Book Number *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., BK789" {...field} disabled={isOtherFieldsDisabled} />
+                    <Input placeholder="e.g., BK789" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -222,7 +217,6 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                         const val = e.target.value;
                         field.onChange(val === "" ? undefined : parseInt(val, 10));
                       }}
-                      disabled={isOtherFieldsDisabled}
                     />
                   </FormControl>
                   <FormMessage />
@@ -246,7 +240,6 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                         const val = e.target.value;
                         field.onChange(val === "" ? undefined : parseFloat(val));
                       }}
-                      disabled={isOtherFieldsDisabled}
                     />
                   </FormControl>
                   <FormMessage />
@@ -260,7 +253,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Meter Number *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., MTRIND456" {...field} disabled={isOtherFieldsDisabled} />
+                    <Input placeholder="e.g., MTRIND456" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -283,7 +276,6 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                         const val = e.target.value;
                         field.onChange(val === "" ? undefined : parseFloat(val));
                       }}
-                      disabled={isOtherFieldsDisabled}
                     />
                   </FormControl>
                   <FormMessage />
@@ -307,7 +299,6 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                         const val = e.target.value;
                         field.onChange(val === "" ? undefined : parseFloat(val));
                       }}
-                      disabled={isOtherFieldsDisabled}
                     />
                   </FormControl>
                   <FormMessage />
@@ -326,7 +317,6 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                       field.onChange(selectedDate ? format(selectedDate, "yyyy-MM") : "");
                     }}
                     placeholder="Select reading month"
-                    disabledTrigger={isOtherFieldsDisabled}
                   />
                   <FormDescription>Month and year of the reading.</FormDescription>
                   <FormMessage />
@@ -340,7 +330,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Specific Area *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Kebele 02, House No 45B" {...field} disabled={isOtherFieldsDisabled} />
+                    <Input placeholder="e.g., Kebele 02, House No 45B" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -353,7 +343,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Location / Sub-City *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Arada Sub-City" {...field} disabled={isOtherFieldsDisabled} />
+                    <Input placeholder="e.g., Arada Sub-City" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -366,7 +356,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 <FormItem>
                   <FormLabel>Ward / Woreda *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Woreda 10" {...field} disabled={isOtherFieldsDisabled} />
+                    <Input placeholder="e.g., Woreda 10" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -382,7 +372,6 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                     onValueChange={field.onChange} 
                     value={field.value || undefined} 
                     defaultValue={field.value || undefined}
-                    disabled={isOtherFieldsDisabled}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -401,7 +390,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
             />
           </div>
 
-          <Button type="submit" className="w-full md:w-auto" disabled={form.formState.isSubmitting || isOtherFieldsDisabled}>
+          <Button type="submit" className="w-full md:w-auto" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting ? "Submitting..." : "Submit Individual Customer Data"}
           </Button>
         </form>
@@ -409,3 +398,4 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
     </ScrollArea>
   );
 }
+

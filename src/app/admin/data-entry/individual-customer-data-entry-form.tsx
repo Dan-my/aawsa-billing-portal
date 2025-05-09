@@ -71,9 +71,6 @@ export function IndividualCustomerDataEntryForm() {
     },
   });
 
-  const assignedBulkMeterIdValue = form.watch("assignedBulkMeterId");
-  const isOtherFieldsDisabled = !assignedBulkMeterIdValue;
-
   function onSubmit(data: IndividualCustomerDataEntryFormValues) {
     const usage = data.currentReading - data.previousReading;
     const calculatedBill = usage * TARIFF_RATE;
@@ -131,7 +128,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Customer Name *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., John Doe" {...field} disabled={isOtherFieldsDisabled} />
+                        <Input placeholder="e.g., John Doe" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -144,7 +141,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Customer Key Number *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., CUST12345" {...field} disabled={isOtherFieldsDisabled} />
+                        <Input placeholder="e.g., CUST12345" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -157,7 +154,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Contract Number *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., CONTR67890" {...field} disabled={isOtherFieldsDisabled} />
+                        <Input placeholder="e.g., CONTR67890" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -173,7 +170,6 @@ export function IndividualCustomerDataEntryForm() {
                         onValueChange={field.onChange} 
                         value={field.value || undefined} 
                         defaultValue={field.value || undefined}
-                        disabled={isOtherFieldsDisabled}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -197,7 +193,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Book Number *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., BK001" {...field} disabled={isOtherFieldsDisabled} />
+                        <Input placeholder="e.g., BK001" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -219,7 +215,6 @@ export function IndividualCustomerDataEntryForm() {
                             const val = e.target.value;
                             field.onChange(val === "" ? undefined : parseInt(val, 10));
                           }}
-                          disabled={isOtherFieldsDisabled}
                         />
                       </FormControl>
                       <FormMessage />
@@ -243,7 +238,6 @@ export function IndividualCustomerDataEntryForm() {
                             const val = e.target.value;
                             field.onChange(val === "" ? undefined : parseFloat(val));
                           }}
-                          disabled={isOtherFieldsDisabled}
                         />
                       </FormControl>
                       <FormMessage />
@@ -257,7 +251,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Meter Number *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., MTR123XYZ" {...field} disabled={isOtherFieldsDisabled} />
+                        <Input placeholder="e.g., MTR123XYZ" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -280,7 +274,6 @@ export function IndividualCustomerDataEntryForm() {
                             const val = e.target.value;
                             field.onChange(val === "" ? undefined : parseFloat(val));
                           }}
-                          disabled={isOtherFieldsDisabled}
                         />
                       </FormControl>
                       <FormMessage />
@@ -304,7 +297,6 @@ export function IndividualCustomerDataEntryForm() {
                             const val = e.target.value;
                             field.onChange(val === "" ? undefined : parseFloat(val));
                           }}
-                          disabled={isOtherFieldsDisabled}
                         />
                       </FormControl>
                       <FormMessage />
@@ -323,7 +315,6 @@ export function IndividualCustomerDataEntryForm() {
                           field.onChange(selectedDate ? format(selectedDate, "yyyy-MM") : "");
                         }}
                         placeholder="Select reading month"
-                        disabledTrigger={isOtherFieldsDisabled}
                       />
                       <FormDescription>Select the month and year of the reading.</FormDescription>
                       <FormMessage />
@@ -337,7 +328,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Specific Area *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Kebele 05, House No 123" {...field} disabled={isOtherFieldsDisabled} />
+                        <Input placeholder="e.g., Kebele 05, House No 123" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -350,7 +341,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Location / Sub-City *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Bole Sub-City" {...field} disabled={isOtherFieldsDisabled} />
+                        <Input placeholder="e.g., Bole Sub-City" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -363,7 +354,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Ward / Woreda *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Woreda 03" {...field} disabled={isOtherFieldsDisabled} />
+                        <Input placeholder="e.g., Woreda 03" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -379,7 +370,6 @@ export function IndividualCustomerDataEntryForm() {
                         onValueChange={field.onChange} 
                         value={field.value || undefined} 
                         defaultValue={field.value || undefined}
-                        disabled={isOtherFieldsDisabled}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -398,7 +388,7 @@ export function IndividualCustomerDataEntryForm() {
                 />
               </div>
 
-              <Button type="submit" className="w-full md:w-auto" disabled={form.formState.isSubmitting || isOtherFieldsDisabled}>
+              <Button type="submit" className="w-full md:w-auto" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? "Submitting..." : "Submit Individual Customer Reading"}
               </Button>
             </form>
@@ -408,3 +398,4 @@ export function IndividualCustomerDataEntryForm() {
     </ScrollArea>
   );
 }
+

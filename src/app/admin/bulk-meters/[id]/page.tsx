@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Droplets, Edit, Trash2, MoreHorizontal, User, CheckCircle, XCircle, FileEdit } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,11 +36,12 @@ export default function BulkMeterDetailsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const bulkMeterId = params.id as string;
-
-  const [bulkMeter, setBulkMeter] = React.useState<BulkMeter | null>(null);
-  const [associatedCustomers, setAssociatedCustomers] = React.useState<IndividualCustomer[]>([]);
+  const [bulkMeterPaymentStatus, setBulkMeterPaymentStatus] = useState<'Paid' | 'Unpaid'>('Unpaid');
+ 
+  const [bulkMeter, setBulkMeter] = useState<BulkMeter | null>(null);
+  const [associatedCustomers, setAssociatedCustomers] = useState<IndividualCustomer[]>([]);
   
-  // Dialog states
+ // Dialog states
   const [isBulkMeterFormOpen, setIsBulkMeterFormOpen] = React.useState(false);
   const [isBulkMeterDeleteDialogOpen, setIsBulkMeterDeleteDialogOpen] = React.useState(false);
   
@@ -49,7 +50,7 @@ export default function BulkMeterDetailsPage() {
   const [customerToDelete, setCustomerToDelete] = React.useState<IndividualCustomer | null>(null);
   const [isCustomerDeleteDialogOpen, setIsCustomerDeleteDialogOpen] = React.useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (getBulkMeters().length === 0) {
       initializeBulkMeters(defaultInitialBulkMeters);
     }
@@ -67,6 +68,7 @@ export default function BulkMeterDetailsPage() {
       
       if (foundBM) {
         setBulkMeter(foundBM);
+ setBulkMeterPaymentStatus(foundBM.paymentStatus || 'Unpaid'); // Initialize status
         const associated = currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId);
         setAssociatedCustomers(associated);
       } else {
@@ -165,6 +167,7 @@ export default function BulkMeterDetailsPage() {
   const differenceBill = totalBulkBill - totalIndividualBill;
 
   return (
+ (
     <div className="space-y-6 p-4">
       <Card className="shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between">
@@ -183,14 +186,15 @@ export default function BulkMeterDetailsPage() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
-            <p><strong className="font-semibold">Name:</strong> {bulkMeter.name}</p>
-            <p><strong className="font-semibold">Location:</strong> {bulkMeter.location}, {bulkMeter.ward}</p>
-            <p><strong className="font-semibold">Bulk Usage:</strong> {bulkUsage.toFixed(2)} m³</p>
-            <p className={differenceBill < 0 ? "text-destructive" : "text-accent"}>
-                <strong className="font-semibold">Difference Bill:</strong> ETB {differenceBill.toFixed(2)}
-            </p>
+ <p><strong className="font-semibold">Name:</strong> {bulkMeter.name}</p>
+ <p><strong className="font-semibold">Location:</strong> {bulkMeter.location}, {bulkMeter.ward}</p>
+ <p><strong className="font-semibold">Bulk Usage:</strong> {bulkUsage.toFixed(2)} m³</p>
           </div>
           <div>
+            <p className={differenceBill < 0 ? "text-destructive" : "text-accent"}>
+ <strong className="font-semibold">Difference Bill:</strong> ETB {differenceBill.toFixed(2)}
+            </p>
+          </div>
             <p><strong className="font-semibold">Meter No:</strong> {bulkMeter.meterNumber}</p>
             <p><strong className="font-semibold">Month:</strong> {bulkMeter.month}</p>
              <p className="text-primary"><strong className="font-semibold">Total Bulk Bill:</strong> ETB {totalBulkBill.toFixed(2)}</p>
@@ -200,6 +204,9 @@ export default function BulkMeterDetailsPage() {
             <p><strong className="font-semibold">Readings (Prev/Curr):</strong> {bulkMeter.previousReading.toFixed(2)} / {bulkMeter.currentReading.toFixed(2)}</p>
             <p className={differenceUsage < 0 ? "text-destructive" : "text-accent"}>
                 <strong className="font-semibold">Difference Usage:</strong> {differenceUsage.toFixed(2)} m³
+            </p>
+            <p className={bulkMeterPaymentStatus === 'Paid' ? "text-green-600" : ""}>
+                <strong className="font-semibold">Payment Status:</strong> {bulkMeterPaymentStatus}
             </p>
           </div>
         </CardContent>
@@ -226,7 +233,6 @@ export default function BulkMeterDetailsPage() {
                   <TableHead>Usage (m³)</TableHead>
                   <TableHead>Calculated Bill (ETB)</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -245,26 +251,6 @@ export default function BulkMeterDetailsPage() {
                           {customer.paymentStatus === 'Paid' ? <CheckCircle className="mr-1 h-3.5 w-3.5"/> : <XCircle className="mr-1 h-3.5 w-3.5"/>}
                           {customer.paymentStatus}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => handleEditCustomer(customer)}>
-                              <Edit className="mr-2 h-4 w-4" /> Edit Customer
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleDeleteCustomer(customer)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                              <Trash2 className="mr-2 h-4 w-4" /> Delete Customer
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   );
@@ -326,6 +312,7 @@ export default function BulkMeterDetailsPage() {
       </AlertDialog>
 
     </div>
+ )
   );
 }
 

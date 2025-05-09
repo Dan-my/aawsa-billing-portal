@@ -21,7 +21,7 @@ export type IndividualCustomer = z.infer<typeof baseIndividualCustomerDataSchema
   status: IndividualCustomerStatus;
   // assignedBulkMeterId is already part of baseIndividualCustomerDataSchema and is mandatory
   paymentStatus: PaymentStatus; 
-  calculatedBill: number; 
+  calculatedBill: number;
 };
 
 export const TARIFF_RATE = 5.50; // ETB per m³

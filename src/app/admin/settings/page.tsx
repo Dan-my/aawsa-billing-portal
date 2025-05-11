@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -174,14 +175,15 @@ export default function AdminSettingsPage() {
               <div>
                 <p className="text-sm font-medium">Non-domestic Customers:</p>
                  <ul className="list-disc list-inside text-sm text-accent pl-2 space-y-1">
-                    <li>Water Tariff:
+                    <li>Water Tariff (Progressive):
                         <ul className="list-disc list-inside pl-4 space-y-1">
-                            {NonDomesticTariffInfo.tiers.length > 0 && (
-                                <li>0 - {NonDomesticTariffInfo.tiers[0].limit} m³: {defaultCurrency} {NonDomesticTariffInfo.tiers[0].rate.toFixed(2)} / m³</li>
-                            )}
-                            {NonDomesticTariffInfo.tiers.length > 1 && NonDomesticTariffInfo.tiers[1].limit === Infinity && (
-                                <li>Above {NonDomesticTariffInfo.tiers[0].limit} m³: {defaultCurrency} {NonDomesticTariffInfo.tiers[1].rate.toFixed(2)} / m³</li>
-                            )}
+                            {NonDomesticTariffInfo.tiers.map((tier, index) => (
+                                <li key={`nondomestic-tier-${index}`}>
+                                {tier.cumulativeUsage !== undefined && tier.cumulativeUsage > 0 
+                                    ? `${(tier.cumulativeUsage + 0.000001).toFixed(0)}` 
+                                    : '0'} - {tier.limit === Infinity ? 'Above' : tier.limit} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
+                                </li>
+                            ))}
                         </ul>
                     </li>
                     <li>Sanitation Fee: {(NonDomesticTariffInfo.sanitationPercentage * 100).toFixed(0)}% of Base Water Charge</li>

@@ -23,38 +23,28 @@ export type IndividualCustomer = z.infer<typeof baseIndividualCustomerDataSchema
   calculatedBill: number;
 };
 
-// Non-domestic tariff constants (updated based on previous request)
-const nonDomesticTariffTiers = [
-    { limit: 200, rate: 60.00 }, // 0-200 M3
-    { limit: Infinity, rate: 75.00 }, // Above 200 M3
-] as const;
-
-const NON_DOMESTIC_SANITATION_PERCENTAGE = 0.10; // 10% of water charge
-const NON_DOMESTIC_METER_RENT = 15.00;
-const NON_DOMESTIC_SEWERAGE_RATE_PER_M3 = 8.75;
-
-
-// Domestic tariff constants & values (updated based on the image)
-const DOMESTIC_METER_RENT = 15.00;
-const DOMESTIC_SEWERAGE_RATE_PER_M3 = 6.25;
-const DOMESTIC_MAINTENANCE_PERCENTAGE = 0.01; // 1% of base water charge
-const DOMESTIC_SANITATION_PERCENTAGE = 0.07; // 7% of base water charge
-
-interface DomesticTariffTier {
-  limit: number; // Upper limit of the tier (e.g., 5 for 1-5 M3)
+interface TariffTier {
+  limit: number; // Upper limit of the tier (e.g., 5 for 0-5 M3)
   rate: number;  // Rate for this tier
   cumulativeUsage?: number; // Max usage covered by previous tiers
   cumulativeCharge?: number; // Max charge from previous tiers
 }
 
-export const domesticTariffTiers: DomesticTariffTier[] = [
-  { limit: 5, rate: 10.21 },    // 1-5 M3
-  { limit: 14, rate: 17.87 },   // 6-14 M3
-  { limit: 23, rate: 33.19 },   // 15-23 M3
-  { limit: 32, rate: 51.07 },   // 24-32 M3
-  { limit: 41, rate: 61.28 },   // 33-41 M3
-  { limit: 50, rate: 71.49 },   // 42-50 M3
-  { limit: Infinity, rate: 81.71 }, // 51+ M3
+
+// Domestic tariff constants & values
+const DOMESTIC_METER_RENT = 15.00;
+const DOMESTIC_SEWERAGE_RATE_PER_M3 = 6.25;
+const DOMESTIC_MAINTENANCE_PERCENTAGE = 0.01; // 1% of base water charge
+const DOMESTIC_SANITATION_PERCENTAGE = 0.07; // 7% of base water charge
+
+export const domesticTariffTiers: TariffTier[] = [
+  { limit: 5, rate: 10.21 },    // 0-5 M3
+  { limit: 14, rate: 17.87 },   // >5-14 M3
+  { limit: 23, rate: 33.19 },   // >14-23 M3
+  { limit: 32, rate: 51.07 },   // >23-32 M3
+  { limit: 41, rate: 61.28 },   // >32-41 M3
+  { limit: 50, rate: 71.49 },   // >41-50 M3
+  { limit: Infinity, rate: 81.71 }, // >50 M3
 ];
 
 // Pre-calculate cumulative values for domestic tariff
@@ -68,46 +58,86 @@ for (const tier of domesticTariffTiers) {
     accumulatedDomesticCharge += usageInTier * tier.rate;
     accumulatedDomesticUsage = tier.limit;
   } else if (tier.limit === Infinity) {
-    tier.cumulativeUsage = accumulatedDomesticUsage; 
-    tier.cumulativeCharge = accumulatedDomesticCharge; 
+    tier.cumulativeUsage = accumulatedDomesticUsage;
+    tier.cumulativeCharge = accumulatedDomesticCharge;
   }
 }
 
+// Non-domestic tariff constants & values
+// Non-domestic will use the same progressive water charge tiers as domestic.
+// Differences will be in other fees like sanitation percentage and sewerage rate.
+export const nonDomesticWaterTiers: TariffTier[] = [
+  { limit: 5, rate: 10.21 },
+  { limit: 14, rate: 17.87 },
+  { limit: 23, rate: 33.19 },
+  { limit: 32, rate: 51.07 },
+  { limit: 41, rate: 61.28 },
+  { limit: 50, rate: 71.49 },
+  { limit: Infinity, rate: 81.71 },
+];
 
-function calculateDomesticBaseWaterCharge(usage: number): number {
+// Pre-calculate cumulative values for non-domestic water tiers
+let accumulatedNonDomesticUsage = 0;
+let accumulatedNonDomesticCharge = 0;
+for (const tier of nonDomesticWaterTiers) {
+  if (tier.limit !== Infinity && tier.limit - accumulatedNonDomesticUsage > 0) {
+    tier.cumulativeUsage = accumulatedNonDomesticUsage;
+    tier.cumulativeCharge = accumulatedNonDomesticCharge;
+    const usageInTier = tier.limit - accumulatedNonDomesticUsage;
+    accumulatedNonDomesticCharge += usageInTier * tier.rate;
+    accumulatedNonDomesticUsage = tier.limit;
+  } else if (tier.limit === Infinity) {
+    tier.cumulativeUsage = accumulatedNonDomesticUsage;
+    tier.cumulativeCharge = accumulatedNonDomesticCharge;
+  }
+}
+
+const NON_DOMESTIC_SANITATION_PERCENTAGE = 0.10; // 10% of water charge
+const NON_DOMESTIC_METER_RENT = 15.00;
+const NON_DOMESTIC_SEWERAGE_RATE_PER_M3 = 8.75;
+// Non-domestic does not have a maintenance percentage in this structure.
+
+
+// Helper function for progressive base water charge calculation
+function calculateProgressiveBaseWaterCharge(usage: number, tiers: TariffTier[]): number {
   if (usage <= 0) return 0;
   let totalCharge = 0;
   let remainingUsage = usage;
 
-  for (const tier of domesticTariffTiers) {
+  for (const tier of tiers) {
     const previousTiersUsage = tier.cumulativeUsage ?? 0;
     if (usage > previousTiersUsage) {
         const usageInThisTier = Math.min(remainingUsage, (tier.limit === Infinity ? Infinity : tier.limit) - previousTiersUsage);
         totalCharge += usageInThisTier * tier.rate;
         remainingUsage -= usageInThisTier;
         if (remainingUsage <= 0) break;
-    } else {
+    } else { // Should not happen if logic is correct and usage > previousTiersUsage
         break; 
     }
   }
   return totalCharge;
 }
 
-function calculateNonDomesticBill(usage: number, sewerageConnection: SewerageConnection): number {
-  if (usage <= 0) return 0;
+
+function calculateDomesticBill(usage: number, sewerageConnection: SewerageConnection): number {
+  const baseWaterCharge = calculateProgressiveBaseWaterCharge(usage, domesticTariffTiers);
   
-  let baseWaterCharge = 0;
-  if (usage <= nonDomesticTariffTiers[0].limit) { // Tier 1
-    baseWaterCharge = usage * nonDomesticTariffTiers[0].rate;
-  } else { // Tier 2
-    baseWaterCharge = nonDomesticTariffTiers[0].limit * nonDomesticTariffTiers[0].rate;
-    const remainingUsage = usage - nonDomesticTariffTiers[0].limit;
-    baseWaterCharge += remainingUsage * nonDomesticTariffTiers[1].rate;
-  }
+  const maintenanceFee = baseWaterCharge * DOMESTIC_MAINTENANCE_PERCENTAGE;
+  const sanitationFee = baseWaterCharge * DOMESTIC_SANITATION_PERCENTAGE;
+  const meterRentFee = DOMESTIC_METER_RENT;
+  const sewerageFee = sewerageConnection === "Yes" ? usage * DOMESTIC_SEWERAGE_RATE_PER_M3 : 0;
+
+  const totalBill = baseWaterCharge + maintenanceFee + sanitationFee + meterRentFee + sewerageFee;
+  return parseFloat(totalBill.toFixed(2));
+}
+
+function calculateNonDomesticBill(usage: number, sewerageConnection: SewerageConnection): number {
+  const baseWaterCharge = calculateProgressiveBaseWaterCharge(usage, nonDomesticWaterTiers);
 
   const sanitationFee = baseWaterCharge * NON_DOMESTIC_SANITATION_PERCENTAGE;
   const meterRentFee = NON_DOMESTIC_METER_RENT;
   const sewerageFee = sewerageConnection === "Yes" ? usage * NON_DOMESTIC_SEWERAGE_RATE_PER_M3 : 0;
+  // No maintenance fee for non-domestic
 
   const totalBill = baseWaterCharge + sanitationFee + meterRentFee + sewerageFee;
   return parseFloat(totalBill.toFixed(2));
@@ -119,35 +149,22 @@ export function calculateBill(
   customerType: CustomerType, 
   sewerageConnection: SewerageConnection
 ): number {
-  if (usage < 0) usage = 0; // Ensure usage is not negative
+  if (usage < 0) usage = 0;
 
   if (customerType === "Non-domestic") {
     return calculateNonDomesticBill(usage, sewerageConnection);
   }
-
   // Domestic customer calculation
-  const baseWaterCharge = calculateDomesticBaseWaterCharge(usage);
-  
-  const maintenanceFee = baseWaterCharge * DOMESTIC_MAINTENANCE_PERCENTAGE;
-  const sanitationFee = baseWaterCharge * DOMESTIC_SANITATION_PERCENTAGE;
-  const meterRentFee = DOMESTIC_METER_RENT;
-  const sewerageFee = sewerageConnection === "Yes" ? usage * DOMESTIC_SEWERAGE_RATE_PER_M3 : 0;
-
-  const totalBill = baseWaterCharge + maintenanceFee + sanitationFee + meterRentFee + sewerageFee;
-  
-  return parseFloat(totalBill.toFixed(2)); // Return rounded to 2 decimal places
+  return calculateDomesticBill(usage, sewerageConnection);
 }
 
 
 export const TARIFF_RATES_BY_TYPE = {
-  Domestic: null, // Domestic is progressive.
-  "Non-domestic": null, // Non-domestic is also progressive (tiered).
+  Domestic: null, 
+  "Non-domestic": null, 
 } as const;
 
-/**
- * @deprecated Use calculateBill for actual bill calculation. This function is misleading.
- * Returns null as both customer types now use progressive/component-based tariffs.
- */
+
 export function getTariffRate(customerType: CustomerType): number | null {
   console.warn(`getTariffRate called for ${customerType} customer. Use calculateBill for accurate billing. This function returns null.`);
   return null;
@@ -155,7 +172,7 @@ export function getTariffRate(customerType: CustomerType): number | null {
 
 // Constants for display in settings or info pages
 export const NonDomesticTariffInfo = {
-  tiers: nonDomesticTariffTiers,
+  tiers: nonDomesticWaterTiers, // Updated to new progressive tiers
   sanitationPercentage: NON_DOMESTIC_SANITATION_PERCENTAGE,
   meterRent: NON_DOMESTIC_METER_RENT,
   sewerageRatePerM3: NON_DOMESTIC_SEWERAGE_RATE_PER_M3,
@@ -168,4 +185,3 @@ export const DomesticTariffInfo = {
     meterRent: DOMESTIC_METER_RENT,
     sewerageRatePerM3: DOMESTIC_SEWERAGE_RATE_PER_M3,
 };
-

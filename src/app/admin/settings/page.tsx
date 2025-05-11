@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Save, AlertTriangle, Info, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { domesticTariffTiers, NonDomesticTariffInfo } from "@/app/admin/individual-customers/individual-customer-types";
+import { DomesticTariffInfo, NonDomesticTariffInfo } from "@/app/admin/individual-customers/individual-customer-types"; // Updated import
 
 const APP_NAME_KEY = "aawsa-app-name";
 const CURRENCY_KEY = "aawsa-default-currency";
@@ -156,28 +156,34 @@ export default function AdminSettingsPage() {
               <DollarSign className="h-5 w-5 text-primary" />
               <h3 className="font-semibold">Current Tariff Information</h3>
             </div>
-            <div className="mt-2 space-y-2">
+            <div className="mt-2 space-y-4">
               <div>
                 <p className="text-sm font-medium">Domestic Customers:</p>
-                <ul className="list-disc list-inside text-sm text-accent pl-2">
-                  {domesticTariffTiers.map((tier, index) => (
+                <ul className="list-disc list-inside text-sm text-accent pl-2 space-y-1">
+                  {DomesticTariffInfo.tiers.map((tier, index) => (
                     <li key={`domestic-tier-${index}`}>
-                      {tier.cumulativeUsage !== undefined && tier.cumulativeUsage > 0 ? `${tier.cumulativeUsage + 1}` : '0'} - {tier.limit === Infinity ? 'Above' : tier.limit} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
+                      {tier.cumulativeUsage !== undefined && tier.cumulativeUsage > 0 
+                        ? `${(tier.cumulativeUsage + 0.000001).toFixed(0)}` // Show start of range (e.g., 6 instead of 5.000001)
+                        : '0'} - {tier.limit === Infinity ? 'Above' : tier.limit} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
                     </li>
                   ))}
-                   <li>+ 1% Maintenance Fee (on water charge)</li>
-                   <li>+ 7% Sanitation Fee (on water charge)</li>
-                   <li>+ {defaultCurrency} {15.00.toFixed(2)} Meter Rent</li>
-                   <li>+ Sewerage: {defaultCurrency} {6.25.toFixed(2)} / m³ (if applicable)</li>
+                   <li>Maintenance Fee: {(DomesticTariffInfo.maintenancePercentage * 100).toFixed(0)}% of Base Water Charge</li>
+                   <li>Sanitation Fee: {(DomesticTariffInfo.sanitationPercentage * 100).toFixed(0)}% of Base Water Charge</li>
+                   <li>Meter Rent: {defaultCurrency} {DomesticTariffInfo.meterRent.toFixed(2)}</li>
+                   <li>Sewerage Charge: {defaultCurrency} {DomesticTariffInfo.sewerageRatePerM3.toFixed(2)} / m³ (if applicable)</li>
                 </ul>
               </div>
               <div>
                 <p className="text-sm font-medium">Non-domestic Customers:</p>
-                 <ul className="list-disc list-inside text-sm text-accent pl-2">
-                    <li>Water Charge: {defaultCurrency} {NonDomesticTariffInfo.waterRatePerM3.toFixed(2)} / m³</li>
-                    <li>Sanitation: {(NonDomesticTariffInfo.sanitationPercentage * 100).toFixed(0)}% of Water Charge</li>
+                 <ul className="list-disc list-inside text-sm text-accent pl-2 space-y-1">
+                    {NonDomesticTariffInfo.tiers.map((tier, index) => (
+                         <li key={`non-domestic-tier-${index}`}>
+                            {index === 0 ? '0' : (NonDomesticTariffInfo.tiers[index-1].limit + 0.000001).toFixed(0)} - {tier.limit === Infinity ? 'Above' : tier.limit} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
+                         </li>
+                    ))}
+                    <li>Sanitation Fee: {(NonDomesticTariffInfo.sanitationPercentage * 100).toFixed(0)}% of Base Water Charge</li>
                     <li>Meter Rent: {defaultCurrency} {NonDomesticTariffInfo.meterRent.toFixed(2)}</li>
-                    <li>Sewerage: {defaultCurrency} {NonDomesticTariffInfo.sewerageRatePerM3.toFixed(2)} / m³ (if applicable)</li>
+                    <li>Sewerage Charge: {defaultCurrency} {NonDomesticTariffInfo.sewerageRatePerM3.toFixed(2)} / m³ (if applicable)</li>
                 </ul>
               </div>
             </div>

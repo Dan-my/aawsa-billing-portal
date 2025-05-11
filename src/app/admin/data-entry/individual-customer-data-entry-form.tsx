@@ -24,7 +24,7 @@ import {
 } from "./customer-data-entry-types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
-import { addCustomer as addCustomerToStore, getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, initializeCustomers } from "@/lib/data-store";
+import { addCustomer as addCustomerToStore, getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, initializeCustomers, getCustomers } from "@/lib/data-store";
 import type { IndividualCustomer, CustomerType, SewerageConnection } from "../individual-customers/individual-customer-types"; 
 import { initialBulkMeters as defaultInitialBulkMeters } from "../bulk-meters/page";
 import { initialCustomers as defaultInitialCustomers } from "../individual-customers/page";
@@ -429,3 +429,4 @@ export function IndividualCustomerDataEntryForm() {
     </ScrollArea>
   );
 }
+

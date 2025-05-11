@@ -3,8 +3,14 @@
 
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, UploadCloud, Building } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { FileText, UploadCloud, Building, ChevronDown } from "lucide-react";
 import { StaffBulkMeterEntryForm } from "./staff-bulk-meter-entry-form";
 import { StaffIndividualCustomerEntryForm } from "./staff-individual-customer-entry-form";
 import { CsvUploadSection } from "@/app/admin/data-entry/csv-upload-section";
@@ -38,9 +44,18 @@ interface User {
   branchName?: string;
 }
 
+type DataEntryType = "manual-individual" | "manual-bulk" | "csv-upload";
+
+const entryTypeLabels: Record<DataEntryType, string> = {
+  "manual-individual": "Individual (Manual)",
+  "manual-bulk": "Bulk Meter (Manual)",
+  "csv-upload": "CSV Upload",
+};
+
 export default function StaffDataEntryPage() {
   const [staffBranchName, setStaffBranchName] = React.useState<string>("Your Branch");
   const [isBranchDetermined, setIsBranchDetermined] = React.useState(false);
+  const [selectedEntryType, setSelectedEntryType] = React.useState<DataEntryType>("manual-individual");
 
   React.useEffect(() => {
     if (getBulkMeters().length === 0) initializeBulkMeters(defaultInitialBulkMeters);
@@ -53,7 +68,7 @@ export default function StaffDataEntryPage() {
         if (parsedUser.role === "staff" && parsedUser.branchName) {
           setStaffBranchName(parsedUser.branchName);
         } else if (parsedUser.role === "staff" && !parsedUser.branchName) {
-          setStaffBranchName("Unassigned Branch"); // Or some default/error state
+          setStaffBranchName("Unassigned Branch"); 
         }
       } catch (e) {
         console.error("Failed to parse user from localStorage", e);
@@ -107,6 +122,33 @@ export default function StaffDataEntryPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-3xl font-bold">Customer Data Entry ({staffBranchName})</h1>
+        {canProceedWithDataEntry && (
+            <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-full md:w-auto">
+                {selectedEntryType === "manual-individual" && <FileText className="mr-2 h-4 w-4" />}
+                {selectedEntryType === "manual-bulk" && <FileText className="mr-2 h-4 w-4" />}
+                {selectedEntryType === "csv-upload" && <UploadCloud className="mr-2 h-4 w-4" />}
+                {entryTypeLabels[selectedEntryType]}
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-full md:w-[--radix-dropdown-menu-trigger-width]">
+              <DropdownMenuItem onClick={() => setSelectedEntryType("manual-individual")}>
+                <FileText className="mr-2 h-4 w-4" />
+                Individual (Manual)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedEntryType("manual-bulk")}>
+                <FileText className="mr-2 h-4 w-4" />
+                Bulk Meter (Manual)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedEntryType("csv-upload")}>
+                <UploadCloud className="mr-2 h-4 w-4" />
+                CSV Upload
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {!canProceedWithDataEntry && (
@@ -128,21 +170,9 @@ export default function StaffDataEntryPage() {
       )}
 
       {canProceedWithDataEntry && (
-        <Tabs defaultValue="manual-individual" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 md:w-auto md:inline-flex">
-            <TabsTrigger value="manual-individual">
-              <FileText className="mr-2 h-4 w-4" /> Individual (Manual)
-            </TabsTrigger>
-            <TabsTrigger value="manual-bulk">
-              <FileText className="mr-2 h-4 w-4" /> Bulk Meter (Manual)
-            </TabsTrigger>
-            <TabsTrigger value="csv-upload">
-              <UploadCloud className="mr-2 h-4 w-4" /> CSV Upload
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="manual-individual">
-            <Card className="shadow-lg mt-4">
+        <div className="mt-4">
+          {selectedEntryType === "manual-individual" && (
+            <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Individual Customer Data Entry</CardTitle>
               </CardHeader>
@@ -150,10 +180,10 @@ export default function StaffDataEntryPage() {
                 <StaffIndividualCustomerEntryForm branchName={staffBranchName} />
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="manual-bulk">
-            <Card className="shadow-lg mt-4">
+          {selectedEntryType === "manual-bulk" && (
+            <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Bulk Meter Data Entry</CardTitle>
               </CardHeader>
@@ -161,10 +191,10 @@ export default function StaffDataEntryPage() {
                 <StaffBulkMeterEntryForm branchName={staffBranchName} />
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="csv-upload">
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+          {selectedEntryType === "csv-upload" && (
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="shadow-lg">
                 <CardHeader>
                   <CardTitle>Bulk Meter CSV Upload</CardTitle>
@@ -199,8 +229,8 @@ export default function StaffDataEntryPage() {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
       )}
     </div>
   );

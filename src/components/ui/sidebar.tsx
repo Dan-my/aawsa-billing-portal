@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -183,7 +184,7 @@ SidebarFooter.displayName = "SidebarFooter"
 const SidebarTrigger = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, children, ...props }, ref) => {
     const { toggleSidebar, state, isMobile } = useSidebar()
-    if (isMobile && state !== "mobile") return null; // Show trigger only when mobile sidebar is open or if it's for desktop
+    if (isMobile && state !== "mobile") return null; 
 
     const effectiveState = isMobile ? state === "mobile" ? "expanded" : "collapsed" : state;
 
@@ -320,7 +321,7 @@ const SidebarMenuButton = React.forwardRef<HTMLButtonElement, SidebarMenuButtonP
         {...props}
         asChild={isLink}
       >
-        {isLink ? <a>{children}</a> : <>{children}</>}
+        {children}
       </Button>
     );
 
@@ -383,7 +384,7 @@ const SidebarMenuSubButton = React.forwardRef<HTMLButtonElement, ButtonProps & {
         {...props}
         asChild={isLink}
       >
-        {isLink ? <a>{children}</a> : <>{children}</>}
+        {children}
       </Button>
     );
   }

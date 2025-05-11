@@ -160,9 +160,9 @@ export default function AdminSettingsPage() {
                 <p className="text-sm font-medium">Domestic Customers:</p>
                 <ul className="list-disc list-inside text-sm text-accent pl-2 space-y-1">
                   {DomesticTariffInfo.tiers.map((tier, index) => (
-                    <li key={`domestic-tier-${index}`}>
-                      {tier.cumulativeUsage !== undefined && tier.cumulativeUsage > 0 
-                        ? `${(tier.cumulativeUsage + 0.000001).toFixed(0)}` 
+                     <li key={`domestic-tier-${index}`}>
+                      {tier.cumulativeUsage !== undefined && tier.cumulativeUsage > 0
+                        ? `${(tier.cumulativeUsage + 0.000001).toFixed(0)}`
                         : '0'} - {tier.limit === Infinity ? 'Above' : tier.limit} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
                     </li>
                   ))}
@@ -179,7 +179,6 @@ export default function AdminSettingsPage() {
                         <li key={`nondomestic-tier-${index}`}>
                          {tier.limit === Infinity ? 
                             `Above ${(tier.cumulativeUsage ?? 0).toFixed(0)}` : 
-                            // Display cumulative usage as the start of the range for non-domestic to clearly show tiers
                             `${(tier.cumulativeUsage ?? 0).toFixed(0)} - ${tier.limit.toFixed(0)}` 
                          } m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
                         </li>
@@ -194,17 +193,20 @@ export default function AdminSettingsPage() {
               Tariff details are managed centrally. Contact system administrators for changes to the underlying rates or structure.
             </p>
           </div>
+        </CardContent>
+      </Card>
 
-          <div className="mt-4 p-4 border-l-4 border-amber-500 bg-amber-50 dark:bg-amber-900/30 rounded-md">
+      <Card className="shadow-lg">
+        <CardHeader>
             <div className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                <h3 className="font-semibold text-amber-700 dark:text-amber-300">Advanced Settings (Coming Soon)</h3>
+                <CardTitle className="text-amber-700 dark:text-amber-300">Advanced Settings (Coming Soon)</CardTitle>
             </div>
-            <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+        </CardHeader>
+        <CardContent>
+            <p className="text-sm text-amber-600 dark:text-amber-400">
               Late fee policies, detailed notification preferences, and data export configurations will be available here in future updates.
             </p>
-          </div>
-
         </CardContent>
       </Card>
       
@@ -216,3 +218,4 @@ export default function AdminSettingsPage() {
     </div>
   );
 }
+

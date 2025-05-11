@@ -48,7 +48,8 @@ export default function IndividualCustomersPage() {
     if (getBulkMeters().length === 0) {
       initializeBulkMeters(defaultInitialBulkMeters);
     }
-    setBulkMetersList(getBulkMeters().map(bm => ({id: bm.id, name: bm.name })));
+    const currentBms = getBulkMeters().map(bm => ({id: bm.id, name: bm.name }));
+    setBulkMetersList(currentBms);
     const unsubscribeBulkMeters = subscribeToBulkMeters((updatedBulkMeters) => {
       setBulkMetersList(updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
     });
@@ -174,7 +175,7 @@ export default function IndividualCustomersPage() {
         onOpenChange={setIsFormOpen}
         onSubmit={handleSubmitCustomer}
         defaultValues={selectedCustomer}
-        bulkMeters={bulkMetersList}
+        bulkMeters={bulkMetersList} // Pass the full list for "Add New", or specific one for "Edit" if applicable
       />
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -194,3 +195,4 @@ export default function IndividualCustomersPage() {
     </div>
   );
 }
+

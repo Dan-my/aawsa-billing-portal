@@ -47,18 +47,19 @@ const individualCustomerFormSchema = individualCustomerFormObjectSchema.refine(d
 });
 
 
-export type IndividualCustomerFormValues = z.infer<typeof individualCustomerFormSchema>; // Export the type
+export type IndividualCustomerFormValues = z.infer<typeof individualCustomerFormSchema>; 
 
 interface IndividualCustomerFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: IndividualCustomerFormValues) => void;
   defaultValues?: IndividualCustomer | null;
-  bulkMeters?: { id: string; name: string }[];
+  bulkMeters?: { id: string; name: string }[]; // Used when editing a customer from bulk meter details page
 }
 
 export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, defaultValues, bulkMeters: propBulkMeters }: IndividualCustomerFormDialogProps) {
   const [dynamicBulkMeters, setDynamicBulkMeters] = React.useState<{ id: string; name: string }[]>(propBulkMeters || []);
+  const [isBulkMeterSelected, setIsBulkMeterSelected] = React.useState(!!defaultValues?.assignedBulkMeterId);
   
   const form = useForm<IndividualCustomerFormValues>({
     resolver: zodResolver(individualCustomerFormSchema),
@@ -79,25 +80,30 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
       ward: "",
       sewerageConnection: undefined,
       assignedBulkMeterId: undefined,
-      status: undefined,
-        paymentStatus: "Unpaid",
+      status: "Active", // Default status for new customer
+      paymentStatus: "Unpaid", // Default payment status for new customer
     },
   });
 
   React.useEffect(() => {
+    // If propBulkMeters are not provided (e.g. adding customer from main customer page), fetch all
     if (!propBulkMeters || propBulkMeters.length === 0) {
         const fetchedBms = getBulkMeters().map(bm => ({ id: bm.id, name: bm.name }));
         setDynamicBulkMeters(fetchedBms);
         if (fetchedBms.length === 0 && open) { 
-            console.warn("IndividualCustomerFormDialog: No bulk meters available on mount.");
+            console.warn("IndividualCustomerFormDialog: No bulk meters available on mount for selection.");
         }
     } else {
-         setDynamicBulkMeters(propBulkMeters); 
+         setDynamicBulkMeters(propBulkMeters); // Use provided bulk meters (e.g. single one from BM details page)
     }
 
-    const unsubscribe = subscribeToBulkMeters((updatedBulkMeters) => {
-      setDynamicBulkMeters(updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
-    });
+    // Subscribe to general bulk meter changes if not editing from BM page
+    let unsubscribe = () => {};
+    if (!propBulkMeters || propBulkMeters.length === 0) {
+      unsubscribe = subscribeToBulkMeters((updatedBulkMeters) => {
+        setDynamicBulkMeters(updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
+      });
+    }
     return () => unsubscribe();
   }, [propBulkMeters, open]); 
 
@@ -111,7 +117,9 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         currentReading: defaultValues.currentReading ?? undefined,
         assignedBulkMeterId: defaultValues.assignedBulkMeterId, 
         paymentStatus: defaultValues.paymentStatus ?? "Unpaid",
+        status: defaultValues.status ?? "Active",
       });
+      setIsBulkMeterSelected(!!defaultValues.assignedBulkMeterId);
     } else {
       form.reset({
         name: "",
@@ -130,16 +138,37 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         ward: "",
         sewerageConnection: undefined,
         assignedBulkMeterId: undefined, 
-        status: undefined,
+        status: "Active",
         paymentStatus: "Unpaid",
       });
+      setIsBulkMeterSelected(false);
     }
   }, [defaultValues, form, open]);
+
+  React.useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === "assignedBulkMeterId") {
+        setIsBulkMeterSelected(!!value.assignedBulkMeterId && dynamicBulkMeters.length > 0);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, dynamicBulkMeters]);
 
   const handleSubmit = (data: IndividualCustomerFormValues) => {
     onSubmit(data); 
     onOpenChange(false);
   };
+
+  const commonFormFieldProps = {
+    disabled: !isBulkMeterSelected && !defaultValues, // Allow editing if defaultValues (editing mode) even if BM not initially selected, but enforce for new
+  };
+  const commonSelectTriggerProps = {
+    disabled: !isBulkMeterSelected && !defaultValues,
+  };
+  const commonDatePickerProps = {
+    disabledTrigger: !isBulkMeterSelected && !defaultValues,
+  };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -160,21 +189,24 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Assign to Bulk Meter *</FormLabel>
                     <Select 
-                        onValueChange={field.onChange} 
-                        value={field.value || undefined} 
-                        defaultValue={field.value || undefined}
-                        disabled={!!defaultValues} // Cannot change bulk meter assignment when editing for now
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setIsBulkMeterSelected(!!value && dynamicBulkMeters.length > 0);
+                        }} 
+                        value={field.value || ""} 
+                        defaultValue={field.value || ""}
+                        disabled={!!defaultValues && !!propBulkMeters && propBulkMeters.length === 1 && propBulkMeters[0].id === defaultValues.assignedBulkMeterId} // Disable if editing from BM details (only that BM available)
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder="Select a bulk meter first" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        {dynamicBulkMeters.length === 0 && <SelectItem value="no-bms-available" disabled>No bulk meters available</SelectItem>}
                         {dynamicBulkMeters.map((bm) => (
                           <SelectItem key={bm.id} value={bm.id}>{bm.name}</SelectItem>
                         ))}
-                        {dynamicBulkMeters.length === 0 && <SelectItem value="no-bms-available" disabled>No bulk meters available</SelectItem>}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -188,7 +220,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Customer Name *</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} {...commonFormFieldProps}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -201,7 +233,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Customer Key Number *</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} {...commonFormFieldProps}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -214,7 +246,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Contract Number *</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} {...commonFormFieldProps}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -226,10 +258,10 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Customer Type *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
+                    <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value || ""} {...commonSelectTriggerProps}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder="Select customer type" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -249,7 +281,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Book Number *</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} {...commonFormFieldProps}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -270,6 +302,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                           const val = e.target.value;
                           field.onChange(val === "" ? undefined : parseInt(val, 10));
                         }}
+                         {...commonFormFieldProps}
                       />
                     </FormControl>
                     <FormMessage />
@@ -292,6 +325,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                           const val = e.target.value;
                           field.onChange(val === "" ? undefined : parseFloat(val));
                         }}
+                         {...commonFormFieldProps}
                       />
                     </FormControl>
                     <FormMessage />
@@ -305,7 +339,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Meter Number *</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} {...commonFormFieldProps}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -327,6 +361,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                           const val = e.target.value;
                           field.onChange(val === "" ? undefined : parseFloat(val));
                         }}
+                         {...commonFormFieldProps}
                       />
                     </FormControl>
                     <FormMessage />
@@ -349,6 +384,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                           const val = e.target.value;
                           field.onChange(val === "" ? undefined : parseFloat(val));
                         }}
+                         {...commonFormFieldProps}
                       />
                     </FormControl>
                     <FormMessage />
@@ -366,6 +402,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                         setDate={(selectedDate) => {
                           field.onChange(selectedDate ? format(selectedDate, "yyyy-MM") : "");
                         }}
+                        {...commonDatePickerProps}
                       />
                     <FormMessage />
                   </FormItem>
@@ -378,7 +415,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Specific Area *</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} {...commonFormFieldProps}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -391,7 +428,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Location / Sub-City *</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} {...commonFormFieldProps}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -404,7 +441,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormItem>
                     <FormLabel>Ward / Woreda *</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} {...commonFormFieldProps}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -416,10 +453,10 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Sewerage Connection *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
+                    <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value || ""} {...commonSelectTriggerProps}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder="Select sewerage status"/>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -438,10 +475,10 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Customer Status *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
+                    <Select onValueChange={field.onChange} value={field.value || "Active"} defaultValue={field.value || "Active"} {...commonSelectTriggerProps}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder="Select status"/>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -460,10 +497,10 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Bill Payment Status *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
+                    <Select onValueChange={field.onChange} value={field.value || "Unpaid"} defaultValue={field.value || "Unpaid"} {...commonSelectTriggerProps}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder="Select payment status"/>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -472,13 +509,14 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                         ))}
                       </SelectContent>
                     </Select>
+                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
+              <Button type="submit" disabled={form.formState.isSubmitting || (!isBulkMeterSelected && !defaultValues)}>
                 {defaultValues ? "Save Changes" : "Add Customer"}
               </Button>
             </DialogFooter>

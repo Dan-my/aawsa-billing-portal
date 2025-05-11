@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -19,7 +20,7 @@ import {
   initializeBranches
 } from "@/lib/data-store";
 
-const initialBranchesData: Branch[] = [
+export const initialBranchesData: Branch[] = [
   { id: "1", name: "Kality Branch", location: "Kality Sub-City, Woreda 05", contactPerson: "Abebe Kebede", contactPhone: "0911123456", status: "Active" },
   { id: "2", name: "Bole Branch", location: "Bole Sub-City, Near Airport", contactPerson: "Chaltu Lemma", contactPhone: "0912987654", status: "Active" },
   { id: "3", name: "Piassa Branch", location: "Arada Sub-City, Piassa", contactPerson: "Yosef Tadesse", contactPhone: "0913112233", status: "Inactive" },

@@ -160,7 +160,7 @@ export default function StaffDataEntryPage() {
 
       {canProceedWithDataEntry && (
         <Tabs defaultValue="manual-individual" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 md:w-[600px]">
+          <TabsList className="grid w-full grid-cols-3 md:w-auto md:inline-flex">
             <TabsTrigger value="manual-individual" disabled={!canProceedWithDataEntry}>
               <FileText className="mr-2 h-4 w-4" /> Individual (Manual)
             </TabsTrigger>
@@ -236,3 +236,4 @@ export default function StaffDataEntryPage() {
     </div>
   );
 }
+

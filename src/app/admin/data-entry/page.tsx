@@ -3,8 +3,7 @@
 
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, UploadCloud } from "lucide-react";
 import { BulkMeterDataEntryForm } from "./bulk-meter-data-entry-form";
 import { IndividualCustomerDataEntryForm } from "./individual-customer-data-entry-form";
@@ -26,11 +25,8 @@ import { initialCustomers } from "../individual-customers/page";
 const bulkMeterCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward"];
 const individualCustomerCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward", "sewerageConnection", "assignedBulkMeterId"];
 
-type DataEntryType = "manual-individual" | "manual-bulk" | "csv-upload";
 
 export default function AdminDataEntryPage() {
-  const [selectedEntryType, setSelectedEntryType] = React.useState<DataEntryType>("manual-individual");
-
   React.useEffect(() => {
     if (getBulkMeters().length === 0) initializeBulkMeters(initialBulkMeters);
     if (getCustomers().length === 0) initializeCustomers(initialCustomers);
@@ -59,85 +55,80 @@ export default function AdminDataEntryPage() {
         <h1 className="text-3xl font-bold">Customer Data Entry</h1>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="data-entry-type">Select Data Entry Method</Label>
-        <Select value={selectedEntryType} onValueChange={(value) => setSelectedEntryType(value as DataEntryType)}>
-          <SelectTrigger id="data-entry-type" className="w-full md:w-[400px]">
-            <SelectValue placeholder="Choose an entry method..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="manual-individual">
-              <FileText className="mr-2 h-4 w-4" /> Manual Individual Customer Entry
-            </SelectItem>
-            <SelectItem value="manual-bulk">
-              <FileText className="mr-2 h-4 w-4" /> Manual Bulk Meter Entry
-            </SelectItem>
-            <SelectItem value="csv-upload">
+      <Tabs defaultValue="manual-individual" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 md:w-auto md:inline-flex">
+            <TabsTrigger value="manual-individual">
+              <FileText className="mr-2 h-4 w-4" /> Individual (Manual)
+            </TabsTrigger>
+            <TabsTrigger value="manual-bulk">
+              <FileText className="mr-2 h-4 w-4" /> Bulk Meter (Manual)
+            </TabsTrigger>
+            <TabsTrigger value="csv-upload">
               <UploadCloud className="mr-2 h-4 w-4" /> CSV Upload
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+            </TabsTrigger>
+        </TabsList>
 
-      {selectedEntryType === "manual-individual" && (
-        <Card className="shadow-lg mt-4">
-          <CardHeader>
-            <CardTitle>Individual Customer Data Entry</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <IndividualCustomerDataEntryForm />
-          </CardContent>
-        </Card>
-      )}
-
-      {selectedEntryType === "manual-bulk" && (
-        <Card className="shadow-lg mt-4">
-          <CardHeader>
-            <CardTitle>Bulk Meter Data Entry</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <BulkMeterDataEntryForm />
-          </CardContent>
-        </Card>
-      )}
-      
-      {selectedEntryType === "csv-upload" && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
-          <Card className="shadow-lg">
+        <TabsContent value="manual-individual">
+            <Card className="shadow-lg mt-4">
             <CardHeader>
-              <CardTitle>Bulk Meter CSV Upload</CardTitle>
-              <CardDescription>
-                Upload a CSV file to add multiple bulk meters.
-              </CardDescription>
+                <CardTitle>Individual Customer Data Entry</CardTitle>
             </CardHeader>
             <CardContent>
-              <CsvUploadSection
-                entryType="bulk"
-                schema={bulkMeterDataEntrySchema} 
-                addRecordFunction={handleBulkMeterCsvUpload}
-                expectedHeaders={bulkMeterCsvHeaders}
-              />
+                <IndividualCustomerDataEntryForm />
             </CardContent>
-          </Card>
+            </Card>
+        </TabsContent>
 
-          <Card className="shadow-lg">
+        <TabsContent value="manual-bulk">
+            <Card className="shadow-lg mt-4">
             <CardHeader>
-              <CardTitle>Individual Customer CSV Upload</CardTitle>
-              <CardDescription>
-                Upload a CSV file to add multiple individual customers.
-              </CardDescription>
+                <CardTitle>Bulk Meter Data Entry</CardTitle>
             </CardHeader>
             <CardContent>
-              <CsvUploadSection
-                entryType="individual"
-                schema={individualCustomerDataEntrySchema} 
-                addRecordFunction={handleIndividualCustomerCsvUpload}
-                expectedHeaders={individualCustomerCsvHeaders}
-              />
+                <BulkMeterDataEntryForm />
             </CardContent>
-          </Card>
-        </div>
-      )}
+            </Card>
+        </TabsContent>
+        
+        <TabsContent value="csv-upload">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+            <Card className="shadow-lg">
+                <CardHeader>
+                <CardTitle>Bulk Meter CSV Upload</CardTitle>
+                <CardDescription>
+                    Upload a CSV file to add multiple bulk meters.
+                </CardDescription>
+                </CardHeader>
+                <CardContent>
+                <CsvUploadSection
+                    entryType="bulk"
+                    schema={bulkMeterDataEntrySchema} 
+                    addRecordFunction={handleBulkMeterCsvUpload}
+                    expectedHeaders={bulkMeterCsvHeaders}
+                />
+                </CardContent>
+            </Card>
+
+            <Card className="shadow-lg">
+                <CardHeader>
+                <CardTitle>Individual Customer CSV Upload</CardTitle>
+                <CardDescription>
+                    Upload a CSV file to add multiple individual customers.
+                </CardDescription>
+                </CardHeader>
+                <CardContent>
+                <CsvUploadSection
+                    entryType="individual"
+                    schema={individualCustomerDataEntrySchema} 
+                    addRecordFunction={handleIndividualCustomerCsvUpload}
+                    expectedHeaders={individualCustomerCsvHeaders}
+                />
+                </CardContent>
+            </Card>
+            </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
+

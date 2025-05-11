@@ -162,7 +162,7 @@ export default function AdminSettingsPage() {
                   {DomesticTariffInfo.tiers.map((tier, index) => (
                      <li key={`domestic-tier-${index}`}>
                       {tier.cumulativeUsage !== undefined && tier.cumulativeUsage > 0
-                        ? `${(tier.cumulativeUsage + 0.000001).toFixed(0)}`
+                        ? `${(tier.cumulativeUsage + 0.000001).toFixed(0)}` 
                         : '0'} - {tier.limit === Infinity ? 'Above' : tier.limit} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
                     </li>
                   ))}
@@ -193,6 +193,9 @@ export default function AdminSettingsPage() {
               Tariff details are managed centrally. Contact system administrators for changes to the underlying rates or structure.
             </p>
           </div>
+          <p className="text-sm text-muted-foreground">
+            Detailed notification preferences and data export configurations will be available here in future updates.
+          </p>
         </CardContent>
       </Card>
 
@@ -205,7 +208,7 @@ export default function AdminSettingsPage() {
         </CardHeader>
         <CardContent>
             <p className="text-sm text-amber-600 dark:text-amber-400">
-              Late fee policies, detailed notification preferences, and data export configurations will be available here in future updates.
+              Late fee policies will be available here in future updates.
             </p>
         </CardContent>
       </Card>
@@ -219,3 +222,4 @@ export default function AdminSettingsPage() {
   );
 }
 
+    

@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -295,16 +294,15 @@ const SidebarMenuItem = React.forwardRef<HTMLLIElement, React.HTMLAttributes<HTM
 SidebarMenuItem.displayName = "SidebarMenuItem"
 
 
-interface SidebarMenuButtonProps extends ButtonProps {
+interface SidebarMenuButtonProps extends ButtonProps { // ButtonProps includes asChild?
   isActive?: boolean;
   tooltip?: React.ReactNode;
 }
 
 const SidebarMenuButton = React.forwardRef<HTMLButtonElement, SidebarMenuButtonProps>(
-  ({ className, variant = "ghost", size = "default", isActive, tooltip, children, ...props }, ref) => {
+  ({ className, variant = "ghost", size = "default", isActive, tooltip, children, asChild, ...props }, ref) => {
     const { state, isMobile } = useSidebar();
     const currentDisplayState = isMobile ? (state === "mobile" ? "expanded" : "collapsed") : state;
-    const isLink = !!props.href;
 
     const buttonElement = (
       <Button
@@ -318,8 +316,8 @@ const SidebarMenuButton = React.forwardRef<HTMLButtonElement, SidebarMenuButtonP
           !isActive && "hover:bg-sidebar-accent/50",
           className
         )}
-        {...props}
-        asChild={isLink}
+        {...props} // Pass down other props
+        asChild={asChild} // Pass down the asChild prop
       >
         {children}
       </Button>
@@ -369,8 +367,7 @@ const SidebarMenuSubItem = React.forwardRef<HTMLLIElement, React.HTMLAttributes<
 SidebarMenuSubItem.displayName = "SidebarMenuSubItem"
 
 const SidebarMenuSubButton = React.forwardRef<HTMLButtonElement, ButtonProps & {isActive?: boolean}>(
-  ({ className, variant = "ghost", size = "sm", isActive, children, ...props }, ref) => {
-    const isLink = !!props.href;
+  ({ className, variant = "ghost", size = "sm", isActive, children, asChild, ...props }, ref) => {
     return (
       <Button
         ref={ref}
@@ -381,8 +378,8 @@ const SidebarMenuSubButton = React.forwardRef<HTMLButtonElement, ButtonProps & {
           isActive && "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/90",
           !isActive && "hover:bg-sidebar-accent/50",
           className)}
-        {...props}
-        asChild={isLink}
+        {...props} // Pass down other props
+        asChild={asChild} // Pass down the asChild prop
       >
         {children}
       </Button>

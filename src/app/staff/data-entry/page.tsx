@@ -21,19 +21,13 @@ import {
   initializeCustomers,
   getBulkMeters,
   getCustomers,
-  getBranches,
-  subscribeToBranches,
-  initializeBranches,
 } from "@/lib/data-store";
 import type { CustomerType, SewerageConnection } from "@/app/admin/individual-customers/individual-customer-types";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import { initialBulkMeters as defaultInitialBulkMeters } from "@/app/admin/bulk-meters/page";
 import { initialCustomers as defaultInitialCustomers } from "@/app/admin/individual-customers/page";
-import { initialBranchesData as defaultInitialBranches } from "@/app/admin/branches/page";
-import type { Branch } from "@/app/admin/branches/branch-types";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+
 
 const bulkMeterCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward"];
 const individualCustomerCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward", "sewerageConnection", "assignedBulkMeterId"];
@@ -45,46 +39,32 @@ interface User {
 }
 
 export default function StaffDataEntryPage() {
-  const [availableBranches, setAvailableBranches] = React.useState<Branch[]>([]);
-  const [selectedBranchId, setSelectedBranchId] = React.useState<string | undefined>(undefined);
+  const [staffBranchName, setStaffBranchName] = React.useState<string>("Your Branch");
+  const [isBranchDetermined, setIsBranchDetermined] = React.useState(false);
 
   React.useEffect(() => {
     if (getBulkMeters().length === 0) initializeBulkMeters(defaultInitialBulkMeters);
     if (getCustomers().length === 0) initializeCustomers(defaultInitialCustomers);
-    if (getBranches().length === 0) initializeBranches(defaultInitialBranches);
-
-    const currentBranches = getBranches();
-    setAvailableBranches(currentBranches);
-
+    
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
         const parsedUser: User = JSON.parse(storedUser);
         if (parsedUser.role === "staff" && parsedUser.branchName) {
-          const staffDefaultBranch = currentBranches.find(b => b.name === parsedUser.branchName);
-          if (staffDefaultBranch) {
-            setSelectedBranchId(staffDefaultBranch.id);
-          }
+          setStaffBranchName(parsedUser.branchName);
+        } else if (parsedUser.role === "staff" && !parsedUser.branchName) {
+          setStaffBranchName("Unassigned Branch"); // Or some default/error state
         }
       } catch (e) {
         console.error("Failed to parse user from localStorage", e);
+        setStaffBranchName("Error: Branch Undefined");
       }
+    } else {
+        setStaffBranchName("Error: Not Logged In");
     }
+    setIsBranchDetermined(true);
+  }, []);
 
-    const unsubscribeBranches = subscribeToBranches((updatedBranches) => {
-      setAvailableBranches(updatedBranches);
-      if (selectedBranchId && !updatedBranches.some(b => b.id === selectedBranchId)) {
-        setSelectedBranchId(undefined); // Clear selection if selected branch is removed
-      }
-    });
-
-    return () => {
-      unsubscribeBranches();
-    };
-  }, [selectedBranchId]); // Depend on selectedBranchId to re-verify it exists if branch list changes
-
-  const selectedBranch = availableBranches.find(b => b.id === selectedBranchId);
-  const displayBranchName = selectedBranch ? selectedBranch.name : "Select a Branch";
 
   const handleBulkMeterCsvUpload = (data: BulkMeterDataEntryFormValues) => {
     const bulkMeterDataForStore: Omit<BulkMeter, 'id'> = {
@@ -102,58 +82,47 @@ export default function StaffDataEntryPage() {
     addCustomer(customerDataForStore);
   };
 
-  const canProceedWithDataEntry = !!selectedBranchId && availableBranches.length > 0;
+  if (!isBranchDetermined) {
+    return (
+        <div className="space-y-6">
+             <h1 className="text-3xl font-bold">Customer Data Entry (Loading branch info...)</h1>
+             <Card className="shadow-md border-primary/50">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-primary">
+                    <Building className="h-5 w-5 animate-spin" /> Loading Branch Information
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground">Please wait while we determine your assigned branch.</p>
+                </CardContent>
+            </Card>
+        </div>
+    );
+  }
+  
+  const canProceedWithDataEntry = staffBranchName !== "Error: Not Logged In" && staffBranchName !== "Error: Branch Undefined" && staffBranchName !== "Unassigned Branch";
+
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-3xl font-bold">Customer Data Entry ({displayBranchName})</h1>
-        <div className="w-full sm:w-auto min-w-[200px] sm:min-w-[250px]">
-          <Label htmlFor="branch-select-staff" className="sr-only">Select Branch</Label>
-          <Select
-            value={selectedBranchId}
-            onValueChange={(value) => setSelectedBranchId(value === "none" ? undefined : value)}
-          >
-            <SelectTrigger id="branch-select-staff" className="w-full">
-              <SelectValue placeholder="Select a branch..." />
-            </SelectTrigger>
-            <SelectContent>
-              {availableBranches.length > 0 ? (
-                availableBranches.map(branch => (
-                  <SelectItem key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </SelectItem>
-                ))
-              ) : (
-                <SelectItem value="none" disabled>No branches available</SelectItem>
-              )}
-            </SelectContent>
-          </Select>
-        </div>
+        <h1 className="text-3xl font-bold">Customer Data Entry ({staffBranchName})</h1>
       </div>
 
-      {!canProceedWithDataEntry && availableBranches.length > 0 && (
-        <Card className="shadow-md border-primary/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-primary">
-              <Building className="h-5 w-5" /> Please Select a Branch
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">You need to select a branch from the dropdown above to proceed with data entry.</p>
-          </CardContent>
-        </Card>
-      )}
-
-       {availableBranches.length === 0 && (
-         <Card className="shadow-md border-destructive/50">
+      {!canProceedWithDataEntry && (
+        <Card className="shadow-md border-destructive/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-destructive">
-              <Building className="h-5 w-5" /> No Branches Available
+              <Building className="h-5 w-5" /> Branch Information Issue
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">There are no branches configured in the system. Please contact an administrator to add branches before proceeding with data entry.</p>
+            <p className="text-muted-foreground">
+                {staffBranchName === "Unassigned Branch" 
+                    ? "You are not assigned to a specific branch. Please contact an administrator."
+                    : "Could not determine your branch. Please ensure you are logged in correctly or contact an administrator."
+                }
+            </p>
           </CardContent>
         </Card>
       )}
@@ -161,13 +130,13 @@ export default function StaffDataEntryPage() {
       {canProceedWithDataEntry && (
         <Tabs defaultValue="manual-individual" className="w-full">
           <TabsList className="grid w-full grid-cols-3 md:w-auto md:inline-flex">
-            <TabsTrigger value="manual-individual" disabled={!canProceedWithDataEntry}>
+            <TabsTrigger value="manual-individual">
               <FileText className="mr-2 h-4 w-4" /> Individual (Manual)
             </TabsTrigger>
-            <TabsTrigger value="manual-bulk" disabled={!canProceedWithDataEntry}>
+            <TabsTrigger value="manual-bulk">
               <FileText className="mr-2 h-4 w-4" /> Bulk Meter (Manual)
             </TabsTrigger>
-            <TabsTrigger value="csv-upload" disabled={!canProceedWithDataEntry}>
+            <TabsTrigger value="csv-upload">
               <UploadCloud className="mr-2 h-4 w-4" /> CSV Upload
             </TabsTrigger>
           </TabsList>
@@ -178,7 +147,7 @@ export default function StaffDataEntryPage() {
                 <CardTitle>Individual Customer Data Entry</CardTitle>
               </CardHeader>
               <CardContent>
-                <StaffIndividualCustomerEntryForm branchName={selectedBranch?.name || "Selected Branch"} />
+                <StaffIndividualCustomerEntryForm branchName={staffBranchName} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -189,7 +158,7 @@ export default function StaffDataEntryPage() {
                 <CardTitle>Bulk Meter Data Entry</CardTitle>
               </CardHeader>
               <CardContent>
-                <StaffBulkMeterEntryForm branchName={selectedBranch?.name || "Selected Branch"} />
+                <StaffBulkMeterEntryForm branchName={staffBranchName} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -200,7 +169,7 @@ export default function StaffDataEntryPage() {
                 <CardHeader>
                   <CardTitle>Bulk Meter CSV Upload</CardTitle>
                   <CardDescription>
-                    Upload a CSV file to add multiple bulk meters for {selectedBranch?.name || "the selected branch"}.
+                    Upload a CSV file to add multiple bulk meters for {staffBranchName}.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -217,7 +186,7 @@ export default function StaffDataEntryPage() {
                 <CardHeader>
                   <CardTitle>Individual Customer CSV Upload</CardTitle>
                   <CardDescription>
-                    Upload a CSV file to add multiple individual customers for {selectedBranch?.name || "the selected branch"}.
+                    Upload a CSV file to add multiple individual customers for {staffBranchName}.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>

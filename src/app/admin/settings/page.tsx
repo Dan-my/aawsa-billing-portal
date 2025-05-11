@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -10,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Save, AlertTriangle, Info, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { DomesticTariffInfo, NonDomesticTariffInfo } from "@/app/admin/individual-customers/individual-customer-types"; 
+import { DomesticTariffInfo, NonDomesticTariffInfo } from "@/app/admin/individual_customers/individual_customer_types"; 
 
 const APP_NAME_KEY = "aawsa-app-name";
 const CURRENCY_KEY = "aawsa-default-currency";
@@ -158,6 +157,7 @@ export default function AdminSettingsPage() {
             <div className="mt-2 space-y-4">
               <div>
                 <p className="text-sm font-medium">Domestic Customers:</p>
+                <p className="text-sm font-medium text-accent">Water Tariff (Progressive):</p>
                 <ul className="list-disc list-inside text-sm text-accent pl-2 space-y-1">
                   {DomesticTariffInfo.tiers.map((tier, index) => (
                     <li key={`domestic-tier-${index}`}>
@@ -175,17 +175,13 @@ export default function AdminSettingsPage() {
               <div>
                 <p className="text-sm font-medium">Non-domestic Customers:</p>
                  <ul className="list-disc list-inside text-sm text-accent pl-2 space-y-1">
-                    <li>Water Tariff (Progressive):
-                        <ul className="list-disc list-inside pl-4 space-y-1">
-                            {NonDomesticTariffInfo.tiers.map((tier, index) => (
-                                <li key={`nondomestic-tier-${index}`}>
-                                {tier.cumulativeUsage !== undefined && tier.cumulativeUsage > 0 
-                                    ? `${(tier.cumulativeUsage + 0.000001).toFixed(0)}` 
-                                    : '0'} - {tier.limit === Infinity ? 'Above' : tier.limit} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
-                                </li>
-                            ))}
-                        </ul>
-                    </li>
+                    {NonDomesticTariffInfo.tiers.map((tier, index) => (
+                        <li key={`nondomestic-tier-${index}`}>
+                        {tier.cumulativeUsage !== undefined && tier.cumulativeUsage > 0 
+                            ? `${(tier.cumulativeUsage).toFixed(0)} - ${(tier.limit).toFixed(0)}`
+                            : `0 - ${(tier.limit).toFixed(0)}`} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
+                        </li>
+                    ))}
                     <li>Sanitation Fee: {(NonDomesticTariffInfo.sanitationPercentage * 100).toFixed(0)}% of Base Water Charge</li>
                     <li>Meter Rent: {defaultCurrency} {NonDomesticTariffInfo.meterRent.toFixed(2)}</li>
                     <li>Sewerage Charge: {defaultCurrency} {NonDomesticTariffInfo.sewerageRatePerM3.toFixed(2)} / m³ (if applicable)</li>
@@ -217,4 +213,3 @@ export default function AdminSettingsPage() {
       </div>
     </div>
   );
-}

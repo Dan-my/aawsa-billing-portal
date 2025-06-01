@@ -28,10 +28,6 @@ import type { IndividualCustomer, PaymentStatus, CustomerType, SewerageConnectio
 import { calculateBill } from "../../individual-customers/individual-customer-types"; 
 import { BulkMeterFormDialog, type BulkMeterFormValues } from "../bulk-meter-form-dialog";
 import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "../../individual-customers/individual-customer-form-dialog";
-// Initial data from pages are fallbacks, store will use Supabase
-// import { initialBulkMeters as defaultInitialBulkMeters } from "../page"; 
-// import { initialCustomers as defaultInitialCustomers } from "../../individual-customers/page"; 
-
 
 export default function BulkMeterDetailsPage() {
   const params = useParams();
@@ -53,11 +49,20 @@ export default function BulkMeterDetailsPage() {
 
   useEffect(() => {
     let isMounted = true;
+    
+    if (!bulkMeterId) {
+      setIsLoading(false);
+      setBulkMeter(null);
+      toast({ title: "Invalid Bulk Meter ID", description: "The ID for the bulk meter is missing in the URL.", variant: "destructive" });
+      router.push("/admin/bulk-meters");
+      return;
+    }
+
     setIsLoading(true);
 
     Promise.all([
-      initializeBulkMeters(), // Ensure bulk meters are loaded from Supabase
-      initializeCustomers()   // Ensure customers are loaded from Supabase
+      initializeBulkMeters(),
+      initializeCustomers()
     ]).then(() => {
       if (!isMounted) return;
 
@@ -70,9 +75,16 @@ export default function BulkMeterDetailsPage() {
         const associated = currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId);
         setAssociatedCustomers(associated);
       } else {
+        setBulkMeter(null); // Explicitly set to null if not found
         toast({ title: "Bulk Meter Not Found", description: "This bulk meter may not exist or has been deleted.", variant: "destructive" });
-        router.push("/admin/bulk-meters");
+        // Optionally redirect: router.push("/admin/bulk-meters");
       }
+      setIsLoading(false);
+    }).catch(error => {
+      if (!isMounted) return;
+      console.error("Error initializing data for bulk meter details page:", error);
+      toast({ title: "Error Loading Data", description: "Could not load necessary data. Please try again.", variant: "destructive" });
+      setBulkMeter(null);
       setIsLoading(false);
     });
 
@@ -83,14 +95,14 @@ export default function BulkMeterDetailsPage() {
       const foundBM = currentGlobalMeters.find(bm => bm.id === bulkMeterId);
       
       if (foundBM) {
-        setBulkMeter(bm => (bm?.id === foundBM.id ? foundBM : bm)); // Update if it's the same BM
+        setBulkMeter(foundBM);
         const associated = currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId);
         setAssociatedCustomers(associated);
-      } else if (bulkMeter) { // If it was found before but not now
-         toast({ title: "Bulk Meter Not Found", description: "This bulk meter may have been deleted.", variant: "destructive" });
-         router.push("/admin/bulk-meters");
+      } else if (bulkMeter) { 
+         toast({ title: "Bulk Meter Update", description: "The bulk meter being viewed may have been deleted or is no longer accessible.", variant: "destructive" });
+         setBulkMeter(null); 
+         // Optionally redirect: router.push("/admin/bulk-meters");
       }
-      // No need to set isLoading here as initial load handles it
     };
     
     const unsubscribeBM = subscribeToBulkMeters(handleStoresUpdate);
@@ -101,7 +113,7 @@ export default function BulkMeterDetailsPage() {
       unsubscribeBM();
       unsubscribeCust();
     };
-  }, [bulkMeterId, router, toast, bulkMeter]); // Added bulkMeter to dependencies to re-check if it disappears
+  }, [bulkMeterId, router, toast]);
 
 
   const handleEditBulkMeter = () => setIsBulkMeterFormOpen(true);
@@ -118,7 +130,6 @@ export default function BulkMeterDetailsPage() {
     if (bulkMeter) {
         const updatedBulkMeter: BulkMeter = { ...bulkMeter, ...data, id: bulkMeter.id };
         await updateBulkMeterInStore(updatedBulkMeter);
-        // State update will happen via subscription
         toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
     }
     setIsBulkMeterFormOpen(false);
@@ -129,7 +140,6 @@ export default function BulkMeterDetailsPage() {
       const newStatus: PaymentStatus = bulkMeter.paymentStatus === 'Paid' ? 'Unpaid' : 'Paid';
       const updatedBulkMeter: BulkMeter = { ...bulkMeter, paymentStatus: newStatus };
       await updateBulkMeterInStore(updatedBulkMeter);
-      // State update via subscription
       toast({ title: "Payment Status Updated", description: `${bulkMeter.name} payment status set to ${newStatus}.` });
     }
   };
@@ -146,7 +156,6 @@ export default function BulkMeterDetailsPage() {
     if (customerToDelete) {
       await deleteCustomerFromStore(customerToDelete.id);
       toast({ title: "Customer Deleted", description: `${customerToDelete.name} has been removed.` });
-      // Associated customers list updates via subscription
     }
     setCustomerToDelete(null);
     setIsCustomerDeleteDialogOpen(false);
@@ -163,7 +172,6 @@ export default function BulkMeterDetailsPage() {
       };
       
       await updateCustomerInStore(updatedCustomerData);
-      // Associated customers list updates via subscription
       toast({ title: "Customer Updated", description: `${data.name} has been updated.` });
     }
     
@@ -177,7 +185,6 @@ export default function BulkMeterDetailsPage() {
       const newStatus: PaymentStatus = customer.paymentStatus === 'Paid' ? 'Unpaid' : 'Paid';
       const updatedCustomer: IndividualCustomer = { ...customer, paymentStatus: newStatus };
       await updateCustomerInStore(updatedCustomer);
-      // Associated customers list updates via subscription
       toast({ title: "Payment Status Updated", description: `${customer.name}'s payment status set to ${newStatus}.` });
     }
   };
@@ -198,6 +205,9 @@ export default function BulkMeterDetailsPage() {
     const hasNonDomesticCustomer = associatedCustomers.some(c => c.customerType === "Non-domestic");
     if (!hasNonDomesticCustomer) { 
       effectiveBulkMeterCustomerType = "Domestic";
+      // Sewerage connection for bulk meter tariffing can be complex.
+      // Defaulting to "No" if all individuals are domestic, or could be based on majority/any with sewerage.
+      // For simplicity, keeping as "No" unless a more specific rule is defined.
       effectiveBulkMeterSewerageConnection = "No"; 
     }
   }
@@ -233,16 +243,16 @@ export default function BulkMeterDetailsPage() {
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
             <p><strong className="font-semibold">Name:</strong> {bulkMeter.name}</p>
-            <p><strong className="font-semibold">Location:</strong> {bulkMeter.location}, {bulkMeter.ward}</p>
+            <p><strong className="font-semibold">Location:</strong> {bulkMeter.location ?? 'N/A'}, {bulkMeter.ward ?? 'N/A'}</p>
             <p><strong className="font-semibold">Bulk Usage:</strong> {bulkUsage.toFixed(2)} m³</p>
           </div>
           <div>
-            <p><strong className="font-semibold">Meter No:</strong> {bulkMeter.meterNumber}</p>
-            <p><strong className="font-semibold">Month:</strong> {bulkMeter.month}</p>
+            <p><strong className="font-semibold">Meter No:</strong> {bulkMeter.meterNumber ?? 'N/A'}</p>
+            <p><strong className="font-semibold">Month:</strong> {bulkMeter.month ?? 'N/A'}</p>
              <p className="text-primary"><strong className="font-semibold">Total Bulk Bill (Tariff: {effectiveBulkMeterCustomerType}):</strong> ETB {totalBulkBill.toFixed(2)}</p>
           </div>
           <div>
-            <p><strong className="font-semibold">Customer Key:</strong> {bulkMeter.customerKeyNumber}</p>
+            <p><strong className="font-semibold">Customer Key:</strong> {bulkMeter.customerKeyNumber ?? 'N/A'}</p>
             <p><strong className="font-semibold">Readings (Prev/Curr):</strong> {(bmPreviousReading).toFixed(2)} / {(bmCurrentReading).toFixed(2)}</p>
             <p className={differenceUsage < 0 ? "text-destructive" : "text-accent"}>
                 <strong className="font-semibold">Difference Usage:</strong> {differenceUsage.toFixed(2)} m³
@@ -259,13 +269,13 @@ export default function BulkMeterDetailsPage() {
                 variant="ghost"
                 size="sm"
                 onClick={handleToggleBulkMeterPaymentStatus}
-                className="p-0 h-auto"
+                className="p-0 h-auto group"
                 aria-label={`Toggle payment status for ${bulkMeter.name}`}
               >
                 <Badge variant={bulkMeter.paymentStatus === 'Paid' ? 'default' : 'destructive'} className="cursor-pointer hover:opacity-80">
                   {bulkMeter.paymentStatus === 'Paid' ? <CheckCircle className="mr-1 h-3.5 w-3.5"/> : <XCircle className="mr-1 h-3.5 w-3.5"/>}
                   {bulkMeter.paymentStatus}
-                  <RefreshCcw className="ml-1.5 h-3 w-3 opacity-70 group-hover:opacity-100" />
+                  <RefreshCcw className="ml-1.5 h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </Badge>
               </Button>
            </div>

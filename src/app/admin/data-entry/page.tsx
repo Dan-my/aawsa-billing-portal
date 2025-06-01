@@ -18,8 +18,9 @@ import { addBulkMeter, addCustomer, initializeBulkMeters, initializeCustomers, g
 import type { CustomerType, SewerageConnection } from "../individual-customers/individual-customer-types";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
-import { initialBulkMeters } from "../bulk-meters/page";
-import { initialCustomers } from "../individual-customers/page";
+// Fallback initial data, not primary source anymore
+// import { initialBulkMeters } from "../bulk-meters/page";
+// import { initialCustomers } from "../individual-customers/page";
 
 // Expected CSV Headers
 const bulkMeterCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward"];
@@ -28,24 +29,26 @@ const individualCustomerCsvHeaders = ["name", "customerKeyNumber", "contractNumb
 
 export default function AdminDataEntryPage() {
   React.useEffect(() => {
-    if (getBulkMeters().length === 0) initializeBulkMeters(initialBulkMeters);
-    if (getCustomers().length === 0) initializeCustomers(initialCustomers);
+    // Initialize data stores (these will attempt to fetch from Supabase)
+    initializeBulkMeters();
+    initializeCustomers();
   }, []);
 
-  const handleBulkMeterCsvUpload = (data: BulkMeterDataEntryFormValues) => {
+  const handleBulkMeterCsvUpload = async (data: BulkMeterDataEntryFormValues) => {
     const bulkMeterDataForStore: Omit<BulkMeter, 'id'> = {
       ...data,
       status: "Active", 
       paymentStatus: "Unpaid", 
     };
-    addBulkMeter(bulkMeterDataForStore);
+    await addBulkMeter(bulkMeterDataForStore);
+    // Toast notifications for success/failure would be good here, handled by CsvUploadSection or here
   };
 
-  const handleIndividualCustomerCsvUpload = (data: IndividualCustomerDataEntryFormValues) => {
+  const handleIndividualCustomerCsvUpload = async (data: IndividualCustomerDataEntryFormValues) => {
      const customerDataForStore = {
         ...data,
     } as Omit<IndividualCustomer, 'id' | 'calculatedBill' | 'paymentStatus' | 'status'> & { customerType: CustomerType, currentReading: number, previousReading: number, sewerageConnection: SewerageConnection };
-    addCustomer(customerDataForStore);
+    await addCustomer(customerDataForStore);
   };
 
 
@@ -131,4 +134,3 @@ export default function AdminDataEntryPage() {
     </div>
   );
 }
-

@@ -26,8 +26,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 import { addCustomer as addCustomerToStore, getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, initializeCustomers, getCustomers } from "@/lib/data-store";
 import type { IndividualCustomer, CustomerType, SewerageConnection } from "../individual-customers/individual-customer-types"; 
-import { initialBulkMeters as defaultInitialBulkMeters } from "../bulk-meters/page";
-import { initialCustomers as defaultInitialCustomers } from "../individual-customers/page";
+// import { initialBulkMeters as defaultInitialBulkMeters } from "../bulk-meters/page"; // Fallback
+// import { initialCustomers as defaultInitialCustomers } from "../individual-customers/page"; // Fallback
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse } from "date-fns";
 
@@ -35,34 +35,38 @@ import { format, parse } from "date-fns";
 export function IndividualCustomerDataEntryForm() {
   const { toast } = useToast();
   const [availableBulkMeters, setAvailableBulkMeters] = React.useState<{id: string, name: string}[]>([]);
+  const [isLoadingBulkMeters, setIsLoadingBulkMeters] = React.useState(true);
   const [isBulkMeterSelected, setIsBulkMeterSelected] = React.useState(false);
 
   React.useEffect(() => {
-    if (getBulkMeters().length === 0) initializeBulkMeters(defaultInitialBulkMeters);
-    if (getCustomers().length === 0) initializeCustomers(defaultInitialCustomers);
-    
-    const fetchedBms = getBulkMeters().map(bm => ({ id: bm.id, name: bm.name }));
-    setAvailableBulkMeters(fetchedBms);
-    
-    // Check if a bulk meter is already selected (e.g. from form state persistence or default values)
-    const currentAssignedBulkMeterId = form.getValues("assignedBulkMeterId");
-    if (fetchedBms.length > 0 && currentAssignedBulkMeterId) {
-        setIsBulkMeterSelected(true);
-    } else if (fetchedBms.length === 0) {
-        setIsBulkMeterSelected(false); // Ensure fields are disabled if no BMs
-    }
+    setIsLoadingBulkMeters(true);
+    Promise.all([
+        initializeBulkMeters(), 
+        initializeCustomers()
+    ]).then(() => {
+        const fetchedBms = getBulkMeters().map(bm => ({ id: bm.id, name: bm.name }));
+        setAvailableBulkMeters(fetchedBms);
+        setIsLoadingBulkMeters(false);
 
-
+        const currentAssignedBulkMeterId = form.getValues("assignedBulkMeterId");
+        if (fetchedBms.length > 0 && currentAssignedBulkMeterId) {
+            setIsBulkMeterSelected(true);
+        } else if (fetchedBms.length === 0) {
+            setIsBulkMeterSelected(false); 
+        }
+    });
+    
     const unsubscribe = subscribeToBulkMeters((updatedBulkMeters) => {
       const newBms = updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name }));
       setAvailableBulkMeters(newBms);
-       if (newBms.length === 0) { // If BMs become empty, disable fields
+      setIsLoadingBulkMeters(false);
+       if (newBms.length === 0) { 
         setIsBulkMeterSelected(false);
       }
     });
     return () => unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // form dependency removed to avoid re-running fetch on every form change
+  }, []); 
 
   const form = useForm<IndividualCustomerDataEntryFormValues>({
     resolver: zodResolver(individualCustomerDataEntrySchema),
@@ -96,18 +100,26 @@ export function IndividualCustomerDataEntryForm() {
   }, [form, availableBulkMeters]);
 
 
-  function onSubmit(data: IndividualCustomerDataEntryFormValues) {
+  async function onSubmit(data: IndividualCustomerDataEntryFormValues) {
     const customerDataForStore = {
         ...data,
     } as Omit<IndividualCustomer, 'id' | 'calculatedBill' | 'paymentStatus' | 'status'> & { customerType: CustomerType, currentReading: number, previousReading: number, sewerageConnection: SewerageConnection };
     
-    addCustomerToStore(customerDataForStore);
-    toast({
-      title: "Data Entry Submitted",
-      description: `Data for individual customer ${data.name} has been successfully recorded.`,
-    });
-    form.reset(); 
-    setIsBulkMeterSelected(false);
+    const result = await addCustomerToStore(customerDataForStore);
+    if (result) {
+        toast({
+        title: "Data Entry Submitted",
+        description: `Data for individual customer ${data.name} has been successfully recorded.`,
+        });
+        form.reset(); 
+        setIsBulkMeterSelected(false);
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Submission Failed",
+            description: "Could not record customer data. Please ensure a bulk meter is selected and check console for errors.",
+        });
+    }
   }
   
   const commonFormFieldProps = {
@@ -134,14 +146,16 @@ export function IndividualCustomerDataEntryForm() {
                         }} 
                         value={field.value || ""} 
                         defaultValue={field.value || ""}
+                        disabled={isLoadingBulkMeters}
                        >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a bulk meter first" />
+                            <SelectValue placeholder={isLoadingBulkMeters ? "Loading bulk meters..." : "Select a bulk meter first"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                           {availableBulkMeters.length === 0 && <SelectItem value="no-bms" disabled>No bulk meters available</SelectItem>}
+                           {isLoadingBulkMeters && <SelectItem value="loading-bms" disabled>Loading...</SelectItem>}
+                           {!isLoadingBulkMeters && availableBulkMeters.length === 0 && <SelectItem value="no-bms" disabled>No bulk meters available</SelectItem>}
                           {availableBulkMeters.map((bm) => (
                             <SelectItem key={bm.id} value={bm.id}>{bm.name}</SelectItem>
                           ))}
@@ -419,7 +433,7 @@ export function IndividualCustomerDataEntryForm() {
                 />
               </div>
 
-              <Button type="submit" className="w-full md:w-auto" disabled={form.formState.isSubmitting || !isBulkMeterSelected}>
+              <Button type="submit" className="w-full md:w-auto" disabled={form.formState.isSubmitting || !isBulkMeterSelected || isLoadingBulkMeters}>
                 {form.formState.isSubmitting ? "Submitting..." : "Submit Individual Customer Reading"}
               </Button>
             </form>
@@ -429,4 +443,3 @@ export function IndividualCustomerDataEntryForm() {
     </ScrollArea>
   );
 }
-

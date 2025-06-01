@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -16,9 +17,10 @@ import {
   updateBulkMeter as updateBulkMeterInStore, 
   deleteBulkMeter as deleteBulkMeterFromStore,
   subscribeToBulkMeters,
-  initializeBulkMeters
+  initializeBulkMeters 
 } from "@/lib/data-store";
 
+// Initial data is now mainly for reference or if Supabase fetch fails and a fallback is desired.
 export const initialBulkMeters: BulkMeter[] = [
   { id: "bm001", name: "Kality Industrial Meter", customerKeyNumber: "BMK001", contractNumber: "BMC001", meterSize: 3, meterNumber: "MTR-BM-001", previousReading: 10000, currentReading: 10500, month: "2023-11", specificArea: "Ind. Zone A", location: "Kality", ward: "Woreda 5", status: "Active", paymentStatus: "Paid" },
   { id: "bm002", name: "Bole Airport Feeder", customerKeyNumber: "BMB002", contractNumber: "BMC002", meterSize: 4, meterNumber: "MTR-BM-002", previousReading: 25000, currentReading: 26500, month: "2023-11", specificArea: "Airport Cargo", location: "Bole", ward: "Woreda 1", status: "Active", paymentStatus: "Unpaid" },
@@ -28,7 +30,8 @@ export const initialBulkMeters: BulkMeter[] = [
 
 export default function BulkMetersPage() {
   const { toast } = useToast();
-  const [bulkMeters, setBulkMeters] = React.useState<BulkMeter[]>(getBulkMeters());
+  const [bulkMeters, setBulkMeters] = React.useState<BulkMeter[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
@@ -36,8 +39,16 @@ export default function BulkMetersPage() {
   const [bulkMeterToDelete, setBulkMeterToDelete] = React.useState<BulkMeter | null>(null);
 
   React.useEffect(() => {
-    initializeBulkMeters(initialBulkMeters);
-    const unsubscribe = subscribeToBulkMeters(setBulkMeters);
+    setIsLoading(true);
+    initializeBulkMeters().then(() => {
+      setBulkMeters(getBulkMeters());
+      setIsLoading(false);
+    });
+    
+    const unsubscribe = subscribeToBulkMeters((updatedBulkMeters) => {
+       setBulkMeters(updatedBulkMeters);
+       setIsLoading(false);
+    });
     return () => unsubscribe();
   }, []);
 
@@ -56,27 +67,25 @@ export default function BulkMetersPage() {
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (bulkMeterToDelete) {
-      deleteBulkMeterFromStore(bulkMeterToDelete.id);
+      await deleteBulkMeterFromStore(bulkMeterToDelete.id);
       toast({ title: "Bulk Meter Deleted", description: `${bulkMeterToDelete.name} has been removed.` });
       setBulkMeterToDelete(null);
     }
     setIsDeleteDialogOpen(false);
   };
 
-  const handleSubmitBulkMeter = (data: BulkMeterFormValues) => {
+  const handleSubmitBulkMeter = async (data: BulkMeterFormValues) => {
     if (selectedBulkMeter) {
       const updatedBulkMeterData: BulkMeter = {
         id: selectedBulkMeter.id,
-        ...data, // data from BulkMeterFormValues already includes paymentStatus
+        ...data, 
       };
-      updateBulkMeterInStore(updatedBulkMeterData);
+      await updateBulkMeterInStore(updatedBulkMeterData);
       toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
     } else {
-      // For new bulk meter, data from BulkMeterFormValues includes paymentStatus
-      // addBulkMeterToStore uses this or its internal default if not provided.
-      addBulkMeterToStore(data); 
+      await addBulkMeterToStore(data); 
       toast({ title: "Bulk Meter Added", description: `${data.name} has been added.` });
     }
     setIsFormOpen(false);
@@ -117,7 +126,11 @@ export default function BulkMetersPage() {
           <CardDescription>View, edit, and manage bulk meter information.</CardDescription>
         </CardHeader>
         <CardContent>
-          {bulkMeters.length === 0 && !searchTerm ? (
+          {isLoading ? (
+             <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
+                Loading bulk meters...
+             </div>
+          ) : bulkMeters.length === 0 && !searchTerm ? (
              <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
                 No bulk meters found. Click "Add New Bulk Meter" to get started. <Gauge className="inline-block ml-2 h-5 w-5" />
              </div>

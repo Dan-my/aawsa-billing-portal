@@ -23,8 +23,8 @@ import {
   subscribeToBulkMeters,
   initializeBulkMeters,
 } from "@/lib/data-store";
-import { initialBulkMeters as defaultInitialBulkMeters } from "../bulk-meters/page";
-
+// initialBulkMeters from page is no longer the primary source for bulk meters if store uses Supabase.
+// import { initialBulkMeters as defaultInitialBulkMeters } from "../bulk-meters/page";
 
 export const initialCustomers: IndividualCustomer[] = [
   { id: "cust001", name: "Abebe Bikila", customerKeyNumber: "CUST001", contractNumber: "CON001", customerType: "Domestic", bookNumber: "B001", ordinal: 1, meterSize: 0.5, meterNumber: "MTR001", previousReading: 100, currentReading: 120, month: "2023-11", specificArea: "Kebele 1, House 101", location: "Bole", ward: "Woreda 3", sewerageConnection: "Yes", status: "Active", assignedBulkMeterId: "bm001", paymentStatus: "Paid", calculatedBill: calculateBill(120-100, "Domestic", "Yes") },
@@ -37,6 +37,7 @@ export default function IndividualCustomersPage() {
   const { toast } = useToast();
   const [customers, setCustomers] = React.useState<IndividualCustomer[]>([]);
   const [bulkMetersList, setBulkMetersList] = React.useState<{id: string, name: string}[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
@@ -44,21 +45,24 @@ export default function IndividualCustomersPage() {
   const [customerToDelete, setCustomerToDelete] = React.useState<IndividualCustomer | null>(null);
 
   React.useEffect(() => {
-    // Initialize stores if empty, then subscribe
-    if (getBulkMeters().length === 0) {
-      initializeBulkMeters(defaultInitialBulkMeters);
-    }
-    const currentBms = getBulkMeters().map(bm => ({id: bm.id, name: bm.name }));
-    setBulkMetersList(currentBms);
+    setIsLoading(true);
+    Promise.all([
+      initializeBulkMeters(), // Fetches from Supabase if cache empty
+      initializeCustomers()  // Fetches from Supabase if cache empty
+    ]).then(() => {
+      setBulkMetersList(getBulkMeters().map(bm => ({id: bm.id, name: bm.name })));
+      setCustomers(getCustomers());
+      setIsLoading(false);
+    });
+
     const unsubscribeBulkMeters = subscribeToBulkMeters((updatedBulkMeters) => {
       setBulkMetersList(updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
     });
-
-    if (getCustomers().length === 0) {
-       initializeCustomers(initialCustomers); 
-    }
-    setCustomers(getCustomers());
-    const unsubscribeCustomers = subscribeToCustomers(setCustomers);
+    const unsubscribeCustomers = subscribeToCustomers((updatedCustomers) => {
+       setCustomers(updatedCustomers);
+       // Potentially set isLoading to false here too if this is the primary data source
+       setIsLoading(false); 
+    });
     
     return () => {
       unsubscribeCustomers();
@@ -67,11 +71,11 @@ export default function IndividualCustomersPage() {
   }, []);
 
   const handleAddCustomer = () => {
-    if (bulkMetersList.length === 0) {
+    if (bulkMetersList.length === 0 && !isLoading) { // Check isLoading to avoid premature toast
         toast({
             variant: "destructive",
             title: "No Bulk Meters Available",
-            description: "Please add bulk meters before adding individual customers.",
+            description: "Please add or wait for bulk meters to load before adding individual customers.",
         });
         return;
     }
@@ -89,16 +93,16 @@ export default function IndividualCustomersPage() {
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (customerToDelete) {
-      deleteCustomerFromStore(customerToDelete.id);
+      await deleteCustomerFromStore(customerToDelete.id);
       toast({ title: "Customer Deleted", description: `${customerToDelete.name} has been removed.` });
       setCustomerToDelete(null);
     }
     setIsDeleteDialogOpen(false);
   };
 
-  const handleSubmitCustomer = (data: IndividualCustomerFormValues) => {
+  const handleSubmitCustomer = async (data: IndividualCustomerFormValues) => {
     const usage = data.currentReading - data.previousReading;
     const calculatedBill = calculateBill(usage, data.customerType as CustomerType, data.sewerageConnection as SewerageConnection);
     
@@ -108,13 +112,15 @@ export default function IndividualCustomersPage() {
         ...data, 
         calculatedBill,
       };
-      updateCustomerInStore(updatedCustomerData);
+      await updateCustomerInStore(updatedCustomerData);
       toast({ title: "Customer Updated", description: `${data.name} has been updated.` });
     } else {
+      // Ensure all required fields for Omit<IndividualCustomer, 'id' | 'calculatedBill' ...> are present from data
       const newCustomerData = {
-        ...data, 
+        ...data,
+        // id, calculatedBill, paymentStatus, status are handled by addCustomerToStore or Supabase
       } as Omit<IndividualCustomer, 'id' | 'calculatedBill' | 'paymentStatus' | 'status'> & { customerType: CustomerType, currentReading: number, previousReading: number, sewerageConnection: SewerageConnection};
-      addCustomerToStore(newCustomerData); 
+      await addCustomerToStore(newCustomerData); 
       toast({ title: "Customer Added", description: `${data.name} has been added.` });
     }
     setIsFormOpen(false);
@@ -143,7 +149,7 @@ export default function IndividualCustomersPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button onClick={handleAddCustomer}>
+          <Button onClick={handleAddCustomer} disabled={isLoading && bulkMetersList.length === 0}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Customer
           </Button>
         </div>
@@ -155,7 +161,11 @@ export default function IndividualCustomersPage() {
           <CardDescription>View, edit, and manage individual customer information.</CardDescription>
         </CardHeader>
         <CardContent>
-           {customers.length === 0 && !searchTerm ? (
+           {isLoading ? (
+             <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
+                Loading customers...
+             </div>
+           ) : customers.length === 0 && !searchTerm ? (
              <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
                 No customers found. Click "Add New Customer" to get started. <User className="inline-block ml-2 h-5 w-5" />
              </div>
@@ -175,7 +185,7 @@ export default function IndividualCustomersPage() {
         onOpenChange={setIsFormOpen}
         onSubmit={handleSubmitCustomer}
         defaultValues={selectedCustomer}
-        bulkMeters={bulkMetersList} // Pass the full list for "Add New", or specific one for "Edit" if applicable
+        bulkMeters={bulkMetersList} 
       />
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -195,4 +205,3 @@ export default function IndividualCustomersPage() {
     </div>
   );
 }
-

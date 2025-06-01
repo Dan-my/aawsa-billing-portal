@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { Branch } from "./branch-types";
-import { BranchFormDialog, type BranchFormValues } from "./branch-form-dialog"; // Import BranchFormValues
+import { BranchFormDialog, type BranchFormValues } from "./branch-form-dialog"; 
 import { BranchTable } from "./branch-table";
 import { 
   getBranches, 
@@ -17,9 +17,10 @@ import {
   updateBranch as updateBranchInStore, 
   deleteBranch as deleteBranchFromStore,
   subscribeToBranches,
-  initializeBranches
+  initializeBranches // This will now fetch from Supabase if cache is empty
 } from "@/lib/data-store";
 
+// initialBranchesData is now effectively a fallback or example, Supabase is the source of truth.
 export const initialBranchesData: Branch[] = [
   { id: "1", name: "Kality Branch", location: "Kality Sub-City, Woreda 05", contactPerson: "Abebe Kebede", contactPhone: "0911123456", status: "Active" },
   { id: "2", name: "Bole Branch", location: "Bole Sub-City, Near Airport", contactPerson: "Chaltu Lemma", contactPhone: "0912987654", status: "Active" },
@@ -29,7 +30,8 @@ export const initialBranchesData: Branch[] = [
 
 export default function BranchesPage() {
   const { toast } = useToast();
-  const [branches, setBranches] = React.useState<Branch[]>(getBranches());
+  const [branches, setBranches] = React.useState<Branch[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
@@ -37,8 +39,16 @@ export default function BranchesPage() {
   const [branchToDelete, setBranchToDelete] = React.useState<Branch | null>(null);
 
   React.useEffect(() => {
-    initializeBranches(initialBranchesData); // Initialize if store is empty
-    const unsubscribe = subscribeToBranches(setBranches);
+    setIsLoading(true);
+    initializeBranches().then(() => {
+      setBranches(getBranches());
+      setIsLoading(false);
+    });
+    
+    const unsubscribe = subscribeToBranches((updatedBranches) => {
+      setBranches(updatedBranches);
+      setIsLoading(false); // Also set loading to false on updates
+    });
     return () => unsubscribe();
   }, []);
 
@@ -57,31 +67,29 @@ export default function BranchesPage() {
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (branchToDelete) {
-      deleteBranchFromStore(branchToDelete.id);
+      await deleteBranchFromStore(branchToDelete.id);
       toast({ title: "Branch Deleted", description: `${branchToDelete.name} has been removed.` });
       setBranchToDelete(null);
     }
     setIsDeleteDialogOpen(false);
   };
 
-  const handleSubmitBranch = (data: BranchFormValues) => {
+  const handleSubmitBranch = async (data: BranchFormValues) => {
     if (selectedBranch) {
-      // Edit existing branch
       const updatedBranchData: Branch = {
-        id: selectedBranch.id, // Keep original ID
+        id: selectedBranch.id,
         name: data.name,
         location: data.location,
         contactPerson: data.contactPerson,
         contactPhone: data.contactPhone,
         status: data.status,
       };
-      updateBranchInStore(updatedBranchData);
+      await updateBranchInStore(updatedBranchData);
       toast({ title: "Branch Updated", description: `${data.name} has been updated.` });
     } else {
-      // Add new branch
-      addBranchToStore(data); // data (BranchFormValues) matches Omit<Branch, 'id'>
+      await addBranchToStore(data); 
       toast({ title: "Branch Added", description: `${data.name} has been added.` });
     }
     setIsFormOpen(false);
@@ -121,7 +129,11 @@ export default function BranchesPage() {
           <CardDescription>Manage AAWSA branches and their details.</CardDescription>
         </CardHeader>
         <CardContent>
-          {branches.length === 0 && !searchTerm ? (
+          {isLoading ? (
+            <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
+              Loading branches...
+            </div>
+          ) : branches.length === 0 && !searchTerm ? (
              <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
                 No branches found. Click "Add New Branch" to get started. <Building className="inline-block ml-2 h-5 w-5" />
              </div>
@@ -159,4 +171,3 @@ export default function BranchesPage() {
     </div>
   );
 }
-

@@ -19,8 +19,8 @@ import { bulkMeterDataEntrySchema, type BulkMeterDataEntryFormValues } from "./c
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 import { addBulkMeter as addBulkMeterToStore, initializeBulkMeters, initializeCustomers } from "@/lib/data-store";
-import { initialBulkMeters as defaultInitialBulkMeters } from "../bulk-meters/page";
-import { initialCustomers as defaultInitialCustomers } from "../individual-customers/page";
+// import { initialBulkMeters as defaultInitialBulkMeters } from "../bulk-meters/page"; // Fallback, not primary
+// import { initialCustomers as defaultInitialCustomers } from "../individual-customers/page"; // Fallback
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse } from "date-fns";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
@@ -29,9 +29,9 @@ export function BulkMeterDataEntryForm() {
   const { toast } = useToast();
 
   React.useEffect(() => {
-    // Ensure stores are initialized
-    initializeCustomers(defaultInitialCustomers);
-    initializeBulkMeters(defaultInitialBulkMeters);
+    // Ensure stores are initialized (these will try to fetch from Supabase)
+    initializeCustomers();
+    initializeBulkMeters();
   }, []);
 
   const form = useForm<BulkMeterDataEntryFormValues>({
@@ -44,30 +44,38 @@ export function BulkMeterDataEntryForm() {
       meterNumber: "",
       previousReading: undefined,
       currentReading: undefined,
-      month: "", // YYYY-MM string
+      month: "", 
       specificArea: "",
       location: "",
       ward: "",
     },
   });
 
-  function onSubmit(data: BulkMeterDataEntryFormValues) {
+  async function onSubmit(data: BulkMeterDataEntryFormValues) {
     const bulkMeterDataForStore: Omit<BulkMeter, 'id'> = { 
       ...data, 
-      status: "Active", // Default to Active status for new entries
-      paymentStatus: "Unpaid", // Default to Unpaid for new entries
+      status: "Active", 
+      paymentStatus: "Unpaid", 
     };
     
-    addBulkMeterToStore(bulkMeterDataForStore);
-    toast({
-      title: "Data Entry Submitted",
-      description: `Data for bulk meter ${data.name} has been successfully recorded.`,
-    });
-    form.reset(); // Reset form after successful submission
+    const result = await addBulkMeterToStore(bulkMeterDataForStore);
+    if (result) {
+      toast({
+        title: "Data Entry Submitted",
+        description: `Data for bulk meter ${data.name} has been successfully recorded.`,
+      });
+      form.reset(); 
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Submission Failed",
+        description: "Could not record bulk meter data. Please check console for errors.",
+      });
+    }
   }
 
   return (
-    <ScrollArea className="h-[calc(100vh-280px)]"> {/* Adjusted height */}
+    <ScrollArea className="h-[calc(100vh-280px)]"> 
       <Card className="shadow-lg w-full">
         <CardContent className="pt-6">
           <Form {...form}>
@@ -258,4 +266,3 @@ export function BulkMeterDataEntryForm() {
     </ScrollArea>
   );
 }
-

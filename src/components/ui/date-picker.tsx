@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { format } from "date-fns"
+import { format, isValid } from "date-fns" // Added isValid
 import { Calendar as CalendarIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -41,7 +41,7 @@ export function DatePicker({ date, setDate, disabled, disabledTrigger }: DatePic
           disabled={disabledTrigger} // Use the disabledTrigger prop here
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "yyyy-MM") : <span>Select a month</span>}
+          {date && isValid(date) ? format(date, "yyyy-MM") : <span>Select a month</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">

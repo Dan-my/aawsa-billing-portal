@@ -59,8 +59,8 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.map((customer) => (
-            <TableRow key={customer.id}>
+          {data.map((customer, index) => (
+            <TableRow key={`${customer.id}-${index}`}> {/* Ensure unique key by combining id and index */}
               <TableCell className="font-medium">{customer.name}</TableCell>
               <TableCell>{customer.customerKeyNumber}</TableCell>
               <TableCell>{customer.meterNumber}</TableCell>

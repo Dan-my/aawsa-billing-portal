@@ -75,9 +75,8 @@ export default function BulkMeterDetailsPage() {
         const associated = currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId);
         setAssociatedCustomers(associated);
       } else {
-        setBulkMeter(null); // Explicitly set to null if not found
+        setBulkMeter(null); 
         toast({ title: "Bulk Meter Not Found", description: "This bulk meter may not exist or has been deleted.", variant: "destructive" });
-        // Optionally redirect: router.push("/admin/bulk-meters");
       }
       setIsLoading(false);
     }).catch(error => {
@@ -101,7 +100,6 @@ export default function BulkMeterDetailsPage() {
       } else if (bulkMeter) { 
          toast({ title: "Bulk Meter Update", description: "The bulk meter being viewed may have been deleted or is no longer accessible.", variant: "destructive" });
          setBulkMeter(null); 
-         // Optionally redirect: router.push("/admin/bulk-meters");
       }
     };
     
@@ -128,9 +126,17 @@ export default function BulkMeterDetailsPage() {
   };
   const handleSubmitBulkMeterForm = async (data: BulkMeterFormValues) => {
     if (bulkMeter) {
-        const updatedBulkMeter: BulkMeter = { ...bulkMeter, ...data, id: bulkMeter.id };
-        await updateBulkMeterInStore(updatedBulkMeter);
-        toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
+        const updatedBulkMeterData: BulkMeter = { 
+          ...bulkMeter, 
+          ...data, 
+          id: bulkMeter.id,
+          // Ensure numeric fields are numbers
+          meterSize: Number(data.meterSize ?? bulkMeter.meterSize ?? 0),
+          previousReading: Number(data.previousReading ?? bulkMeter.previousReading ?? 0),
+          currentReading: Number(data.currentReading ?? bulkMeter.currentReading ?? 0),
+        };
+        await updateBulkMeterInStore(updatedBulkMeterData);
+        toast({ title: "Bulk Meter Updated", description: `${updatedBulkMeterData.name} has been updated.` });
     }
     setIsBulkMeterFormOpen(false);
   };
@@ -138,9 +144,17 @@ export default function BulkMeterDetailsPage() {
   const handleToggleBulkMeterPaymentStatus = async () => {
     if (bulkMeter) {
       const newStatus: PaymentStatus = bulkMeter.paymentStatus === 'Paid' ? 'Unpaid' : 'Paid';
-      const updatedBulkMeter: BulkMeter = { ...bulkMeter, paymentStatus: newStatus };
-      await updateBulkMeterInStore(updatedBulkMeter);
-      toast({ title: "Payment Status Updated", description: `${bulkMeter.name} payment status set to ${newStatus}.` });
+      const updatedBulkMeterData: BulkMeter = { 
+        ...bulkMeter, 
+        paymentStatus: newStatus,
+        // Defensive coercion for numeric fields, ensuring they are numbers
+        meterSize: Number(bulkMeter.meterSize ?? 0),
+        previousReading: Number(bulkMeter.previousReading ?? 0),
+        currentReading: Number(bulkMeter.currentReading ?? 0),
+      };
+      await updateBulkMeterInStore(updatedBulkMeterData);
+      // Use updatedBulkMeterData.name for toast in case bulkMeter state is stale or name was part of an edit
+      toast({ title: "Payment Status Updated", description: `${updatedBulkMeterData.name} payment status set to ${newStatus}.` });
     }
   };
 
@@ -162,17 +176,22 @@ export default function BulkMeterDetailsPage() {
   };
   const handleSubmitCustomerForm = async (data: IndividualCustomerFormValues) => {
     if (selectedCustomer) {
-      const usage = (data.currentReading ?? 0) - (data.previousReading ?? 0);
+      const usage = (Number(data.currentReading) ?? 0) - (Number(data.previousReading) ?? 0);
       const calculatedBill = calculateBill(usage, data.customerType as CustomerType, data.sewerageConnection as SewerageConnection);
       const updatedCustomerData: IndividualCustomer = { 
           ...selectedCustomer, 
           ...data, 
           id: selectedCustomer.id, 
-          calculatedBill 
+          calculatedBill,
+          // Ensure numeric fields are numbers
+          meterSize: Number(data.meterSize ?? selectedCustomer.meterSize ?? 0),
+          previousReading: Number(data.previousReading ?? selectedCustomer.previousReading ?? 0),
+          currentReading: Number(data.currentReading ?? selectedCustomer.currentReading ?? 0),
+          ordinal: Number(data.ordinal ?? selectedCustomer.ordinal ?? 0),
       };
       
       await updateCustomerInStore(updatedCustomerData);
-      toast({ title: "Customer Updated", description: `${data.name} has been updated.` });
+      toast({ title: "Customer Updated", description: `${updatedCustomerData.name} has been updated.` });
     }
     
     setIsCustomerFormOpen(false);
@@ -183,16 +202,29 @@ export default function BulkMeterDetailsPage() {
     const customer = associatedCustomers.find(c => c.id === customerId);
     if (customer) {
       const newStatus: PaymentStatus = customer.paymentStatus === 'Paid' ? 'Unpaid' : 'Paid';
-      const updatedCustomer: IndividualCustomer = { ...customer, paymentStatus: newStatus };
-      await updateCustomerInStore(updatedCustomer);
-      toast({ title: "Payment Status Updated", description: `${customer.name}'s payment status set to ${newStatus}.` });
+      const updatedCustomerData: IndividualCustomer = { 
+        ...customer, 
+        paymentStatus: newStatus,
+        // Defensive coercion
+        meterSize: Number(customer.meterSize ?? 0),
+        previousReading: Number(customer.previousReading ?? 0),
+        currentReading: Number(customer.currentReading ?? 0),
+        ordinal: Number(customer.ordinal ?? 0),
+        calculatedBill: Number(customer.calculatedBill ?? 0),
+      };
+      await updateCustomerInStore(updatedCustomerData);
+      toast({ title: "Payment Status Updated", description: `${updatedCustomerData.name}'s payment status set to ${newStatus}.` });
     }
   };
 
 
-  if (isLoading || !bulkMeter) {
-    return <div className="p-4 text-center">Loading bulk meter details or not found...</div>;
+  if (isLoading || !bulkMeter) { // isLoading check ensures we don't prematurely render "not found"
+    return <div className="p-4 text-center">Loading bulk meter details...</div>;
   }
+  if (!bulkMeter && !isLoading) { // Only show not found if loading is complete and bulkMeter is still null
+     return <div className="p-4 text-center">Bulk meter not found or an error occurred.</div>;
+  }
+
 
   const bmPreviousReading = bulkMeter.previousReading ?? 0;
   const bmCurrentReading = bulkMeter.currentReading ?? 0;
@@ -205,9 +237,6 @@ export default function BulkMeterDetailsPage() {
     const hasNonDomesticCustomer = associatedCustomers.some(c => c.customerType === "Non-domestic");
     if (!hasNonDomesticCustomer) { 
       effectiveBulkMeterCustomerType = "Domestic";
-      // Sewerage connection for bulk meter tariffing can be complex.
-      // Defaulting to "No" if all individuals are domestic, or could be based on majority/any with sewerage.
-      // For simplicity, keeping as "No" unless a more specific rule is defined.
       effectiveBulkMeterSewerageConnection = "No"; 
     }
   }
@@ -412,3 +441,5 @@ export default function BulkMeterDetailsPage() {
     </div>
   );
 }
+
+    

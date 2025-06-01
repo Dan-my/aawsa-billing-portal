@@ -27,7 +27,7 @@ interface IndividualCustomerTableProps {
   data: IndividualCustomer[];
   onEdit: (customer: IndividualCustomer) => void;
   onDelete: (customer: IndividualCustomer) => void;
-  bulkMetersList?: { id: string; name: string }[]; // For displaying assigned bulk meter name
+  bulkMetersList?: { id: string; name: string }[];
 }
 
 export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList = [] }: IndividualCustomerTableProps) {
@@ -60,7 +60,7 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
         </TableHeader>
         <TableBody>
           {data.map((customer, index) => (
-            <TableRow key={`${customer.id}-${index}`}> {/* Ensure unique key by combining id and index */}
+            <TableRow key={`${customer.id}-${index}`}>
               <TableCell className="font-medium">{customer.name}</TableCell>
               <TableCell>{customer.customerKeyNumber}</TableCell>
               <TableCell>{customer.meterNumber}</TableCell>
@@ -71,7 +71,7 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
                    variant={
                     customer.status === 'Active' ? 'default' 
                     : customer.status === 'Inactive' ? 'secondary' 
-                    : 'destructive' // For Suspended
+                    : 'destructive'
                   }
                 >
                   {customer.status}

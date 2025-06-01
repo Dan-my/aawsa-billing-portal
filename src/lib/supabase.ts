@@ -3,34 +3,16 @@ import { createClient } from '@supabase/supabase-js';
 import type { Branch, BranchStatus } from '@/app/admin/branches/branch-types';
 import type { IndividualCustomer, CustomerType, SewerageConnection, PaymentStatus, IndividualCustomerStatus } from '@/app/admin/individual-customers/individual-customer-types';
 import type { BulkMeter, BulkMeterStatus } from '@/app/admin/bulk-meters/bulk-meter-types';
+import type { StaffMember, StaffStatus } from '@/app/admin/staff-management/staff-types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  // This will be caught by Next.js during build or server-side rendering if vars are missing
-  // For client-side, it might result in Supabase client initialization errors
   console.error('Missing Supabase environment variables. Ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set.');
 }
 
-// Initialize Supabase client. If URL/Key are undefined, this will likely throw an error or fail silently.
 export const supabase = createClient(supabaseUrl!, supabaseAnonKey!);
-
-// --- Helper to map camelCase to snake_case for Supabase ---
-// Supabase JS client v2 often handles this automatically, but being explicit can avoid issues.
-// For this refactor, we'll assume the client handles it, but if not, this function would be used.
-/*
-const toSnakeCase = (obj: Record<string, any>): Record<string, any> => {
-  const newObj: Record<string, any> = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-      newObj[snakeKey] = obj[key];
-    }
-  }
-  return newObj;
-};
-*/
 
 // --- CRUD Operations for Branches ---
 export async function getAllBranches() {
@@ -54,7 +36,7 @@ export async function getBranchById(id: string) {
 export async function createBranch(branchData: Omit<Branch, 'id'>) {
   const { data, error } = await supabase
     .from('branches')
-    .insert([branchData]) // Supabase client should handle camelCase to snake_case mapping
+    .insert([branchData])
     .select()
     .single();
   if (error) console.error('Error creating branch:', error.message);
@@ -78,7 +60,7 @@ export async function deleteBranch(id: string) {
     .delete()
     .eq('id', id)
     .select()
-    .single(); // Returns the deleted record
+    .single(); 
   if (error) console.error('Error deleting branch:', error.message);
   return { data: data as Branch | null, error };
 }
@@ -183,4 +165,65 @@ export async function deleteBulkMeter(id: string) {
     .single();
   if (error) console.error('Error deleting bulk meter:', error.message);
   return { data: data as BulkMeter | null, error };
+}
+
+// --- CRUD Operations for Staff Members ---
+// Assuming 'staff_members' table in Supabase
+export async function getAllStaffMembers() {
+  const { data, error } = await supabase
+    .from('staff_members')
+    .select('*');
+  if (error) console.error('Error fetching staff members:', error.message);
+  // Ensure password is included if your logic relies on it client-side (e.g., AuthForm)
+  // However, typically passwords shouldn't be sent to the client.
+  // For this app's current structure, we might need it.
+  return { data: data as StaffMember[] | null, error };
+}
+
+export async function getStaffMemberById(id: string) {
+  const { data, error } = await supabase
+    .from('staff_members')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (error) console.error('Error fetching staff member by ID:', error.message);
+  return { data: data as StaffMember | null, error };
+}
+
+// For createStaffMember, password handling is important.
+// Supabase Auth handles hashing. If not using Supabase Auth for staff,
+// you'd handle hashing server-side (e.g., in a Supabase Edge Function) or store as is (less secure).
+// Current app structure seems to imply plain text password matching.
+export async function createStaffMember(staffData: Omit<StaffMember, 'id'>) {
+  const { data, error } = await supabase
+    .from('staff_members')
+    .insert([staffData]) // Ensure staffData has `password` if required by table
+    .select()
+    .single();
+  if (error) console.error('Error creating staff member:', error.message);
+  return { data: data as StaffMember | null, error };
+}
+
+export async function updateStaffMember(id: string, staffData: Partial<Omit<StaffMember, 'id'>>) {
+  // If password is not part of staffData, it won't be updated.
+  // If it is, it will be updated as plain text based on current app structure.
+  const { data, error } = await supabase
+    .from('staff_members')
+    .update(staffData)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) console.error('Error updating staff member:', error.message);
+  return { data: data as StaffMember | null, error };
+}
+
+export async function deleteStaffMember(id: string) {
+  const { data, error } = await supabase
+    .from('staff_members')
+    .delete()
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) console.error('Error deleting staff member:', error.message);
+  return { data: data as StaffMember | null, error };
 }

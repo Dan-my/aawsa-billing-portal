@@ -20,9 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Droplets } from "lucide-react";
 import type { StaffMember } from "@/app/admin/staff-management/staff-types";
-// Import fallback and storage key
-import { fallbackInitialStaffMembers, STAFF_STORAGE_KEY } from "@/app/admin/staff-management/page";
-
+import { getStaffMembers, initializeStaffMembers, subscribeToStaffMembers } from "@/lib/data-store"; // Import from data-store
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -34,29 +32,27 @@ type UserRole = "admin" | "staff";
 interface UserSessionData {
   email: string;
   role: UserRole;
-  branchName?: string; 
+  branchName?: string;
 }
 
 export function AuthForm() {
   const router = useRouter();
   const { toast } = useToast();
-  const [allStaffMembers, setAllStaffMembers] = React.useState<StaffMember[]>(fallbackInitialStaffMembers);
+  const [allStaffMembers, setAllStaffMembers] = React.useState<StaffMember[]>([]);
+  const [isLoadingStaff, setIsLoadingStaff] = React.useState(true);
 
   React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedStaffJson = localStorage.getItem(STAFF_STORAGE_KEY);
-      if (storedStaffJson) {
-        try {
-          const storedStaff = JSON.parse(storedStaffJson);
-          if (Array.isArray(storedStaff)) {
-            setAllStaffMembers(storedStaff);
-          }
-        } catch (e) {
-          console.error("Failed to parse staff from localStorage for auth:", e);
-          // Keep fallback if parsing fails
-        }
-      }
-    }
+    setIsLoadingStaff(true);
+    initializeStaffMembers().then(() => {
+      setAllStaffMembers(getStaffMembers());
+      setIsLoadingStaff(false);
+    });
+
+    const unsubscribe = subscribeToStaffMembers((updatedStaff) => {
+      setAllStaffMembers(updatedStaff);
+      // No need to setIsLoadingStaff here, initial load handles it
+    });
+    return () => unsubscribe();
   }, []);
 
 
@@ -69,6 +65,13 @@ export function AuthForm() {
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
+    if (isLoadingStaff) {
+        toast({
+            title: "Authenticating",
+            description: "Please wait, loading user data...",
+        });
+        return;
+    }
     const { email, password } = values;
 
     let userSession: UserSessionData | null = null;
@@ -78,10 +81,11 @@ export function AuthForm() {
       userSession = { email, role: "admin" };
       redirectTo = "/admin/dashboard";
     } else {
-      // Check against staff members
       const staffUser = allStaffMembers.find(staff => staff.email.toLowerCase() === email.toLowerCase());
 
       if (staffUser) {
+        // Password comparison - ensure staffUser.password is available and matches.
+        // For Supabase, if password column is readable by anon/auth role.
         if (staffUser.password === password) {
           if (staffUser.status === "Active") {
             userSession = { email: staffUser.email, role: "staff", branchName: staffUser.branch };
@@ -104,7 +108,7 @@ export function AuthForm() {
         title: "Login Successful",
         description: `Welcome, ${userSession.role === 'admin' ? userSession.email : userSession.branchName}! Redirecting...`,
       });
-      window.location.assign(redirectTo);
+      window.location.assign(redirectTo); // Use window.location.assign for full page reload and middleware re-evaluation if any
     } else {
       toast({
         variant: "destructive",
@@ -153,8 +157,8 @@ export function AuthForm() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Signing In..." : "Sign In"}
+              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || isLoadingStaff}>
+                {form.formState.isSubmitting || isLoadingStaff ? "Signing In..." : "Sign In"}
               </Button>
             </form>
           </Form>
@@ -166,4 +170,3 @@ export function AuthForm() {
     </div>
   );
 }
-

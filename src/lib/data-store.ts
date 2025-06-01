@@ -3,6 +3,7 @@ import type { IndividualCustomer, CustomerType, SewerageConnection } from '@/app
 import { calculateBill } from '@/app/admin/individual-customers/individual-customer-types';
 import type { BulkMeter } from '@/app/admin/bulk-meters/bulk-meter-types';
 import type { Branch } from '@/app/admin/branches/branch-types';
+import type { StaffMember } from '@/app/admin/staff-management/staff-types'; // Import StaffMember
 import {
   getAllBranches as supabaseGetAllBranches,
   createBranch as supabaseCreateBranch,
@@ -16,34 +17,39 @@ import {
   createBulkMeter as supabaseCreateBulkMeter,
   updateBulkMeter as supabaseUpdateBulkMeter,
   deleteBulkMeter as supabaseDeleteBulkMeter,
+  getAllStaffMembers as supabaseGetAllStaffMembers, // Import staff functions
+  createStaffMember as supabaseCreateStaffMember,
+  updateStaffMember as supabaseUpdateStaffMember,
+  deleteStaffMember as supabaseDeleteStaffMember,
 } from './supabase';
 
 // Local cache state
 let customers: IndividualCustomer[] = [];
 let bulkMeters: BulkMeter[] = [];
 let branches: Branch[] = [];
+let staffMembers: StaffMember[] = []; // Cache for staff members
 
 // Flags to see if initial fetch has been attempted
 let customersFetched = false;
 let bulkMetersFetched = false;
 let branchesFetched = false;
+let staffMembersFetched = false; // Flag for staff members
 
 // Listeners
 type Listener<T> = (data: T[]) => void;
 const customerListeners: Set<Listener<IndividualCustomer>> = new Set();
 const bulkMeterListeners: Set<Listener<BulkMeter>> = new Set();
 const branchListeners: Set<Listener<Branch>> = new Set();
+const staffMemberListeners: Set<Listener<StaffMember>> = new Set(); // Listeners for staff
 
 // Notify functions
 const notifyCustomerListeners = () => customerListeners.forEach(listener => listener([...customers]));
 const notifyBulkMeterListeners = () => bulkMeterListeners.forEach(listener => listener([...bulkMeters]));
 const notifyBranchListeners = () => branchListeners.forEach(listener => listener([...branches]));
+const notifyStaffMemberListeners = () => staffMemberListeners.forEach(listener => listener([...staffMembers])); // Notify for staff
 
 
 // --- Initialization and Data Fetching ---
-// These functions are now for explicit data fetching, not for localStorage initialization.
-// Components should call these or the getters which in turn call these.
-
 async function fetchAllBranches() {
   const { data, error } = await supabaseGetAllBranches();
   if (data) {
@@ -51,9 +57,8 @@ async function fetchAllBranches() {
     notifyBranchListeners();
   } else {
     console.error("DataStore: Failed to fetch branches", error);
-    // branches will remain empty or stale, listeners won't be spammed
   }
-  branchesFetched = true; // Mark as fetched even if error, to avoid refetch loops by simple getters
+  branchesFetched = true;
   return branches;
 }
 
@@ -81,41 +86,49 @@ async function fetchAllBulkMeters() {
   return bulkMeters;
 }
 
-// --- Initializer functions (Legacy - to be called by components if needed, or getters will lazy load) ---
-// These are kept for now if existing components call them, but ideally, components would manage their own data needs.
-export const initializeBranches = async (initialData?: Branch[]) => {
-  if (!branchesFetched || branches.length === 0) { // Fetch if not fetched or empty
+async function fetchAllStaffMembers() {
+  const { data, error } = await supabaseGetAllStaffMembers();
+  if (data) {
+    staffMembers = data;
+    notifyStaffMemberListeners();
+  } else {
+    console.error("DataStore: Failed to fetch staff members", error);
+  }
+  staffMembersFetched = true;
+  return staffMembers;
+}
+
+// --- Initializer functions ---
+export const initializeBranches = async () => {
+  if (!branchesFetched || branches.length === 0) {
     await fetchAllBranches();
   }
-  // initialData from props is now ignored if using Supabase as source of truth
 };
 
-export const initializeCustomers = async (initialData?: IndividualCustomer[]) => {
+export const initializeCustomers = async () => {
   if (!customersFetched || customers.length === 0) {
     await fetchAllCustomers();
   }
 };
 
-export const initializeBulkMeters = async (initialData?: BulkMeter[]) => {
+export const initializeBulkMeters = async () => {
   if (!bulkMetersFetched || bulkMeters.length === 0) {
     await fetchAllBulkMeters();
   }
 };
 
+export const initializeStaffMembers = async () => {
+  if (!staffMembersFetched || staffMembers.length === 0) {
+    await fetchAllStaffMembers();
+  }
+};
 
-// Getters - now potentially fetching if cache is empty / not yet fetched
-export const getBranches = (): Branch[] => {
-  // if (!branchesFetched) fetchAllBranches(); // Simple lazy load, might cause issues in React rendering
-  return [...branches];
-};
-export const getCustomers = (): IndividualCustomer[] => {
-  // if (!customersFetched) fetchAllCustomers();
-  return [...customers];
-};
-export const getBulkMeters = (): BulkMeter[] => {
-  // if (!bulkMetersFetched) fetchAllBulkMeters();
-  return [...bulkMeters];
-};
+// Getters
+export const getBranches = (): Branch[] => [...branches];
+export const getCustomers = (): IndividualCustomer[] => [...customers];
+export const getBulkMeters = (): BulkMeter[] => [...bulkMeters];
+export const getStaffMembers = (): StaffMember[] => [...staffMembers];
+
 
 // --- Actions for Branches ---
 export const addBranch = async (branchData: Omit<Branch, 'id'>) => {
@@ -157,8 +170,8 @@ export const addCustomer = async (customerData: Omit<IndividualCustomer, 'id' | 
 
   const customerPayload: Omit<IndividualCustomer, 'id'> = {
     ...customerData,
-    paymentStatus: 'Unpaid', // Default payment status
-    status: 'Active',       // Default status
+    paymentStatus: 'Unpaid',
+    status: 'Active',
     calculatedBill,
   };
 
@@ -174,7 +187,6 @@ export const addCustomer = async (customerData: Omit<IndividualCustomer, 'id' | 
 
 export const updateCustomer = async (updatedCustomerData: IndividualCustomer) => {
   const { id, ...updatePayload } = updatedCustomerData;
-  // Recalculate bill before sending to Supabase if relevant fields changed
   const usage = updatePayload.currentReading - updatePayload.previousReading;
   updatePayload.calculatedBill = calculateBill(usage, updatePayload.customerType, updatePayload.sewerageConnection);
 
@@ -229,47 +241,79 @@ export const deleteBulkMeter = async (bulkMeterId: string) => {
   const { data, error } = await supabaseDeleteBulkMeter(bulkMeterId);
   if (!error) {
     bulkMeters = bulkMeters.filter(bm => bm.id !== bulkMeterId);
-    // Optionally, update related customers if assignedBulkMeterId needs clearing.
-    // This might be better handled by database constraints (ON DELETE SET NULL) or specific business logic.
-    // For now, just removing the bulk meter from the local cache.
-    // customers = customers.map(c => c.assignedBulkMeterId === bulkMeterId ? { ...c, assignedBulkMeterId: "" } : c);
-    // notifyCustomerListeners(); // If customers are modified
     notifyBulkMeterListeners();
   } else {
     console.error("DataStore: Failed to delete bulk meter", error);
   }
 };
 
+// --- Actions for Staff Members ---
+export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>) => {
+  // Password is included in staffData from StaffFormValues
+  const { data: newStaff, error } = await supabaseCreateStaffMember(staffData);
+  if (newStaff && !error) {
+    staffMembers = [newStaff, ...staffMembers];
+    notifyStaffMemberListeners();
+    return newStaff;
+  }
+  console.error("DataStore: Failed to add staff member", error);
+  return null;
+};
+
+export const updateStaffMember = async (updatedStaffData: StaffMember) => {
+  const { id, ...updatePayload } = updatedStaffData;
+  // Password will be updated if present in updatePayload
+  const { data: updatedStaff, error } = await supabaseUpdateStaffMember(id, updatePayload);
+  if (updatedStaff && !error) {
+    staffMembers = staffMembers.map(s => s.id === updatedStaff.id ? updatedStaff : s);
+    notifyStaffMemberListeners();
+  } else {
+    console.error("DataStore: Failed to update staff member", error);
+  }
+};
+
+export const deleteStaffMember = async (staffId: string) => {
+  const { data, error } = await supabaseDeleteStaffMember(staffId);
+  if (!error) {
+    staffMembers = staffMembers.filter(s => s.id !== staffId);
+    notifyStaffMemberListeners();
+  } else {
+    console.error("DataStore: Failed to delete staff member", error);
+  }
+};
+
 // --- Subscribe functions ---
-// These remain largely the same, but now depend on explicit fetch calls to populate initial data.
 export const subscribeToCustomers = (listener: Listener<IndividualCustomer>): (() => void) => {
   customerListeners.add(listener);
-  // if (customersFetched) listener([...customers]); // Send current cache if already fetched
-  fetchAllCustomers().then(() => listener([...customers])); // Fetch and then send
+  fetchAllCustomers().then(() => listener([...customers]));
   return () => customerListeners.delete(listener);
 };
 
 export const subscribeToBulkMeters = (listener: Listener<BulkMeter>): (() => void) => {
   bulkMeterListeners.add(listener);
-  // if (bulkMetersFetched) listener([...bulkMeters]);
   fetchAllBulkMeters().then(() => listener([...bulkMeters]));
   return () => bulkMeterListeners.delete(listener);
 };
 
 export const subscribeToBranches = (listener: Listener<Branch>): (() => void) => {
   branchListeners.add(listener);
-  // if (branchesFetched) listener([...branches]);
   fetchAllBranches().then(() => listener([...branches]));
   return () => branchListeners.delete(listener);
 };
 
+export const subscribeToStaffMembers = (listener: Listener<StaffMember>): (() => void) => {
+  staffMemberListeners.add(listener);
+  fetchAllStaffMembers().then(() => listener([...staffMembers]));
+  return () => staffMemberListeners.delete(listener);
+};
+
+
 // --- Initial data load for the application ---
-// Call this early in your application, e.g., in a top-level layout or provider.
-// Or, allow components to trigger fetches via getters or specific fetch functions.
 export async function loadInitialData() {
   await Promise.all([
     fetchAllBranches(),
     fetchAllCustomers(),
     fetchAllBulkMeters(),
+    fetchAllStaffMembers(), // Load staff members
   ]);
 }

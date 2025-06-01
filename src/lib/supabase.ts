@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -26,7 +27,8 @@ export async function createBranch(branchData: {
 }) {
   const { data, error } = await supabase
     .from('branches')
-    .insert([branchData]);
+    .insert([branchData])
+    .select(); // Ensure data is returned
 
   if (error) {
     console.error('Error creating branch:', error.message);
@@ -48,7 +50,8 @@ export async function createCustomer(customerData: {
 }) {
   const { data, error } = await supabase
  .from('individual_customers')
- .insert([customerData]);
+ .insert([customerData])
+ .select(); // Ensure data is returned
 
   if (error) {
  console.error('Error creating customer:', error.message);
@@ -75,7 +78,7 @@ export async function getAllCustomers() {
 }
 
 // Read a single individual customer by customer key number
-export async function getCustomerByKetNumber(customerKeyNumber: string) {
+export async function getCustomerByKeyNumber(customerKeyNumber: string) {
   const { data, error } = await supabase
  .from('individual_customers')
  .select('*')
@@ -106,7 +109,8 @@ export async function updateCustomer(
   const { data, error } = await supabase
  .from('individual_customers')
  .update(updatedCustomerData)
- .eq('customer_key_number', customerKeyNumber);
+ .eq('customer_key_number', customerKeyNumber)
+ .select(); // Ensure data is returned
 
   if (error) {
  console.error(`Error updating customer with key number ${customerKeyNumber}:`, error.message);
@@ -122,7 +126,8 @@ export async function deleteCustomer(customerKeyNumber: string) {
   const { data, error } = await supabase
  .from('individual_customers')
  .delete()
- .eq('customer_key_number', customerKeyNumber);
+ .eq('customer_key_number', customerKeyNumber)
+ .select(); // Ensure data is returned (often the deleted record(s))
 
   if (error) {
  console.error(`Error deleting customer with key number ${customerKeyNumber}:`, error.message);

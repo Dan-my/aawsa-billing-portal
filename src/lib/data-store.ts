@@ -3,7 +3,7 @@ import type { IndividualCustomer, CustomerType, SewerageConnection } from '@/app
 import { calculateBill } from '@/app/admin/individual-customers/individual-customer-types';
 import type { BulkMeter } from '@/app/admin/bulk-meters/bulk-meter-types';
 import type { Branch } from '@/app/admin/branches/branch-types';
-import type { StaffMember } from '@/app/admin/staff-management/staff-types'; // Import StaffMember
+import type { StaffMember } from '@/app/admin/staff-management/staff-types';
 import {
   getAllBranches as supabaseGetAllBranches,
   createBranch as supabaseCreateBranch,
@@ -17,36 +17,77 @@ import {
   createBulkMeter as supabaseCreateBulkMeter,
   updateBulkMeter as supabaseUpdateBulkMeter,
   deleteBulkMeter as supabaseDeleteBulkMeter,
-  getAllStaffMembers as supabaseGetAllStaffMembers, // Import staff functions
+  getAllStaffMembers as supabaseGetAllStaffMembers,
   createStaffMember as supabaseCreateStaffMember,
   updateStaffMember as supabaseUpdateStaffMember,
   deleteStaffMember as supabaseDeleteStaffMember,
+  // Import CRUD for new tables
+  getAllBills as supabaseGetAllBills,
+  createBill as supabaseCreateBill,
+  updateBill as supabaseUpdateBill,
+  deleteBill as supabaseDeleteBill,
+  getAllMeterReadings as supabaseGetAllMeterReadings,
+  createMeterReading as supabaseCreateMeterReading,
+  updateMeterReading as supabaseUpdateMeterReading,
+  deleteMeterReading as supabaseDeleteMeterReading,
+  getAllPayments as supabaseGetAllPayments,
+  createPayment as supabaseCreatePayment,
+  updatePayment as supabaseUpdatePayment,
+  deletePayment as supabaseDeletePayment,
+  getAllReportLogs as supabaseGetAllReportLogs,
+  createReportLog as supabaseCreateReportLog,
+  updateReportLog as supabaseUpdateReportLog,
+  deleteReportLog as supabaseDeleteReportLog,
 } from './supabase';
+import type { Bill, BillInsert, BillUpdate } from './supabase';
+import type { MeterReading, MeterReadingInsert, MeterReadingUpdate } from './supabase';
+import type { Payment, PaymentInsert, PaymentUpdate } from './supabase';
+import type { ReportLog, ReportLogInsert, ReportLogUpdate } from './supabase';
+
 
 // Local cache state
 let customers: IndividualCustomer[] = [];
 let bulkMeters: BulkMeter[] = [];
 let branches: Branch[] = [];
-let staffMembers: StaffMember[] = []; // Cache for staff members
+let staffMembers: StaffMember[] = [];
+let bills: Bill[] = [];
+let meterReadings: MeterReading[] = [];
+let payments: Payment[] = [];
+let reportLogs: ReportLog[] = [];
+
 
 // Flags to see if initial fetch has been attempted
 let customersFetched = false;
 let bulkMetersFetched = false;
 let branchesFetched = false;
-let staffMembersFetched = false; // Flag for staff members
+let staffMembersFetched = false;
+let billsFetched = false;
+let meterReadingsFetched = false;
+let paymentsFetched = false;
+let reportLogsFetched = false;
+
 
 // Listeners
 type Listener<T> = (data: T[]) => void;
 const customerListeners: Set<Listener<IndividualCustomer>> = new Set();
 const bulkMeterListeners: Set<Listener<BulkMeter>> = new Set();
 const branchListeners: Set<Listener<Branch>> = new Set();
-const staffMemberListeners: Set<Listener<StaffMember>> = new Set(); // Listeners for staff
+const staffMemberListeners: Set<Listener<StaffMember>> = new Set();
+const billListeners: Set<Listener<Bill>> = new Set();
+const meterReadingListeners: Set<Listener<MeterReading>> = new Set();
+const paymentListeners: Set<Listener<Payment>> = new Set();
+const reportLogListeners: Set<Listener<ReportLog>> = new Set();
+
 
 // Notify functions
 const notifyCustomerListeners = () => customerListeners.forEach(listener => listener([...customers]));
 const notifyBulkMeterListeners = () => bulkMeterListeners.forEach(listener => listener([...bulkMeters]));
 const notifyBranchListeners = () => branchListeners.forEach(listener => listener([...branches]));
-const notifyStaffMemberListeners = () => staffMemberListeners.forEach(listener => listener([...staffMembers])); // Notify for staff
+const notifyStaffMemberListeners = () => staffMemberListeners.forEach(listener => listener([...staffMembers]));
+const notifyBillListeners = () => billListeners.forEach(listener => listener([...bills]));
+const notifyMeterReadingListeners = () => meterReadingListeners.forEach(listener => listener([...meterReadings]));
+const notifyPaymentListeners = () => paymentListeners.forEach(listener => listener([...payments]));
+const notifyReportLogListeners = () => reportLogListeners.forEach(listener => listener([...reportLogs]));
 
 
 // --- Initialization and Data Fetching ---
@@ -65,7 +106,15 @@ async function fetchAllBranches() {
 async function fetchAllCustomers() {
   const { data, error } = await supabaseGetAllCustomers();
   if (data) {
-    customers = data;
+    customers = data.map(c => ({
+        ...c,
+        // Ensure numeric fields are numbers, defaulting to 0 if null/undefined from DB
+        meterSize: Number(c.meter_size) || 0,
+        previousReading: Number(c.previous_reading) || 0,
+        currentReading: Number(c.current_reading) || 0,
+        ordinal: Number(c.ordinal) || 0,
+        calculatedBill: Number(c.calculated_bill) || 0,
+    })) as IndividualCustomer[];
     notifyCustomerListeners();
   } else {
     console.error("DataStore: Failed to fetch customers", error);
@@ -77,7 +126,12 @@ async function fetchAllCustomers() {
 async function fetchAllBulkMeters() {
   const { data, error } = await supabaseGetAllBulkMeters();
   if (data) {
-    bulkMeters = data;
+    bulkMeters = data.map(bm => ({
+        ...bm,
+        meterSize: Number(bm.meter_size) || 0,
+        previousReading: Number(bm.previous_reading) || 0,
+        currentReading: Number(bm.current_reading) || 0,
+    })) as BulkMeter[];
     notifyBulkMeterListeners();
   } else {
     console.error("DataStore: Failed to fetch bulk meters", error);
@@ -97,6 +151,55 @@ async function fetchAllStaffMembers() {
   staffMembersFetched = true;
   return staffMembers;
 }
+
+async function fetchAllBills() {
+    const { data, error } = await supabaseGetAllBills();
+    if (data) {
+        bills = data;
+        notifyBillListeners();
+    } else {
+        console.error("DataStore: Failed to fetch bills", error);
+    }
+    billsFetched = true;
+    return bills;
+}
+
+async function fetchAllMeterReadings() {
+    const { data, error } = await supabaseGetAllMeterReadings();
+    if (data) {
+        meterReadings = data;
+        notifyMeterReadingListeners();
+    } else {
+        console.error("DataStore: Failed to fetch meter readings", error);
+    }
+    meterReadingsFetched = true;
+    return meterReadings;
+}
+
+async function fetchAllPayments() {
+    const { data, error } = await supabaseGetAllPayments();
+    if (data) {
+        payments = data;
+        notifyPaymentListeners();
+    } else {
+        console.error("DataStore: Failed to fetch payments", error);
+    }
+    paymentsFetched = true;
+    return payments;
+}
+
+async function fetchAllReportLogs() {
+    const { data, error } = await supabaseGetAllReportLogs();
+    if (data) {
+        reportLogs = data;
+        notifyReportLogListeners();
+    } else {
+        console.error("DataStore: Failed to fetch report logs", error);
+    }
+    reportLogsFetched = true;
+    return reportLogs;
+}
+
 
 // --- Initializer functions ---
 export const initializeBranches = async () => {
@@ -123,11 +226,29 @@ export const initializeStaffMembers = async () => {
   }
 };
 
+export const initializeBills = async () => {
+    if (!billsFetched || bills.length === 0) await fetchAllBills();
+};
+export const initializeMeterReadings = async () => {
+    if (!meterReadingsFetched || meterReadings.length === 0) await fetchAllMeterReadings();
+};
+export const initializePayments = async () => {
+    if (!paymentsFetched || payments.length === 0) await fetchAllPayments();
+};
+export const initializeReportLogs = async () => {
+    if (!reportLogsFetched || reportLogs.length === 0) await fetchAllReportLogs();
+};
+
+
 // Getters
 export const getBranches = (): Branch[] => [...branches];
 export const getCustomers = (): IndividualCustomer[] => [...customers];
 export const getBulkMeters = (): BulkMeter[] => [...bulkMeters];
 export const getStaffMembers = (): StaffMember[] => [...staffMembers];
+export const getBills = (): Bill[] => [...bills];
+export const getMeterReadings = (): MeterReading[] => [...meterReadings];
+export const getPayments = (): Payment[] => [...payments];
+export const getReportLogs = (): ReportLog[] => [...reportLogs];
 
 
 // --- Actions for Branches ---
@@ -173,9 +294,14 @@ export const addCustomer = async (customerData: Omit<IndividualCustomer, 'id' | 
     paymentStatus: 'Unpaid',
     status: 'Active',
     calculatedBill,
+    // Ensure numeric fields are numbers
+    meterSize: Number(customerData.meterSize) || 0,
+    previousReading: Number(customerData.previousReading) || 0,
+    currentReading: Number(customerData.currentReading) || 0,
+    ordinal: Number(customerData.ordinal) || 0,
   };
 
-  const { data: newCustomer, error } = await supabaseCreateCustomer(customerPayload);
+  const { data: newCustomer, error } = await supabaseCreateCustomer(customerPayload as any); // Cast to any if Supabase types are strict on insert
   if (newCustomer && !error) {
     customers = [newCustomer, ...customers];
     notifyCustomerListeners();
@@ -187,8 +313,15 @@ export const addCustomer = async (customerData: Omit<IndividualCustomer, 'id' | 
 
 export const updateCustomer = async (updatedCustomerData: IndividualCustomer) => {
   const { id, ...updatePayload } = updatedCustomerData;
-  const usage = updatePayload.currentReading - updatePayload.previousReading;
+  const usage = Number(updatePayload.currentReading) - Number(updatePayload.previousReading);
   updatePayload.calculatedBill = calculateBill(usage, updatePayload.customerType, updatePayload.sewerageConnection);
+
+  // Ensure numeric fields are numbers before sending
+  updatePayload.meterSize = Number(updatePayload.meterSize) || 0;
+  updatePayload.previousReading = Number(updatePayload.previousReading) || 0;
+  updatePayload.currentReading = Number(updatePayload.currentReading) || 0;
+  updatePayload.ordinal = Number(updatePayload.ordinal) || 0;
+
 
   const { data: updatedCustomer, error } = await supabaseUpdateCustomer(id, updatePayload);
   if (updatedCustomer && !error) {
@@ -215,8 +348,12 @@ export const addBulkMeter = async (bulkMeterData: Omit<BulkMeter, 'id'>) => {
     ...bulkMeterData,
     paymentStatus: bulkMeterData.paymentStatus || 'Unpaid',
     status: bulkMeterData.status || 'Active',
+    // Ensure numeric fields are numbers
+    meterSize: Number(bulkMeterData.meterSize) || 0,
+    previousReading: Number(bulkMeterData.previousReading) || 0,
+    currentReading: Number(bulkMeterData.currentReading) || 0,
   };
-  const { data: newBulkMeter, error } = await supabaseCreateBulkMeter(bulkMeterPayload);
+  const { data: newBulkMeter, error } = await supabaseCreateBulkMeter(bulkMeterPayload as any);
   if (newBulkMeter && !error) {
     bulkMeters = [newBulkMeter, ...bulkMeters];
     notifyBulkMeterListeners();
@@ -227,13 +364,29 @@ export const addBulkMeter = async (bulkMeterData: Omit<BulkMeter, 'id'>) => {
 };
 
 export const updateBulkMeter = async (updatedBulkMeterData: BulkMeter) => {
-  const { id, ...updatePayload } = updatedBulkMeterData;
-  const { data: updatedBulkMeter, error } = await supabaseUpdateBulkMeter(id, updatePayload);
+  const { id, ...updatePayloadToSend } = updatedBulkMeterData;
+
+  // Ensure numeric fields in the payload are numbers.
+  // The BulkMeter type defines these as 'number', so they should be.
+  // This is more of a safeguard if data somehow gets corrupted before this point.
+  (updatePayloadToSend as any).meterSize = Number(updatedBulkMeterData.meterSize);
+  (updatePayloadToSend as any).previousReading = Number(updatedBulkMeterData.previousReading);
+  (updatePayloadToSend as any).currentReading = Number(updatedBulkMeterData.currentReading);
+
+
+  const { data: updatedBulkMeter, error } = await supabaseUpdateBulkMeter(id, updatePayloadToSend);
   if (updatedBulkMeter && !error) {
     bulkMeters = bulkMeters.map(bm => bm.id === updatedBulkMeter.id ? updatedBulkMeter : bm);
     notifyBulkMeterListeners();
   } else {
-    console.error("DataStore: Failed to update bulk meter", error);
+    console.error("DataStore: Failed to update bulk meter. Supabase error:", error);
+    if (error && typeof error === 'object') {
+        console.error("Error details (JSON):", JSON.stringify(error, null, 2));
+        if ('message' in error) console.error("Error message:", (error as any).message);
+        if ('details' in error) console.error("Error details:", (error as any).details);
+        if ('hint' in error) console.error("Error hint:", (error as any).hint);
+        if ('code' in error) console.error("Error code:", (error as any).code);
+    }
   }
 };
 
@@ -249,7 +402,6 @@ export const deleteBulkMeter = async (bulkMeterId: string) => {
 
 // --- Actions for Staff Members ---
 export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>) => {
-  // Password is included in staffData from StaffFormValues
   const { data: newStaff, error } = await supabaseCreateStaffMember(staffData);
   if (newStaff && !error) {
     staffMembers = [newStaff, ...staffMembers];
@@ -262,7 +414,6 @@ export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>) => {
 
 export const updateStaffMember = async (updatedStaffData: StaffMember) => {
   const { id, ...updatePayload } = updatedStaffData;
-  // Password will be updated if present in updatePayload
   const { data: updatedStaff, error } = await supabaseUpdateStaffMember(id, updatePayload);
   if (updatedStaff && !error) {
     staffMembers = staffMembers.map(s => s.id === updatedStaff.id ? updatedStaff : s);
@@ -282,29 +433,167 @@ export const deleteStaffMember = async (staffId: string) => {
   }
 };
 
+// --- Actions for Bills ---
+export const addBill = async (billData: BillInsert) => {
+    const { data, error } = await supabaseCreateBill(billData);
+    if (data && !error) {
+        bills = [data, ...bills];
+        notifyBillListeners();
+        return data;
+    }
+    console.error("DataStore: Failed to add bill", error); return null;
+};
+export const updateExistingBill = async (id: string, billUpdateData: BillUpdate) => {
+    const { data, error } = await supabaseUpdateBill(id, billUpdateData);
+    if (data && !error) {
+        bills = bills.map(b => b.id === id ? data : b);
+        notifyBillListeners();
+    } else {
+        console.error("DataStore: Failed to update bill", error);
+    }
+};
+export const removeBill = async (billId: string) => {
+    const { error } = await supabaseDeleteBill(billId);
+    if (!error) {
+        bills = bills.filter(b => b.id !== billId);
+        notifyBillListeners();
+    } else {
+        console.error("DataStore: Failed to delete bill", error);
+    }
+};
+
+// --- Actions for MeterReadings ---
+export const addMeterReading = async (readingData: MeterReadingInsert) => {
+    const { data, error } = await supabaseCreateMeterReading(readingData);
+    if (data && !error) {
+        meterReadings = [data, ...meterReadings];
+        notifyMeterReadingListeners();
+        return data;
+    }
+    console.error("DataStore: Failed to add meter reading", error); return null;
+};
+export const updateExistingMeterReading = async (id: string, readingUpdateData: MeterReadingUpdate) => {
+    const { data, error } = await supabaseUpdateMeterReading(id, readingUpdateData);
+    if (data && !error) {
+        meterReadings = meterReadings.map(r => r.id === id ? data : r);
+        notifyMeterReadingListeners();
+    } else {
+        console.error("DataStore: Failed to update meter reading", error);
+    }
+};
+export const removeMeterReading = async (readingId: string) => {
+    const { error } = await supabaseDeleteMeterReading(readingId);
+    if (!error) {
+        meterReadings = meterReadings.filter(r => r.id !== readingId);
+        notifyMeterReadingListeners();
+    } else {
+        console.error("DataStore: Failed to delete meter reading", error);
+    }
+};
+
+// --- Actions for Payments ---
+export const addPayment = async (paymentData: PaymentInsert) => {
+    const { data, error } = await supabaseCreatePayment(paymentData);
+    if (data && !error) {
+        payments = [data, ...payments];
+        notifyPaymentListeners();
+        return data;
+    }
+    console.error("DataStore: Failed to add payment", error); return null;
+};
+export const updateExistingPayment = async (id: string, paymentUpdateData: PaymentUpdate) => {
+    const { data, error } = await supabaseUpdatePayment(id, paymentUpdateData);
+    if (data && !error) {
+        payments = payments.map(p => p.id === id ? data : p);
+        notifyPaymentListeners();
+    } else {
+        console.error("DataStore: Failed to update payment", error);
+    }
+};
+export const removePayment = async (paymentId: string) => {
+    const { error } = await supabaseDeletePayment(paymentId);
+    if (!error) {
+        payments = payments.filter(p => p.id !== paymentId);
+        notifyPaymentListeners();
+    } else {
+        console.error("DataStore: Failed to delete payment", error);
+    }
+};
+
+// --- Actions for ReportLogs ---
+export const addReportLog = async (logData: ReportLogInsert) => {
+    const { data, error } = await supabaseCreateReportLog(logData);
+    if (data && !error) {
+        reportLogs = [data, ...reportLogs];
+        notifyReportLogListeners();
+        return data;
+    }
+    console.error("DataStore: Failed to add report log", error); return null;
+};
+export const updateExistingReportLog = async (id: string, logUpdateData: ReportLogUpdate) => {
+    const { data, error } = await supabaseUpdateReportLog(id, logUpdateData);
+    if (data && !error) {
+        reportLogs = reportLogs.map(l => l.id === id ? data : l);
+        notifyReportLogListeners();
+    } else {
+        console.error("DataStore: Failed to update report log", error);
+    }
+};
+export const removeReportLog = async (logId: string) => {
+    const { error } = await supabaseDeleteReportLog(logId);
+    if (!error) {
+        reportLogs = reportLogs.filter(l => l.id !== logId);
+        notifyReportLogListeners();
+    } else {
+        console.error("DataStore: Failed to delete report log", error);
+    }
+};
+
+
 // --- Subscribe functions ---
 export const subscribeToCustomers = (listener: Listener<IndividualCustomer>): (() => void) => {
   customerListeners.add(listener);
-  fetchAllCustomers().then(() => listener([...customers]));
+  if (customersFetched) listener([...customers]); else fetchAllCustomers();
   return () => customerListeners.delete(listener);
 };
 
 export const subscribeToBulkMeters = (listener: Listener<BulkMeter>): (() => void) => {
   bulkMeterListeners.add(listener);
-  fetchAllBulkMeters().then(() => listener([...bulkMeters]));
+  if (bulkMetersFetched) listener([...bulkMeters]); else fetchAllBulkMeters();
   return () => bulkMeterListeners.delete(listener);
 };
 
 export const subscribeToBranches = (listener: Listener<Branch>): (() => void) => {
   branchListeners.add(listener);
-  fetchAllBranches().then(() => listener([...branches]));
+  if (branchesFetched) listener([...branches]); else fetchAllBranches();
   return () => branchListeners.delete(listener);
 };
 
 export const subscribeToStaffMembers = (listener: Listener<StaffMember>): (() => void) => {
   staffMemberListeners.add(listener);
-  fetchAllStaffMembers().then(() => listener([...staffMembers]));
+  if (staffMembersFetched) listener([...staffMembers]); else fetchAllStaffMembers();
   return () => staffMemberListeners.delete(listener);
+};
+
+export const subscribeToBills = (listener: Listener<Bill>): (() => void) => {
+    billListeners.add(listener);
+    if (billsFetched) listener([...bills]); else fetchAllBills();
+    return () => billListeners.delete(listener);
+};
+export const subscribeToMeterReadings = (listener: Listener<MeterReading>): (() => void) => {
+    meterReadingListeners.add(listener);
+    if (meterReadingsFetched) listener([...meterReadings]); else fetchAllMeterReadings();
+    return () => meterReadingListeners.delete(listener);
+};
+export const subscribeToPayments = (listener: Listener<Payment>): (() => void) => {
+    paymentListeners.add(listener);
+    if (paymentsFetched) listener([...payments]); else fetchAllPayments();
+    return () => paymentListeners.delete(listener);
+};
+export const subscribeToReportLogs = (listener: Listener<ReportLog>): (() => void) => {
+    reportLogListeners.add(listener);
+    if (reportLogsFetched) listener([...reportLogs]); else fetchAllReportLogs();
+    return () => reportLogListeners.delete(listener);
 };
 
 
@@ -314,6 +603,10 @@ export async function loadInitialData() {
     fetchAllBranches(),
     fetchAllCustomers(),
     fetchAllBulkMeters(),
-    fetchAllStaffMembers(), // Load staff members
+    fetchAllStaffMembers(),
+    fetchAllBills(),
+    fetchAllMeterReadings(),
+    fetchAllPayments(),
+    fetchAllReportLogs(),
   ]);
 }

@@ -153,7 +153,7 @@ export default function BulkMeterDetailsPage() {
   };
   const handleSubmitCustomerForm = async (data: IndividualCustomerFormValues) => {
     if (selectedCustomer) {
-      const usage = data.currentReading - data.previousReading;
+      const usage = (data.currentReading ?? 0) - (data.previousReading ?? 0);
       const calculatedBill = calculateBill(usage, data.customerType as CustomerType, data.sewerageConnection as SewerageConnection);
       const updatedCustomerData: IndividualCustomer = { 
           ...selectedCustomer, 
@@ -187,7 +187,9 @@ export default function BulkMeterDetailsPage() {
     return <div className="p-4 text-center">Loading bulk meter details or not found...</div>;
   }
 
-  const bulkUsage = bulkMeter.currentReading - bulkMeter.previousReading;
+  const bmPreviousReading = bulkMeter.previousReading ?? 0;
+  const bmCurrentReading = bulkMeter.currentReading ?? 0;
+  const bulkUsage = bmCurrentReading - bmPreviousReading;
   
   let effectiveBulkMeterCustomerType: CustomerType = "Non-domestic"; 
   let effectiveBulkMeterSewerageConnection: SewerageConnection = "No"; 
@@ -201,8 +203,12 @@ export default function BulkMeterDetailsPage() {
   }
   const totalBulkBill = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection);
   
-  const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + (cust.currentReading - cust.previousReading), 0);
-  const totalIndividualBill = associatedCustomers.reduce((sum, cust) => sum + cust.calculatedBill, 0);
+  const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => {
+    const custPrevReading = cust.previousReading ?? 0;
+    const custCurrReading = cust.currentReading ?? 0;
+    return sum + (custCurrReading - custPrevReading);
+  }, 0);
+  const totalIndividualBill = associatedCustomers.reduce((sum, cust) => sum + (cust.calculatedBill ?? 0), 0);
 
   const differenceUsage = bulkUsage - totalIndividualUsage;
   const differenceBill = totalBulkBill - totalIndividualBill;
@@ -237,7 +243,7 @@ export default function BulkMeterDetailsPage() {
           </div>
           <div>
             <p><strong className="font-semibold">Customer Key:</strong> {bulkMeter.customerKeyNumber}</p>
-            <p><strong className="font-semibold">Readings (Prev/Curr):</strong> {bulkMeter.previousReading.toFixed(2)} / {bulkMeter.currentReading.toFixed(2)}</p>
+            <p><strong className="font-semibold">Readings (Prev/Curr):</strong> {(bmPreviousReading).toFixed(2)} / {(bmCurrentReading).toFixed(2)}</p>
             <p className={differenceUsage < 0 ? "text-destructive" : "text-accent"}>
                 <strong className="font-semibold">Difference Usage:</strong> {differenceUsage.toFixed(2)} m³
             </p>
@@ -290,13 +296,15 @@ export default function BulkMeterDetailsPage() {
               </TableHeader>
               <TableBody>
                 {associatedCustomers.map((customer) => {
-                  const usage = customer.currentReading - customer.previousReading;
+                  const custPrevReading = customer.previousReading ?? 0;
+                  const custCurrReading = customer.currentReading ?? 0;
+                  const usage = custCurrReading - custPrevReading;
                   return (
                     <TableRow key={customer.id}>
                       <TableCell className="font-medium">{customer.name}</TableCell>
                       <TableCell>{customer.meterNumber}</TableCell>
                       <TableCell>{usage.toFixed(2)}</TableCell>
-                      <TableCell className="text-accent">ETB {customer.calculatedBill.toFixed(2)}</TableCell>
+                      <TableCell className="text-accent">ETB {(customer.calculatedBill ?? 0).toFixed(2)}</TableCell>
                       <TableCell>
                         <Button
                             variant="ghost"

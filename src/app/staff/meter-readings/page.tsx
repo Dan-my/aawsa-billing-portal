@@ -4,10 +4,12 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { PlusCircle, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { AddMeterReadingForm } from "@/components/add-meter-reading-form";
 
-interface User {
+interface User { 
   email: string;
   role: "admin" | "staff";
   branchName?: string;
@@ -15,6 +17,7 @@ interface User {
 
 export default function StaffMeterReadingsPage() {
   const [branchName, setBranchName] = React.useState<string>("Your Branch");
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
 
   React.useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -30,6 +33,11 @@ export default function StaffMeterReadingsPage() {
     }
   }, []);
 
+  const handleAddReadingSubmit = (data: any) => {
+    console.log("New reading data:", data);
+    setIsModalOpen(false); // Close modal on submit
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
@@ -39,9 +47,14 @@ export default function StaffMeterReadingsPage() {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input type="search" placeholder="Search meters..." className="pl-8 w-full md:w-[250px]" />
           </div>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New Reading
-          </Button>
+          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add New Reading
+              </Button>
+            </DialogTrigger>
+            <DialogContent><AddMeterReadingForm onSubmit={handleAddReadingSubmit} /></DialogContent>
+          </Dialog>
         </div>
       </div>
       <Card className="shadow-lg">

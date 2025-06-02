@@ -4,12 +4,12 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle as UIDialogTitle, DialogDescription as UIDialogDescription } from "@/components/ui/dialog";
 import { PlusCircle, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AddMeterReadingForm } from "@/components/add-meter-reading-form";
 
-interface User { 
+interface User {
   email: string;
   role: "admin" | "staff";
   branchName?: string;
@@ -53,7 +53,15 @@ export default function StaffMeterReadingsPage() {
                 <PlusCircle className="mr-2 h-4 w-4" /> Add New Reading
               </Button>
             </DialogTrigger>
-            <DialogContent><AddMeterReadingForm onSubmit={handleAddReadingSubmit} /></DialogContent>
+            <DialogContent>
+              <DialogHeader>
+                <UIDialogTitle>Add New Meter Reading</UIDialogTitle>
+                <UIDialogDescription>
+                  Enter the details for the new meter reading. Click submit when you're done.
+                </UIDialogDescription>
+              </DialogHeader>
+              <AddMeterReadingForm onSubmit={handleAddReadingSubmit} />
+            </DialogContent>
           </Dialog>
         </div>
       </div>

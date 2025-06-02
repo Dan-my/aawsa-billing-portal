@@ -113,13 +113,12 @@ async function fetchAllCustomers() {
   if (data) {
     customers = data.map(c => ({
         ...c,
-        // Ensure numeric fields are correctly typed from Supabase (which might return strings for NUMERIC)
         meterSize: Number(c.meter_size) || 0,
         previousReading: Number(c.previous_reading) || 0,
         currentReading: Number(c.current_reading) || 0,
         ordinal: Number(c.ordinal) || 0,
         calculatedBill: Number(c.calculated_bill) || 0,
-    })) as IndividualCustomer[]; // Cast to ensure type alignment
+    })) as IndividualCustomer[];
     notifyCustomerListeners();
   } else {
     console.error("DataStore: Failed to fetch customers. Supabase error:", JSON.stringify(error, null, 2));
@@ -257,7 +256,7 @@ async function fetchAllPayments() {
 async function fetchAllReportLogs() {
     const { data, error } = await supabaseGetAllReportLogs();
     if (data) {
-        reportLogs = data; // Assuming ReportLog type doesn't need numeric coercion like others
+        reportLogs = data;
         notifyReportLogListeners();
     } else {
         console.error("DataStore: Failed to fetch report logs. Supabase error:", JSON.stringify(error, null, 2));
@@ -352,17 +351,25 @@ export const updateBranch = async (updatedBranchData: Branch) => {
     branches = branches.map(b => b.id === updatedBranch.id ? updatedBranch : b);
     notifyBranchListeners();
   } else {
-    console.error("DataStore: Failed to update branch", error);
+    console.error("DataStore: Failed to update branch. Supabase error:", error);
+     if (error && typeof error === 'object') {
+        const supabaseError = error as any;
+        console.error("Error details (JSON):", JSON.stringify(error, null, 2));
+        if ('message' in error) console.error("Error message:", supabaseError.message);
+        if ('details' in error) console.error("Error details string:", supabaseError.details);
+        if ('hint' in error)    console.error("Error hint:", supabaseError.hint);
+        if ('code' in error)    console.error("Error code:", supabaseError.code);
+    }
   }
 };
 
 export const deleteBranch = async (branchId: string) => {
-  const { error } = await supabaseDeleteBranch(branchId); // supabaseDeleteBranch might return { data, error }
+  const { error } = await supabaseDeleteBranch(branchId);
   if (!error) {
     branches = branches.filter(b => b.id !== branchId);
     notifyBranchListeners();
   } else {
-    console.error("DataStore: Failed to delete branch", error);
+    console.error("DataStore: Failed to delete branch. Supabase error:", error);
   }
 };
 
@@ -372,25 +379,46 @@ export const addCustomer = async (customerData: Omit<IndividualCustomer, 'id' | 
   const calculatedBill = calculateBill(usage, customerData.customerType, customerData.sewerageConnection);
 
   const customerPayload: IndividualCustomerInsert = {
-    ...customerData,
-    payment_status: 'Unpaid',
-    status: 'Active',
-    calculated_bill: calculatedBill,
+    name: customerData.name,
+    customer_key_number: customerData.customerKeyNumber,
+    contract_number: customerData.contractNumber,
+    customer_type: customerData.customerType,
+    book_number: customerData.bookNumber,
+    ordinal: Number(customerData.ordinal) || 0,
     meter_size: Number(customerData.meterSize) || 0,
+    meter_number: customerData.meterNumber,
     previous_reading: Number(customerData.previousReading) || 0,
     current_reading: Number(customerData.currentReading) || 0,
-    ordinal: Number(customerData.ordinal) || 0,
+    month: customerData.month,
+    specific_area: customerData.specificArea,
+    location: customerData.location,
+    ward: customerData.ward,
+    sewerage_connection: customerData.sewerageConnection,
+    assigned_bulk_meter_id: customerData.assignedBulkMeterId,
+    status: 'Active', // Default status
+    payment_status: 'Unpaid', // Default payment status
+    calculated_bill: calculatedBill,
   };
 
   const { data: newCustomerResult, error } = await supabaseCreateCustomer(customerPayload);
   if (newCustomerResult && !error) {
     const newCustomer: IndividualCustomer = {
         ...newCustomerResult,
+        // Ensure field names and types match IndividualCustomer type
+        customerKeyNumber: newCustomerResult.customer_key_number,
+        contractNumber: newCustomerResult.contract_number,
+        customerType: newCustomerResult.customer_type,
+        bookNumber: newCustomerResult.book_number,
         meterSize: Number(newCustomerResult.meter_size),
+        meterNumber: newCustomerResult.meter_number,
         previousReading: Number(newCustomerResult.previous_reading),
         currentReading: Number(newCustomerResult.current_reading),
-        ordinal: Number(newCustomerResult.ordinal),
+        specificArea: newCustomerResult.specific_area,
+        sewerageConnection: newCustomerResult.sewerage_connection,
+        assignedBulkMeterId: newCustomerResult.assigned_bulk_meter_id || undefined,
+        paymentStatus: newCustomerResult.payment_status,
         calculatedBill: Number(newCustomerResult.calculated_bill),
+        ordinal: Number(newCustomerResult.ordinal),
     };
     customers = [newCustomer, ...customers];
     notifyCustomerListeners();
@@ -408,34 +436,63 @@ export const addCustomer = async (customerData: Omit<IndividualCustomer, 'id' | 
 };
 
 export const updateCustomer = async (updatedCustomerData: IndividualCustomer) => {
-  const { id, ...updatePayload } = updatedCustomerData;
-  const usage = Number(updatePayload.currentReading) - Number(updatePayload.previousReading);
-  updatePayload.calculatedBill = calculateBill(usage, updatePayload.customerType, updatePayload.sewerageConnection);
+  const { id, ...domainData } = updatedCustomerData; // domainData is camelCase
+  const usage = Number(domainData.currentReading) - Number(domainData.previousReading);
+  const calculatedBill = calculateBill(usage, domainData.customerType, domainData.sewerageConnection);
 
   const updatePayloadSupabase: IndividualCustomerUpdate = {
-    ...updatePayload,
-    meter_size: Number(updatePayload.meterSize) || 0,
-    previous_reading: Number(updatePayload.previousReading) || 0,
-    current_reading: Number(updatePayload.currentReading) || 0,
-    ordinal: Number(updatePayload.ordinal) || 0,
-    calculated_bill: updatePayload.calculatedBill,
+    name: domainData.name,
+    customer_key_number: domainData.customerKeyNumber,
+    contract_number: domainData.contractNumber,
+    customer_type: domainData.customerType,
+    book_number: domainData.bookNumber,
+    ordinal: Number(domainData.ordinal),
+    meter_size: Number(domainData.meterSize),
+    meter_number: domainData.meterNumber,
+    previous_reading: Number(domainData.previousReading),
+    current_reading: Number(domainData.currentReading),
+    month: domainData.month,
+    specific_area: domainData.specificArea,
+    location: domainData.location,
+    ward: domainData.ward,
+    sewerage_connection: domainData.sewerageConnection,
+    assigned_bulk_meter_id: domainData.assignedBulkMeterId,
+    status: domainData.status,
+    payment_status: domainData.paymentStatus,
+    calculated_bill: calculatedBill,
   };
-
 
   const { data: updatedCustomerResult, error } = await supabaseUpdateCustomer(id, updatePayloadSupabase);
   if (updatedCustomerResult && !error) {
     const updatedCustomer: IndividualCustomer = {
         ...updatedCustomerResult,
+        customerKeyNumber: updatedCustomerResult.customer_key_number,
+        contractNumber: updatedCustomerResult.contract_number,
+        customerType: updatedCustomerResult.customer_type,
+        bookNumber: updatedCustomerResult.book_number,
         meterSize: Number(updatedCustomerResult.meter_size),
+        meterNumber: updatedCustomerResult.meter_number,
         previousReading: Number(updatedCustomerResult.previous_reading),
         currentReading: Number(updatedCustomerResult.current_reading),
-        ordinal: Number(updatedCustomerResult.ordinal),
+        specificArea: updatedCustomerResult.specific_area,
+        sewerageConnection: updatedCustomerResult.sewerage_connection,
+        assignedBulkMeterId: updatedCustomerResult.assigned_bulk_meter_id || undefined,
+        paymentStatus: updatedCustomerResult.payment_status,
         calculatedBill: Number(updatedCustomerResult.calculated_bill),
+        ordinal: Number(updatedCustomerResult.ordinal),
     };
     customers = customers.map(c => c.id === updatedCustomer.id ? updatedCustomer : c);
     notifyCustomerListeners();
   } else {
-    console.error("DataStore: Failed to update customer", error);
+    console.error("DataStore: Failed to update customer. Supabase error:", error);
+     if (error && typeof error === 'object') {
+        const supabaseError = error as any;
+        console.error("Error details (JSON):", JSON.stringify(error, null, 2));
+        if ('message' in error) console.error("Error message:", supabaseError.message);
+        if ('details' in error) console.error("Error details string:", supabaseError.details);
+        if ('hint' in error)    console.error("Error hint:", supabaseError.hint);
+        if ('code' in error)    console.error("Error code:", supabaseError.code);
+    }
   }
 };
 
@@ -445,27 +502,40 @@ export const deleteCustomer = async (customerId: string) => {
     customers = customers.filter(c => c.id !== customerId);
     notifyCustomerListeners();
   } else {
-    console.error("DataStore: Failed to delete customer", error);
+    console.error("DataStore: Failed to delete customer. Supabase error:", error);
   }
 };
 
 // --- Actions for Bulk Meters ---
-export const addBulkMeter = async (bulkMeterData: Omit<BulkMeter, 'id'>) => {
+export const addBulkMeter = async (bulkMeterDomainData: Omit<BulkMeter, 'id'>) => {
   const bulkMeterPayload: BulkMeterInsert = {
-    ...bulkMeterData,
-    payment_status: bulkMeterData.paymentStatus || 'Unpaid',
-    status: bulkMeterData.status || 'Active',
-    meter_size: Number(bulkMeterData.meterSize) || 0,
-    previous_reading: Number(bulkMeterData.previousReading) || 0,
-    current_reading: Number(bulkMeterData.currentReading) || 0,
+    name: bulkMeterDomainData.name,
+    customer_key_number: bulkMeterDomainData.customerKeyNumber,
+    contract_number: bulkMeterDomainData.contractNumber,
+    meter_size: Number(bulkMeterDomainData.meterSize) || 0,
+    meter_number: bulkMeterDomainData.meterNumber,
+    previous_reading: Number(bulkMeterDomainData.previousReading) || 0,
+    current_reading: Number(bulkMeterDomainData.currentReading) || 0,
+    month: bulkMeterDomainData.month,
+    specific_area: bulkMeterDomainData.specificArea,
+    location: bulkMeterDomainData.location,
+    ward: bulkMeterDomainData.ward,
+    status: bulkMeterDomainData.status || 'Active',
+    payment_status: bulkMeterDomainData.paymentStatus || 'Unpaid',
   };
   const { data: newBulkMeterResult, error } = await supabaseCreateBulkMeter(bulkMeterPayload);
   if (newBulkMeterResult && !error) {
     const newBulkMeter: BulkMeter = {
         ...newBulkMeterResult,
+        // Map snake_case from DB to camelCase for BulkMeter type
+        customerKeyNumber: newBulkMeterResult.customer_key_number,
+        contractNumber: newBulkMeterResult.contract_number,
         meterSize: Number(newBulkMeterResult.meter_size),
+        meterNumber: newBulkMeterResult.meter_number,
         previousReading: Number(newBulkMeterResult.previous_reading),
         currentReading: Number(newBulkMeterResult.current_reading),
+        specificArea: newBulkMeterResult.specific_area,
+        paymentStatus: newBulkMeterResult.payment_status,
     };
     bulkMeters = [newBulkMeter, ...bulkMeters];
     notifyBulkMeterListeners();
@@ -483,22 +553,37 @@ export const addBulkMeter = async (bulkMeterData: Omit<BulkMeter, 'id'>) => {
 };
 
 export const updateBulkMeter = async (updatedBulkMeterData: BulkMeter) => {
-  const { id, ...updatePayload } = updatedBulkMeterData;
+  const { id, ...domainData } = updatedBulkMeterData; // domainData is camelCase (BulkMeter type)
 
-  const updatePayloadToSend: BulkMeterUpdate = {
-    ...updatePayload,
-    meter_size: Number(updatedBulkMeterData.meterSize) || 0,
-    previous_reading: Number(updatedBulkMeterData.previousReading) || 0,
-    current_reading: Number(updatedBulkMeterData.currentReading) || 0,
+  const updatePayloadToSend: BulkMeterUpdate = { // BulkMeterUpdate from supabase types (expects snake_case)
+    name: domainData.name,
+    customer_key_number: domainData.customerKeyNumber,
+    contract_number: domainData.contractNumber,
+    meter_size: Number(domainData.meterSize), // Ensure it's a number
+    meter_number: domainData.meterNumber,
+    previous_reading: Number(domainData.previousReading), // Ensure it's a number
+    current_reading: Number(domainData.currentReading),   // Ensure it's a number
+    month: domainData.month,
+    specific_area: domainData.specificArea,
+    location: domainData.location,
+    ward: domainData.ward,
+    status: domainData.status,
+    payment_status: domainData.paymentStatus,
   };
 
   const { data: updatedBulkMeterResult, error } = await supabaseUpdateBulkMeter(id, updatePayloadToSend);
   if (updatedBulkMeterResult && !error) {
     const updatedBulkMeter: BulkMeter = {
         ...updatedBulkMeterResult,
+        // Map snake_case from DB to camelCase for BulkMeter type
+        customerKeyNumber: updatedBulkMeterResult.customer_key_number,
+        contractNumber: updatedBulkMeterResult.contract_number,
         meterSize: Number(updatedBulkMeterResult.meter_size),
+        meterNumber: updatedBulkMeterResult.meter_number,
         previousReading: Number(updatedBulkMeterResult.previous_reading),
         currentReading: Number(updatedBulkMeterResult.current_reading),
+        specificArea: updatedBulkMeterResult.specific_area,
+        paymentStatus: updatedBulkMeterResult.payment_status,
     };
     bulkMeters = bulkMeters.map(bm => bm.id === updatedBulkMeter.id ? updatedBulkMeter : bm);
     notifyBulkMeterListeners();
@@ -507,10 +592,10 @@ export const updateBulkMeter = async (updatedBulkMeterData: BulkMeter) => {
     if (error && typeof error === 'object') {
         const supabaseError = error as any;
         console.error("Error details (JSON):", JSON.stringify(error, null, 2));
-        if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
-        if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
-        if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
-        if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
+        if ('message' in error) console.error("Error message:", supabaseError.message);
+        if ('details' in error) console.error("Error details string:", supabaseError.details);
+        if ('hint' in error)    console.error("Error hint:", supabaseError.hint);
+        if ('code' in error)    console.error("Error code:", supabaseError.code);
     }
   }
 };
@@ -521,14 +606,20 @@ export const deleteBulkMeter = async (bulkMeterId: string) => {
     bulkMeters = bulkMeters.filter(bm => bm.id !== bulkMeterId);
     notifyBulkMeterListeners();
   } else {
-    console.error("DataStore: Failed to delete bulk meter", error);
+    console.error("DataStore: Failed to delete bulk meter. Supabase error:", error);
   }
 };
 
 // --- Actions for Staff Members ---
 export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>) => {
-  const { data: newStaff, error } = await supabaseCreateStaffMember(staffData as StaffMemberInsert);
-  if (newStaff && !error) {
+  const staffPayload: StaffMemberInsert = {
+      ...staffData,
+      // Assuming StaffMemberInsert expects snake_case if DB does, but your types are camelCase
+      // If StaffMemberInsert is also camelCase (from placeholder types), this is fine
+  };
+  const { data: newStaffResult, error } = await supabaseCreateStaffMember(staffPayload);
+  if (newStaffResult && !error) {
+    const newStaff: StaffMember = { ...newStaffResult }; // Direct spread if types match
     staffMembers = [newStaff, ...staffMembers];
     notifyStaffMemberListeners();
     return newStaff;
@@ -545,13 +636,23 @@ export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>) => {
 };
 
 export const updateStaffMember = async (updatedStaffData: StaffMember) => {
-  const { id, ...updatePayload } = updatedStaffData;
-  const { data: updatedStaff, error } = await supabaseUpdateStaffMember(id, updatePayload as StaffMemberUpdate);
-  if (updatedStaff && !error) {
+  const { id, ...updatePayload } = updatedStaffData; // updatePayload is Omit<StaffMember, "id"> camelCase
+  const staffUpdatePayload: StaffMemberUpdate = { ...updatePayload }; // Assuming StaffMemberUpdate matches
+  const { data: updatedStaffResult, error } = await supabaseUpdateStaffMember(id, staffUpdatePayload);
+  if (updatedStaffResult && !error) {
+    const updatedStaff: StaffMember = { ...updatedStaffResult };
     staffMembers = staffMembers.map(s => s.id === updatedStaff.id ? updatedStaff : s);
     notifyStaffMemberListeners();
   } else {
-    console.error("DataStore: Failed to update staff member", error);
+    console.error("DataStore: Failed to update staff member. Supabase error:", error);
+     if (error && typeof error === 'object') {
+        const supabaseError = error as any;
+        console.error("Error details (JSON):", JSON.stringify(error, null, 2));
+        if ('message' in error) console.error("Error message:", supabaseError.message);
+        if ('details' in error) console.error("Error details string:", supabaseError.details);
+        if ('hint' in error)    console.error("Error hint:", supabaseError.hint);
+        if ('code' in error)    console.error("Error code:", supabaseError.code);
+    }
   }
 };
 
@@ -561,13 +662,13 @@ export const deleteStaffMember = async (staffId: string) => {
     staffMembers = staffMembers.filter(s => s.id !== staffId);
     notifyStaffMemberListeners();
   } else {
-    console.error("DataStore: Failed to delete staff member", error);
+    console.error("DataStore: Failed to delete staff member. Supabase error:", error);
   }
 };
 
 // --- Actions for Bills ---
-export const addBill = async (billData: BillInsert) => {
-    const payload: BillInsert = {
+export const addBill = async (billData: BillInsert) => { // BillInsert from supabase.ts
+    const payload: BillInsert = { // Ensure mapping if DB expects snake_case
         ...billData,
         previous_reading_value: Number(billData.previous_reading_value),
         current_reading_value: Number(billData.current_reading_value),
@@ -581,14 +682,14 @@ export const addBill = async (billData: BillInsert) => {
     };
     const { data, error } = await supabaseCreateBill(payload);
     if (data && !error) {
-        bills = [data, ...bills];
+        bills = [data, ...bills]; // data is Bill (Row type)
         notifyBillListeners();
         return data;
     }
-    console.error("DataStore: Failed to add bill", error); return null;
+    console.error("DataStore: Failed to add bill. Supabase error:", error); return null;
 };
-export const updateExistingBill = async (id: string, billUpdateData: BillUpdate) => {
-    const payload: BillUpdate = { ...billUpdateData };
+export const updateExistingBill = async (id: string, billUpdateData: BillUpdate) => { // BillUpdate from supabase.ts
+    const payload: BillUpdate = { ...billUpdateData }; // Ensure mapping if DB expects snake_case
     if (payload.previous_reading_value !== undefined) payload.previous_reading_value = Number(payload.previous_reading_value);
     if (payload.current_reading_value !== undefined) payload.current_reading_value = Number(payload.current_reading_value);
     if (payload.base_water_charge !== undefined) payload.base_water_charge = Number(payload.base_water_charge);
@@ -597,10 +698,10 @@ export const updateExistingBill = async (id: string, billUpdateData: BillUpdate)
 
     const { data, error } = await supabaseUpdateBill(id, payload);
     if (data && !error) {
-        bills = bills.map(b => b.id === id ? data : b);
+        bills = bills.map(b => b.id === id ? data : b); // data is Bill (Row type)
         notifyBillListeners();
     } else {
-        console.error("DataStore: Failed to update bill", error);
+        console.error("DataStore: Failed to update bill. Supabase error:", error);
     }
 };
 export const removeBill = async (billId: string) => {
@@ -609,34 +710,34 @@ export const removeBill = async (billId: string) => {
         bills = bills.filter(b => b.id !== billId);
         notifyBillListeners();
     } else {
-        console.error("DataStore: Failed to delete bill", error);
+        console.error("DataStore: Failed to delete bill. Supabase error:", error);
     }
 };
 
 // --- Actions for MeterReadings ---
-export const addMeterReading = async (readingData: MeterReadingInsert) => {
-    const payload: MeterReadingInsert = {
+export const addMeterReading = async (readingData: MeterReadingInsert) => { // MeterReadingInsert from supabase.ts
+    const payload: MeterReadingInsert = { // Ensure mapping if DB expects snake_case
         ...readingData,
         reading_value: Number(readingData.reading_value),
     };
     const { data, error } = await supabaseCreateMeterReading(payload);
     if (data && !error) {
-        meterReadings = [data, ...meterReadings];
+        meterReadings = [data, ...meterReadings]; // data is MeterReading (Row type)
         notifyMeterReadingListeners();
         return data;
     }
-    console.error("DataStore: Failed to add meter reading", error); return null;
+    console.error("DataStore: Failed to add meter reading. Supabase error:", error); return null;
 };
-export const updateExistingMeterReading = async (id: string, readingUpdateData: MeterReadingUpdate) => {
-    const payload: MeterReadingUpdate = { ...readingUpdateData };
+export const updateExistingMeterReading = async (id: string, readingUpdateData: MeterReadingUpdate) => { // MeterReadingUpdate
+    const payload: MeterReadingUpdate = { ...readingUpdateData }; // Ensure mapping
     if (payload.reading_value !== undefined) payload.reading_value = Number(payload.reading_value);
 
     const { data, error } = await supabaseUpdateMeterReading(id, payload);
     if (data && !error) {
-        meterReadings = meterReadings.map(r => r.id === id ? data : r);
+        meterReadings = meterReadings.map(r => r.id === id ? data : r); // data is MeterReading (Row type)
         notifyMeterReadingListeners();
     } else {
-        console.error("DataStore: Failed to update meter reading", error);
+        console.error("DataStore: Failed to update meter reading. Supabase error:", error);
     }
 };
 export const removeMeterReading = async (readingId: string) => {
@@ -645,34 +746,34 @@ export const removeMeterReading = async (readingId: string) => {
         meterReadings = meterReadings.filter(r => r.id !== readingId);
         notifyMeterReadingListeners();
     } else {
-        console.error("DataStore: Failed to delete meter reading", error);
+        console.error("DataStore: Failed to delete meter reading. Supabase error:", error);
     }
 };
 
 // --- Actions for Payments ---
-export const addPayment = async (paymentData: PaymentInsert) => {
-    const payload: PaymentInsert = {
+export const addPayment = async (paymentData: PaymentInsert) => { // PaymentInsert from supabase.ts
+    const payload: PaymentInsert = { // Ensure mapping
         ...paymentData,
         amount_paid: Number(paymentData.amount_paid),
     };
     const { data, error } = await supabaseCreatePayment(payload);
     if (data && !error) {
-        payments = [data, ...payments];
+        payments = [data, ...payments]; // data is Payment (Row type)
         notifyPaymentListeners();
         return data;
     }
-    console.error("DataStore: Failed to add payment", error); return null;
+    console.error("DataStore: Failed to add payment. Supabase error:", error); return null;
 };
-export const updateExistingPayment = async (id: string, paymentUpdateData: PaymentUpdate) => {
-    const payload: PaymentUpdate = { ...paymentUpdateData };
+export const updateExistingPayment = async (id: string, paymentUpdateData: PaymentUpdate) => { // PaymentUpdate
+    const payload: PaymentUpdate = { ...paymentUpdateData }; // Ensure mapping
     if (payload.amount_paid !== undefined) payload.amount_paid = Number(payload.amount_paid);
 
     const { data, error } = await supabaseUpdatePayment(id, payload);
     if (data && !error) {
-        payments = payments.map(p => p.id === id ? data : p);
+        payments = payments.map(p => p.id === id ? data : p); // data is Payment (Row type)
         notifyPaymentListeners();
     } else {
-        console.error("DataStore: Failed to update payment", error);
+        console.error("DataStore: Failed to update payment. Supabase error:", error);
     }
 };
 export const removePayment = async (paymentId: string) => {
@@ -681,27 +782,27 @@ export const removePayment = async (paymentId: string) => {
         payments = payments.filter(p => p.id !== paymentId);
         notifyPaymentListeners();
     } else {
-        console.error("DataStore: Failed to delete payment", error);
+        console.error("DataStore: Failed to delete payment. Supabase error:", error);
     }
 };
 
 // --- Actions for ReportLogs ---
-export const addReportLog = async (logData: ReportLogInsert) => {
-    const { data, error } = await supabaseCreateReportLog(logData);
+export const addReportLog = async (logData: ReportLogInsert) => { // ReportLogInsert from supabase.ts
+    const { data, error } = await supabaseCreateReportLog(logData); // Assuming direct match or correct mapping in supabaseCreateReportLog
     if (data && !error) {
-        reportLogs = [data, ...reportLogs];
+        reportLogs = [data, ...reportLogs]; // data is ReportLog (Row type)
         notifyReportLogListeners();
         return data;
     }
-    console.error("DataStore: Failed to add report log", error); return null;
+    console.error("DataStore: Failed to add report log. Supabase error:", error); return null;
 };
-export const updateExistingReportLog = async (id: string, logUpdateData: ReportLogUpdate) => {
-    const { data, error } = await supabaseUpdateReportLog(id, logUpdateData);
+export const updateExistingReportLog = async (id: string, logUpdateData: ReportLogUpdate) => { // ReportLogUpdate
+    const { data, error } = await supabaseUpdateReportLog(id, logUpdateData); // Assuming direct match
     if (data && !error) {
-        reportLogs = reportLogs.map(l => l.id === id ? data : l);
+        reportLogs = reportLogs.map(l => l.id === id ? data : l); // data is ReportLog (Row type)
         notifyReportLogListeners();
     } else {
-        console.error("DataStore: Failed to update report log", error);
+        console.error("DataStore: Failed to update report log. Supabase error:", error);
     }
 };
 export const removeReportLog = async (logId: string) => {
@@ -710,7 +811,7 @@ export const removeReportLog = async (logId: string) => {
         reportLogs = reportLogs.filter(l => l.id !== logId);
         notifyReportLogListeners();
     } else {
-        console.error("DataStore: Failed to delete report log", error);
+        console.error("DataStore: Failed to delete report log. Supabase error:", error);
     }
 };
 

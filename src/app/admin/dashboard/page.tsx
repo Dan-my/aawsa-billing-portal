@@ -3,26 +3,23 @@
 
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart as BarChartIcon, PieChart as PieChartIcon, LineChart as LineChartIcon, Building, Users, Gauge, ArrowRight, TableIcon, BarChartBig, TrendingUp } from 'lucide-react'; 
+import { BarChart as BarChartIcon, PieChart as PieChartIcon, LineChart as LineChartIcon, Building, Users, Gauge, ArrowRight, TableIcon, BarChartBig, TrendingUp, AlertCircle } from 'lucide-react'; 
 import { ResponsiveContainer, BarChart, PieChart, LineChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Line, Bar } from 'recharts'; 
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'; 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getBulkMeters, subscribeToBulkMeters, initializeBulkMeters } from "@/lib/data-store";
+import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
+import { 
+  getBulkMeters, subscribeToBulkMeters, initializeBulkMeters,
+  getCustomers, subscribeToCustomers, initializeCustomers,
+  getBills, subscribeToBills, initializeBills 
+} from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
-import { initialBulkMeters } from "../bulk-meters/page";
+import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
+import type { Bill } from "@/lib/supabase"; // Assuming Bill type is exported from supabase.ts or a dedicated types file
 
-const totalBillsData = [
-  { status: 'Paid', count: 1250, fill: 'hsl(var(--chart-1))' }, 
-  { status: 'Unpaid', count: 350, fill: 'hsl(var(--chart-2))' }, 
-];
-
-const customerCountData = [
-  { name: 'Bulk Meters', value: 150, fill: 'hsl(var(--chart-1))' }, 
-  { name: 'Individual Customers', value: 12030, fill: 'hsl(var(--chart-2))' }, 
-];
-
+// Mock data for charts that are not yet connected to real data
 const branchPerformanceData = [
   { branch: 'Branch A', paid: 400, unpaid: 50 },
   { branch: 'Branch B', paid: 300, unpaid: 30 },
@@ -53,22 +50,120 @@ const chartConfig = {
 export default function AdminDashboardPage() {
   const [showBranchPerformanceTable, setShowBranchPerformanceTable] = React.useState(false);
   const [showWaterUsageTable, setShowWaterUsageTable] = React.useState(false);
-  const [totalBulkMeters, setTotalBulkMeters] = React.useState<number>(0);
+  
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  // State for "Total Bills" card
+  const [totalBillCount, setTotalBillCount] = React.useState<number>(0);
+  const [paidBillCount, setPaidBillCount] = React.useState<number>(0);
+  const [unpaidBillCount, setUnpaidBillCount] = React.useState<number>(0);
+  const [totalBillsData, setTotalBillsData] = React.useState<{ status: string; count: number; fill: string }[]>([]);
+
+  // State for "Customer Counts" card
+  const [totalIndividualCustomerCount, setTotalIndividualCustomerCount] = React.useState<number>(0);
+  const [customerCountChartData, setCustomerCountChartData] = React.useState<{ name: string; value: number; fill: string }[]>([]);
+  
+  // State for "Total Bulk Meters" card (already partially existed)
+  const [totalBulkMeterCount, setTotalBulkMeterCount] = React.useState<number>(0);
+
 
   React.useEffect(() => {
-    if (getBulkMeters().length === 0) {
-      initializeBulkMeters(initialBulkMeters);
-    }
+    let isMounted = true;
+    setIsLoading(true);
+    setError(null);
 
-    const updateBulkMeterCount = (meters: BulkMeter[]) => {
-      setTotalBulkMeters(meters.length);
+    const fetchData = async () => {
+      try {
+        await Promise.all([
+          initializeBulkMeters(),
+          initializeCustomers(),
+          initializeBills(),
+        ]);
+
+        if (!isMounted) return;
+
+        // Initial data load
+        const currentBulkMeters = getBulkMeters();
+        const currentCustomers = getCustomers();
+        const currentBills = getBills();
+
+        setTotalBulkMeterCount(currentBulkMeters.length);
+        setTotalIndividualCustomerCount(currentCustomers.length);
+        
+        const paid = currentBills.filter(b => b.payment_status === 'Paid').length;
+        const unpaid = currentBills.filter(b => b.payment_status === 'Unpaid').length;
+        setTotalBillCount(currentBills.length);
+        setPaidBillCount(paid);
+        setUnpaidBillCount(unpaid);
+
+      } catch (err) {
+        console.error("Error initializing dashboard data:", err);
+        if (isMounted) {
+          setError("Failed to load dashboard data. Please try again later.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
     };
 
-    updateBulkMeterCount(getBulkMeters()); // Initial count
-    const unsubscribe = subscribeToBulkMeters(updateBulkMeterCount);
-    return () => unsubscribe();
+    fetchData();
+
+    const unsubscribeBulkMeters = subscribeToBulkMeters((meters) => {
+      if (isMounted) setTotalBulkMeterCount(meters.length);
+    });
+    const unsubscribeCustomers = subscribeToCustomers((customers) => {
+      if (isMounted) setTotalIndividualCustomerCount(customers.length);
+    });
+    const unsubscribeBills = subscribeToBills((bills) => {
+      if (isMounted) {
+        const paid = bills.filter(b => b.payment_status === 'Paid').length;
+        const unpaid = bills.filter(b => b.payment_status === 'Unpaid').length;
+        setTotalBillCount(bills.length);
+        setPaidBillCount(paid);
+        setUnpaidBillCount(unpaid);
+      }
+    });
+    
+    return () => {
+      isMounted = false;
+      unsubscribeBulkMeters();
+      unsubscribeCustomers();
+      unsubscribeBills();
+    };
   }, []);
 
+  React.useEffect(() => {
+    setTotalBillsData([
+      { status: 'Paid', count: paidBillCount, fill: 'hsl(var(--chart-1))' },
+      { status: 'Unpaid', count: unpaidBillCount, fill: 'hsl(var(--chart-2))' },
+    ]);
+  }, [paidBillCount, unpaidBillCount]);
+
+  React.useEffect(() => {
+    setCustomerCountChartData([
+      { name: 'Bulk Meters', value: totalBulkMeterCount, fill: 'hsl(var(--chart-1))' },
+      { name: 'Individual Customers', value: totalIndividualCustomerCount, fill: 'hsl(var(--chart-2))' },
+    ]);
+  }, [totalBulkMeterCount, totalIndividualCustomerCount]);
+
+  if (isLoading) {
+    return <div className="p-4 text-center">Loading dashboard data...</div>;
+  }
+
+  if (error) {
+    return (
+        <div className="p-4">
+            <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <UIAlertDescription>{error}</UIAlertDescription>
+            </Alert>
+        </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -81,8 +176,8 @@ export default function AdminDashboardPage() {
             <BarChartIcon className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1600</div>
-            <p className="text-xs text-muted-foreground">+20.1% from last month</p>
+            <div className="text-2xl font-bold">{totalBillCount.toLocaleString()}</div>
+            {/* <p className="text-xs text-muted-foreground">+20.1% from last month</p> */}
             <div className="h-[120px] mt-4">
               <ChartContainer config={chartConfig} className="w-full h-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -106,14 +201,14 @@ export default function AdminDashboardPage() {
             <PieChartIcon className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12,180</div>
-            <p className="text-xs text-muted-foreground">Total active customers</p>
+            <div className="text-2xl font-bold">{(totalIndividualCustomerCount + totalBulkMeterCount).toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Total active customers & meters</p>
             <div className="h-[120px] mt-4">
               <ChartContainer config={chartConfig} className="w-full h-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={customerCountData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={30} outerRadius={50} paddingAngle={2} label>
-                      {customerCountData.map((entry, index) => (
+                    <Pie data={customerCountChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={30} outerRadius={50} paddingAngle={2} label>
+                      {customerCountChartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.fill} />
                       ))}
                     </Pie>
@@ -131,7 +226,7 @@ export default function AdminDashboardPage() {
             <Gauge className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalBulkMeters}</div>
+            <div className="text-2xl font-bold">{totalBulkMeterCount.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Total registered bulk meters</p>
             <div className="h-[120px] mt-4 flex items-center justify-center">
                 <Gauge className="h-16 w-16 text-primary opacity-50" />
@@ -174,7 +269,7 @@ export default function AdminDashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div>
               <CardTitle>Branch Performance (Paid vs Unpaid)</CardTitle>
-              <CardDescription>Comparison of bills status across branches.</CardDescription>
+              <CardDescription>Mock data: Comparison of bills status across branches.</CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={() => setShowBranchPerformanceTable(!showBranchPerformanceTable)}>
               {showBranchPerformanceTable ? <BarChartBig className="mr-2 h-4 w-4" /> : <TableIcon className="mr-2 h-4 w-4" />}
@@ -224,7 +319,7 @@ export default function AdminDashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div>
               <CardTitle>Overall Water Usage Trend</CardTitle>
-              <CardDescription>Monthly water consumption across all meters.</CardDescription>
+              <CardDescription>Mock data: Monthly water consumption across all meters.</CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={() => setShowWaterUsageTable(!showWaterUsageTable)}>
               {showWaterUsageTable ? <TrendingUp className="mr-2 h-4 w-4" /> : <TableIcon className="mr-2 h-4 w-4" />}
@@ -270,3 +365,5 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+
+    

@@ -21,7 +21,6 @@ import {
   createStaffMember as supabaseCreateStaffMember,
   updateStaffMember as supabaseUpdateStaffMember,
   deleteStaffMember as supabaseDeleteStaffMember,
-  // Import CRUD for new tables
   getAllBills as supabaseGetAllBills,
   createBill as supabaseCreateBill,
   updateBill as supabaseUpdateBill,
@@ -39,10 +38,7 @@ import {
   updateReportLog as supabaseUpdateReportLog,
   deleteReportLog as supabaseDeleteReportLog,
 } from './supabase';
-import type { Bill, BillInsert, BillUpdate } from './supabase';
-import type { MeterReading, MeterReadingInsert, MeterReadingUpdate } from './supabase';
-import type { Payment, PaymentInsert, PaymentUpdate } from './supabase';
-import type { ReportLog, ReportLogInsert, ReportLogUpdate } from './supabase';
+import type { BranchInsert, BulkMeterInsert, IndividualCustomerInsert, StaffMemberInsert, Bill, BillInsert, BillUpdate, MeterReading, MeterReadingInsert, MeterReadingUpdate, Payment, PaymentInsert, PaymentUpdate, ReportLog, ReportLogInsert, ReportLogUpdate } from './supabase';
 
 
 // Local cache state
@@ -108,7 +104,6 @@ async function fetchAllCustomers() {
   if (data) {
     customers = data.map(c => ({
         ...c,
-        // Ensure numeric fields are numbers, defaulting to 0 if null/undefined from DB
         meterSize: Number(c.meter_size) || 0,
         previousReading: Number(c.previous_reading) || 0,
         currentReading: Number(c.current_reading) || 0,
@@ -253,13 +248,22 @@ export const getReportLogs = (): ReportLog[] => [...reportLogs];
 
 // --- Actions for Branches ---
 export const addBranch = async (branchData: Omit<Branch, 'id'>) => {
-  const { data: newBranch, error } = await supabaseCreateBranch(branchData);
+  console.log("DataStore: Attempting to add branch with data:", JSON.stringify(branchData, null, 2));
+  const { data: newBranch, error } = await supabaseCreateBranch(branchData as BranchInsert);
   if (newBranch && !error) {
     branches = [newBranch, ...branches];
     notifyBranchListeners();
     return newBranch;
   }
-  console.error("DataStore: Failed to add branch", error);
+  console.error("DataStore: Failed to add branch. Raw Supabase error:", error);
+  if (error && typeof error === 'object') {
+    console.error("Error details (JSON):", JSON.stringify(error, null, 2));
+    const supabaseError = error as any; // Attempt to cast to access potential properties
+    if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
+    if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
+    if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
+    if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
+  }
   return null;
 };
 
@@ -294,14 +298,13 @@ export const addCustomer = async (customerData: Omit<IndividualCustomer, 'id' | 
     paymentStatus: 'Unpaid',
     status: 'Active',
     calculatedBill,
-    // Ensure numeric fields are numbers
     meterSize: Number(customerData.meterSize) || 0,
     previousReading: Number(customerData.previousReading) || 0,
     currentReading: Number(customerData.currentReading) || 0,
     ordinal: Number(customerData.ordinal) || 0,
   };
 
-  const { data: newCustomer, error } = await supabaseCreateCustomer(customerPayload as any); // Cast to any if Supabase types are strict on insert
+  const { data: newCustomer, error } = await supabaseCreateCustomer(customerPayload as IndividualCustomerInsert);
   if (newCustomer && !error) {
     customers = [newCustomer, ...customers];
     notifyCustomerListeners();
@@ -316,7 +319,6 @@ export const updateCustomer = async (updatedCustomerData: IndividualCustomer) =>
   const usage = Number(updatePayload.currentReading) - Number(updatePayload.previousReading);
   updatePayload.calculatedBill = calculateBill(usage, updatePayload.customerType, updatePayload.sewerageConnection);
 
-  // Ensure numeric fields are numbers before sending
   updatePayload.meterSize = Number(updatePayload.meterSize) || 0;
   updatePayload.previousReading = Number(updatePayload.previousReading) || 0;
   updatePayload.currentReading = Number(updatePayload.currentReading) || 0;
@@ -348,12 +350,11 @@ export const addBulkMeter = async (bulkMeterData: Omit<BulkMeter, 'id'>) => {
     ...bulkMeterData,
     paymentStatus: bulkMeterData.paymentStatus || 'Unpaid',
     status: bulkMeterData.status || 'Active',
-    // Ensure numeric fields are numbers
     meterSize: Number(bulkMeterData.meterSize) || 0,
     previousReading: Number(bulkMeterData.previousReading) || 0,
     currentReading: Number(bulkMeterData.currentReading) || 0,
   };
-  const { data: newBulkMeter, error } = await supabaseCreateBulkMeter(bulkMeterPayload as any);
+  const { data: newBulkMeter, error } = await supabaseCreateBulkMeter(bulkMeterPayload as BulkMeterInsert);
   if (newBulkMeter && !error) {
     bulkMeters = [newBulkMeter, ...bulkMeters];
     notifyBulkMeterListeners();
@@ -366,13 +367,9 @@ export const addBulkMeter = async (bulkMeterData: Omit<BulkMeter, 'id'>) => {
 export const updateBulkMeter = async (updatedBulkMeterData: BulkMeter) => {
   const { id, ...updatePayloadToSend } = updatedBulkMeterData;
 
-  // Ensure numeric fields in the payload are numbers.
-  // The BulkMeter type defines these as 'number', so they should be.
-  // This is more of a safeguard if data somehow gets corrupted before this point.
-  (updatePayloadToSend as any).meterSize = Number(updatedBulkMeterData.meterSize);
-  (updatePayloadToSend as any).previousReading = Number(updatedBulkMeterData.previousReading);
-  (updatePayloadToSend as any).currentReading = Number(updatedBulkMeterData.currentReading);
-
+  (updatePayloadToSend as any).meterSize = Number(updatedBulkMeterData.meterSize) || 0;
+  (updatePayloadToSend as any).previousReading = Number(updatedBulkMeterData.previousReading) || 0;
+  (updatePayloadToSend as any).currentReading = Number(updatedBulkMeterData.currentReading) || 0;
 
   const { data: updatedBulkMeter, error } = await supabaseUpdateBulkMeter(id, updatePayloadToSend);
   if (updatedBulkMeter && !error) {
@@ -382,10 +379,11 @@ export const updateBulkMeter = async (updatedBulkMeterData: BulkMeter) => {
     console.error("DataStore: Failed to update bulk meter. Supabase error:", error);
     if (error && typeof error === 'object') {
         console.error("Error details (JSON):", JSON.stringify(error, null, 2));
-        if ('message' in error) console.error("Error message:", (error as any).message);
-        if ('details' in error) console.error("Error details:", (error as any).details);
-        if ('hint' in error) console.error("Error hint:", (error as any).hint);
-        if ('code' in error) console.error("Error code:", (error as any).code);
+        const supabaseError = error as any;
+        if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
+        if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
+        if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
+        if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
     }
   }
 };
@@ -402,7 +400,7 @@ export const deleteBulkMeter = async (bulkMeterId: string) => {
 
 // --- Actions for Staff Members ---
 export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>) => {
-  const { data: newStaff, error } = await supabaseCreateStaffMember(staffData);
+  const { data: newStaff, error } = await supabaseCreateStaffMember(staffData as StaffMemberInsert);
   if (newStaff && !error) {
     staffMembers = [newStaff, ...staffMembers];
     notifyStaffMemberListeners();
@@ -610,3 +608,6 @@ export async function loadInitialData() {
     fetchAllReportLogs(),
   ]);
 }
+
+
+    

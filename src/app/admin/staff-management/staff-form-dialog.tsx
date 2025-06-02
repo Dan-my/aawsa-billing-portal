@@ -37,6 +37,7 @@ const formSchema = z.object({
   branch: z.string().min(1, { message: "Branch is required." }),
   status: z.enum(staffStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
   phone: z.string().optional(),
+  role: z.string().min(1, { message: "Role is required." }), // Add role field
 });
 
 export type StaffFormValues = z.infer<typeof formSchema>;
@@ -58,6 +59,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
       branch: "",
       status: undefined,
       phone: "",
+      role: "", // Add default value for role
     },
   });
 
@@ -70,6 +72,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
         branch: defaultValues.branch,
         status: defaultValues.status,
         phone: defaultValues.phone || "",
+        role: defaultValues.role, // Populate role from defaultValues
       });
     } else {
       form.reset({
@@ -79,6 +82,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
         branch: "",
         status: undefined,
         phone: "",
+        role: "", // Reset role
       });
     }
   }, [defaultValues, form, open]);
@@ -167,6 +171,28 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
                       {availableBranches.map(branch => (
                         <SelectItem key={branch} value={branch}>{branch}</SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Add Role Select Field */}
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Role</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a role" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Admin">Admin</SelectItem>
+                      <SelectItem value="Staff">Staff</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

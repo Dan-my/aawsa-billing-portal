@@ -1,4 +1,6 @@
 
+"use client";
+
 import type { IndividualCustomer, CustomerType, SewerageConnection } from '@/app/admin/individual-customers/individual-customer-types';
 import { calculateBill } from '@/app/admin/individual-customers/individual-customer-types';
 import type { BulkMeter } from '@/app/admin/bulk-meters/bulk-meter-types';
@@ -38,7 +40,7 @@ import {
   updateReportLog as supabaseUpdateReportLog,
   deleteReportLog as supabaseDeleteReportLog,
 } from './supabase';
-import type { BranchInsert, BulkMeterInsert, IndividualCustomerInsert, StaffMemberInsert, Bill, BillInsert, BillUpdate, MeterReading, MeterReadingInsert, MeterReadingUpdate, Payment, PaymentInsert, PaymentUpdate, ReportLog, ReportLogInsert, ReportLogUpdate } from './supabase';
+import type { BranchInsert, BranchUpdate, BulkMeterInsert, BulkMeterUpdate, IndividualCustomerInsert, IndividualCustomerUpdate, StaffMemberInsert, StaffMemberUpdate, Bill, BillInsert, BillUpdate, MeterReading, MeterReadingInsert, MeterReadingUpdate, Payment, PaymentInsert, PaymentUpdate, ReportLog, ReportLogInsert, ReportLogUpdate } from './supabase';
 
 
 // Local cache state
@@ -93,7 +95,14 @@ async function fetchAllBranches() {
     branches = data;
     notifyBranchListeners();
   } else {
-    console.error("DataStore: Failed to fetch branches", error);
+    console.error("DataStore: Failed to fetch branches. Supabase error:", JSON.stringify(error, null, 2));
+    if (error && typeof error === 'object') {
+      const supabaseError = error as any;
+      if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
+      if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
+      if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
+      if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
+    }
   }
   branchesFetched = true;
   return branches;
@@ -104,15 +113,23 @@ async function fetchAllCustomers() {
   if (data) {
     customers = data.map(c => ({
         ...c,
+        // Ensure numeric fields are correctly typed from Supabase (which might return strings for NUMERIC)
         meterSize: Number(c.meter_size) || 0,
         previousReading: Number(c.previous_reading) || 0,
         currentReading: Number(c.current_reading) || 0,
         ordinal: Number(c.ordinal) || 0,
         calculatedBill: Number(c.calculated_bill) || 0,
-    })) as IndividualCustomer[];
+    })) as IndividualCustomer[]; // Cast to ensure type alignment
     notifyCustomerListeners();
   } else {
-    console.error("DataStore: Failed to fetch customers", error);
+    console.error("DataStore: Failed to fetch customers. Supabase error:", JSON.stringify(error, null, 2));
+    if (error && typeof error === 'object') {
+      const supabaseError = error as any;
+      if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
+      if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
+      if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
+      if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
+    }
   }
   customersFetched = true;
   return customers;
@@ -129,7 +146,14 @@ async function fetchAllBulkMeters() {
     })) as BulkMeter[];
     notifyBulkMeterListeners();
   } else {
-    console.error("DataStore: Failed to fetch bulk meters", error);
+    console.error("DataStore: Failed to fetch bulk meters. Supabase error:", JSON.stringify(error, null, 2));
+    if (error && typeof error === 'object') {
+      const supabaseError = error as any;
+      if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
+      if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
+      if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
+      if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
+    }
   }
   bulkMetersFetched = true;
   return bulkMeters;
@@ -141,7 +165,14 @@ async function fetchAllStaffMembers() {
     staffMembers = data;
     notifyStaffMemberListeners();
   } else {
-    console.error("DataStore: Failed to fetch staff members", error);
+    console.error("DataStore: Failed to fetch staff members. Supabase error:", JSON.stringify(error, null, 2));
+    if (error && typeof error === 'object') {
+      const supabaseError = error as any;
+      if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
+      if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
+      if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
+      if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
+    }
   }
   staffMembersFetched = true;
   return staffMembers;
@@ -150,10 +181,30 @@ async function fetchAllStaffMembers() {
 async function fetchAllBills() {
     const { data, error } = await supabaseGetAllBills();
     if (data) {
-        bills = data;
+        bills = data.map(b => ({
+            ...b,
+            previous_reading_value: Number(b.previous_reading_value) || 0,
+            current_reading_value: Number(b.current_reading_value) || 0,
+            usage_m3: Number(b.usage_m3) || 0,
+            base_water_charge: Number(b.base_water_charge) || 0,
+            sewerage_charge: Number(b.sewerage_charge) || 0,
+            maintenance_fee: Number(b.maintenance_fee) || 0,
+            sanitation_fee: Number(b.sanitation_fee) || 0,
+            meter_rent: Number(b.meter_rent) || 0,
+            total_amount_due: Number(b.total_amount_due) || 0,
+            amount_paid: Number(b.amount_paid) || 0,
+            balance_due: Number(b.balance_due) || 0,
+        })) as Bill[];
         notifyBillListeners();
     } else {
-        console.error("DataStore: Failed to fetch bills", error);
+        console.error("DataStore: Failed to fetch bills. Supabase error:", JSON.stringify(error, null, 2));
+        if (error && typeof error === 'object') {
+            const supabaseError = error as any;
+            if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
+            if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
+            if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
+            if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
+        }
     }
     billsFetched = true;
     return bills;
@@ -162,10 +213,20 @@ async function fetchAllBills() {
 async function fetchAllMeterReadings() {
     const { data, error } = await supabaseGetAllMeterReadings();
     if (data) {
-        meterReadings = data;
+        meterReadings = data.map(mr => ({
+            ...mr,
+            reading_value: Number(mr.reading_value) || 0,
+        })) as MeterReading[];
         notifyMeterReadingListeners();
     } else {
-        console.error("DataStore: Failed to fetch meter readings", error);
+        console.error("DataStore: Failed to fetch meter readings. Supabase error:", JSON.stringify(error, null, 2));
+        if (error && typeof error === 'object') {
+            const supabaseError = error as any;
+            if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
+            if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
+            if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
+            if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
+        }
     }
     meterReadingsFetched = true;
     return meterReadings;
@@ -174,10 +235,20 @@ async function fetchAllMeterReadings() {
 async function fetchAllPayments() {
     const { data, error } = await supabaseGetAllPayments();
     if (data) {
-        payments = data;
+        payments = data.map(p => ({
+            ...p,
+            amount_paid: Number(p.amount_paid) || 0,
+        })) as Payment[];
         notifyPaymentListeners();
     } else {
-        console.error("DataStore: Failed to fetch payments", error);
+        console.error("DataStore: Failed to fetch payments. Supabase error:", JSON.stringify(error, null, 2));
+        if (error && typeof error === 'object') {
+            const supabaseError = error as any;
+            if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
+            if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
+            if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
+            if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
+        }
     }
     paymentsFetched = true;
     return payments;
@@ -186,10 +257,17 @@ async function fetchAllPayments() {
 async function fetchAllReportLogs() {
     const { data, error } = await supabaseGetAllReportLogs();
     if (data) {
-        reportLogs = data;
+        reportLogs = data; // Assuming ReportLog type doesn't need numeric coercion like others
         notifyReportLogListeners();
     } else {
-        console.error("DataStore: Failed to fetch report logs", error);
+        console.error("DataStore: Failed to fetch report logs. Supabase error:", JSON.stringify(error, null, 2));
+        if (error && typeof error === 'object') {
+            const supabaseError = error as any;
+            if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
+            if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
+            if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
+            if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
+        }
     }
     reportLogsFetched = true;
     return reportLogs;
@@ -258,7 +336,7 @@ export const addBranch = async (branchData: Omit<Branch, 'id'>) => {
   console.error("DataStore: Failed to add branch. Raw Supabase error:", error);
   if (error && typeof error === 'object') {
     console.error("Error details (JSON):", JSON.stringify(error, null, 2));
-    const supabaseError = error as any; // Attempt to cast to access potential properties
+    const supabaseError = error as any;
     if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
     if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
     if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
@@ -269,7 +347,7 @@ export const addBranch = async (branchData: Omit<Branch, 'id'>) => {
 
 export const updateBranch = async (updatedBranchData: Branch) => {
   const { id, ...updatePayload } = updatedBranchData;
-  const { data: updatedBranch, error } = await supabaseUpdateBranch(id, updatePayload);
+  const { data: updatedBranch, error } = await supabaseUpdateBranch(id, updatePayload as BranchUpdate);
   if (updatedBranch && !error) {
     branches = branches.map(b => b.id === updatedBranch.id ? updatedBranch : b);
     notifyBranchListeners();
@@ -279,7 +357,7 @@ export const updateBranch = async (updatedBranchData: Branch) => {
 };
 
 export const deleteBranch = async (branchId: string) => {
-  const { data, error } = await supabaseDeleteBranch(branchId);
+  const { error } = await supabaseDeleteBranch(branchId); // supabaseDeleteBranch might return { data, error }
   if (!error) {
     branches = branches.filter(b => b.id !== branchId);
     notifyBranchListeners();
@@ -293,24 +371,39 @@ export const addCustomer = async (customerData: Omit<IndividualCustomer, 'id' | 
   const usage = customerData.currentReading - customerData.previousReading;
   const calculatedBill = calculateBill(usage, customerData.customerType, customerData.sewerageConnection);
 
-  const customerPayload: Omit<IndividualCustomer, 'id'> = {
+  const customerPayload: IndividualCustomerInsert = {
     ...customerData,
-    paymentStatus: 'Unpaid',
+    payment_status: 'Unpaid',
     status: 'Active',
-    calculatedBill,
-    meterSize: Number(customerData.meterSize) || 0,
-    previousReading: Number(customerData.previousReading) || 0,
-    currentReading: Number(customerData.currentReading) || 0,
+    calculated_bill: calculatedBill,
+    meter_size: Number(customerData.meterSize) || 0,
+    previous_reading: Number(customerData.previousReading) || 0,
+    current_reading: Number(customerData.currentReading) || 0,
     ordinal: Number(customerData.ordinal) || 0,
   };
 
-  const { data: newCustomer, error } = await supabaseCreateCustomer(customerPayload as IndividualCustomerInsert);
-  if (newCustomer && !error) {
+  const { data: newCustomerResult, error } = await supabaseCreateCustomer(customerPayload);
+  if (newCustomerResult && !error) {
+    const newCustomer: IndividualCustomer = {
+        ...newCustomerResult,
+        meterSize: Number(newCustomerResult.meter_size),
+        previousReading: Number(newCustomerResult.previous_reading),
+        currentReading: Number(newCustomerResult.current_reading),
+        ordinal: Number(newCustomerResult.ordinal),
+        calculatedBill: Number(newCustomerResult.calculated_bill),
+    };
     customers = [newCustomer, ...customers];
     notifyCustomerListeners();
     return newCustomer;
   }
-  console.error("DataStore: Failed to add customer", error);
+  console.error("DataStore: Failed to add customer. Supabase error:", JSON.stringify(error, null, 2));
+  if (error && typeof error === 'object') {
+    const supabaseError = error as any;
+    if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
+    if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
+    if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
+    if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
+  }
   return null;
 };
 
@@ -319,14 +412,26 @@ export const updateCustomer = async (updatedCustomerData: IndividualCustomer) =>
   const usage = Number(updatePayload.currentReading) - Number(updatePayload.previousReading);
   updatePayload.calculatedBill = calculateBill(usage, updatePayload.customerType, updatePayload.sewerageConnection);
 
-  updatePayload.meterSize = Number(updatePayload.meterSize) || 0;
-  updatePayload.previousReading = Number(updatePayload.previousReading) || 0;
-  updatePayload.currentReading = Number(updatePayload.currentReading) || 0;
-  updatePayload.ordinal = Number(updatePayload.ordinal) || 0;
+  const updatePayloadSupabase: IndividualCustomerUpdate = {
+    ...updatePayload,
+    meter_size: Number(updatePayload.meterSize) || 0,
+    previous_reading: Number(updatePayload.previousReading) || 0,
+    current_reading: Number(updatePayload.currentReading) || 0,
+    ordinal: Number(updatePayload.ordinal) || 0,
+    calculated_bill: updatePayload.calculatedBill,
+  };
 
 
-  const { data: updatedCustomer, error } = await supabaseUpdateCustomer(id, updatePayload);
-  if (updatedCustomer && !error) {
+  const { data: updatedCustomerResult, error } = await supabaseUpdateCustomer(id, updatePayloadSupabase);
+  if (updatedCustomerResult && !error) {
+    const updatedCustomer: IndividualCustomer = {
+        ...updatedCustomerResult,
+        meterSize: Number(updatedCustomerResult.meter_size),
+        previousReading: Number(updatedCustomerResult.previous_reading),
+        currentReading: Number(updatedCustomerResult.current_reading),
+        ordinal: Number(updatedCustomerResult.ordinal),
+        calculatedBill: Number(updatedCustomerResult.calculated_bill),
+    };
     customers = customers.map(c => c.id === updatedCustomer.id ? updatedCustomer : c);
     notifyCustomerListeners();
   } else {
@@ -335,7 +440,7 @@ export const updateCustomer = async (updatedCustomerData: IndividualCustomer) =>
 };
 
 export const deleteCustomer = async (customerId: string) => {
-  const { data, error } = await supabaseDeleteCustomer(customerId);
+  const { error } = await supabaseDeleteCustomer(customerId);
   if (!error) {
     customers = customers.filter(c => c.id !== customerId);
     notifyCustomerListeners();
@@ -346,40 +451,62 @@ export const deleteCustomer = async (customerId: string) => {
 
 // --- Actions for Bulk Meters ---
 export const addBulkMeter = async (bulkMeterData: Omit<BulkMeter, 'id'>) => {
-  const bulkMeterPayload: Omit<BulkMeter, 'id'> = {
+  const bulkMeterPayload: BulkMeterInsert = {
     ...bulkMeterData,
-    paymentStatus: bulkMeterData.paymentStatus || 'Unpaid',
+    payment_status: bulkMeterData.paymentStatus || 'Unpaid',
     status: bulkMeterData.status || 'Active',
-    meterSize: Number(bulkMeterData.meterSize) || 0,
-    previousReading: Number(bulkMeterData.previousReading) || 0,
-    currentReading: Number(bulkMeterData.currentReading) || 0,
+    meter_size: Number(bulkMeterData.meterSize) || 0,
+    previous_reading: Number(bulkMeterData.previousReading) || 0,
+    current_reading: Number(bulkMeterData.currentReading) || 0,
   };
-  const { data: newBulkMeter, error } = await supabaseCreateBulkMeter(bulkMeterPayload as BulkMeterInsert);
-  if (newBulkMeter && !error) {
+  const { data: newBulkMeterResult, error } = await supabaseCreateBulkMeter(bulkMeterPayload);
+  if (newBulkMeterResult && !error) {
+    const newBulkMeter: BulkMeter = {
+        ...newBulkMeterResult,
+        meterSize: Number(newBulkMeterResult.meter_size),
+        previousReading: Number(newBulkMeterResult.previous_reading),
+        currentReading: Number(newBulkMeterResult.current_reading),
+    };
     bulkMeters = [newBulkMeter, ...bulkMeters];
     notifyBulkMeterListeners();
     return newBulkMeter;
   }
-  console.error("DataStore: Failed to add bulk meter", error);
+  console.error("DataStore: Failed to add bulk meter. Supabase error:", JSON.stringify(error, null, 2));
+  if (error && typeof error === 'object') {
+    const supabaseError = error as any;
+    if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
+    if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
+    if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
+    if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
+  }
   return null;
 };
 
 export const updateBulkMeter = async (updatedBulkMeterData: BulkMeter) => {
-  const { id, ...updatePayloadToSend } = updatedBulkMeterData;
+  const { id, ...updatePayload } = updatedBulkMeterData;
 
-  (updatePayloadToSend as any).meterSize = Number(updatedBulkMeterData.meterSize) || 0;
-  (updatePayloadToSend as any).previousReading = Number(updatedBulkMeterData.previousReading) || 0;
-  (updatePayloadToSend as any).currentReading = Number(updatedBulkMeterData.currentReading) || 0;
+  const updatePayloadToSend: BulkMeterUpdate = {
+    ...updatePayload,
+    meter_size: Number(updatedBulkMeterData.meterSize) || 0,
+    previous_reading: Number(updatedBulkMeterData.previousReading) || 0,
+    current_reading: Number(updatedBulkMeterData.currentReading) || 0,
+  };
 
-  const { data: updatedBulkMeter, error } = await supabaseUpdateBulkMeter(id, updatePayloadToSend);
-  if (updatedBulkMeter && !error) {
+  const { data: updatedBulkMeterResult, error } = await supabaseUpdateBulkMeter(id, updatePayloadToSend);
+  if (updatedBulkMeterResult && !error) {
+    const updatedBulkMeter: BulkMeter = {
+        ...updatedBulkMeterResult,
+        meterSize: Number(updatedBulkMeterResult.meter_size),
+        previousReading: Number(updatedBulkMeterResult.previous_reading),
+        currentReading: Number(updatedBulkMeterResult.current_reading),
+    };
     bulkMeters = bulkMeters.map(bm => bm.id === updatedBulkMeter.id ? updatedBulkMeter : bm);
     notifyBulkMeterListeners();
   } else {
     console.error("DataStore: Failed to update bulk meter. Supabase error:", error);
     if (error && typeof error === 'object') {
-        console.error("Error details (JSON):", JSON.stringify(error, null, 2));
         const supabaseError = error as any;
+        console.error("Error details (JSON):", JSON.stringify(error, null, 2));
         if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
         if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
         if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
@@ -389,7 +516,7 @@ export const updateBulkMeter = async (updatedBulkMeterData: BulkMeter) => {
 };
 
 export const deleteBulkMeter = async (bulkMeterId: string) => {
-  const { data, error } = await supabaseDeleteBulkMeter(bulkMeterId);
+  const { error } = await supabaseDeleteBulkMeter(bulkMeterId);
   if (!error) {
     bulkMeters = bulkMeters.filter(bm => bm.id !== bulkMeterId);
     notifyBulkMeterListeners();
@@ -406,13 +533,20 @@ export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>) => {
     notifyStaffMemberListeners();
     return newStaff;
   }
-  console.error("DataStore: Failed to add staff member", error);
+  console.error("DataStore: Failed to add staff member. Supabase error:", JSON.stringify(error, null, 2));
+  if (error && typeof error === 'object') {
+    const supabaseError = error as any;
+    if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
+    if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
+    if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
+    if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
+  }
   return null;
 };
 
 export const updateStaffMember = async (updatedStaffData: StaffMember) => {
   const { id, ...updatePayload } = updatedStaffData;
-  const { data: updatedStaff, error } = await supabaseUpdateStaffMember(id, updatePayload);
+  const { data: updatedStaff, error } = await supabaseUpdateStaffMember(id, updatePayload as StaffMemberUpdate);
   if (updatedStaff && !error) {
     staffMembers = staffMembers.map(s => s.id === updatedStaff.id ? updatedStaff : s);
     notifyStaffMemberListeners();
@@ -422,7 +556,7 @@ export const updateStaffMember = async (updatedStaffData: StaffMember) => {
 };
 
 export const deleteStaffMember = async (staffId: string) => {
-  const { data, error } = await supabaseDeleteStaffMember(staffId);
+  const { error } = await supabaseDeleteStaffMember(staffId);
   if (!error) {
     staffMembers = staffMembers.filter(s => s.id !== staffId);
     notifyStaffMemberListeners();
@@ -433,7 +567,19 @@ export const deleteStaffMember = async (staffId: string) => {
 
 // --- Actions for Bills ---
 export const addBill = async (billData: BillInsert) => {
-    const { data, error } = await supabaseCreateBill(billData);
+    const payload: BillInsert = {
+        ...billData,
+        previous_reading_value: Number(billData.previous_reading_value),
+        current_reading_value: Number(billData.current_reading_value),
+        base_water_charge: Number(billData.base_water_charge),
+        sewerage_charge: Number(billData.sewerage_charge) || 0,
+        maintenance_fee: Number(billData.maintenance_fee) || 0,
+        sanitation_fee: Number(billData.sanitation_fee) || 0,
+        meter_rent: Number(billData.meter_rent) || 0,
+        total_amount_due: Number(billData.total_amount_due),
+        amount_paid: Number(billData.amount_paid) || 0,
+    };
+    const { data, error } = await supabaseCreateBill(payload);
     if (data && !error) {
         bills = [data, ...bills];
         notifyBillListeners();
@@ -442,7 +588,14 @@ export const addBill = async (billData: BillInsert) => {
     console.error("DataStore: Failed to add bill", error); return null;
 };
 export const updateExistingBill = async (id: string, billUpdateData: BillUpdate) => {
-    const { data, error } = await supabaseUpdateBill(id, billUpdateData);
+    const payload: BillUpdate = { ...billUpdateData };
+    if (payload.previous_reading_value !== undefined) payload.previous_reading_value = Number(payload.previous_reading_value);
+    if (payload.current_reading_value !== undefined) payload.current_reading_value = Number(payload.current_reading_value);
+    if (payload.base_water_charge !== undefined) payload.base_water_charge = Number(payload.base_water_charge);
+    if (payload.total_amount_due !== undefined) payload.total_amount_due = Number(payload.total_amount_due);
+    if (payload.amount_paid !== undefined) payload.amount_paid = Number(payload.amount_paid);
+
+    const { data, error } = await supabaseUpdateBill(id, payload);
     if (data && !error) {
         bills = bills.map(b => b.id === id ? data : b);
         notifyBillListeners();
@@ -462,7 +615,11 @@ export const removeBill = async (billId: string) => {
 
 // --- Actions for MeterReadings ---
 export const addMeterReading = async (readingData: MeterReadingInsert) => {
-    const { data, error } = await supabaseCreateMeterReading(readingData);
+    const payload: MeterReadingInsert = {
+        ...readingData,
+        reading_value: Number(readingData.reading_value),
+    };
+    const { data, error } = await supabaseCreateMeterReading(payload);
     if (data && !error) {
         meterReadings = [data, ...meterReadings];
         notifyMeterReadingListeners();
@@ -471,7 +628,10 @@ export const addMeterReading = async (readingData: MeterReadingInsert) => {
     console.error("DataStore: Failed to add meter reading", error); return null;
 };
 export const updateExistingMeterReading = async (id: string, readingUpdateData: MeterReadingUpdate) => {
-    const { data, error } = await supabaseUpdateMeterReading(id, readingUpdateData);
+    const payload: MeterReadingUpdate = { ...readingUpdateData };
+    if (payload.reading_value !== undefined) payload.reading_value = Number(payload.reading_value);
+
+    const { data, error } = await supabaseUpdateMeterReading(id, payload);
     if (data && !error) {
         meterReadings = meterReadings.map(r => r.id === id ? data : r);
         notifyMeterReadingListeners();
@@ -491,7 +651,11 @@ export const removeMeterReading = async (readingId: string) => {
 
 // --- Actions for Payments ---
 export const addPayment = async (paymentData: PaymentInsert) => {
-    const { data, error } = await supabaseCreatePayment(paymentData);
+    const payload: PaymentInsert = {
+        ...paymentData,
+        amount_paid: Number(paymentData.amount_paid),
+    };
+    const { data, error } = await supabaseCreatePayment(payload);
     if (data && !error) {
         payments = [data, ...payments];
         notifyPaymentListeners();
@@ -500,7 +664,10 @@ export const addPayment = async (paymentData: PaymentInsert) => {
     console.error("DataStore: Failed to add payment", error); return null;
 };
 export const updateExistingPayment = async (id: string, paymentUpdateData: PaymentUpdate) => {
-    const { data, error } = await supabaseUpdatePayment(id, paymentUpdateData);
+    const payload: PaymentUpdate = { ...paymentUpdateData };
+    if (payload.amount_paid !== undefined) payload.amount_paid = Number(payload.amount_paid);
+
+    const { data, error } = await supabaseUpdatePayment(id, payload);
     if (data && !error) {
         payments = payments.map(p => p.id === id ? data : p);
         notifyPaymentListeners();
@@ -551,46 +718,46 @@ export const removeReportLog = async (logId: string) => {
 // --- Subscribe functions ---
 export const subscribeToCustomers = (listener: Listener<IndividualCustomer>): (() => void) => {
   customerListeners.add(listener);
-  if (customersFetched) listener([...customers]); else fetchAllCustomers();
+  if (customersFetched) listener([...customers]); else initializeCustomers().then(() => listener([...customers]));
   return () => customerListeners.delete(listener);
 };
 
 export const subscribeToBulkMeters = (listener: Listener<BulkMeter>): (() => void) => {
   bulkMeterListeners.add(listener);
-  if (bulkMetersFetched) listener([...bulkMeters]); else fetchAllBulkMeters();
+  if (bulkMetersFetched) listener([...bulkMeters]); else initializeBulkMeters().then(() => listener([...bulkMeters]));
   return () => bulkMeterListeners.delete(listener);
 };
 
 export const subscribeToBranches = (listener: Listener<Branch>): (() => void) => {
   branchListeners.add(listener);
-  if (branchesFetched) listener([...branches]); else fetchAllBranches();
+  if (branchesFetched) listener([...branches]); else initializeBranches().then(() => listener([...branches]));
   return () => branchListeners.delete(listener);
 };
 
 export const subscribeToStaffMembers = (listener: Listener<StaffMember>): (() => void) => {
   staffMemberListeners.add(listener);
-  if (staffMembersFetched) listener([...staffMembers]); else fetchAllStaffMembers();
+  if (staffMembersFetched) listener([...staffMembers]); else initializeStaffMembers().then(() => listener([...staffMembers]));
   return () => staffMemberListeners.delete(listener);
 };
 
 export const subscribeToBills = (listener: Listener<Bill>): (() => void) => {
     billListeners.add(listener);
-    if (billsFetched) listener([...bills]); else fetchAllBills();
+    if (billsFetched) listener([...bills]); else initializeBills().then(() => listener([...bills]));
     return () => billListeners.delete(listener);
 };
 export const subscribeToMeterReadings = (listener: Listener<MeterReading>): (() => void) => {
     meterReadingListeners.add(listener);
-    if (meterReadingsFetched) listener([...meterReadings]); else fetchAllMeterReadings();
+    if (meterReadingsFetched) listener([...meterReadings]); else initializeMeterReadings().then(() => listener([...meterReadings]));
     return () => meterReadingListeners.delete(listener);
 };
 export const subscribeToPayments = (listener: Listener<Payment>): (() => void) => {
     paymentListeners.add(listener);
-    if (paymentsFetched) listener([...payments]); else fetchAllPayments();
+    if (paymentsFetched) listener([...payments]); else initializePayments().then(() => listener([...payments]));
     return () => paymentListeners.delete(listener);
 };
 export const subscribeToReportLogs = (listener: Listener<ReportLog>): (() => void) => {
     reportLogListeners.add(listener);
-    if (reportLogsFetched) listener([...reportLogs]); else fetchAllReportLogs();
+    if (reportLogsFetched) listener([...reportLogs]); else initializeReportLogs().then(() => listener([...reportLogs]));
     return () => reportLogListeners.delete(listener);
 };
 
@@ -598,16 +765,15 @@ export const subscribeToReportLogs = (listener: Listener<ReportLog>): (() => voi
 // --- Initial data load for the application ---
 export async function loadInitialData() {
   await Promise.all([
-    fetchAllBranches(),
-    fetchAllCustomers(),
-    fetchAllBulkMeters(),
-    fetchAllStaffMembers(),
-    fetchAllBills(),
-    fetchAllMeterReadings(),
-    fetchAllPayments(),
-    fetchAllReportLogs(),
+    initializeBranches(),
+    initializeCustomers(),
+    initializeBulkMeters(),
+    initializeStaffMembers(),
+    initializeBills(),
+    initializeMeterReadings(),
+    initializePayments(),
+    initializeReportLogs(),
   ]);
 }
-
 
     

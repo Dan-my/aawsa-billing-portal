@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { IndividualCustomer, CustomerType, SewerageConnection } from '@/app/admin/individual-customers/individual-customer-types';
+import type { IndividualCustomer, CustomerType, SewerageConnection, PaymentStatus } from '@/app/admin/individual-customers/individual-customer-types'; // Added PaymentStatus
 import { calculateBill } from '@/app/admin/individual-customers/individual-customer-types';
 import type { BulkMeter } from '@/app/admin/bulk-meters/bulk-meter-types';
 import type { Branch } from '@/app/admin/branches/branch-types';
@@ -38,7 +38,7 @@ import {
   deleteCustomer as supabaseDeleteCustomer,
   getAllBulkMeters as supabaseGetAllBulkMeters,
   createBulkMeter as supabaseCreateBulkMeter,
-  updateBulkMeter as supabaseUpdateBulkMeter,
+  updateBulkMeter as supabaseUpdateBulkMeter, // This is the generic update function
   deleteBulkMeter as supabaseDeleteBulkMeter,
   getAllStaffMembers as supabaseGetAllStaffMembers,
   createStaffMember as supabaseCreateStaffMember,
@@ -749,6 +749,7 @@ export const addBulkMeter = async (bulkMeterDomainData: Omit<BulkMeter, 'id'>) =
   return null;
 };
 
+// General update function for bulk meter
 export const updateBulkMeter = async (updatedBulkMeterData: BulkMeter) => {
   const { id } = updatedBulkMeterData;
   const updatePayloadToSend = mapDomainBulkMeterToUpdate(updatedBulkMeterData);
@@ -769,6 +770,33 @@ export const updateBulkMeter = async (updatedBulkMeterData: BulkMeter) => {
     }
   }
 };
+
+// Targeted update for payment status
+export const updateBulkMeterPaymentStatus = async (id: string, newPaymentStatus: PaymentStatus) => {
+  const updatePayload: BulkMeterUpdate = { payment_status: newPaymentStatus };
+  const { data: updatedSupabaseBulkMeter, error } = await supabaseUpdateBulkMeter(id, updatePayload);
+  if (updatedSupabaseBulkMeter && !error) {
+    const updatedBulkMeter = mapSupabaseBulkMeterToDomain(updatedSupabaseBulkMeter);
+    // Update the local cache ensuring other fields are preserved from the existing cache item
+    bulkMeters = bulkMeters.map(bm => 
+      bm.id === updatedBulkMeter.id 
+        ? { ...bm, paymentStatus: updatedBulkMeter.paymentStatus, updatedAt: updatedBulkMeter.updatedAt } // Assuming updatedAt is a field to update
+        : bm
+    );
+    notifyBulkMeterListeners();
+  } else {
+    console.error("DataStore: Failed to update bulk meter payment status. Supabase error:", error);
+    if (error && typeof error === 'object') {
+        const supabaseError = error as any;
+        console.error("Error details (JSON):", JSON.stringify(error, null, 2));
+        if ('message' in error) console.error("Error message:", (error as any).message);
+        if ('details' in error) console.error("Error details string:", (error as any).details);
+        if ('hint' in error) console.error("Error hint:", (error as any).hint);
+        if ('code' in error) console.error("Error code:", (error as any).code);
+    }
+  }
+};
+
 
 export const deleteBulkMeter = async (bulkMeterId: string) => {
   const { error } = await supabaseDeleteBulkMeter(bulkMeterId);
@@ -1019,10 +1047,4 @@ export async function loadInitialData() {
   ]);
 }
 
-// Helper to get staff role for StaffMember type if it's missing
-// This is a workaround for potential schema differences where role might not be on SupabaseStaffMemberRow initially
-// It's better to ensure 'role' is on the SupabaseStaffMemberRow type via proper db schema and type generation.
-// (StaffMember domain type already includes role)
-// function getStaffRole(supabaseStaff: SupabaseStaffMemberRow): 'Admin' | 'Staff' {
-//    return (supabaseStaff as any).role === 'Admin' ? 'Admin' : 'Staff';
-// }
+    

@@ -14,7 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import {
   getBulkMeters,
   getCustomers,
-  updateBulkMeter as updateBulkMeterInStore,
+  updateBulkMeter as updateBulkMeterInStore, // Keep for general edit
+  updateBulkMeterPaymentStatus, // New function for targeted update
   deleteBulkMeter as deleteBulkMeterFromStore,
   updateCustomer as updateCustomerInStore,
   deleteCustomer as deleteCustomerFromStore,
@@ -97,9 +98,9 @@ export default function BulkMeterDetailsPage() {
         setBulkMeter(foundBM);
         const associated = currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId);
         setAssociatedCustomers(associated);
-      } else if (bulkMeter) { // Check if bulkMeter was previously set
+      } else if (bulkMeter) { 
          toast({ title: "Bulk Meter Update", description: "The bulk meter being viewed may have been deleted or is no longer accessible.", variant: "destructive" });
-         setBulkMeter(null); // Clear if no longer found
+         setBulkMeter(null); 
       }
     };
 
@@ -111,7 +112,7 @@ export default function BulkMeterDetailsPage() {
       unsubscribeBM();
       unsubscribeCust();
     };
-  }, [bulkMeterId, router, toast]); // Removed bulkMeter from dependencies
+  }, [bulkMeterId, router, toast]); 
 
 
   const handleEditBulkMeter = () => setIsBulkMeterFormOpen(true);
@@ -127,11 +128,9 @@ export default function BulkMeterDetailsPage() {
 
   const handleSubmitBulkMeterForm = async (data: BulkMeterFormValues) => {
     if (bulkMeter) {
-        // data comes from BulkMeterFormDialog and is already validated by Zod.
-        // Its numeric fields (meterSize, previousReading, currentReading) are numbers.
         const updatedBulkMeterData: BulkMeter = {
-          id: bulkMeter.id, // Keep the original ID
-          ...data, // Spread validated form data (name, readings, status, paymentStatus, etc.)
+          id: bulkMeter.id, 
+          ...data, 
         };
         await updateBulkMeterInStore(updatedBulkMeterData);
         toast({ title: "Bulk Meter Updated", description: `${updatedBulkMeterData.name} has been updated.` });
@@ -142,16 +141,10 @@ export default function BulkMeterDetailsPage() {
   const handleToggleBulkMeterPaymentStatus = async () => {
     if (bulkMeter) {
       const newStatus: PaymentStatus = bulkMeter.paymentStatus === 'Paid' ? 'Unpaid' : 'Paid';
-      const updatedBulkMeterData: BulkMeter = {
-        ...bulkMeter,
-        paymentStatus: newStatus,
-        // Ensure numeric fields are numbers, defaulting to 0 if undefined/null from state
-        meterSize: Number(bulkMeter.meterSize ?? 0),
-        previousReading: Number(bulkMeter.previousReading ?? 0),
-        currentReading: Number(bulkMeter.currentReading ?? 0),
-      };
-      await updateBulkMeterInStore(updatedBulkMeterData);
-      toast({ title: "Payment Status Updated", description: `${updatedBulkMeterData.name} payment status set to ${newStatus}.` });
+      // Call the new targeted update function
+      await updateBulkMeterPaymentStatus(bulkMeter.id, newStatus);
+      toast({ title: "Payment Status Updated", description: `${bulkMeter.name} payment status set to ${newStatus}.` });
+      // The local state `bulkMeter` will be updated by the subscription to `subscribeToBulkMeters`
     }
   };
 
@@ -180,7 +173,6 @@ export default function BulkMeterDetailsPage() {
           ...data,
           id: selectedCustomer.id,
           calculatedBill,
-          // Ensure numeric fields from form data are numbers, defaulting to existing or 0
           meterSize: Number(data.meterSize ?? selectedCustomer.meterSize ?? 0),
           previousReading: Number(data.previousReading ?? selectedCustomer.previousReading ?? 0),
           currentReading: Number(data.currentReading ?? selectedCustomer.currentReading ?? 0),
@@ -202,7 +194,6 @@ export default function BulkMeterDetailsPage() {
       const updatedCustomerData: IndividualCustomer = {
         ...customer,
         paymentStatus: newStatus,
-        // Defensive coercion
         meterSize: Number(customer.meterSize ?? 0),
         previousReading: Number(customer.previousReading ?? 0),
         currentReading: Number(customer.currentReading ?? 0),
@@ -221,7 +212,6 @@ export default function BulkMeterDetailsPage() {
   if (!bulkMeter && !isLoading) {
      return <div className="p-4 text-center">Bulk meter not found or an error occurred.</div>;
   }
-  // Add a null check for bulkMeter before accessing its properties
   if (!bulkMeter) {
     return <div className="p-4 text-center">Bulk meter data is unavailable.</div>;
   }
@@ -238,8 +228,10 @@ export default function BulkMeterDetailsPage() {
     const hasNonDomesticCustomer = associatedCustomers.some(c => c.customerType === "Non-domestic");
     if (!hasNonDomesticCustomer) {
       effectiveBulkMeterCustomerType = "Domestic";
-      effectiveBulkMeterSewerageConnection = "No";
     }
+    // Sewerage for bulk meter could be based on its own setting or if any associated customer has it.
+    // For simplicity, let's assume if it has customers, and any are non-domestic it implies non-domestic tariff logic.
+    // This part of logic for effectiveBulkMeterSewerageConnection might need refinement based on business rules.
   }
   const totalBulkBill = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection);
 

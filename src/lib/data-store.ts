@@ -10,7 +10,7 @@ import type { StaffMember } from '@/app/admin/staff-management/staff-types';
 // Supabase Row types (these will be camelCase for bulk_meters based on updated supabase.ts)
 import type { 
   Branch as SupabaseBranchRow,
-  BulkMeterRow as SupabaseBulkMeterRow, // Renamed for clarity, expects camelCase props
+  BulkMeterRow as SupabaseBulkMeterRow, 
   IndividualCustomer as SupabaseIndividualCustomerRow,
   StaffMember as SupabaseStaffMemberRow,
   Bill as SupabaseBillRow,
@@ -18,7 +18,7 @@ import type {
   Payment as SupabasePaymentRow,
   ReportLog as SupabaseReportLogRow,
   BranchInsert, BranchUpdate, 
-  BulkMeterInsert, BulkMeterUpdate, // These expect camelCase props for bulk_meters
+  BulkMeterInsert, BulkMeterUpdate, 
   IndividualCustomerInsert, IndividualCustomerUpdate, 
   StaffMemberInsert, StaffMemberUpdate, 
   BillInsert, BillUpdate, 
@@ -285,7 +285,7 @@ const mapDomainCustomerToUpdate = (customer: IndividualCustomer): IndividualCust
   };
 };
 
-// Updated for camelCase database columns for bulk_meters
+
 const mapSupabaseBulkMeterToDomain = (sbm: SupabaseBulkMeterRow): BulkMeter => ({
   id: sbm.id,
   name: sbm.name,
@@ -301,11 +301,11 @@ const mapSupabaseBulkMeterToDomain = (sbm: SupabaseBulkMeterRow): BulkMeter => (
   ward: sbm.ward,
   status: sbm.status,
   paymentStatus: sbm.paymentStatus,
-  // createdAt: sbm.createdAt || undefined, // Assuming these are on SupabaseBulkMeterRow
+  // createdAt: sbm.createdAt || undefined, 
   // updatedAt: sbm.updatedAt || undefined,
 });
 
-// Updated for camelCase database columns for bulk_meters
+
 const mapDomainBulkMeterToInsert = (bm: Omit<BulkMeter, 'id'>): BulkMeterInsert => ({
   name: bm.name,
   customerKeyNumber: bm.customerKeyNumber,
@@ -322,9 +322,8 @@ const mapDomainBulkMeterToInsert = (bm: Omit<BulkMeter, 'id'>): BulkMeterInsert 
   paymentStatus: bm.paymentStatus || 'Unpaid',
 });
 
-// Updated for camelCase database columns for bulk_meters
+
 const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { id: string } ): BulkMeterUpdate => ({
-  // id is used for .eq filter, not in update payload typically
   name: bm.name,
   customerKeyNumber: bm.customerKeyNumber,
   contractNumber: bm.contractNumber,
@@ -533,7 +532,6 @@ async function fetchAllCustomers() {
 async function fetchAllBulkMeters() {
   const { data, error } = await supabaseGetAllBulkMeters();
   if (data) {
-    // SupabaseBulkMeterRow will have camelCase properties due to updated supabase.ts
     bulkMeters = data.map(mapSupabaseBulkMeterToDomain);
     notifyBulkMeterListeners();
   } else {
@@ -665,8 +663,9 @@ export const addBranch = async (branchData: Omit<Branch, 'id'>) => {
     notifyBranchListeners();
     return newBranch;
   }
-  console.error("DataStore: Failed to add branch. Supabase error:", JSON.stringify(error, null, 2));
+  console.error("DataStore: Failed to add branch.", error);
   if (error && typeof error === 'object') {
+    console.error("Error details (JSON):", JSON.stringify(error, null, 2));
     const supabaseError = error as any;
     if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
     if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
@@ -685,7 +684,15 @@ export const updateBranch = async (updatedBranchData: Branch) => {
     branches = branches.map(b => b.id === updatedBranch.id ? updatedBranch : b);
     notifyBranchListeners();
   } else {
-    console.error("DataStore: Failed to update branch. Supabase error:", JSON.stringify(error, null, 2));
+    console.error("DataStore: Failed to update branch. Supabase error:", error);
+    if (error && typeof error === 'object') {
+        console.error("Error details (JSON):", JSON.stringify(error, null, 2));
+        const supabaseError = error as any;
+        if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
+        if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
+        if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
+        if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
+    }
   }
 };
 
@@ -730,7 +737,15 @@ export const updateCustomer = async (updatedCustomerData: IndividualCustomer) =>
     customers = customers.map(c => c.id === updatedCustomer.id ? updatedCustomer : c);
     notifyCustomerListeners();
   } else {
-    console.error("DataStore: Failed to update customer. Supabase error:", JSON.stringify(error, null, 2));
+    console.error("DataStore: Failed to update customer. Supabase error object:", error);
+    if (error && typeof error === 'object') {
+        console.error("Error details stringified (JSON):", JSON.stringify(error, null, 2));
+        const supabaseError = error as any; // Cast to any to access potential properties
+        if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
+        if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
+        if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
+        if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
+    }
   }
 };
 
@@ -745,7 +760,6 @@ export const deleteCustomer = async (customerId: string) => {
 };
 
 // --- Actions for Bulk Meters ---
-// Updated to use camelCase for Supabase interaction
 export const addBulkMeter = async (bulkMeterDomainData: Omit<BulkMeter, 'id'>) => {
   const bulkMeterPayload = mapDomainBulkMeterToInsert(bulkMeterDomainData) as BulkMeterInsert;
   const { data: newSupabaseBulkMeter, error } = await supabaseCreateBulkMeter(bulkMeterPayload);
@@ -755,8 +769,9 @@ export const addBulkMeter = async (bulkMeterDomainData: Omit<BulkMeter, 'id'>) =
     notifyBulkMeterListeners();
     return newBulkMeter;
   }
-  console.error("DataStore: Failed to add bulk meter. Supabase error:", JSON.stringify(error, null, 2));
+  console.error("DataStore: Failed to add bulk meter. Supabase error:", error);
   if (error && typeof error === 'object') {
+    console.error("Error details (JSON):", JSON.stringify(error, null, 2));
     const supabaseError = error as any;
     if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
     if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
@@ -788,13 +803,13 @@ export const updateBulkMeter = async (updatedBulkMeterData: BulkMeter) => {
 };
 
 export const updateBulkMeterPaymentStatus = async (id: string, newPaymentStatus: PaymentStatus) => {
-  const updatePayload: BulkMeterUpdate = { paymentStatus: newPaymentStatus }; // Correctly uses camelCase
+  const updatePayload: BulkMeterUpdate = { paymentStatus: newPaymentStatus };
   const { data: updatedSupabaseBulkMeter, error } = await supabaseUpdateBulkMeter(id, updatePayload);
   if (updatedSupabaseBulkMeter && !error) {
     const updatedBulkMeter = mapSupabaseBulkMeterToDomain(updatedSupabaseBulkMeter);
     bulkMeters = bulkMeters.map(bm => 
       bm.id === updatedBulkMeter.id 
-        ? { ...bm, paymentStatus: updatedBulkMeter.paymentStatus, updatedAt: updatedBulkMeter.updatedAt } 
+        ? { ...bm, paymentStatus: updatedBulkMeter.paymentStatus }  // Assuming updatedAt is handled by Supabase
         : bm
     );
     notifyBulkMeterListeners();
@@ -832,8 +847,9 @@ export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>) => {
     notifyStaffMemberListeners();
     return newStaff;
   }
-  console.error("DataStore: Failed to add staff member. Supabase error:", JSON.stringify(error, null, 2));
+  console.error("DataStore: Failed to add staff member. Supabase error:", error);
   if (error && typeof error === 'object') {
+    console.error("Error details (JSON):", JSON.stringify(error, null, 2));
     const supabaseError = error as any;
     if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
     if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
@@ -1060,5 +1076,3 @@ export async function loadInitialData() {
     initializeReportLogs(),
   ]);
 }
-
-    

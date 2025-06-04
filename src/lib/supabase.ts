@@ -56,60 +56,60 @@ export interface Database {
           updated_at?: string | null;
         };
       };
-      bulk_meters: {
+      bulk_meters: { // Updated to camelCase based on user image
         Row: {
           id: string;
           name: string;
-          customer_key_number: string;
-          contract_number: string;
-          meter_size: number;
-          meter_number: string;
-          previous_reading: number;
-          current_reading: number;
+          customerKeyNumber: string;
+          contractNumber: string;
+          meterSize: number;
+          meterNumber: string;
+          previousReading: number;
+          currentReading: number;
           month: string;
-          specific_area: string;
+          specificArea: string;
           location: string;
           ward: string;
-          status: 'Active' | 'Maintenance' | 'Decommissioned'; // Assuming bulk_meter_status_enum
-          payment_status: 'Paid' | 'Unpaid'; // Assuming payment_status_enum
-          created_at?: string | null;
-          updated_at?: string | null;
+          status: 'Active' | 'Maintenance' | 'Decommissioned';
+          paymentStatus: 'Paid' | 'Unpaid';
+          createdAt?: string | null;
+          updatedAt?: string | null;
         };
         Insert: {
           id?: string;
           name: string;
-          customer_key_number: string;
-          contract_number: string;
-          meter_size: number;
-          meter_number: string;
-          previous_reading: number;
-          current_reading: number;
+          customerKeyNumber: string;
+          contractNumber: string;
+          meterSize: number;
+          meterNumber: string;
+          previousReading: number;
+          currentReading: number;
           month: string;
-          specific_area: string;
+          specificArea: string;
           location: string;
           ward: string;
           status: 'Active' | 'Maintenance' | 'Decommissioned';
-          payment_status: 'Paid' | 'Unpaid';
-          created_at?: string | null;
-          updated_at?: string | null;
+          paymentStatus: 'Paid' | 'Unpaid';
+          createdAt?: string | null;
+          updatedAt?: string | null;
         };
         Update: {
           id?: string;
           name?: string;
-          customer_key_number?: string;
-          contract_number?: string;
-          meter_size?: number;
-          meter_number?: string;
-          previous_reading?: number;
-          current_reading?: number;
+          customerKeyNumber?: string;
+          contractNumber?: string;
+          meterSize?: number;
+          meterNumber?: string;
+          previousReading?: number;
+          currentReading?: number;
           month?: string;
-          specific_area?: string;
+          specificArea?: string;
           location?: string;
           ward?: string;
           status?: 'Active' | 'Maintenance' | 'Decommissioned';
-          payment_status?: 'Paid' | 'Unpaid';
-          created_at?: string | null;
-          updated_at?: string | null;
+          paymentStatus?: 'Paid' | 'Unpaid';
+          createdAt?: string | null;
+          updatedAt?: string | null;
         };
       };
       individual_customers: {
@@ -196,6 +196,7 @@ export interface Database {
           status: 'Active' | 'Inactive' | 'On Leave'; // Assuming staff_status_enum
           phone?: string | null;
           hire_date?: string | null; // Assuming DATE stored as string
+          role: 'Admin' | 'Staff';
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -208,6 +209,7 @@ export interface Database {
           status: 'Active' | 'Inactive' | 'On Leave';
           phone?: string | null;
           hire_date?: string | null;
+          role: 'Admin' | 'Staff';
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -220,6 +222,7 @@ export interface Database {
           status?: 'Active' | 'Inactive' | 'On Leave';
           phone?: string | null;
           hire_date?: string | null;
+          role?: 'Admin' | 'Staff';
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -458,7 +461,7 @@ export type Branch = ResolvedDatabase['public']['Tables']['branches']['Row'];
 export type BranchInsert = ResolvedDatabase['public']['Tables']['branches']['Insert'];
 export type BranchUpdate = ResolvedDatabase['public']['Tables']['branches']['Update'];
 
-export type BulkMeter = ResolvedDatabase['public']['Tables']['bulk_meters']['Row'];
+export type BulkMeterRow = ResolvedDatabase['public']['Tables']['bulk_meters']['Row'];
 export type BulkMeterInsert = ResolvedDatabase['public']['Tables']['bulk_meters']['Insert'];
 export type BulkMeterUpdate = ResolvedDatabase['public']['Tables']['bulk_meters']['Update'];
 
@@ -546,3 +549,5 @@ export const getAllReportLogs = async () => supabase.from('reports').select('*')
 export const createReportLog = async (reportLog: ReportLogInsert) => supabase.from('reports').insert(reportLog).select().single();
 export const updateReportLog = async (id: string, reportLog: ReportLogUpdate) => supabase.from('reports').update(reportLog).eq('id', id).select().single();
 export const deleteReportLog = async (id: string) => supabase.from('reports').delete().eq('id', id).select().single();
+
+    

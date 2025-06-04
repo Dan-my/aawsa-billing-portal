@@ -7,10 +7,10 @@ import type { BulkMeter } from '@/app/admin/bulk-meters/bulk-meter-types';
 import type { Branch } from '@/app/admin/branches/branch-types';
 import type { StaffMember } from '@/app/admin/staff-management/staff-types';
 
-// Supabase Row types (snake_case)
+// Supabase Row types (these will be camelCase for bulk_meters based on updated supabase.ts)
 import type { 
   Branch as SupabaseBranchRow,
-  BulkMeter as SupabaseBulkMeterRow,
+  BulkMeterRow as SupabaseBulkMeterRow, // Renamed for clarity, expects camelCase props
   IndividualCustomer as SupabaseIndividualCustomerRow,
   StaffMember as SupabaseStaffMemberRow,
   Bill as SupabaseBillRow,
@@ -18,7 +18,7 @@ import type {
   Payment as SupabasePaymentRow,
   ReportLog as SupabaseReportLogRow,
   BranchInsert, BranchUpdate, 
-  BulkMeterInsert, BulkMeterUpdate, 
+  BulkMeterInsert, BulkMeterUpdate, // These expect camelCase props for bulk_meters
   IndividualCustomerInsert, IndividualCustomerUpdate, 
   StaffMemberInsert, StaffMemberUpdate, 
   BillInsert, BillUpdate, 
@@ -38,7 +38,7 @@ import {
   deleteCustomer as supabaseDeleteCustomer,
   getAllBulkMeters as supabaseGetAllBulkMeters,
   createBulkMeter as supabaseCreateBulkMeter,
-  updateBulkMeter as supabaseUpdateBulkMeter, // This is the generic update function
+  updateBulkMeter as supabaseUpdateBulkMeter,
   deleteBulkMeter as supabaseDeleteBulkMeter,
   getAllStaffMembers as supabaseGetAllStaffMembers,
   createStaffMember as supabaseCreateStaffMember,
@@ -176,7 +176,7 @@ const notifyBulkMeterListeners = () => bulkMeterListeners.forEach(listener => li
 const notifyStaffMemberListeners = () => staffMemberListeners.forEach(listener => listener([...staffMembers]));
 const notifyBillListeners = () => billListeners.forEach(listener => listener([...bills]));
 const notifyMeterReadingListeners = () => meterReadingListeners.forEach(listener => listener([...meterReadings]));
-const notifyPaymentListeners = () => paymentListeners.forEach(listener => listener([...payments]));
+const notifyPaymentListeners = () => payments.forEach(listener => listener([...payments]));
 const notifyReportLogListeners = () => reportLogs.forEach(listener => listener([...reportLogs]));
 
 
@@ -188,6 +188,8 @@ const mapSupabaseBranchToDomain = (sb: SupabaseBranchRow): Branch => ({
   contactPerson: sb.contact_person || undefined,
   contactPhone: sb.contact_phone || undefined,
   status: sb.status,
+  // createdAt: sb.created_at || undefined, // Assuming these might not be in domain type
+  // updatedAt: sb.updated_at || undefined,
 });
 
 const mapDomainBranchToInsert = (branch: Omit<Branch, 'id'>): BranchInsert => ({
@@ -283,71 +285,80 @@ const mapDomainCustomerToUpdate = (customer: IndividualCustomer): IndividualCust
   };
 };
 
+// Updated for camelCase database columns for bulk_meters
 const mapSupabaseBulkMeterToDomain = (sbm: SupabaseBulkMeterRow): BulkMeter => ({
   id: sbm.id,
   name: sbm.name,
-  customerKeyNumber: sbm.customer_key_number,
-  contractNumber: sbm.contract_number,
-  meterSize: Number(sbm.meter_size),
-  meterNumber: sbm.meter_number,
-  previousReading: Number(sbm.previous_reading),
-  currentReading: Number(sbm.current_reading),
+  customerKeyNumber: sbm.customerKeyNumber,
+  contractNumber: sbm.contractNumber,
+  meterSize: Number(sbm.meterSize),
+  meterNumber: sbm.meterNumber,
+  previousReading: Number(sbm.previousReading),
+  currentReading: Number(sbm.currentReading),
   month: sbm.month,
-  specificArea: sbm.specific_area,
+  specificArea: sbm.specificArea,
   location: sbm.location,
   ward: sbm.ward,
   status: sbm.status,
-  paymentStatus: sbm.payment_status,
+  paymentStatus: sbm.paymentStatus,
+  // createdAt: sbm.createdAt || undefined, // Assuming these are on SupabaseBulkMeterRow
+  // updatedAt: sbm.updatedAt || undefined,
 });
 
+// Updated for camelCase database columns for bulk_meters
 const mapDomainBulkMeterToInsert = (bm: Omit<BulkMeter, 'id'>): BulkMeterInsert => ({
   name: bm.name,
-  customer_key_number: bm.customerKeyNumber,
-  contract_number: bm.contractNumber,
-  meter_size: Number(bm.meterSize) || 0,
-  meter_number: bm.meterNumber,
-  previous_reading: Number(bm.previousReading) || 0,
-  current_reading: Number(bm.currentReading) || 0,
+  customerKeyNumber: bm.customerKeyNumber,
+  contractNumber: bm.contractNumber,
+  meterSize: Number(bm.meterSize) || 0,
+  meterNumber: bm.meterNumber,
+  previousReading: Number(bm.previousReading) || 0,
+  currentReading: Number(bm.currentReading) || 0,
   month: bm.month,
-  specific_area: bm.specificArea,
+  specificArea: bm.specificArea,
   location: bm.location,
   ward: bm.ward,
   status: bm.status || 'Active',
-  payment_status: bm.paymentStatus || 'Unpaid',
+  paymentStatus: bm.paymentStatus || 'Unpaid',
 });
 
-const mapDomainBulkMeterToUpdate = (bm: BulkMeter): BulkMeterUpdate => ({
+// Updated for camelCase database columns for bulk_meters
+const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { id: string } ): BulkMeterUpdate => ({
+  // id is used for .eq filter, not in update payload typically
   name: bm.name,
-  customer_key_number: bm.customerKeyNumber,
-  contract_number: bm.contractNumber,
-  meter_size: Number(bm.meterSize),
-  meter_number: bm.meterNumber,
-  previous_reading: Number(bm.previousReading),
-  current_reading: Number(bm.currentReading),
+  customerKeyNumber: bm.customerKeyNumber,
+  contractNumber: bm.contractNumber,
+  meterSize: bm.meterSize !== undefined ? Number(bm.meterSize) : undefined,
+  meterNumber: bm.meterNumber,
+  previousReading: bm.previousReading !== undefined ? Number(bm.previousReading) : undefined,
+  currentReading: bm.currentReading !== undefined ? Number(bm.currentReading) : undefined,
   month: bm.month,
-  specific_area: bm.specificArea,
+  specificArea: bm.specificArea,
   location: bm.location,
   ward: bm.ward,
   status: bm.status,
-  payment_status: bm.paymentStatus,
+  paymentStatus: bm.paymentStatus,
 });
+
 
 const mapSupabaseStaffToDomain = (ss: SupabaseStaffMemberRow): StaffMember => ({
   id: ss.id,
   name: ss.name,
   email: ss.email,
-  password: ss.password || undefined,
+  password: ss.password || undefined, // Password might not always be fetched or present
   branch: ss.branch,
   status: ss.status,
   phone: ss.phone || undefined,
   hireDate: ss.hire_date || undefined,
-  role: (ss as any).role || 'Staff', 
+  role: ss.role,
+  // createdAt: ss.created_at || undefined,
+  // updatedAt: ss.updated_at || undefined,
 });
 
 const mapDomainStaffToInsert = (staff: Omit<StaffMember, 'id'>): StaffMemberInsert => ({
   name: staff.name,
   email: staff.email,
-  password: staff.password,
+  password: staff.password, // Ensure password is provided if required by DB
   branch: staff.branch,
   status: staff.status,
   phone: staff.phone,
@@ -355,7 +366,7 @@ const mapDomainStaffToInsert = (staff: Omit<StaffMember, 'id'>): StaffMemberInse
   role: staff.role,
 });
 
-const mapDomainStaffToUpdate = (staff: StaffMember): StaffMemberUpdate => ({
+const mapDomainStaffToUpdate = (staff: Partial<Omit<StaffMember, 'id'>>): StaffMemberUpdate => ({
   name: staff.name,
   email: staff.email,
   password: staff.password,
@@ -365,6 +376,7 @@ const mapDomainStaffToUpdate = (staff: StaffMember): StaffMemberUpdate => ({
   hire_date: staff.hireDate,
   role: staff.role,
 });
+
 
 const mapSupabaseBillToDomain = (sb: SupabaseBillRow): DomainBill => ({
   id: sb.id,
@@ -400,6 +412,7 @@ const mapDomainBillToSupabase = (bill: Partial<DomainBill>): Partial<BillInsert 
     month_year: bill.monthYear,
     previous_reading_value: bill.previousReadingValue,
     current_reading_value: bill.currentReadingValue,
+    // usage_m3 is often a generated column, so typically not included in inserts/updates
     base_water_charge: bill.baseWaterCharge,
     sewerage_charge: bill.sewerageCharge,
     maintenance_fee: bill.maintenanceFee,
@@ -407,6 +420,7 @@ const mapDomainBillToSupabase = (bill: Partial<DomainBill>): Partial<BillInsert 
     meter_rent: bill.meterRent,
     total_amount_due: bill.totalAmountDue,
     amount_paid: bill.amountPaid,
+    // balance_due is often a generated column
     due_date: bill.dueDate,
     payment_status: bill.paymentStatus,
     bill_number: bill.billNumber,
@@ -482,6 +496,7 @@ const mapSupabaseReportLogToDomain = (srl: SupabaseReportLogRow): DomainReportLo
 const mapDomainReportLogToSupabase = (rl: Partial<DomainReportLog>): Partial<ReportLogInsert | ReportLogUpdate> => ({
     report_name: rl.reportName,
     description: rl.description,
+    // generated_at is usually set by DB default
     generated_by_staff_id: rl.generatedByStaffId,
     parameters: rl.parameters,
     file_format: rl.fileFormat,
@@ -518,6 +533,7 @@ async function fetchAllCustomers() {
 async function fetchAllBulkMeters() {
   const { data, error } = await supabaseGetAllBulkMeters();
   if (data) {
+    // SupabaseBulkMeterRow will have camelCase properties due to updated supabase.ts
     bulkMeters = data.map(mapSupabaseBulkMeterToDomain);
     notifyBulkMeterListeners();
   } else {
@@ -729,8 +745,9 @@ export const deleteCustomer = async (customerId: string) => {
 };
 
 // --- Actions for Bulk Meters ---
+// Updated to use camelCase for Supabase interaction
 export const addBulkMeter = async (bulkMeterDomainData: Omit<BulkMeter, 'id'>) => {
-  const bulkMeterPayload = mapDomainBulkMeterToInsert(bulkMeterDomainData);
+  const bulkMeterPayload = mapDomainBulkMeterToInsert(bulkMeterDomainData) as BulkMeterInsert;
   const { data: newSupabaseBulkMeter, error } = await supabaseCreateBulkMeter(bulkMeterPayload);
   if (newSupabaseBulkMeter && !error) {
     const newBulkMeter = mapSupabaseBulkMeterToDomain(newSupabaseBulkMeter);
@@ -749,10 +766,9 @@ export const addBulkMeter = async (bulkMeterDomainData: Omit<BulkMeter, 'id'>) =
   return null;
 };
 
-// General update function for bulk meter
 export const updateBulkMeter = async (updatedBulkMeterData: BulkMeter) => {
-  const { id } = updatedBulkMeterData;
-  const updatePayloadToSend = mapDomainBulkMeterToUpdate(updatedBulkMeterData);
+  const { id, ...domainData } = updatedBulkMeterData;
+  const updatePayloadToSend = mapDomainBulkMeterToUpdate({ id, ...domainData }) as BulkMeterUpdate;
   const { data: updatedSupabaseBulkMeter, error } = await supabaseUpdateBulkMeter(id, updatePayloadToSend);
   if (updatedSupabaseBulkMeter && !error) {
     const updatedBulkMeter = mapSupabaseBulkMeterToDomain(updatedSupabaseBulkMeter);
@@ -761,38 +777,36 @@ export const updateBulkMeter = async (updatedBulkMeterData: BulkMeter) => {
   } else {
     console.error("DataStore: Failed to update bulk meter. Supabase error:", error);
     if (error && typeof error === 'object') {
-        const supabaseError = error as any;
         console.error("Error details (JSON):", JSON.stringify(error, null, 2));
-        if ('message' in error) console.error("Error message:", (error as any).message);
-        if ('details' in error) console.error("Error details string:", (error as any).details);
-        if ('hint' in error) console.error("Error hint:", (error as any).hint);
-        if ('code' in error) console.error("Error code:", (error as any).code);
+        const supabaseError = error as any;
+        if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
+        if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
+        if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
+        if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
     }
   }
 };
 
-// Targeted update for payment status
 export const updateBulkMeterPaymentStatus = async (id: string, newPaymentStatus: PaymentStatus) => {
-  const updatePayload: BulkMeterUpdate = { payment_status: newPaymentStatus };
+  const updatePayload: BulkMeterUpdate = { paymentStatus: newPaymentStatus }; // Correctly uses camelCase
   const { data: updatedSupabaseBulkMeter, error } = await supabaseUpdateBulkMeter(id, updatePayload);
   if (updatedSupabaseBulkMeter && !error) {
     const updatedBulkMeter = mapSupabaseBulkMeterToDomain(updatedSupabaseBulkMeter);
-    // Update the local cache ensuring other fields are preserved from the existing cache item
     bulkMeters = bulkMeters.map(bm => 
       bm.id === updatedBulkMeter.id 
-        ? { ...bm, paymentStatus: updatedBulkMeter.paymentStatus, updatedAt: updatedBulkMeter.updatedAt } // Assuming updatedAt is a field to update
+        ? { ...bm, paymentStatus: updatedBulkMeter.paymentStatus, updatedAt: updatedBulkMeter.updatedAt } 
         : bm
     );
     notifyBulkMeterListeners();
   } else {
     console.error("DataStore: Failed to update bulk meter payment status. Supabase error:", error);
     if (error && typeof error === 'object') {
-        const supabaseError = error as any;
         console.error("Error details (JSON):", JSON.stringify(error, null, 2));
-        if ('message' in error) console.error("Error message:", (error as any).message);
-        if ('details' in error) console.error("Error details string:", (error as any).details);
-        if ('hint' in error) console.error("Error hint:", (error as any).hint);
-        if ('code' in error) console.error("Error code:", (error as any).code);
+        const supabaseError = error as any;
+        if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
+        if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
+        if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
+        if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
     }
   }
 };
@@ -830,8 +844,8 @@ export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>) => {
 };
 
 export const updateStaffMember = async (updatedStaffData: StaffMember) => {
-  const { id } = updatedStaffData; 
-  const staffUpdatePayload = mapDomainStaffToUpdate(updatedStaffData); 
+  const { id, ...domainData } = updatedStaffData; 
+  const staffUpdatePayload = mapDomainStaffToUpdate(domainData); 
   const { data: updatedSupabaseStaff, error } = await supabaseUpdateStaffMember(id, staffUpdatePayload);
   if (updatedSupabaseStaff && !error) {
     const updatedStaff = mapSupabaseStaffToDomain(updatedSupabaseStaff);
@@ -853,7 +867,7 @@ export const deleteStaffMember = async (staffId: string) => {
 };
 
 // --- Actions for Bills ---
-export const addBill = async (billData: Omit<DomainBill, 'id'>) => { 
+export const addBill = async (billData: Omit<DomainBill, 'id'>): Promise<DomainBill | null> => { 
     const payload = mapDomainBillToSupabase(billData) as BillInsert;
     const { data: newSupabaseBill, error } = await supabaseCreateBill(payload);
     if (newSupabaseBill && !error) {
@@ -864,7 +878,7 @@ export const addBill = async (billData: Omit<DomainBill, 'id'>) => {
     }
     console.error("DataStore: Failed to add bill. Supabase error:", JSON.stringify(error, null, 2)); return null;
 };
-export const updateExistingBill = async (id: string, billUpdateData: Partial<Omit<DomainBill, 'id'>>) => { 
+export const updateExistingBill = async (id: string, billUpdateData: Partial<Omit<DomainBill, 'id'>>): Promise<void> => { 
     const payload = mapDomainBillToSupabase(billUpdateData) as BillUpdate;
     const { data: updatedSupabaseBill, error } = await supabaseUpdateBill(id, payload);
     if (updatedSupabaseBill && !error) {
@@ -875,7 +889,7 @@ export const updateExistingBill = async (id: string, billUpdateData: Partial<Omi
         console.error("DataStore: Failed to update bill. Supabase error:", JSON.stringify(error, null, 2));
     }
 };
-export const removeBill = async (billId: string) => {
+export const removeBill = async (billId: string): Promise<void> => {
     const { error } = await supabaseDeleteBill(billId);
     if (!error) {
         bills = bills.filter(b => b.id !== billId);
@@ -886,7 +900,7 @@ export const removeBill = async (billId: string) => {
 };
 
 // --- Actions for MeterReadings ---
-export const addMeterReading = async (readingData: Omit<DomainMeterReading, 'id'>) => { 
+export const addMeterReading = async (readingData: Omit<DomainMeterReading, 'id'>): Promise<DomainMeterReading | null> => { 
     const payload = mapDomainMeterReadingToSupabase(readingData) as MeterReadingInsert;
     const { data: newSupabaseReading, error } = await supabaseCreateMeterReading(payload);
     if (newSupabaseReading && !error) {
@@ -897,7 +911,7 @@ export const addMeterReading = async (readingData: Omit<DomainMeterReading, 'id'
     }
     console.error("DataStore: Failed to add meter reading. Supabase error:", JSON.stringify(error, null, 2)); return null;
 };
-export const updateExistingMeterReading = async (id: string, readingUpdateData: Partial<Omit<DomainMeterReading, 'id'>>) => { 
+export const updateExistingMeterReading = async (id: string, readingUpdateData: Partial<Omit<DomainMeterReading, 'id'>>): Promise<void> => { 
     const payload = mapDomainMeterReadingToSupabase(readingUpdateData) as MeterReadingUpdate;
     const { data: updatedSupabaseReading, error } = await supabaseUpdateMeterReading(id, payload);
     if (updatedSupabaseReading && !error) {
@@ -908,7 +922,7 @@ export const updateExistingMeterReading = async (id: string, readingUpdateData: 
         console.error("DataStore: Failed to update meter reading. Supabase error:", JSON.stringify(error, null, 2));
     }
 };
-export const removeMeterReading = async (readingId: string) => {
+export const removeMeterReading = async (readingId: string): Promise<void> => {
     const { error } = await supabaseDeleteMeterReading(readingId);
     if (!error) {
         meterReadings = meterReadings.filter(r => r.id !== readingId);
@@ -919,7 +933,7 @@ export const removeMeterReading = async (readingId: string) => {
 };
 
 // --- Actions for Payments ---
-export const addPayment = async (paymentData: Omit<DomainPayment, 'id'>) => { 
+export const addPayment = async (paymentData: Omit<DomainPayment, 'id'>): Promise<DomainPayment | null> => { 
     const payload = mapDomainPaymentToSupabase(paymentData) as PaymentInsert;
     const { data: newSupabasePayment, error } = await supabaseCreatePayment(payload);
     if (newSupabasePayment && !error) {
@@ -930,7 +944,7 @@ export const addPayment = async (paymentData: Omit<DomainPayment, 'id'>) => {
     }
     console.error("DataStore: Failed to add payment. Supabase error:", JSON.stringify(error, null, 2)); return null;
 };
-export const updateExistingPayment = async (id: string, paymentUpdateData: Partial<Omit<DomainPayment, 'id'>>) => { 
+export const updateExistingPayment = async (id: string, paymentUpdateData: Partial<Omit<DomainPayment, 'id'>>): Promise<void> => { 
     const payload = mapDomainPaymentToSupabase(paymentUpdateData) as PaymentUpdate;
     const { data: updatedSupabasePayment, error } = await supabaseUpdatePayment(id, payload);
     if (updatedSupabasePayment && !error) {
@@ -941,7 +955,7 @@ export const updateExistingPayment = async (id: string, paymentUpdateData: Parti
         console.error("DataStore: Failed to update payment. Supabase error:", JSON.stringify(error, null, 2));
     }
 };
-export const removePayment = async (paymentId: string) => {
+export const removePayment = async (paymentId: string): Promise<void> => {
     const { error } = await supabaseDeletePayment(paymentId);
     if (!error) {
         payments = payments.filter(p => p.id !== paymentId);
@@ -952,9 +966,9 @@ export const removePayment = async (paymentId: string) => {
 };
 
 // --- Actions for ReportLogs ---
-export const addReportLog = async (logData: Omit<DomainReportLog, 'id'>) => { 
+export const addReportLog = async (logData: Omit<DomainReportLog, 'id' | 'generatedAt'> & { generatedAt?: string } ): Promise<DomainReportLog | null> => { 
     const payload = mapDomainReportLogToSupabase(logData) as ReportLogInsert;
-    // 'generated_at' is set by default in Supabase, so we don't need to set it from client unless overriding.
+    if(!payload.generated_at) payload.generated_at = new Date().toISOString(); // Ensure generated_at if not provided
     const { data: newSupabaseLog, error } = await supabaseCreateReportLog(payload); 
     if (newSupabaseLog && !error) {
         const newLog = mapSupabaseReportLogToDomain(newSupabaseLog);
@@ -964,7 +978,7 @@ export const addReportLog = async (logData: Omit<DomainReportLog, 'id'>) => {
     }
     console.error("DataStore: Failed to add report log. Supabase error:", JSON.stringify(error, null, 2)); return null;
 };
-export const updateExistingReportLog = async (id: string, logUpdateData: Partial<Omit<DomainReportLog, 'id'>>) => { 
+export const updateExistingReportLog = async (id: string, logUpdateData: Partial<Omit<DomainReportLog, 'id'>>): Promise<void> => { 
     const payload = mapDomainReportLogToSupabase(logUpdateData) as ReportLogUpdate;
     const { data: updatedSupabaseLog, error } = await supabaseUpdateReportLog(id, payload); 
     if (updatedSupabaseLog && !error) {
@@ -975,7 +989,7 @@ export const updateExistingReportLog = async (id: string, logUpdateData: Partial
         console.error("DataStore: Failed to update report log. Supabase error:", JSON.stringify(error, null, 2));
     }
 };
-export const removeReportLog = async (logId: string) => {
+export const removeReportLog = async (logId: string): Promise<void> => {
     const { error } = await supabaseDeleteReportLog(logId);
     if (!error) {
         reportLogs = reportLogs.filter(l => l.id !== logId);

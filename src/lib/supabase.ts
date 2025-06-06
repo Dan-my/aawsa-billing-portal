@@ -29,18 +29,18 @@ export interface Database {
           id: string;
           name: string;
           location: string;
-          contactPerson?: string | null; // Updated to camelCase
-          contactPhone?: string | null;  // Updated to camelCase, assuming text/varchar
-          status: 'Active' | 'Inactive'; // Assuming branch_status_enum
-          created_at?: string | null; // snake_case
-          updated_at?: string | null; // snake_case
+          contactPerson?: string | null;
+          contactPhone?: number | null;  // Changed to number | null
+          status: 'Active' | 'Inactive';
+          created_at?: string | null;
+          updated_at?: string | null;
         };
         Insert: {
           id?: string;
           name: string;
           location: string;
-          contactPerson?: string | null; // Updated to camelCase
-          contactPhone?: string | null;  // Updated to camelCase
+          contactPerson?: string | null;
+          contactPhone?: number | null;  // Changed to number | null
           status: 'Active' | 'Inactive';
           created_at?: string | null;
           updated_at?: string | null;
@@ -49,8 +49,8 @@ export interface Database {
           id?: string;
           name?: string;
           location?: string;
-          contactPerson?: string | null; // Updated to camelCase
-          contactPhone?: string | null;  // Updated to camelCase
+          contactPerson?: string | null;
+          contactPhone?: number | null;  // Changed to number | null
           status?: 'Active' | 'Inactive';
           created_at?: string | null;
           updated_at?: string | null;
@@ -118,7 +118,7 @@ export interface Database {
           name: string;
           customer_key_number: string;
           contract_number: string;
-          customer_type: 'Domestic' | 'Non-domestic'; // Assuming customer_type_enum
+          customer_type: 'Domestic' | 'Non-domestic';
           book_number: string;
           ordinal: number;
           meter_size: number;
@@ -129,10 +129,10 @@ export interface Database {
           specific_area: string;
           location: string;
           ward: string;
-          sewerage_connection: 'Yes' | 'No'; // Assuming sewerage_connection_enum
+          sewerage_connection: 'Yes' | 'No';
           assigned_bulk_meter_id?: string | null;
-          status: 'Active' | 'Inactive' | 'Suspended'; // Assuming individual_customer_status_enum
-          payment_status: 'Paid' | 'Unpaid'; // Assuming payment_status_enum
+          status: 'Active' | 'Inactive' | 'Suspended';
+          payment_status: 'Paid' | 'Unpaid';
           calculated_bill: number;
           created_at?: string | null;
           updated_at?: string | null;
@@ -193,9 +193,9 @@ export interface Database {
           email: string;
           password?: string;
           branch: string;
-          status: 'Active' | 'Inactive' | 'On Leave'; // Assuming staff_status_enum
+          status: 'Active' | 'Inactive' | 'On Leave';
           phone?: string | null;
-          hire_date?: string | null; // Assuming DATE stored as string
+          hire_date?: string | null;
           role: 'Admin' | 'Staff';
           created_at?: string | null;
           updated_at?: string | null;
@@ -232,12 +232,12 @@ export interface Database {
           id: string;
           individual_customer_id?: string | null;
           bulk_meter_id?: string | null;
-          bill_period_start_date: string; // Assuming DATE stored as string
-          bill_period_end_date: string; // Assuming DATE stored as string
+          bill_period_start_date: string;
+          bill_period_end_date: string;
           month_year: string;
           previous_reading_value: number;
           current_reading_value: number;
-          usage_m3?: number | null; // Generated column
+          usage_m3?: number | null;
           base_water_charge: number;
           sewerage_charge?: number | null;
           maintenance_fee?: number | null;
@@ -245,9 +245,9 @@ export interface Database {
           meter_rent?: number | null;
           total_amount_due: number;
           amount_paid?: number;
-          balance_due?: number | null; // Generated column
-          due_date: string; // Assuming DATE stored as string
-          payment_status: 'Paid' | 'Unpaid'; // Assuming payment_status_enum
+          balance_due?: number | null;
+          due_date: string;
+          payment_status: 'Paid' | 'Unpaid';
           bill_number?: string | null;
           notes?: string | null;
           created_at?: string | null;
@@ -303,11 +303,11 @@ export interface Database {
       meter_readings: {
         Row: {
           id: string;
-          meter_type: 'individual_customer_meter' | 'bulk_meter'; // Assuming meter_reading_meter_type_enum
+          meter_type: 'individual_customer_meter' | 'bulk_meter';
           individual_customer_id?: string | null;
           bulk_meter_id?: string | null;
           reader_staff_id?: string | null;
-          reading_date: string; // Assuming TIMESTAMPTZ stored as string
+          reading_date: string;
           month_year: string;
           reading_value: number;
           is_estimate?: boolean | null;
@@ -349,9 +349,9 @@ export interface Database {
           id: string;
           bill_id?: string | null;
           individual_customer_id?: string | null;
-          payment_date: string; // Assuming TIMESTAMPTZ stored as string
+          payment_date: string;
           amount_paid: number;
-          payment_method: 'Cash' | 'Bank Transfer' | 'Mobile Money' | 'Online Payment' | 'Other'; // Assuming payment_method_enum
+          payment_method: 'Cash' | 'Bank Transfer' | 'Mobile Money' | 'Online Payment' | 'Other';
           transaction_reference?: string | null;
           processed_by_staff_id?: string | null;
           notes?: string | null;
@@ -388,14 +388,14 @@ export interface Database {
       reports: {
         Row: {
           id: string;
-          report_name: 'CustomerDataExport' | 'BulkMeterDataExport' | 'BillingSummary' | 'WaterUsageReport' | 'PaymentHistoryReport' | 'MeterReadingAccuracy'; // Assuming report_type_enum
+          report_name: 'CustomerDataExport' | 'BulkMeterDataExport' | 'BillingSummary' | 'WaterUsageReport' | 'PaymentHistoryReport' | 'MeterReadingAccuracy';
           description?: string | null;
-          generated_at: string; // Assuming TIMESTAMPTZ stored as string
+          generated_at: string;
           generated_by_staff_id?: string | null;
-          parameters?: Json | null; // Assuming JSONB stored as Json
+          parameters?: Json | null;
           file_format?: string | null;
           file_name?: string | null;
-          status?: 'Generated' | 'Pending' | 'Failed' | 'Archived' | null; // Assuming report_status_enum
+          status?: 'Generated' | 'Pending' | 'Failed' | 'Archived' | null;
           created_at?: string | null;
           updated_at?: string | null;
         };

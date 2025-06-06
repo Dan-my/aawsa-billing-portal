@@ -41,7 +41,12 @@ const individualCustomerFormObjectSchema = baseIndividualCustomerDataSchema.exte
   paymentStatus: z.enum(paymentStatuses, { errorMap: () => ({ message: "Please select a valid payment status."}) }),
 });
 
-const individualCustomerFormSchema = individualCustomerFormObjectSchema.refine(data => data.currentReading >= data.previousReading, {
+const individualCustomerFormSchema = individualCustomerFormObjectSchema.refine(data => {
+  const prev = Number(data.previousReading);
+  const curr = Number(data.currentReading);
+  if (isNaN(prev) || isNaN(curr)) return true; // Let zod handle individual field validation if unparseable
+  return curr >= prev;
+} , {
   message: "Current Reading must be greater than or equal to Previous Reading.",
   path: ["currentReading"],
 });
@@ -297,10 +302,15 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                       <Input 
                         type="number" 
                         {...field} 
-                        value={field.value ?? ""} 
+                        value={(field.value === null || field.value === undefined || isNaN(field.value as number)) ? "" : String(field.value)}
                         onChange={e => {
                           const val = e.target.value;
-                          field.onChange(val === "" ? undefined : parseInt(val, 10));
+                          if (val === "") {
+                            field.onChange(undefined);
+                          } else {
+                            const parsed = parseInt(val, 10);
+                            field.onChange(isNaN(parsed) ? undefined : parsed);
+                          }
                         }}
                          {...commonFormFieldProps}
                       />
@@ -320,10 +330,15 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                         type="number" 
                         step="0.1" 
                         {...field} 
-                        value={field.value ?? ""} 
+                        value={(field.value === null || field.value === undefined || isNaN(field.value as number)) ? "" : String(field.value)}
                         onChange={e => {
                           const val = e.target.value;
-                          field.onChange(val === "" ? undefined : parseFloat(val));
+                           if (val === "") {
+                            field.onChange(undefined);
+                          } else {
+                            const parsed = parseFloat(val);
+                            field.onChange(isNaN(parsed) ? undefined : parsed);
+                          }
                         }}
                          {...commonFormFieldProps}
                       />
@@ -356,10 +371,15 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                         type="number" 
                         step="0.01" 
                         {...field} 
-                        value={field.value ?? ""} 
+                        value={(field.value === null || field.value === undefined || isNaN(field.value as number)) ? "" : String(field.value)}
                         onChange={e => {
                           const val = e.target.value;
-                          field.onChange(val === "" ? undefined : parseFloat(val));
+                           if (val === "") {
+                            field.onChange(undefined);
+                          } else {
+                            const parsed = parseFloat(val);
+                            field.onChange(isNaN(parsed) ? undefined : parsed);
+                          }
                         }}
                          {...commonFormFieldProps}
                       />
@@ -379,10 +399,15 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                         type="number" 
                         step="0.01" 
                         {...field} 
-                        value={field.value ?? ""} 
+                        value={(field.value === null || field.value === undefined || isNaN(field.value as number)) ? "" : String(field.value)}
                         onChange={e => {
                           const val = e.target.value;
-                          field.onChange(val === "" ? undefined : parseFloat(val));
+                           if (val === "") {
+                            field.onChange(undefined);
+                          } else {
+                            const parsed = parseFloat(val);
+                            field.onChange(isNaN(parsed) ? undefined : parsed);
+                          }
                         }}
                          {...commonFormFieldProps}
                       />

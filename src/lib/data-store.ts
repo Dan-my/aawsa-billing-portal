@@ -4,12 +4,12 @@
 import type { IndividualCustomer, CustomerType, SewerageConnection, PaymentStatus } from '@/app/admin/individual-customers/individual-customer-types'; // Added PaymentStatus
 import { calculateBill } from '@/app/admin/individual-customers/individual-customer-types';
 import type { BulkMeter } from '@/app/admin/bulk-meters/bulk-meter-types';
-import type { Branch } from '@/app/admin/branches/branch-types';
+import type { Branch as DomainBranch } from '@/app/admin/branches/branch-types'; // Renamed to avoid conflict
 import type { StaffMember } from '@/app/admin/staff-management/staff-types';
 
 // Supabase Row types (these will be camelCase for bulk_meters based on updated supabase.ts)
 import type { 
-  Branch as SupabaseBranchRow,
+  Branch as SupabaseBranchRow, // This will now have camelCase contactPerson/Phone
   BulkMeterRow as SupabaseBulkMeterRow, 
   IndividualCustomer as SupabaseIndividualCustomerRow,
   StaffMember as SupabaseStaffMemberRow,
@@ -136,7 +136,7 @@ export interface DomainReportLog {
 
 
 // Local cache state (using camelCase domain types)
-let branches: Branch[] = [];
+let branches: DomainBranch[] = [];
 let customers: IndividualCustomer[] = [];
 let bulkMeters: BulkMeter[] = [];
 let staffMembers: StaffMember[] = [];
@@ -159,7 +159,7 @@ let reportLogsFetched = false;
 
 // Listeners
 type Listener<T> = (data: T[]) => void;
-const branchListeners: Set<Listener<Branch>> = new Set();
+const branchListeners: Set<Listener<DomainBranch>> = new Set();
 const customerListeners: Set<Listener<IndividualCustomer>> = new Set();
 const bulkMeterListeners: Set<Listener<BulkMeter>> = new Set();
 const staffMemberListeners: Set<Listener<StaffMember>> = new Set();
@@ -181,30 +181,30 @@ const notifyReportLogListeners = () => reportLogs.forEach(listener => listener([
 
 
 // --- Mappers ---
-const mapSupabaseBranchToDomain = (sb: SupabaseBranchRow): Branch => ({
+const mapSupabaseBranchToDomain = (sb: SupabaseBranchRow): DomainBranch => ({
   id: sb.id,
   name: sb.name,
   location: sb.location,
-  contactPerson: sb.contact_person || undefined,
-  contactPhone: sb.contact_phone || undefined,
+  contactPerson: sb.contactPerson || undefined, // sb.contactPerson is now camelCase from Supabase type
+  contactPhone: sb.contactPhone || undefined,  // sb.contactPhone is now camelCase from Supabase type
   status: sb.status,
   // createdAt: sb.created_at || undefined, // Assuming these might not be in domain type
   // updatedAt: sb.updated_at || undefined,
 });
 
-const mapDomainBranchToInsert = (branch: Omit<Branch, 'id'>): BranchInsert => ({
+const mapDomainBranchToInsert = (branch: Omit<DomainBranch, 'id'>): BranchInsert => ({
   name: branch.name,
   location: branch.location,
-  contact_person: branch.contactPerson,
-  contact_phone: branch.contactPhone,
+  contactPerson: branch.contactPerson, // Map to camelCase Supabase field
+  contactPhone: branch.contactPhone,   // Map to camelCase Supabase field
   status: branch.status,
 });
 
-const mapDomainBranchToUpdate = (branch: Partial<Omit<Branch, 'id'>>): BranchUpdate => ({
+const mapDomainBranchToUpdate = (branch: Partial<Omit<DomainBranch, 'id'>>): BranchUpdate => ({
   name: branch.name,
   location: branch.location,
-  contact_person: branch.contactPerson,
-  contact_phone: branch.contactPhone,
+  contactPerson: branch.contactPerson, // Map to camelCase Supabase field
+  contactPhone: branch.contactPhone,   // Map to camelCase Supabase field
   status: branch.status,
 });
 
@@ -289,54 +289,54 @@ const mapDomainCustomerToUpdate = (customer: IndividualCustomer): IndividualCust
 const mapSupabaseBulkMeterToDomain = (sbm: SupabaseBulkMeterRow): BulkMeter => ({
   id: sbm.id,
   name: sbm.name,
-  customerKeyNumber: sbm.customerKeyNumber,
-  contractNumber: sbm.contractNumber,
-  meterSize: Number(sbm.meterSize),
-  meterNumber: sbm.meterNumber,
-  previousReading: Number(sbm.previousReading),
-  currentReading: Number(sbm.currentReading),
+  customerKeyNumber: sbm.customerKeyNumber, // DB uses camelCase
+  contractNumber: sbm.contractNumber,   // DB uses camelCase
+  meterSize: Number(sbm.meterSize),       // DB uses camelCase
+  meterNumber: sbm.meterNumber,       // DB uses camelCase
+  previousReading: Number(sbm.previousReading), // DB uses camelCase
+  currentReading: Number(sbm.currentReading),  // DB uses camelCase
   month: sbm.month,
-  specificArea: sbm.specificArea,
+  specificArea: sbm.specificArea,     // DB uses camelCase
   location: sbm.location,
   ward: sbm.ward,
   status: sbm.status,
-  paymentStatus: sbm.paymentStatus,
-  // createdAt: sbm.createdAt || undefined, 
-  // updatedAt: sbm.updatedAt || undefined,
+  paymentStatus: sbm.paymentStatus,   // DB uses camelCase
+  // createdAt: sbm.createdAt || undefined, // Assuming DB uses camelCase (createdAt vs created_at)
+  // updatedAt: sbm.updatedAt || undefined, // Assuming DB uses camelCase (updatedAt vs updated_at)
 });
 
 
 const mapDomainBulkMeterToInsert = (bm: Omit<BulkMeter, 'id'>): BulkMeterInsert => ({
   name: bm.name,
-  customerKeyNumber: bm.customerKeyNumber,
-  contractNumber: bm.contractNumber,
-  meterSize: Number(bm.meterSize) || 0,
-  meterNumber: bm.meterNumber,
-  previousReading: Number(bm.previousReading) || 0,
-  currentReading: Number(bm.currentReading) || 0,
+  customerKeyNumber: bm.customerKeyNumber, // Send as camelCase
+  contractNumber: bm.contractNumber,   // Send as camelCase
+  meterSize: Number(bm.meterSize) || 0,      // Send as camelCase
+  meterNumber: bm.meterNumber,       // Send as camelCase
+  previousReading: Number(bm.previousReading) || 0, // Send as camelCase
+  currentReading: Number(bm.currentReading) || 0,  // Send as camelCase
   month: bm.month,
-  specificArea: bm.specificArea,
+  specificArea: bm.specificArea,     // Send as camelCase
   location: bm.location,
   ward: bm.ward,
   status: bm.status || 'Active',
-  paymentStatus: bm.paymentStatus || 'Unpaid',
+  paymentStatus: bm.paymentStatus || 'Unpaid', // Send as camelCase
 });
 
 
 const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { id: string } ): BulkMeterUpdate => ({
   name: bm.name,
-  customerKeyNumber: bm.customerKeyNumber,
-  contractNumber: bm.contractNumber,
-  meterSize: bm.meterSize !== undefined ? Number(bm.meterSize) : undefined,
-  meterNumber: bm.meterNumber,
-  previousReading: bm.previousReading !== undefined ? Number(bm.previousReading) : undefined,
-  currentReading: bm.currentReading !== undefined ? Number(bm.currentReading) : undefined,
+  customerKeyNumber: bm.customerKeyNumber, // Send as camelCase
+  contractNumber: bm.contractNumber,   // Send as camelCase
+  meterSize: bm.meterSize !== undefined ? Number(bm.meterSize) : undefined, // Send as camelCase
+  meterNumber: bm.meterNumber,       // Send as camelCase
+  previousReading: bm.previousReading !== undefined ? Number(bm.previousReading) : undefined, // Send as camelCase
+  currentReading: bm.currentReading !== undefined ? Number(bm.currentReading) : undefined, // Send as camelCase
   month: bm.month,
-  specificArea: bm.specificArea,
+  specificArea: bm.specificArea,     // Send as camelCase
   location: bm.location,
   ward: bm.ward,
   status: bm.status,
-  paymentStatus: bm.paymentStatus,
+  paymentStatus: bm.paymentStatus,   // Send as camelCase
 });
 
 
@@ -344,11 +344,11 @@ const mapSupabaseStaffToDomain = (ss: SupabaseStaffMemberRow): StaffMember => ({
   id: ss.id,
   name: ss.name,
   email: ss.email,
-  password: ss.password || undefined, // Password might not always be fetched or present
+  password: ss.password || undefined, 
   branch: ss.branch,
   status: ss.status,
   phone: ss.phone || undefined,
-  hireDate: ss.hire_date || undefined,
+  hireDate: ss.hire_date || undefined, // DB is snake_case
   role: ss.role,
   // createdAt: ss.created_at || undefined,
   // updatedAt: ss.updated_at || undefined,
@@ -357,11 +357,11 @@ const mapSupabaseStaffToDomain = (ss: SupabaseStaffMemberRow): StaffMember => ({
 const mapDomainStaffToInsert = (staff: Omit<StaffMember, 'id'>): StaffMemberInsert => ({
   name: staff.name,
   email: staff.email,
-  password: staff.password, // Ensure password is provided if required by DB
+  password: staff.password, 
   branch: staff.branch,
   status: staff.status,
   phone: staff.phone,
-  hire_date: staff.hireDate,
+  hire_date: staff.hireDate, // Send as snake_case
   role: staff.role,
 });
 
@@ -372,7 +372,7 @@ const mapDomainStaffToUpdate = (staff: Partial<Omit<StaffMember, 'id'>>): StaffM
   branch: staff.branch,
   status: staff.status,
   phone: staff.phone,
-  hire_date: staff.hireDate,
+  hire_date: staff.hireDate, // Send as snake_case
   role: staff.role,
 });
 
@@ -411,7 +411,6 @@ const mapDomainBillToSupabase = (bill: Partial<DomainBill>): Partial<BillInsert 
     month_year: bill.monthYear,
     previous_reading_value: bill.previousReadingValue,
     current_reading_value: bill.currentReadingValue,
-    // usage_m3 is often a generated column, so typically not included in inserts/updates
     base_water_charge: bill.baseWaterCharge,
     sewerage_charge: bill.sewerageCharge,
     maintenance_fee: bill.maintenanceFee,
@@ -419,7 +418,6 @@ const mapDomainBillToSupabase = (bill: Partial<DomainBill>): Partial<BillInsert 
     meter_rent: bill.meterRent,
     total_amount_due: bill.totalAmountDue,
     amount_paid: bill.amountPaid,
-    // balance_due is often a generated column
     due_date: bill.dueDate,
     payment_status: bill.paymentStatus,
     bill_number: bill.billNumber,
@@ -495,7 +493,6 @@ const mapSupabaseReportLogToDomain = (srl: SupabaseReportLogRow): DomainReportLo
 const mapDomainReportLogToSupabase = (rl: Partial<DomainReportLog>): Partial<ReportLogInsert | ReportLogUpdate> => ({
     report_name: rl.reportName,
     description: rl.description,
-    // generated_at is usually set by DB default
     generated_by_staff_id: rl.generatedByStaffId,
     parameters: rl.parameters,
     file_format: rl.fileFormat,
@@ -642,7 +639,7 @@ export const initializeReportLogs = async () => {
 
 
 // Getters
-export const getBranches = (): Branch[] => [...branches];
+export const getBranches = (): DomainBranch[] => [...branches];
 export const getCustomers = (): IndividualCustomer[] => [...customers];
 export const getBulkMeters = (): BulkMeter[] => [...bulkMeters];
 export const getStaffMembers = (): StaffMember[] => [...staffMembers];
@@ -653,7 +650,7 @@ export const getReportLogs = (): DomainReportLog[] => [...reportLogs];
 
 
 // --- Actions for Branches ---
-export const addBranch = async (branchData: Omit<Branch, 'id'>) => {
+export const addBranch = async (branchData: Omit<DomainBranch, 'id'>) => {
   const payload = mapDomainBranchToInsert(branchData);
   console.log("DataStore: Attempting to add branch with payload:", JSON.stringify(payload, null, 2));
   const { data: newSupabaseBranch, error } = await supabaseCreateBranch(payload);
@@ -675,7 +672,7 @@ export const addBranch = async (branchData: Omit<Branch, 'id'>) => {
   return null;
 };
 
-export const updateBranch = async (updatedBranchData: Branch) => {
+export const updateBranch = async (updatedBranchData: DomainBranch) => {
   const { id, ...domainData } = updatedBranchData;
   const updatePayload = mapDomainBranchToUpdate(domainData);
   const { data: updatedSupabaseBranch, error } = await supabaseUpdateBranch(id, updatePayload);
@@ -717,8 +714,9 @@ export const addCustomer = async (customerData: Omit<IndividualCustomer, 'id' | 
     notifyCustomerListeners();
     return newCustomer;
   }
-  console.error("DataStore: Failed to add customer. Supabase error:", JSON.stringify(error, null, 2));
+  console.error("DataStore: Failed to add customer. Supabase error:", error);
   if (error && typeof error === 'object') {
+    console.error("Error details (JSON):", JSON.stringify(error, null, 2));
     const supabaseError = error as any;
     if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
     if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
@@ -737,9 +735,9 @@ export const updateCustomer = async (updatedCustomerData: IndividualCustomer) =>
     customers = customers.map(c => c.id === updatedCustomer.id ? updatedCustomer : c);
     notifyCustomerListeners();
   } else {
-    console.error("DataStore: Failed to update customer. Supabase error object:", error);
+    console.error("DataStore: Failed to update customer. Supabase error:", error);
     if (error && typeof error === 'object') {
-        console.error("Error details stringified (JSON):", JSON.stringify(error, null, 2));
+        console.error("Error details (JSON):", JSON.stringify(error, null, 2));
         const supabaseError = error as any; // Cast to any to access potential properties
         if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
         if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
@@ -803,13 +801,13 @@ export const updateBulkMeter = async (updatedBulkMeterData: BulkMeter) => {
 };
 
 export const updateBulkMeterPaymentStatus = async (id: string, newPaymentStatus: PaymentStatus) => {
-  const updatePayload: BulkMeterUpdate = { paymentStatus: newPaymentStatus };
+  const updatePayload: BulkMeterUpdate = { paymentStatus: newPaymentStatus }; // field name should be camelCase now
   const { data: updatedSupabaseBulkMeter, error } = await supabaseUpdateBulkMeter(id, updatePayload);
   if (updatedSupabaseBulkMeter && !error) {
     const updatedBulkMeter = mapSupabaseBulkMeterToDomain(updatedSupabaseBulkMeter);
     bulkMeters = bulkMeters.map(bm => 
       bm.id === updatedBulkMeter.id 
-        ? { ...bm, paymentStatus: updatedBulkMeter.paymentStatus }  // Assuming updatedAt is handled by Supabase
+        ? { ...bm, paymentStatus: updatedBulkMeter.paymentStatus } 
         : bm
     );
     notifyBulkMeterListeners();
@@ -1017,7 +1015,7 @@ export const removeReportLog = async (logId: string): Promise<void> => {
 
 
 // --- Subscribe functions ---
-export const subscribeToBranches = (listener: Listener<Branch>): (() => void) => {
+export const subscribeToBranches = (listener: Listener<DomainBranch>): (() => void) => {
   branchListeners.add(listener);
   if (branchesFetched) listener([...branches]); else initializeBranches().then(() => listener([...branches]));
   return () => branchListeners.delete(listener);

@@ -29,18 +29,18 @@ export interface Database {
           id: string;
           name: string;
           location: string;
-          contact_person?: string | null;
-          contact_phone?: string | null;
+          contactPerson?: string | null; // Updated to camelCase
+          contactPhone?: string | null;  // Updated to camelCase, assuming text/varchar
           status: 'Active' | 'Inactive'; // Assuming branch_status_enum
-          created_at?: string | null;
-          updated_at?: string | null;
+          created_at?: string | null; // snake_case
+          updated_at?: string | null; // snake_case
         };
         Insert: {
           id?: string;
           name: string;
           location: string;
-          contact_person?: string | null;
-          contact_phone?: string | null;
+          contactPerson?: string | null; // Updated to camelCase
+          contactPhone?: string | null;  // Updated to camelCase
           status: 'Active' | 'Inactive';
           created_at?: string | null;
           updated_at?: string | null;
@@ -49,14 +49,14 @@ export interface Database {
           id?: string;
           name?: string;
           location?: string;
-          contact_person?: string | null;
-          contact_phone?: string | null;
+          contactPerson?: string | null; // Updated to camelCase
+          contactPhone?: string | null;  // Updated to camelCase
           status?: 'Active' | 'Inactive';
           created_at?: string | null;
           updated_at?: string | null;
         };
       };
-      bulk_meters: { // Updated to camelCase based on user image
+      bulk_meters: {
         Row: {
           id: string;
           name: string;
@@ -549,5 +549,4 @@ export const getAllReportLogs = async () => supabase.from('reports').select('*')
 export const createReportLog = async (reportLog: ReportLogInsert) => supabase.from('reports').insert(reportLog).select().single();
 export const updateReportLog = async (id: string, reportLog: ReportLogUpdate) => supabase.from('reports').update(reportLog).eq('id', id).select().single();
 export const deleteReportLog = async (id: string) => supabase.from('reports').delete().eq('id', id).select().single();
-
     

@@ -2,9 +2,10 @@
 "use client";
 
 import * as React from "react";
+import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart as BarChartIcon, PieChart as PieChartIcon, LineChart as LineChartIcon, Building, Users, Gauge, ArrowRight, TableIcon, BarChartBig, TrendingUp, AlertCircle } from 'lucide-react'; 
-import { ResponsiveContainer, BarChart, PieChart, LineChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Line, Bar } from 'recharts'; 
+// import { ResponsiveContainer, BarChart, PieChart, LineChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Line, Bar } from 'recharts'; 
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'; 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,26 @@ import {
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
 import type { Bill } from "@/lib/supabase"; // Assuming Bill type is exported from supabase.ts or a dedicated types file
+
+const commonChartLoading = (heightClass: string) => (
+  <div className={`w-full flex items-center justify-center text-xs text-muted-foreground ${heightClass}`}>
+    Loading chart...
+  </div>
+);
+
+const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false, loading: () => commonChartLoading("h-full") });
+const BarChart = dynamic(() => import('recharts').then(mod => mod.BarChart), { ssr: false, loading: () => commonChartLoading("h-full") });
+const PieChart = dynamic(() => import('recharts').then(mod => mod.PieChart), { ssr: false, loading: () => commonChartLoading("h-full") });
+const LineChart = dynamic(() => import('recharts').then(mod => mod.LineChart), { ssr: false, loading: () => commonChartLoading("h-full") });
+const XAxis = dynamic(() => import('recharts').then(mod => mod.XAxis), { ssr: false });
+const YAxis = dynamic(() => import('recharts').then(mod => mod.YAxis), { ssr: false });
+const Tooltip = dynamic(() => import('recharts').then(mod => mod.Tooltip), { ssr: false });
+const Legend = dynamic(() => import('recharts').then(mod => mod.Legend), { ssr: false });
+const Pie = dynamic(() => import('recharts').then(mod => mod.Pie), { ssr: false });
+const Cell = dynamic(() => import('recharts').then(mod => mod.Cell), { ssr: false });
+const Line = dynamic(() => import('recharts').then(mod => mod.Line), { ssr: false });
+const Bar = dynamic(() => import('recharts').then(mod => mod.Bar), { ssr: false });
+
 
 // Mock data for charts that are not yet connected to real data
 const branchPerformanceData = [
@@ -69,6 +90,7 @@ export default function AdminDashboardPage() {
 
 
   React.useEffect(() => {
+    // console.log("AdminDashboardPage: Component mounting or re-rendering"); // Diagnostic log
     let isMounted = true;
     setIsLoading(true);
     setError(null);
@@ -91,8 +113,8 @@ export default function AdminDashboardPage() {
         setTotalBulkMeterCount(currentBulkMeters.length);
         setTotalIndividualCustomerCount(currentCustomers.length);
         
-        const paid = currentBills.filter(b => b.payment_status === 'Paid').length;
-        const unpaid = currentBills.filter(b => b.payment_status === 'Unpaid').length;
+        const paid = currentBills.filter(b => b.paymentStatus === 'Paid').length;
+        const unpaid = currentBills.filter(b => b.paymentStatus === 'Unpaid').length;
         setTotalBillCount(currentBills.length);
         setPaidBillCount(paid);
         setUnpaidBillCount(unpaid);
@@ -119,8 +141,8 @@ export default function AdminDashboardPage() {
     });
     const unsubscribeBills = subscribeToBills((bills) => {
       if (isMounted) {
-        const paid = bills.filter(b => b.payment_status === 'Paid').length;
-        const unpaid = bills.filter(b => b.payment_status === 'Unpaid').length;
+        const paid = bills.filter(b => b.paymentStatus === 'Paid').length;
+        const unpaid = bills.filter(b => b.paymentStatus === 'Unpaid').length;
         setTotalBillCount(bills.length);
         setPaidBillCount(paid);
         setUnpaidBillCount(unpaid);
@@ -187,7 +209,7 @@ export default function AdminDashboardPage() {
                         <Cell key={`cell-${index}`} fill={entry.fill} />
                       ))}
                     </Pie>
-                    <ChartTooltipContent />
+                    <Tooltip content={<ChartTooltipContent />} />
                   </PieChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -212,7 +234,7 @@ export default function AdminDashboardPage() {
                         <Cell key={`cell-${index}`} fill={entry.fill} />
                       ))}
                     </Pie>
-                    <ChartTooltipContent />
+                    <Tooltip content={<ChartTooltipContent />} />
                   </PieChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -365,5 +387,6 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+    
 
     

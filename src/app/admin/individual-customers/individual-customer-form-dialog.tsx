@@ -7,12 +7,12 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, // Reverted alias
+  DialogContent, // Reverted alias
+  DialogDescription, // Reverted alias
+  DialogFooter, // Reverted alias
+  DialogHeader, // Reverted alias
+  DialogTitle, // Reverted alias
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -31,7 +31,7 @@ import {
 } from "@/app/admin/data-entry/customer-data-entry-types";
 import type { IndividualCustomer } from "./individual-customer-types";
 import { individualCustomerStatuses, paymentStatuses } from "./individual-customer-types";
-import { getBulkMeters, subscribeToBulkMeters } from "@/lib/data-store";
+import { getBulkMeters, subscribeToBulkMeters, initializeBulkMeters } from "@/lib/data-store"; // Added initializeBulkMeters
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse, isValid } from "date-fns";
 
@@ -45,7 +45,7 @@ const individualCustomerFormObjectSchema = baseIndividualCustomerDataSchema.exte
 const individualCustomerFormSchema = individualCustomerFormObjectSchema.refine(data => {
   const prev = data.previousReading === null || data.previousReading === undefined ? -Infinity : Number(data.previousReading);
   const curr = data.currentReading === null || data.currentReading === undefined ? -Infinity : Number(data.currentReading);
-  if (isNaN(prev) || isNaN(curr)) return true;
+  if (isNaN(prev) || isNaN(curr)) return true; // Allow Zod to handle NaN type errors separately
   return curr >= prev;
 } , {
   message: "Current Reading must be greater than or equal to Previous Reading.",
@@ -92,12 +92,15 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
   });
 
   React.useEffect(() => {
+    // Ensure bulk meters are initialized if not provided via props
     if (!propBulkMeters || propBulkMeters.length === 0) {
+      initializeBulkMeters().then(() => {
         const fetchedBms = getBulkMeters().map(bm => ({ id: bm.id, name: bm.name }));
         setDynamicBulkMeters(fetchedBms);
         if (fetchedBms.length === 0 && open) {
             console.warn("IndividualCustomerFormDialog: No bulk meters available on mount for selection.");
         }
+      });
     } else {
          setDynamicBulkMeters(propBulkMeters);
     }
@@ -315,10 +318,10 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                         onChange={e => {
                           const valStr = e.target.value;
                           if (valStr === "") {
-                            field.onChange(undefined);
+                            field.onChange(undefined); 
                           } else {
                             const parsed = parseInt(valStr, 10);
-                            field.onChange(Number.isNaN(parsed) ? NaN : parsed);
+                            field.onChange(Number.isNaN(parsed) ? NaN : parsed); 
                           }
                         }}
                          {...commonFormFieldProps}
@@ -559,5 +562,3 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
     </Dialog>
   );
 }
-
-    

@@ -17,7 +17,7 @@ import {
 } from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
-import type { Bill } from "@/lib/supabase"; // Assuming Bill type is exported from supabase.ts or a dedicated types file
+import type { Bill as DomainBill } from "@/lib/data-store"; 
 
 const commonChartLoading = (heightClass: string) => (
   <div className={`w-full flex items-center justify-center text-xs text-muted-foreground ${heightClass}`}>
@@ -61,23 +61,10 @@ const waterUsageTrendData = [
 const chartConfig = {
   paid: { label: "Paid", color: "hsl(var(--chart-1))" },
   unpaid: { label: "Unpaid", color: "hsl(var(--chart-2))" },
-  segmentA: { label: "Segment A", color: "hsl(var(--chart-1))" }, // Generic label for customer counts
-  segmentB: { label: "Segment B", color: "hsl(var(--chart-2))" }, // Generic label for customer counts
   bulkMeters: { label: "Bulk Meters", color: "hsl(var(--chart-1))" },
   individualCustomers: { label: "Individual Customers", color: "hsl(var(--chart-2))" },
   waterUsage: { label: "Water Usage (m³)", color: "hsl(var(--chart-1))" },
 } satisfies import("@/components/ui/chart").ChartConfig;
-
-// Static data for top cards based on the image
-const staticTotalBillsData = [
-  { status: 'Paid', count: 1250, fill: 'hsl(var(--chart-1))' },
-  { status: 'Unpaid', count: 350, fill: 'hsl(var(--chart-2))' },
-];
-
-const staticCustomerCountChartData = [
-  { name: 'Main Customers', value: 12030, fill: 'hsl(var(--chart-1))' }, // Using 'Main Customers'
-  { name: 'Other Customers', value: 150, fill: 'hsl(var(--chart-2))' },   // Using 'Other Customers'
-];
 
 
 export default function AdminDashboardPage() {
@@ -87,7 +74,6 @@ export default function AdminDashboardPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Dynamic data states (still fetched but overridden for display in top cards)
   const [dynamicTotalBillCount, setDynamicTotalBillCount] = React.useState<number>(0);
   const [dynamicPaidBillCount, setDynamicPaidBillCount] = React.useState<number>(0);
   const [dynamicUnpaidBillCount, setDynamicUnpaidBillCount] = React.useState<number>(0);
@@ -161,6 +147,20 @@ export default function AdminDashboardPage() {
     };
   }, []);
 
+  const totalBillsChartData = React.useMemo(() => {
+    return [
+      { status: 'Paid', count: dynamicPaidBillCount, fill: chartConfig.paid.color },
+      { status: 'Unpaid', count: dynamicUnpaidBillCount, fill: chartConfig.unpaid.color },
+    ];
+  }, [dynamicPaidBillCount, dynamicUnpaidBillCount]);
+
+  const customerCountChartData = React.useMemo(() => {
+    return [
+      { name: 'Individual Customers', value: dynamicTotalIndividualCustomerCount, fill: chartConfig.individualCustomers.color },
+      { name: 'Bulk Meters', value: dynamicTotalBulkMeterCount, fill: chartConfig.bulkMeters.color },
+    ];
+  }, [dynamicTotalIndividualCustomerCount, dynamicTotalBulkMeterCount]);
+
 
   if (isLoading) {
     return <div className="p-4 text-center">Loading dashboard data...</div>;
@@ -178,6 +178,8 @@ export default function AdminDashboardPage() {
     );
   }
 
+  const totalCustomersAndMeters = dynamicTotalIndividualCustomerCount + dynamicTotalBulkMeterCount;
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Admin Dashboard</h1>
@@ -189,19 +191,22 @@ export default function AdminDashboardPage() {
             <BarChartIcon className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1600</div>
-            <p className="text-xs text-muted-foreground">+20.1% from last month</p>
+            <div className="text-2xl font-bold">{dynamicTotalBillCount.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              {dynamicPaidBillCount.toLocaleString()} Paid / {dynamicUnpaidBillCount.toLocaleString()} Unpaid
+            </p>
             <div className="h-[120px] mt-4">
-              {(staticTotalBillsData.length > 0 && (staticTotalBillsData[0].count > 0 || staticTotalBillsData[1].count > 0)) ? (
+              {(totalBillsChartData.length > 0 && (totalBillsChartData[0].count > 0 || totalBillsChartData[1].count > 0)) ? (
                 <ChartContainer config={chartConfig} className="w-full h-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={staticTotalBillsData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={50} label>
-                        {staticTotalBillsData.map((entry, index) => (
+                      <Pie data={totalBillsChartData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={50} label>
+                        {totalBillsChartData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.fill} />
                         ))}
                       </Pie>
                       <Tooltip content={<ChartTooltipContent />} />
+                      <Legend verticalAlign="bottom" height={36} content={<ChartLegendContent nameKey="status" />} />
                     </PieChart>
                   </ResponsiveContainer>
                 </ChartContainer>
@@ -216,29 +221,30 @@ export default function AdminDashboardPage() {
 
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Customer Counts</CardTitle>
+            <CardTitle className="text-sm font-medium">Customer & Meter Counts</CardTitle>
             <PieChartIcon className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12,180</div>
-            <p className="text-xs text-muted-foreground">Total active customers</p>
+            <div className="text-2xl font-bold">{totalCustomersAndMeters.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Total registered entities</p>
             <div className="h-[120px] mt-4">
-              {(staticCustomerCountChartData.length > 0 && (staticCustomerCountChartData[0].value > 0 || staticCustomerCountChartData[1].value > 0)) ? (
+              {(customerCountChartData.length > 0 && (customerCountChartData[0].value > 0 || customerCountChartData[1].value > 0)) ? (
                 <ChartContainer config={chartConfig} className="w-full h-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={staticCustomerCountChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={30} outerRadius={50} paddingAngle={2} label>
-                        {staticCustomerCountChartData.map((entry, index) => (
+                      <Pie data={customerCountChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={30} outerRadius={50} paddingAngle={2} label>
+                        {customerCountChartData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.fill} />
                         ))}
                       </Pie>
                       <Tooltip content={<ChartTooltipContent />} />
+                       <Legend verticalAlign="bottom" height={36} content={<ChartLegendContent nameKey="name" />} />
                     </PieChart>
                   </ResponsiveContainer>
                 </ChartContainer>
               ) : (
                  <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                  No customer count data available for chart.
+                  No customer/meter data for chart.
                 </div>
               )}
             </div>
@@ -251,7 +257,7 @@ export default function AdminDashboardPage() {
             <Gauge className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1</div>
+            <div className="text-2xl font-bold">{dynamicTotalBulkMeterCount.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Total registered bulk meters</p>
             <div className="h-[120px] mt-4 flex items-center justify-center">
                 <Gauge className="h-16 w-16 text-primary opacity-50" />
@@ -294,7 +300,7 @@ export default function AdminDashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div>
               <CardTitle>Branch Performance (Paid vs Unpaid)</CardTitle>
-              <CardDescription>Mock data: Comparison of bills status across branches.</CardDescription>
+              <CardDescription>Mock data: Comparison of bills status. Future enhancements will connect this to live data.</CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={() => setShowBranchPerformanceTable(!showBranchPerformanceTable)}>
               {showBranchPerformanceTable ? <BarChartBig className="mr-2 h-4 w-4" /> : <TableIcon className="mr-2 h-4 w-4" />}
@@ -335,8 +341,8 @@ export default function AdminDashboardPage() {
                     <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                     <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
                     <Legend />
-                     <Bar dataKey="paid" stackId="a" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
-                     <Bar dataKey="unpaid" stackId="a" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                     <Bar dataKey="paid" stackId="a" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} name={chartConfig.paid.label} />
+                     <Bar dataKey="unpaid" stackId="a" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} name={chartConfig.unpaid.label} />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -348,7 +354,7 @@ export default function AdminDashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div>
               <CardTitle>Overall Water Usage Trend</CardTitle>
-              <CardDescription>Mock data: Monthly water consumption across all meters.</CardDescription>
+              <CardDescription>Mock data: Monthly water consumption. Future enhancements will connect this to live data.</CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={() => setShowWaterUsageTable(!showWaterUsageTable)}>
               {showWaterUsageTable ? <TrendingUp className="mr-2 h-4 w-4" /> : <TableIcon className="mr-2 h-4 w-4" />}
@@ -398,6 +404,8 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+    
+
     
 
     

@@ -5,7 +5,6 @@ import * as React from "react";
 import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart as BarChartIcon, PieChart as PieChartIcon, LineChart as LineChartIcon, Building, Users, Gauge, ArrowRight, TableIcon, BarChartBig, TrendingUp, AlertCircle } from 'lucide-react'; 
-// import { ResponsiveContainer, BarChart, PieChart, LineChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Line, Bar } from 'recharts'; 
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'; 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -201,18 +200,24 @@ export default function AdminDashboardPage() {
             <div className="text-2xl font-bold">{totalBillCount.toLocaleString()}</div>
             {/* <p className="text-xs text-muted-foreground">+20.1% from last month</p> */}
             <div className="h-[120px] mt-4">
-              <ChartContainer config={chartConfig} className="w-full h-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={totalBillsData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={50} label>
-                      {totalBillsData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<ChartTooltipContent />} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </ChartContainer>
+              {totalBillsData.length > 0 && (totalBillsData[0].count > 0 || totalBillsData[1].count > 0) ? (
+                <ChartContainer config={chartConfig} className="w-full h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={totalBillsData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={50} label>
+                        {totalBillsData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<ChartTooltipContent />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                  No bill data available for chart.
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -226,18 +231,24 @@ export default function AdminDashboardPage() {
             <div className="text-2xl font-bold">{(totalIndividualCustomerCount + totalBulkMeterCount).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Total active customers & meters</p>
             <div className="h-[120px] mt-4">
-              <ChartContainer config={chartConfig} className="w-full h-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={customerCountChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={30} outerRadius={50} paddingAngle={2} label>
-                      {customerCountChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<ChartTooltipContent />} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </ChartContainer>
+              {customerCountChartData.length > 0 && (customerCountChartData[0].value > 0 || customerCountChartData[1].value > 0) ? (
+                <ChartContainer config={chartConfig} className="w-full h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={customerCountChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={30} outerRadius={50} paddingAngle={2} label>
+                        {customerCountChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<ChartTooltipContent />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              ) : (
+                 <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                  No customer count data available for chart.
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -387,6 +398,8 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+    
+
     
 
     

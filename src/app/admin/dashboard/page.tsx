@@ -61,10 +61,23 @@ const waterUsageTrendData = [
 const chartConfig = {
   paid: { label: "Paid", color: "hsl(var(--chart-1))" },
   unpaid: { label: "Unpaid", color: "hsl(var(--chart-2))" },
+  segmentA: { label: "Segment A", color: "hsl(var(--chart-1))" }, // Generic label for customer counts
+  segmentB: { label: "Segment B", color: "hsl(var(--chart-2))" }, // Generic label for customer counts
   bulkMeters: { label: "Bulk Meters", color: "hsl(var(--chart-1))" },
   individualCustomers: { label: "Individual Customers", color: "hsl(var(--chart-2))" },
   waterUsage: { label: "Water Usage (m³)", color: "hsl(var(--chart-1))" },
 } satisfies import("@/components/ui/chart").ChartConfig;
+
+// Static data for top cards based on the image
+const staticTotalBillsData = [
+  { status: 'Paid', count: 1250, fill: 'hsl(var(--chart-1))' },
+  { status: 'Unpaid', count: 350, fill: 'hsl(var(--chart-2))' },
+];
+
+const staticCustomerCountChartData = [
+  { name: 'Main Customers', value: 12030, fill: 'hsl(var(--chart-1))' }, // Using 'Main Customers'
+  { name: 'Other Customers', value: 150, fill: 'hsl(var(--chart-2))' },   // Using 'Other Customers'
+];
 
 
 export default function AdminDashboardPage() {
@@ -74,22 +87,15 @@ export default function AdminDashboardPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  // State for "Total Bills" card
-  const [totalBillCount, setTotalBillCount] = React.useState<number>(0);
-  const [paidBillCount, setPaidBillCount] = React.useState<number>(0);
-  const [unpaidBillCount, setUnpaidBillCount] = React.useState<number>(0);
-  const [totalBillsData, setTotalBillsData] = React.useState<{ status: string; count: number; fill: string }[]>([]);
-
-  // State for "Customer Counts" card
-  const [totalIndividualCustomerCount, setTotalIndividualCustomerCount] = React.useState<number>(0);
-  const [customerCountChartData, setCustomerCountChartData] = React.useState<{ name: string; value: number; fill: string }[]>([]);
-  
-  // State for "Total Bulk Meters" card (already partially existed)
-  const [totalBulkMeterCount, setTotalBulkMeterCount] = React.useState<number>(0);
+  // Dynamic data states (still fetched but overridden for display in top cards)
+  const [dynamicTotalBillCount, setDynamicTotalBillCount] = React.useState<number>(0);
+  const [dynamicPaidBillCount, setDynamicPaidBillCount] = React.useState<number>(0);
+  const [dynamicUnpaidBillCount, setDynamicUnpaidBillCount] = React.useState<number>(0);
+  const [dynamicTotalIndividualCustomerCount, setDynamicTotalIndividualCustomerCount] = React.useState<number>(0);
+  const [dynamicTotalBulkMeterCount, setDynamicTotalBulkMeterCount] = React.useState<number>(0);
 
 
   React.useEffect(() => {
-    // console.log("AdminDashboardPage: Component mounting or re-rendering"); // Diagnostic log
     let isMounted = true;
     setIsLoading(true);
     setError(null);
@@ -104,19 +110,18 @@ export default function AdminDashboardPage() {
 
         if (!isMounted) return;
 
-        // Initial data load
         const currentBulkMeters = getBulkMeters();
         const currentCustomers = getCustomers();
         const currentBills = getBills();
 
-        setTotalBulkMeterCount(currentBulkMeters.length);
-        setTotalIndividualCustomerCount(currentCustomers.length);
+        setDynamicTotalBulkMeterCount(currentBulkMeters.length);
+        setDynamicTotalIndividualCustomerCount(currentCustomers.length);
         
         const paid = currentBills.filter(b => b.paymentStatus === 'Paid').length;
         const unpaid = currentBills.filter(b => b.paymentStatus === 'Unpaid').length;
-        setTotalBillCount(currentBills.length);
-        setPaidBillCount(paid);
-        setUnpaidBillCount(unpaid);
+        setDynamicTotalBillCount(currentBills.length);
+        setDynamicPaidBillCount(paid);
+        setDynamicUnpaidBillCount(unpaid);
 
       } catch (err) {
         console.error("Error initializing dashboard data:", err);
@@ -133,18 +138,18 @@ export default function AdminDashboardPage() {
     fetchData();
 
     const unsubscribeBulkMeters = subscribeToBulkMeters((meters) => {
-      if (isMounted) setTotalBulkMeterCount(meters.length);
+      if (isMounted) setDynamicTotalBulkMeterCount(meters.length);
     });
     const unsubscribeCustomers = subscribeToCustomers((customers) => {
-      if (isMounted) setTotalIndividualCustomerCount(customers.length);
+      if (isMounted) setDynamicTotalIndividualCustomerCount(customers.length);
     });
     const unsubscribeBills = subscribeToBills((bills) => {
       if (isMounted) {
         const paid = bills.filter(b => b.paymentStatus === 'Paid').length;
         const unpaid = bills.filter(b => b.paymentStatus === 'Unpaid').length;
-        setTotalBillCount(bills.length);
-        setPaidBillCount(paid);
-        setUnpaidBillCount(unpaid);
+        setDynamicTotalBillCount(bills.length);
+        setDynamicPaidBillCount(paid);
+        setDynamicUnpaidBillCount(unpaid);
       }
     });
     
@@ -156,19 +161,6 @@ export default function AdminDashboardPage() {
     };
   }, []);
 
-  React.useEffect(() => {
-    setTotalBillsData([
-      { status: 'Paid', count: paidBillCount, fill: 'hsl(var(--chart-1))' },
-      { status: 'Unpaid', count: unpaidBillCount, fill: 'hsl(var(--chart-2))' },
-    ]);
-  }, [paidBillCount, unpaidBillCount]);
-
-  React.useEffect(() => {
-    setCustomerCountChartData([
-      { name: 'Bulk Meters', value: totalBulkMeterCount, fill: 'hsl(var(--chart-1))' },
-      { name: 'Individual Customers', value: totalIndividualCustomerCount, fill: 'hsl(var(--chart-2))' },
-    ]);
-  }, [totalBulkMeterCount, totalIndividualCustomerCount]);
 
   if (isLoading) {
     return <div className="p-4 text-center">Loading dashboard data...</div>;
@@ -197,15 +189,15 @@ export default function AdminDashboardPage() {
             <BarChartIcon className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalBillCount.toLocaleString()}</div>
-            {/* <p className="text-xs text-muted-foreground">+20.1% from last month</p> */}
+            <div className="text-2xl font-bold">1600</div>
+            <p className="text-xs text-muted-foreground">+20.1% from last month</p>
             <div className="h-[120px] mt-4">
-              {(totalBillsData.length > 0 && (totalBillsData[0].count > 0 || totalBillsData[1].count > 0)) ? (
+              {(staticTotalBillsData.length > 0 && (staticTotalBillsData[0].count > 0 || staticTotalBillsData[1].count > 0)) ? (
                 <ChartContainer config={chartConfig} className="w-full h-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={totalBillsData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={50} label>
-                        {totalBillsData.map((entry, index) => (
+                      <Pie data={staticTotalBillsData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={50} label>
+                        {staticTotalBillsData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.fill} />
                         ))}
                       </Pie>
@@ -228,15 +220,15 @@ export default function AdminDashboardPage() {
             <PieChartIcon className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(totalIndividualCustomerCount + totalBulkMeterCount).toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Total active customers & meters</p>
+            <div className="text-2xl font-bold">12,180</div>
+            <p className="text-xs text-muted-foreground">Total active customers</p>
             <div className="h-[120px] mt-4">
-              {(customerCountChartData.length > 0 && (customerCountChartData[0].value > 0 || customerCountChartData[1].value > 0)) ? (
+              {(staticCustomerCountChartData.length > 0 && (staticCustomerCountChartData[0].value > 0 || staticCustomerCountChartData[1].value > 0)) ? (
                 <ChartContainer config={chartConfig} className="w-full h-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={customerCountChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={30} outerRadius={50} paddingAngle={2} label>
-                        {customerCountChartData.map((entry, index) => (
+                      <Pie data={staticCustomerCountChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={30} outerRadius={50} paddingAngle={2} label>
+                        {staticCustomerCountChartData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.fill} />
                         ))}
                       </Pie>
@@ -259,7 +251,7 @@ export default function AdminDashboardPage() {
             <Gauge className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalBulkMeterCount.toLocaleString()}</div>
+            <div className="text-2xl font-bold">1</div>
             <p className="text-xs text-muted-foreground">Total registered bulk meters</p>
             <div className="h-[120px] mt-4 flex items-center justify-center">
                 <Gauge className="h-16 w-16 text-primary opacity-50" />
@@ -276,7 +268,7 @@ export default function AdminDashboardPage() {
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Link href="/admin/bulk-meters" passHref>
                 <Button variant="outline" className="w-full justify-start p-4 h-auto">
- <Gauge className="mr-3 h-6 w-6 text-primary" />
+                 <Gauge className="mr-3 h-6 w-6 text-primary" />
                     <div>
                         <p className="font-semibold text-base">View Bulk Meters</p>
                         <p className="text-xs text-muted-foreground">Manage all bulk water meters.</p>
@@ -333,7 +325,7 @@ export default function AdminDashboardPage() {
               </div>
             ) : (
               <ChartContainer 
-                key={showBranchPerformanceTable ? 'bp-chart' : 'bp-table-placeholder'} 
+                key={showBranchPerformanceTable ? 'bp-table-placeholder' : 'bp-chart'} 
                 config={chartConfig} 
                 className="w-full h-full"
               >
@@ -343,8 +335,8 @@ export default function AdminDashboardPage() {
                     <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                     <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
                     <Legend />
- <Bar dataKey="paid" stackId="a" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
- <Bar dataKey="unpaid" stackId="a" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                     <Bar dataKey="paid" stackId="a" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+                     <Bar dataKey="unpaid" stackId="a" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -385,7 +377,7 @@ export default function AdminDashboardPage() {
               </div>
              ) : (
               <ChartContainer 
-                key={showWaterUsageTable ? 'wu-chart' : 'wu-table-placeholder'} 
+                key={showWaterUsageTable ? 'wu-table-placeholder' : 'wu-chart'}
                 config={chartConfig} 
                 className="w-full h-full"
               >
@@ -394,7 +386,7 @@ export default function AdminDashboardPage() {
                     <XAxis dataKey="month" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                     <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                     <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
- <Legend />
+                     <Legend />
                     <Line type="monotone" dataKey="usage" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--chart-1))", stroke: "hsl(var(--background))" }} activeDot={{ r:6, fill: "hsl(var(--chart-1))", stroke: "hsl(var(--background))"}} name={chartConfig.waterUsage.label} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -406,6 +398,8 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+    
+
     
 
     

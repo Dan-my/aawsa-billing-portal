@@ -38,18 +38,17 @@ import { format, parse, isValid } from "date-fns";
 const individualCustomerFormObjectSchema = baseIndividualCustomerDataSchema.extend({
   status: z.enum(individualCustomerStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
   paymentStatus: z.enum(paymentStatuses, { errorMap: () => ({ message: "Please select a valid payment status."}) }),
-});
+});; // Explicit semicolon
 
-// Zod schema refinement to ensure currentReading is not less than previousReading
 const individualCustomerFormSchema = individualCustomerFormObjectSchema.refine(data => {
   const prev = data.previousReading === null || data.previousReading === undefined ? -Infinity : Number(data.previousReading);
   const curr = data.currentReading === null || data.currentReading === undefined ? -Infinity : Number(data.currentReading);
-  if (Number.isNaN(prev) || Number.isNaN(curr)) return true; // Allow Zod to handle NaN type errors separately
+  if (Number.isNaN(prev) || Number.isNaN(curr)) return true;
   return curr >= prev;
 } , {
   message: "Current Reading must be greater than or equal to Previous Reading.",
   path: ["currentReading"],
-});
+});; // Explicit semicolon
 
 export type IndividualCustomerFormValues = z.infer<typeof individualCustomerFormSchema>;
 
@@ -109,7 +108,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
       });
     }
     return () => unsubscribe();
-  }, [propBulkMeters, open]);
+  }, [propBulkMeters, open]);; // Explicit semicolon
 
   React.useEffect(() => {
     if (defaultValues) {
@@ -157,7 +156,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
       });
       setIsBulkMeterSelected(false);
     }
-  }, [defaultValues, form, open]);
+  }, [defaultValues, form, open]);; // Explicit semicolon
 
   React.useEffect(() => {
     const subscription = form.watch((value, { name }) => {
@@ -166,22 +165,24 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
       }
     });
     return () => subscription.unsubscribe();
-  }, [form, dynamicBulkMeters]);
+  }, [form, dynamicBulkMeters]);; // Explicit semicolon
 
   const handleSubmit = (data: IndividualCustomerFormValues) => {
     onSubmit(data);
     onOpenChange(false);
-  };
+  };; // Explicit semicolon
 
   const commonFormFieldProps = {
     disabled: !isBulkMeterSelected && !defaultValues,
-  };
+  };; // Explicit semicolon
+
   const commonSelectTriggerProps = {
     disabled: !isBulkMeterSelected && !defaultValues,
-  };
+  };; // Explicit semicolon
+
   const commonDatePickerProps = {
     disabledTrigger: !isBulkMeterSelected && !defaultValues,
-  };
+  };; // Explicit semicolon
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -314,10 +315,10 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                         onChange={e => {
                           const valStr = e.target.value;
                           if (valStr === "") {
-                            field.onChange(undefined); 
+                            field.onChange(undefined);
                           } else {
                             const parsed = parseInt(valStr, 10);
-                            field.onChange(Number.isNaN(parsed) ? NaN : parsed); 
+                            field.onChange(Number.isNaN(parsed) ? NaN : parsed);
                           }
                         }}
                          {...commonFormFieldProps}
@@ -541,6 +542,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                           <SelectItem key={status} value={status}>{status}</SelectItem>
                         ))}
                       </SelectContent>
+                    </Select>
                      <FormMessage />
                   </FormItem>
                 )}

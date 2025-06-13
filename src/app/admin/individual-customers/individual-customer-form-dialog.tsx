@@ -7,12 +7,12 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog, // Reverted alias
-  DialogContent, // Reverted alias
-  DialogDescription, // Reverted alias
-  DialogFooter, // Reverted alias
-  DialogHeader, // Reverted alias
-  DialogTitle, // Reverted alias
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -31,10 +31,9 @@ import {
 } from "@/app/admin/data-entry/customer-data-entry-types";
 import type { IndividualCustomer } from "./individual-customer-types";
 import { individualCustomerStatuses, paymentStatuses } from "./individual-customer-types";
-import { getBulkMeters, subscribeToBulkMeters, initializeBulkMeters } from "@/lib/data-store"; // Added initializeBulkMeters
+import { getBulkMeters, subscribeToBulkMeters, initializeBulkMeters } from "@/lib/data-store";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse, isValid } from "date-fns";
-
 
 const individualCustomerFormObjectSchema = baseIndividualCustomerDataSchema.extend({
   status: z.enum(individualCustomerStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
@@ -45,13 +44,12 @@ const individualCustomerFormObjectSchema = baseIndividualCustomerDataSchema.exte
 const individualCustomerFormSchema = individualCustomerFormObjectSchema.refine(data => {
   const prev = data.previousReading === null || data.previousReading === undefined ? -Infinity : Number(data.previousReading);
   const curr = data.currentReading === null || data.currentReading === undefined ? -Infinity : Number(data.currentReading);
-  if (isNaN(prev) || isNaN(curr)) return true; // Allow Zod to handle NaN type errors separately
+  if (Number.isNaN(prev) || Number.isNaN(curr)) return true; // Allow Zod to handle NaN type errors separately
   return curr >= prev;
 } , {
   message: "Current Reading must be greater than or equal to Previous Reading.",
   path: ["currentReading"],
 });
-
 
 export type IndividualCustomerFormValues = z.infer<typeof individualCustomerFormSchema>;
 
@@ -92,7 +90,6 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
   });
 
   React.useEffect(() => {
-    // Ensure bulk meters are initialized if not provided via props
     if (!propBulkMeters || propBulkMeters.length === 0) {
       initializeBulkMeters().then(() => {
         const fetchedBms = getBulkMeters().map(bm => ({ id: bm.id, name: bm.name }));
@@ -185,7 +182,6 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
   const commonDatePickerProps = {
     disabledTrigger: !isBulkMeterSelected && !defaultValues,
   };
-
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

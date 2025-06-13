@@ -26,9 +26,9 @@ const commonChartLoading = (heightClass: string) => (
 );
 
 const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false, loading: () => commonChartLoading("h-full") });
-const BarChart = dynamic(() => import('recharts').then(mod => mod.BarChart), { ssr: false, loading: () => commonChartLoading("h-full") });
-const PieChart = dynamic(() => import('recharts').then(mod => mod.PieChart), { ssr: false, loading: () => commonChartLoading("h-full") });
-const LineChart = dynamic(() => import('recharts').then(mod => mod.LineChart), { ssr: false, loading: () => commonChartLoading("h-full") });
+const BarChart = dynamic(() => import('recharts').then(mod => mod.BarChart), { ssr: false });
+const PieChart = dynamic(() => import('recharts').then(mod => mod.PieChart), { ssr: false });
+const LineChart = dynamic(() => import('recharts').then(mod => mod.LineChart), { ssr: false });
 const XAxis = dynamic(() => import('recharts').then(mod => mod.XAxis), { ssr: false });
 const YAxis = dynamic(() => import('recharts').then(mod => mod.YAxis), { ssr: false });
 const Tooltip = dynamic(() => import('recharts').then(mod => mod.Tooltip), { ssr: false });
@@ -325,7 +325,7 @@ export default function AdminDashboardPage() {
               </div>
             ) : (
               <ChartContainer 
-                key={showBranchPerformanceTable ? 'bp-table-placeholder' : 'bp-chart'} 
+                key={showBranchPerformanceTable ? 'bp-table-mode' : 'bp-chart-mode'} 
                 config={chartConfig} 
                 className="w-full h-full"
               >
@@ -377,7 +377,7 @@ export default function AdminDashboardPage() {
               </div>
              ) : (
               <ChartContainer 
-                key={showWaterUsageTable ? 'wu-table-placeholder' : 'wu-chart'}
+                key={showWaterUsageTable ? 'wu-table-mode' : 'wu-chart-mode'}
                 config={chartConfig} 
                 className="w-full h-full"
               >
@@ -398,6 +398,8 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+    
+
     
 
     

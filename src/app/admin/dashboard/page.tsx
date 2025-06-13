@@ -200,7 +200,7 @@ export default function AdminDashboardPage() {
             <div className="text-2xl font-bold">{totalBillCount.toLocaleString()}</div>
             {/* <p className="text-xs text-muted-foreground">+20.1% from last month</p> */}
             <div className="h-[120px] mt-4">
-              {totalBillsData.length > 0 && (totalBillsData[0].count > 0 || totalBillsData[1].count > 0) ? (
+              {(totalBillsData.length > 0 && (totalBillsData[0].count > 0 || totalBillsData[1].count > 0)) ? (
                 <ChartContainer config={chartConfig} className="w-full h-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -231,7 +231,7 @@ export default function AdminDashboardPage() {
             <div className="text-2xl font-bold">{(totalIndividualCustomerCount + totalBulkMeterCount).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Total active customers & meters</p>
             <div className="h-[120px] mt-4">
-              {customerCountChartData.length > 0 && (customerCountChartData[0].value > 0 || customerCountChartData[1].value > 0) ? (
+              {(customerCountChartData.length > 0 && (customerCountChartData[0].value > 0 || customerCountChartData[1].value > 0)) ? (
                 <ChartContainer config={chartConfig} className="w-full h-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -332,7 +332,11 @@ export default function AdminDashboardPage() {
                 </Table>
               </div>
             ) : (
-              <ChartContainer config={chartConfig} className="w-full h-full">
+              <ChartContainer 
+                key={showBranchPerformanceTable ? 'bp-chart' : 'bp-table-placeholder'} 
+                config={chartConfig} 
+                className="w-full h-full"
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={branchPerformanceData}>
                     <XAxis dataKey="branch" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
@@ -380,7 +384,11 @@ export default function AdminDashboardPage() {
                 </Table>
               </div>
              ) : (
-              <ChartContainer config={chartConfig} className="w-full h-full">
+              <ChartContainer 
+                key={showWaterUsageTable ? 'wu-chart' : 'wu-table-placeholder'} 
+                config={chartConfig} 
+                className="w-full h-full"
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={waterUsageTrendData}>
                     <XAxis dataKey="month" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
@@ -398,6 +406,8 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+    
+
     
 
     

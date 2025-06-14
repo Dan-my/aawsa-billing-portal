@@ -5,7 +5,7 @@ import * as React from "react";
 import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart as BarChartIcon, PieChart as PieChartIcon, LineChart as LineChartIcon, Building, Users, Gauge, ArrowRight, TableIcon, BarChartBig, TrendingUp, AlertCircle } from 'lucide-react'; 
-import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'; 
+import { ChartContainer, ChartTooltipContent, ChartLegendContent } from '@/components/ui/chart'; 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";

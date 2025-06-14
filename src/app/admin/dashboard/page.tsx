@@ -5,7 +5,7 @@ import * as React from "react";
 import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart as BarChartIcon, PieChart as PieChartIcon, LineChart as LineChartIcon, Building, Users, Gauge, ArrowRight, TableIcon, BarChartBig, TrendingUp, AlertCircle } from 'lucide-react'; 
-import { ChartContainer, ChartTooltipContent, ChartLegendContent } from '@/components/ui/chart'; 
+import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart'; 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -196,7 +196,7 @@ export default function AdminDashboardPage() {
               {dynamicPaidBillCount.toLocaleString()} Paid / {dynamicUnpaidBillCount.toLocaleString()} Unpaid
             </p>
             <div className="h-[120px] mt-4">
-              {(totalBillsChartData.length > 0 && (totalBillsChartData[0].count > 0 || totalBillsChartData[1].count > 0)) ? (
+              {(totalBillsChartData.length > 0 && (totalBillsChartData.some(d => d.count > 0))) ? (
                 <ChartContainer config={chartConfig} className="w-full h-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -228,7 +228,7 @@ export default function AdminDashboardPage() {
             <div className="text-2xl font-bold">{totalCustomersAndMeters.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Total registered entities</p>
             <div className="h-[120px] mt-4">
-              {(customerCountChartData.length > 0 && (customerCountChartData[0].value > 0 || customerCountChartData[1].value > 0)) ? (
+              {(customerCountChartData.length > 0 && (customerCountChartData.some(d => d.value > 0))) ? (
                 <ChartContainer config={chartConfig} className="w-full h-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -300,7 +300,7 @@ export default function AdminDashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div>
               <CardTitle>Branch Performance (Paid vs Unpaid)</CardTitle>
-              <CardDescription>Mock data: Comparison of bills status. Future enhancements will connect this to live data.</CardDescription>
+               <CardDescription>Mock data: Comparison of bills status. Future enhancements will connect this to live data.</CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={() => setShowBranchPerformanceTable(!showBranchPerformanceTable)}>
               {showBranchPerformanceTable ? <BarChartBig className="mr-2 h-4 w-4" /> : <TableIcon className="mr-2 h-4 w-4" />}

@@ -69,10 +69,10 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal" }: AppHeaderC
         <Link href={dashboardHref} className="flex items-center gap-2 text-lg font-semibold">
           <Image
             src="https://user-images.githubusercontent.com/1212970/281944903-71216077-91e0-4399-8094-110806046cb4.png"
-            alt="AAWSA Logo"
+            alt="AAWSA Portal Logo"
             width={40}
             height={40}
-            className="h-auto rounded-full" 
+            className="rounded-full" 
             data-ai-hint="official logo"
           />
           <span className="hidden sm:inline-block ml-2">{appName}</span>

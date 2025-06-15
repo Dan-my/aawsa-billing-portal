@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
+import Image from "next/image"; // Import next/image
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -18,9 +19,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Droplets } from "lucide-react";
+// Droplets icon is no longer needed
 import type { StaffMember } from "@/app/admin/staff-management/staff-types";
-import { getStaffMembers, initializeStaffMembers, subscribeToStaffMembers } from "@/lib/data-store"; // Import from data-store
+import { getStaffMembers, initializeStaffMembers, subscribeToStaffMembers } from "@/lib/data-store";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -50,7 +51,6 @@ export function AuthForm() {
 
     const unsubscribe = subscribeToStaffMembers((updatedStaff) => {
       setAllStaffMembers(updatedStaff);
-      // No need to setIsLoadingStaff here, initial load handles it
     });
     return () => unsubscribe();
   }, []);
@@ -84,8 +84,6 @@ export function AuthForm() {
       const staffUser = allStaffMembers.find(staff => staff.email.toLowerCase() === email.toLowerCase());
 
       if (staffUser) {
-        // Password comparison - ensure staffUser.password is available and matches.
-        // For Supabase, if password column is readable by anon/auth role.
         if (staffUser.password === password) {
           if (staffUser.status === "Active") {
             userSession = { email: staffUser.email, role: "staff", branchName: staffUser.branch };
@@ -108,7 +106,7 @@ export function AuthForm() {
         title: "Login Successful",
         description: `Welcome, ${userSession.role === 'admin' ? userSession.email : userSession.branchName}! Redirecting...`,
       });
-      window.location.assign(redirectTo); // Use window.location.assign for full page reload and middleware re-evaluation if any
+      window.location.assign(redirectTo); 
     } else {
       toast({
         variant: "destructive",
@@ -122,8 +120,14 @@ export function AuthForm() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <Droplets className="h-8 w-8" />
+          <div className="mx-auto mb-4 flex items-center justify-center"> {/* Adjusted styling for the logo container */}
+            <Image
+              src="https://veiethiopia.com/photo/partner/par2.png"
+              alt="AAWSA Logo"
+              width={96} // Adjusted width for better visibility on login form
+              height={60} // Adjusted height maintaining aspect ratio
+              className="flex-shrink-0"
+            />
           </div>
           <CardTitle className="text-3xl font-bold">AAWSA Billing Portal</CardTitle>
           <CardDescription>Sign in to access your account</CardDescription>

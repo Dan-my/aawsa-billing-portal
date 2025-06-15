@@ -3,13 +3,13 @@
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm } from "react-hook-form"; // Ensure this is imported
 import * as z from "zod";
 import { useRouter } from "next/navigation";
-import Image from "next/image"; // Import next/image
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
-  Form,
+  Form, // Ensure this is imported from "@/components/ui/form"
   FormControl,
   FormField,
   FormItem,
@@ -41,6 +41,15 @@ export function AuthForm() {
   const [allStaffMembers, setAllStaffMembers] = React.useState<StaffMember[]>([]);
   const [isLoadingStaff, setIsLoadingStaff] = React.useState(true);
 
+  // Initialize the form here
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
   React.useEffect(() => {
     setIsLoadingStaff(true);
     initializeStaffMembers().then(() => {
@@ -53,7 +62,6 @@ export function AuthForm() {
     });
     return () => unsubscribe();
   }, []);
-
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isLoadingStaff) {
@@ -95,9 +103,9 @@ export function AuthForm() {
       localStorage.setItem("user", JSON.stringify(userSession));
       toast({
         title: "Login Successful",
-        description: `Welcome, ${userSession.role === 'admin' ? userSession.email : userSession.branchName}! Redirecting...`,
+        description: `Welcome, ${userSession.role === 'admin' ? userSession.email : (userSession.branchName || userSession.email)}! Redirecting...`,
       });
-      window.location.assign(redirectTo); 
+      window.location.assign(redirectTo);
     } else {
       toast({
         variant: "destructive",
@@ -115,9 +123,9 @@ export function AuthForm() {
             <Image
               src="https://veiethiopia.com/photo/partner/par2.png"
               alt="AAWSA Logo"
-              width={96} 
+              width={96}
               height={60}
-              className="flex-shrink-0" 
+              className="flex-shrink-0"
             />
           </div>
           <CardTitle className="text-3xl font-bold">AAWSA Billing Portal</CardTitle>

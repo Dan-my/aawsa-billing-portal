@@ -132,6 +132,15 @@ export interface DomainReportLog {
   updatedAt?: string | null;
 }
 
+interface StoreOperationResult<T = any> {
+    success: boolean;
+    data?: T;
+    message?: string;
+    isNotFoundError?: boolean;
+    error?: any; 
+}
+
+
 let branches: DomainBranch[] = [];
 let customers: DomainIndividualCustomer[] = [];
 let bulkMeters: BulkMeter[] = [];
@@ -613,29 +622,20 @@ export const getMeterReadings = (): DomainMeterReading[] => [...meterReadings];
 export const getPayments = (): DomainPayment[] => [...payments];
 export const getReportLogs = (): DomainReportLog[] => [...reportLogs];
 
-export const addBranch = async (branchData: Omit<DomainBranch, 'id'>) => {
+export const addBranch = async (branchData: Omit<DomainBranch, 'id'>): Promise<StoreOperationResult<DomainBranch>> => {
   const payload = mapDomainBranchToInsert(branchData);
-  console.log("DataStore: Attempting to add branch with payload:", JSON.stringify(payload, null, 2));
   const { data: newSupabaseBranch, error } = await supabaseCreateBranch(payload);
   if (newSupabaseBranch && !error) {
     const newBranch = mapSupabaseBranchToDomain(newSupabaseBranch);
     branches = [newBranch, ...branches];
     notifyBranchListeners();
-    return newBranch;
+    return { success: true, data: newBranch };
   }
-  console.error("DataStore: Failed to add branch. Original error object:", error);
-  if (error && typeof error === 'object') {
-    console.error("Error details (JSON):", JSON.stringify(error, null, 2));
-    const supabaseError = error as any;
-    if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
-    if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
-    if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
-    if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
-  }
-  return null;
+  console.error("DataStore: Failed to add branch. Error:", JSON.stringify(error, null, 2));
+  return { success: false, message: error?.message || "Failed to add branch.", error };
 };
 
-export const updateBranch = async (updatedBranchData: DomainBranch) => {
+export const updateBranch = async (updatedBranchData: DomainBranch): Promise<StoreOperationResult<void>> => {
   const { id, ...domainData } = updatedBranchData;
   const updatePayload = mapDomainBranchToUpdate(domainData);
   const { data: updatedSupabaseBranch, error } = await supabaseUpdateBranch(id, updatePayload);
@@ -643,30 +643,32 @@ export const updateBranch = async (updatedBranchData: DomainBranch) => {
     const updatedBranch = mapSupabaseBranchToDomain(updatedSupabaseBranch);
     branches = branches.map(b => b.id === updatedBranch.id ? updatedBranch : b);
     notifyBranchListeners();
-  } else {
-    console.error("DataStore: Failed to update branch. Supabase error:", error);
-    if (error && typeof error === 'object') {
-        console.error("Error details (JSON):", JSON.stringify(error, null, 2));
-        const supabaseError = error as any;
-        if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
-        if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
-        if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
-        if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
-    }
+    return { success: true };
   }
+  console.error("DataStore: Failed to update branch. Error:", JSON.stringify(error, null, 2));
+  let userMessage = "Failed to update branch.";
+  let isNotFoundError = false;
+  if (error && error.code === 'PGRST204') {
+    userMessage = "Failed to update branch: Record not found.";
+    isNotFoundError = true;
+  } else if (error?.message) {
+    userMessage = `Failed to update branch: ${error.message}`;
+  }
+  return { success: false, message: userMessage, isNotFoundError, error };
 };
 
-export const deleteBranch = async (branchId: string) => {
+export const deleteBranch = async (branchId: string): Promise<StoreOperationResult<void>> => {
   const { error } = await supabaseDeleteBranch(branchId);
   if (!error) {
     branches = branches.filter(b => b.id !== branchId);
     notifyBranchListeners();
-  } else {
-    console.error("DataStore: Failed to delete branch. Supabase error:", JSON.stringify(error, null, 2));
+    return { success: true };
   }
+  console.error("DataStore: Failed to delete branch. Error:", JSON.stringify(error, null, 2));
+  return { success: false, message: error?.message || "Failed to delete branch.", error };
 };
 
-export const addCustomer = async (customerData: Omit<DomainIndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'status'>) => {
+export const addCustomer = async (customerData: Omit<DomainIndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'status'>): Promise<StoreOperationResult<DomainIndividualCustomer>> => {
   const customerPayload = mapDomainCustomerToInsert(customerData);
   const { data: newSupabaseCustomer, error } = await supabaseCreateCustomer(customerPayload);
 
@@ -674,73 +676,70 @@ export const addCustomer = async (customerData: Omit<DomainIndividualCustomer, '
     const newCustomer = mapSupabaseCustomerToDomain(newSupabaseCustomer);
     customers = [newCustomer, ...customers];
     notifyCustomerListeners();
-    return newCustomer;
+    return { success: true, data: newCustomer };
   }
-  console.error("DataStore: Failed to add customer. Original error object:", error);
-  if (error && typeof error === 'object') {
-    console.error("Error details (JSON):", JSON.stringify(error, null, 2));
-    const supabaseError = error as any;
-    if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
-    if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
-    if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
-    if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
-  }
-  return null;
+  console.error("DataStore: Failed to add customer. Error:", JSON.stringify(error, null, 2));
+  return { success: false, message: error?.message || "Failed to add customer.", error };
 };
 
-export const updateCustomer = async (updatedCustomerData: DomainIndividualCustomer) => {
+export const updateCustomer = async (updatedCustomerData: DomainIndividualCustomer): Promise<StoreOperationResult<void>> => {
   const { id } = updatedCustomerData;
   const updatePayloadSupabase = mapDomainCustomerToUpdate(updatedCustomerData);
   const { data: updatedSupabaseCustomer, error } = await supabaseUpdateCustomer(id, updatePayloadSupabase);
+
   if (updatedSupabaseCustomer && !error) {
     const updatedCustomer = mapSupabaseCustomerToDomain(updatedSupabaseCustomer);
     customers = customers.map(c => c.id === updatedCustomer.id ? updatedCustomer : c);
     notifyCustomerListeners();
+    return { success: true };
   } else {
     console.error("DataStore: Failed to update customer. Original error object:", error);
+    let userMessage = "Failed to update customer due to an unexpected error.";
+    let isNotFoundError = false;
     if (error && typeof error === 'object') {
-        console.error("Error details (JSON):", JSON.stringify(error, null, 2));
-        const supabaseError = error as any;
-        if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
-        if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
-        if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
-        if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
+      const supabaseError = error as any; 
+      console.error("Error details (JSON):", JSON.stringify(supabaseError, null, 2));
+      if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
+      if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
+      if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
+      if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
+
+      if (supabaseError.code === 'PGRST204') {
+        userMessage = "Failed to update customer: Record not found. It may have been deleted.";
+        isNotFoundError = true;
+      } else if (supabaseError.message) {
+        userMessage = `Failed to update customer: ${supabaseError.message}`;
+      }
     }
+    return { success: false, message: userMessage, isNotFoundError, error };
   }
 };
 
-export const deleteCustomer = async (customerId: string) => {
+export const deleteCustomer = async (customerId: string): Promise<StoreOperationResult<void>> => {
   const { error } = await supabaseDeleteCustomer(customerId);
   if (!error) {
     customers = customers.filter(c => c.id !== customerId);
     notifyCustomerListeners();
-  } else {
-    console.error("DataStore: Failed to delete customer. Supabase error:", JSON.stringify(error, null, 2));
+    return { success: true };
   }
+  console.error("DataStore: Failed to delete customer. Error:", JSON.stringify(error, null, 2));
+  return { success: false, message: error?.message || "Failed to delete customer.", error };
 };
 
-export const addBulkMeter = async (bulkMeterDomainData: Omit<BulkMeter, 'id'>) => {
+export const addBulkMeter = async (bulkMeterDomainData: Omit<BulkMeter, 'id'>): Promise<StoreOperationResult<BulkMeter>> => {
   const bulkMeterPayload = mapDomainBulkMeterToInsert(bulkMeterDomainData) as BulkMeterInsert;
   const { data: newSupabaseBulkMeter, error } = await supabaseCreateBulkMeter(bulkMeterPayload);
   if (newSupabaseBulkMeter && !error) {
     const newBulkMeter = mapSupabaseBulkMeterToDomain(newSupabaseBulkMeter);
     bulkMeters = [newBulkMeter, ...bulkMeters];
     notifyBulkMeterListeners();
-    return newBulkMeter;
+    return { success: true, data: newBulkMeter };
   }
-  console.error("DataStore: Failed to add bulk meter. Original error object:", error);
-  if (error && typeof error === 'object') {
-    console.error("Error details (JSON):", JSON.stringify(error, null, 2));
-    const supabaseError = error as any;
-    if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
-    if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
-    if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
-    if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
-  }
-  return null;
+  console.error("DataStore: Failed to add bulk meter. Error:", JSON.stringify(error, null, 2));
+  return { success: false, message: error?.message || "Failed to add bulk meter.", error };
 };
 
-export const updateBulkMeter = async (updatedBulkMeterData: BulkMeter) => {
+export const updateBulkMeter = async (updatedBulkMeterData: BulkMeter): Promise<StoreOperationResult<void>> => {
   const { id, ...domainData } = updatedBulkMeterData;
   const updatePayloadToSend = mapDomainBulkMeterToUpdate({ id, ...domainData }) as BulkMeterUpdate;
   const { data: updatedSupabaseBulkMeter, error } = await supabaseUpdateBulkMeter(id, updatePayloadToSend);
@@ -748,20 +747,21 @@ export const updateBulkMeter = async (updatedBulkMeterData: BulkMeter) => {
     const updatedBulkMeter = mapSupabaseBulkMeterToDomain(updatedSupabaseBulkMeter);
     bulkMeters = bulkMeters.map(bm => bm.id === updatedBulkMeter.id ? updatedBulkMeter : bm);
     notifyBulkMeterListeners();
-  } else {
-    console.error("DataStore: Failed to update bulk meter. Original error object:", error);
-    if (error && typeof error === 'object') {
-        console.error("Error details (JSON):", JSON.stringify(error, null, 2));
-        const supabaseError = error as any;
-        if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
-        if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
-        if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
-        if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
-    }
+    return { success: true };
   }
+  console.error("DataStore: Failed to update bulk meter. Error:", JSON.stringify(error, null, 2));
+  let userMessage = "Failed to update bulk meter.";
+  let isNotFoundError = false;
+  if (error && error.code === 'PGRST204') {
+    userMessage = "Failed to update bulk meter: Record not found.";
+    isNotFoundError = true;
+  } else if (error?.message) {
+    userMessage = `Failed to update bulk meter: ${error.message}`;
+  }
+  return { success: false, message: userMessage, isNotFoundError, error };
 };
 
-export const updateBulkMeterPaymentStatus = async (id: string, newPaymentStatus: PaymentStatus) => {
+export const updateBulkMeterPaymentStatus = async (id: string, newPaymentStatus: PaymentStatus): Promise<StoreOperationResult<void>> => {
   const updatePayload: BulkMeterUpdate = { paymentStatus: newPaymentStatus };
   const { data: updatedSupabaseBulkMeter, error } = await supabaseUpdateBulkMeter(id, updatePayload);
   if (updatedSupabaseBulkMeter && !error) {
@@ -772,52 +772,46 @@ export const updateBulkMeterPaymentStatus = async (id: string, newPaymentStatus:
         : bm
     );
     notifyBulkMeterListeners();
-  } else {
-    console.error("DataStore: Failed to update bulk meter payment status. Original error object:", error);
-    if (error && typeof error === 'object') {
-        console.error("Error details (JSON):", JSON.stringify(error, null, 2));
-        const supabaseError = error as any;
-        if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
-        if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
-        if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
-        if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
-    }
+    return { success: true };
   }
+  console.error("DataStore: Failed to update bulk meter payment status. Error:", JSON.stringify(error, null, 2));
+  let userMessage = "Failed to update payment status.";
+   let isNotFoundError = false;
+  if (error && error.code === 'PGRST204') {
+    userMessage = "Failed to update payment status: Record not found.";
+    isNotFoundError = true;
+  } else if (error?.message) {
+    userMessage = `Failed to update payment status: ${error.message}`;
+  }
+  return { success: false, message: userMessage, isNotFoundError, error };
 };
 
 
-export const deleteBulkMeter = async (bulkMeterId: string) => {
+export const deleteBulkMeter = async (bulkMeterId: string): Promise<StoreOperationResult<void>> => {
   const { error } = await supabaseDeleteBulkMeter(bulkMeterId);
   if (!error) {
     bulkMeters = bulkMeters.filter(bm => bm.id !== bulkMeterId);
     notifyBulkMeterListeners();
-  } else {
-    console.error("DataStore: Failed to delete bulk meter. Supabase error:", JSON.stringify(error, null, 2));
+    return { success: true };
   }
+  console.error("DataStore: Failed to delete bulk meter. Error:", JSON.stringify(error, null, 2));
+  return { success: false, message: error?.message || "Failed to delete bulk meter.", error };
 };
 
-export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>) => {
+export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>): Promise<StoreOperationResult<StaffMember>> => {
   const staffPayload = mapDomainStaffToInsert(staffData);
   const { data: newSupabaseStaff, error } = await supabaseCreateStaffMember(staffPayload);
   if (newSupabaseStaff && !error) {
     const newStaff = mapSupabaseStaffToDomain(newSupabaseStaff);
     staffMembers = [newStaff, ...staffMembers];
     notifyStaffMemberListeners();
-    return newStaff;
+    return { success: true, data: newStaff };
   }
-  console.error("DataStore: Failed to add staff member. Original error object:", error);
-  if (error && typeof error === 'object') {
-    console.error("Error details (JSON):", JSON.stringify(error, null, 2));
-    const supabaseError = error as any;
-    if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
-    if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
-    if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
-    if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
-  }
-  return null;
+  console.error("DataStore: Failed to add staff member. Error:", JSON.stringify(error, null, 2));
+  return { success: false, message: error?.message || "Failed to add staff member.", error };
 };
 
-export const updateStaffMember = async (updatedStaffData: StaffMember) => {
+export const updateStaffMember = async (updatedStaffData: StaffMember): Promise<StoreOperationResult<void>> => {
   const { id, ...domainData } = updatedStaffData; 
   const staffUpdatePayload = mapDomainStaffToUpdate(domainData); 
   const { data: updatedSupabaseStaff, error } = await supabaseUpdateStaffMember(id, staffUpdatePayload);
@@ -825,118 +819,161 @@ export const updateStaffMember = async (updatedStaffData: StaffMember) => {
     const updatedStaff = mapSupabaseStaffToDomain(updatedSupabaseStaff);
     staffMembers = staffMembers.map(s => s.id === updatedStaff.id ? updatedStaff : s);
     notifyStaffMemberListeners();
-  } else {
-    console.error("DataStore: Failed to update staff member. Supabase error:", JSON.stringify(error, null, 2));
+    return { success: true };
   }
+  console.error("DataStore: Failed to update staff member. Error:", JSON.stringify(error, null, 2));
+  let userMessage = "Failed to update staff member.";
+  let isNotFoundError = false;
+  if (error && error.code === 'PGRST204') {
+    userMessage = "Failed to update staff member: Record not found.";
+    isNotFoundError = true;
+  } else if (error?.message) {
+    userMessage = `Failed to update staff member: ${error.message}`;
+  }
+  return { success: false, message: userMessage, isNotFoundError, error };
 };
 
-export const deleteStaffMember = async (staffId: string) => {
+export const deleteStaffMember = async (staffId: string): Promise<StoreOperationResult<void>> => {
   const { error } = await supabaseDeleteStaffMember(staffId);
   if (!error) {
     staffMembers = staffMembers.filter(s => s.id !== staffId);
     notifyStaffMemberListeners();
-  } else {
-    console.error("DataStore: Failed to delete staff member. Supabase error:", JSON.stringify(error, null, 2));
+    return { success: true };
   }
+  console.error("DataStore: Failed to delete staff member. Error:", JSON.stringify(error, null, 2));
+  return { success: false, message: error?.message || "Failed to delete staff member.", error };
 };
 
-export const addBill = async (billData: Omit<DomainBill, 'id'>): Promise<DomainBill | null> => { 
+export const addBill = async (billData: Omit<DomainBill, 'id'>): Promise<StoreOperationResult<DomainBill>> => { 
     const payload = mapDomainBillToSupabase(billData) as BillInsert;
     const { data: newSupabaseBill, error } = await supabaseCreateBill(payload);
     if (newSupabaseBill && !error) {
         const newBill = mapSupabaseBillToDomain(newSupabaseBill);
         bills = [newBill, ...bills]; 
         notifyBillListeners();
-        return newBill;
+        return { success: true, data: newBill };
     }
-    console.error("DataStore: Failed to add bill. Supabase error:", JSON.stringify(error, null, 2)); return null;
+    console.error("DataStore: Failed to add bill. Supabase error:", JSON.stringify(error, null, 2)); 
+    return { success: false, message: error?.message || "Failed to add bill.", error };
 };
-export const updateExistingBill = async (id: string, billUpdateData: Partial<Omit<DomainBill, 'id'>>): Promise<void> => { 
+export const updateExistingBill = async (id: string, billUpdateData: Partial<Omit<DomainBill, 'id'>>): Promise<StoreOperationResult<void>> => { 
     const payload = mapDomainBillToSupabase(billUpdateData) as BillUpdate;
     const { data: updatedSupabaseBill, error } = await supabaseUpdateBill(id, payload);
     if (updatedSupabaseBill && !error) {
         const updatedBill = mapSupabaseBillToDomain(updatedSupabaseBill);
         bills = bills.map(b => b.id === id ? updatedBill : b); 
         notifyBillListeners();
-    } else {
-        console.error("DataStore: Failed to update bill. Supabase error:", JSON.stringify(error, null, 2));
+        return { success: true };
     }
+    console.error("DataStore: Failed to update bill. Supabase error:", JSON.stringify(error, null, 2));
+    let userMessage = "Failed to update bill.";
+    let isNotFoundError = false;
+    if (error && error.code === 'PGRST204') {
+      userMessage = "Failed to update bill: Record not found.";
+      isNotFoundError = true;
+    } else if (error?.message) {
+      userMessage = `Failed to update bill: ${error.message}`;
+    }
+    return { success: false, message: userMessage, isNotFoundError, error };
 };
-export const removeBill = async (billId: string): Promise<void> => {
+export const removeBill = async (billId: string): Promise<StoreOperationResult<void>> => {
     const { error } = await supabaseDeleteBill(billId);
     if (!error) {
         bills = bills.filter(b => b.id !== billId);
         notifyBillListeners();
-    } else {
-        console.error("DataStore: Failed to delete bill. Supabase error:", JSON.stringify(error, null, 2));
+        return { success: true };
     }
+    console.error("DataStore: Failed to delete bill. Supabase error:", JSON.stringify(error, null, 2));
+    return { success: false, message: error?.message || "Failed to delete bill.", error };
 };
 
-export const addMeterReading = async (readingData: Omit<DomainMeterReading, 'id'>): Promise<DomainMeterReading | null> => { 
+export const addMeterReading = async (readingData: Omit<DomainMeterReading, 'id'>): Promise<StoreOperationResult<DomainMeterReading>> => { 
     const payload = mapDomainMeterReadingToSupabase(readingData) as MeterReadingInsert;
     const { data: newSupabaseReading, error } = await supabaseCreateMeterReading(payload);
     if (newSupabaseReading && !error) {
         const newReading = mapSupabaseMeterReadingToDomain(newSupabaseReading);
         meterReadings = [newReading, ...meterReadings]; 
         notifyMeterReadingListeners();
-        return newReading;
+        return { success: true, data: newReading };
     }
-    console.error("DataStore: Failed to add meter reading. Supabase error:", JSON.stringify(error, null, 2)); return null;
+    console.error("DataStore: Failed to add meter reading. Supabase error:", JSON.stringify(error, null, 2)); 
+    return { success: false, message: error?.message || "Failed to add meter reading.", error };
 };
-export const updateExistingMeterReading = async (id: string, readingUpdateData: Partial<Omit<DomainMeterReading, 'id'>>): Promise<void> => { 
+export const updateExistingMeterReading = async (id: string, readingUpdateData: Partial<Omit<DomainMeterReading, 'id'>>): Promise<StoreOperationResult<void>> => { 
     const payload = mapDomainMeterReadingToSupabase(readingUpdateData) as MeterReadingUpdate;
     const { data: updatedSupabaseReading, error } = await supabaseUpdateMeterReading(id, payload);
     if (updatedSupabaseReading && !error) {
         const updatedReading = mapSupabaseMeterReadingToDomain(updatedSupabaseReading);
         meterReadings = meterReadings.map(r => r.id === id ? updatedReading : r); 
         notifyMeterReadingListeners();
-    } else {
-        console.error("DataStore: Failed to update meter reading. Supabase error:", JSON.stringify(error, null, 2));
+        return { success: true };
     }
+    console.error("DataStore: Failed to update meter reading. Supabase error:", JSON.stringify(error, null, 2));
+    let userMessage = "Failed to update meter reading.";
+    let isNotFoundError = false;
+    if (error && error.code === 'PGRST204') {
+      userMessage = "Failed to update meter reading: Record not found.";
+      isNotFoundError = true;
+    } else if (error?.message) {
+      userMessage = `Failed to update meter reading: ${error.message}`;
+    }
+    return { success: false, message: userMessage, isNotFoundError, error };
 };
-export const removeMeterReading = async (readingId: string): Promise<void> => {
+export const removeMeterReading = async (readingId: string): Promise<StoreOperationResult<void>> => {
     const { error } = await supabaseDeleteMeterReading(readingId);
     if (!error) {
         meterReadings = meterReadings.filter(r => r.id !== readingId);
         notifyMeterReadingListeners();
-    } else {
-        console.error("DataStore: Failed to delete meter reading. Supabase error:", JSON.stringify(error, null, 2));
+        return { success: true };
     }
+    console.error("DataStore: Failed to delete meter reading. Supabase error:", JSON.stringify(error, null, 2));
+    return { success: false, message: error?.message || "Failed to delete meter reading.", error };
 };
 
-export const addPayment = async (paymentData: Omit<DomainPayment, 'id'>): Promise<DomainPayment | null> => { 
+export const addPayment = async (paymentData: Omit<DomainPayment, 'id'>): Promise<StoreOperationResult<DomainPayment>> => { 
     const payload = mapDomainPaymentToSupabase(paymentData) as PaymentInsert;
     const { data: newSupabasePayment, error } = await supabaseCreatePayment(payload);
     if (newSupabasePayment && !error) {
         const newPayment = mapSupabasePaymentToDomain(newSupabasePayment);
         payments = [newPayment, ...payments]; 
         notifyPaymentListeners();
-        return newPayment;
+        return { success: true, data: newPayment };
     }
-    console.error("DataStore: Failed to add payment. Supabase error:", JSON.stringify(error, null, 2)); return null;
+    console.error("DataStore: Failed to add payment. Supabase error:", JSON.stringify(error, null, 2)); 
+    return { success: false, message: error?.message || "Failed to add payment.", error };
 };
-export const updateExistingPayment = async (id: string, paymentUpdateData: Partial<Omit<DomainPayment, 'id'>>): Promise<void> => { 
+export const updateExistingPayment = async (id: string, paymentUpdateData: Partial<Omit<DomainPayment, 'id'>>): Promise<StoreOperationResult<void>> => { 
     const payload = mapDomainPaymentToSupabase(paymentUpdateData) as PaymentUpdate;
     const { data: updatedSupabasePayment, error } = await supabaseUpdatePayment(id, payload);
     if (updatedSupabasePayment && !error) {
         const updatedPayment = mapSupabasePaymentToDomain(updatedSupabasePayment);
         payments = payments.map(p => p.id === id ? updatedPayment : p); 
         notifyPaymentListeners();
-    } else {
-        console.error("DataStore: Failed to update payment. Supabase error:", JSON.stringify(error, null, 2));
+        return { success: true };
     }
+    console.error("DataStore: Failed to update payment. Supabase error:", JSON.stringify(error, null, 2));
+    let userMessage = "Failed to update payment.";
+    let isNotFoundError = false;
+    if (error && error.code === 'PGRST204') {
+      userMessage = "Failed to update payment: Record not found.";
+      isNotFoundError = true;
+    } else if (error?.message) {
+      userMessage = `Failed to update payment: ${error.message}`;
+    }
+    return { success: false, message: userMessage, isNotFoundError, error };
 };
-export const removePayment = async (paymentId: string): Promise<void> => {
+export const removePayment = async (paymentId: string): Promise<StoreOperationResult<void>> => {
     const { error } = await supabaseDeletePayment(paymentId);
     if (!error) {
         payments = payments.filter(p => p.id !== paymentId);
         notifyPaymentListeners();
-    } else {
-        console.error("DataStore: Failed to delete payment. Supabase error:", JSON.stringify(error, null, 2));
+        return { success: true };
     }
+    console.error("DataStore: Failed to delete payment. Supabase error:", JSON.stringify(error, null, 2));
+    return { success: false, message: error?.message || "Failed to delete payment.", error };
 };
 
-export const addReportLog = async (logData: Omit<DomainReportLog, 'id' | 'generatedAt'> & { generatedAt?: string } ): Promise<DomainReportLog | null> => { 
+export const addReportLog = async (logData: Omit<DomainReportLog, 'id' | 'generatedAt'> & { generatedAt?: string } ): Promise<StoreOperationResult<DomainReportLog>> => { 
     const payload = mapDomainReportLogToSupabase(logData) as ReportLogInsert;
     if(!payload.generated_at) payload.generated_at = new Date().toISOString();
     const { data: newSupabaseLog, error } = await supabaseCreateReportLog(payload); 
@@ -944,29 +981,40 @@ export const addReportLog = async (logData: Omit<DomainReportLog, 'id' | 'genera
         const newLog = mapSupabaseReportLogToDomain(newSupabaseLog);
         reportLogs = [newLog, ...reportLogs]; 
         notifyReportLogListeners();
-        return newLog;
+        return { success: true, data: newLog };
     }
-    console.error("DataStore: Failed to add report log. Supabase error:", JSON.stringify(error, null, 2)); return null;
+    console.error("DataStore: Failed to add report log. Supabase error:", JSON.stringify(error, null, 2)); 
+    return { success: false, message: error?.message || "Failed to add report log.", error };
 };
-export const updateExistingReportLog = async (id: string, logUpdateData: Partial<Omit<DomainReportLog, 'id'>>): Promise<void> => { 
+export const updateExistingReportLog = async (id: string, logUpdateData: Partial<Omit<DomainReportLog, 'id'>>): Promise<StoreOperationResult<void>> => { 
     const payload = mapDomainReportLogToSupabase(logUpdateData) as ReportLogUpdate;
     const { data: updatedSupabaseLog, error } = await supabaseUpdateReportLog(id, payload); 
     if (updatedSupabaseLog && !error) {
         const updatedLog = mapSupabaseReportLogToDomain(updatedSupabaseLog);
         reportLogs = reportLogs.map(l => l.id === id ? updatedLog : l); 
         notifyReportLogListeners();
-    } else {
-        console.error("DataStore: Failed to update report log. Supabase error:", JSON.stringify(error, null, 2));
+        return { success: true };
     }
+    console.error("DataStore: Failed to update report log. Supabase error:", JSON.stringify(error, null, 2));
+    let userMessage = "Failed to update report log.";
+    let isNotFoundError = false;
+    if (error && error.code === 'PGRST204') {
+      userMessage = "Failed to update report log: Record not found.";
+      isNotFoundError = true;
+    } else if (error?.message) {
+      userMessage = `Failed to update report log: ${error.message}`;
+    }
+    return { success: false, message: userMessage, isNotFoundError, error };
 };
-export const removeReportLog = async (logId: string): Promise<void> => {
+export const removeReportLog = async (logId: string): Promise<StoreOperationResult<void>> => {
     const { error } = await supabaseDeleteReportLog(logId);
     if (!error) {
         reportLogs = reportLogs.filter(l => l.id !== logId);
         notifyReportLogListeners();
-    } else {
-        console.error("DataStore: Failed to delete report log. Supabase error:", JSON.stringify(error, null, 2));
+        return { success: true };
     }
+    console.error("DataStore: Failed to delete report log. Supabase error:", JSON.stringify(error, null, 2));
+    return { success: false, message: error?.message || "Failed to delete report log.", error };
 };
 
 export const subscribeToBranches = (listener: Listener<DomainBranch>): (() => void) => {

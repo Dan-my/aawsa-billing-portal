@@ -92,8 +92,12 @@ export default function IndividualCustomersPage() {
 
   const confirmDelete = async () => {
     if (customerToDelete) {
-      await deleteCustomerFromStore(customerToDelete.id);
-      toast({ title: "Customer Deleted", description: `${customerToDelete.name} has been removed.` });
+      const result = await deleteCustomerFromStore(customerToDelete.id);
+      if (result.success) {
+        toast({ title: "Customer Deleted", description: `${customerToDelete.name} has been removed.` });
+      } else {
+        toast({ variant: "destructive", title: "Delete Failed", description: result.message || "Could not delete customer."});
+      }
       setCustomerToDelete(null);
     }
     setIsDeleteDialogOpen(false);
@@ -112,8 +116,16 @@ export default function IndividualCustomersPage() {
         status: data.status as IndividualCustomerStatus,
         // created_at and updated_at are managed by DB or data-store
       };
-      await updateCustomerInStore(updatedCustomerData);
-      toast({ title: "Customer Updated", description: `${data.name} has been updated.` });
+      const result = await updateCustomerInStore(updatedCustomerData);
+      if (result.success) {
+        toast({ title: "Customer Updated", description: `${data.name} has been updated.` });
+      } else {
+         toast({
+          variant: "destructive",
+          title: "Update Failed",
+          description: result.message || "Could not update the customer.",
+        });
+      }
     } else {
       const newCustomerData = {
         name: data.name,
@@ -124,8 +136,12 @@ export default function IndividualCustomersPage() {
         assignedBulkMeterId: data.assignedBulkMeterId,
         // status is handled by addCustomerToStore (defaults to Active)
       } as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'status'>;
-      await addCustomerToStore(newCustomerData); 
-      toast({ title: "Customer Added", description: `${data.name} has been added.` });
+      const result = await addCustomerToStore(newCustomerData); 
+      if (result.success && result.data) {
+        toast({ title: "Customer Added", description: `${result.data.name} has been added.` });
+      } else {
+        toast({ variant: "destructive", title: "Add Failed", description: result.message || "Could not add customer."});
+      }
     }
     setIsFormOpen(false);
     setSelectedCustomer(null);

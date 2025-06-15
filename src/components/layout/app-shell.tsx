@@ -72,10 +72,10 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal" }: AppHeaderC
             alt="AAWSA Portal Logo"
             width={40}
             height={40}
-            className="rounded-full" 
+            className="rounded-full flex-shrink-0" 
             data-ai-hint="official logo"
           />
-          <span className="hidden sm:inline-block ml-2">{appName}</span>
+          <span className="hidden sm:inline-block">{appName}</span>
         </Link>
         {user && (
           <DropdownMenu>
@@ -213,3 +213,4 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
     </SidebarProvider>
   );
 }
+

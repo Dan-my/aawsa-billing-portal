@@ -300,3 +300,4 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
     </Dialog>
   );
 }
+

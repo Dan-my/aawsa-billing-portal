@@ -52,3 +52,4 @@ export const bulkMeterDataEntrySchema = baseBulkMeterDataSchema.refine(data => d
 export type BulkMeterDataEntryFormValues = z.infer<typeof bulkMeterDataEntrySchema>;
 
 export type MockBulkMeter = { id: string; name: string };
+

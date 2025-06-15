@@ -68,10 +68,10 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal" }: AppHeaderC
       <div className="flex flex-1 items-center justify-between">
         <Link href={dashboardHref} className="flex items-center gap-2 text-lg font-semibold">
           <Image
-            src="https://veiethiopia.com/photo/partner/par2.png"
+            src="https://www.undp.org/sites/g/files/zskgke326/files/migration/et/AAWSA-LOGO.png"
             alt="AAWSA Logo"
-            width={48}
-            height={30}
+            width={40}
+            height={40}
             className="flex-shrink-0" 
           />
           <span className="hidden sm:inline-block">{appName}</span>

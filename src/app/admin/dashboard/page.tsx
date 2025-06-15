@@ -40,6 +40,7 @@ const Bar = dynamic(() => import('recharts').then(mod => mod.Bar), { ssr: false 
 
 
 // Mock data for charts that are not yet connected to real data
+// This data is based on the provided diagram
 const branchPerformanceData = [
   { branch: 'Branch A', paid: 400, unpaid: 50 },
   { branch: 'Branch B', paid: 300, unpaid: 30 },
@@ -62,7 +63,7 @@ const chartConfig = {
   paid: { label: "Paid", color: "hsl(var(--chart-1))" },
   unpaid: { label: "Unpaid", color: "hsl(var(--chart-2))" },
   bulkMeters: { label: "Bulk Meters", color: "hsl(var(--chart-1))" },
-  individualCustomers: { label: "Individual Customers", color: "hsl(var(--chart-2))" },
+  individualCustomers: { label: "Customers", color: "hsl(var(--chart-2))" }, // Updated label
   waterUsage: { label: "Water Usage (m³)", color: "hsl(var(--chart-1))" },
 } satisfies import("@/components/ui/chart").ChartConfig;
 
@@ -155,9 +156,11 @@ export default function AdminDashboardPage() {
   }, [dynamicPaidBillCount, dynamicUnpaidBillCount]);
 
   const customerCountChartData = React.useMemo(() => {
+    // The diagram shows "12030" and "150", sum is 12180. Let's use these for the chart labels.
+    // These labels are generic as the diagram doesn't specify what "150" refers to.
     return [
-      { name: 'Individual Customers', value: dynamicTotalIndividualCustomerCount, fill: chartConfig.individualCustomers.color },
-      { name: 'Bulk Meters', value: dynamicTotalBulkMeterCount, fill: chartConfig.bulkMeters.color },
+      { name: 'Customers Segment A', value: dynamicTotalIndividualCustomerCount, fill: chartConfig.individualCustomers.color },
+      { name: 'Customers Segment B', value: dynamicTotalBulkMeterCount, fill: chartConfig.bulkMeters.color }, // Using bulk meter count as a placeholder for the second segment
     ];
   }, [dynamicTotalIndividualCustomerCount, dynamicTotalBulkMeterCount]);
 
@@ -300,7 +303,7 @@ export default function AdminDashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div>
               <CardTitle>Branch Performance (Paid vs Unpaid)</CardTitle>
-               <CardDescription>Mock data: Comparison of bills status. Future enhancements will connect this to live data.</CardDescription>
+               <CardDescription>Comparison of bills status across branches. (Currently displaying sample data from design diagram).</CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={() => setShowBranchPerformanceTable(!showBranchPerformanceTable)}>
               {showBranchPerformanceTable ? <BarChartBig className="mr-2 h-4 w-4" /> : <TableIcon className="mr-2 h-4 w-4" />}
@@ -354,7 +357,7 @@ export default function AdminDashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div>
               <CardTitle>Overall Water Usage Trend</CardTitle>
-              <CardDescription>Mock data: Monthly water consumption. Future enhancements will connect this to live data.</CardDescription>
+              <CardDescription>Monthly water consumption across all meters. (Currently displaying sample data from design diagram).</CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={() => setShowWaterUsageTable(!showWaterUsageTable)}>
               {showWaterUsageTable ? <TrendingUp className="mr-2 h-4 w-4" /> : <TableIcon className="mr-2 h-4 w-4" />}

@@ -19,7 +19,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-// Droplets icon is no longer needed
 import type { StaffMember } from "@/app/admin/staff-management/staff-types";
 import { getStaffMembers, initializeStaffMembers, subscribeToStaffMembers } from "@/lib/data-store";
 
@@ -120,13 +119,13 @@ export function AuthForm() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex items-center justify-center"> {/* Adjusted styling for the logo container */}
+          <div className="mx-auto mb-4 flex items-center justify-center w-24 h-[60px] overflow-hidden"> {/* Adjusted to crop border */}
             <Image
               src="https://veiethiopia.com/photo/partner/par2.png"
               alt="AAWSA Logo"
-              width={96} // Adjusted width for better visibility on login form
-              height={60} // Adjusted height maintaining aspect ratio
-              className="flex-shrink-0"
+              width={96} 
+              height={60}
+              className="flex-shrink-0 scale-[1.03]" // Scale up to push border out
             />
           </div>
           <CardTitle className="text-3xl font-bold">AAWSA Billing Portal</CardTitle>

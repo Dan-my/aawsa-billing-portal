@@ -55,14 +55,6 @@ export function AuthForm() {
   }, []);
 
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
-
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isLoadingStaff) {
         toast({
@@ -119,13 +111,13 @@ export function AuthForm() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex items-center justify-center w-24 h-[60px] overflow-hidden"> {/* Adjusted to crop border */}
+          <div className="mx-auto mb-4 flex items-center justify-center w-24 h-[60px] overflow-hidden">
             <Image
               src="https://veiethiopia.com/photo/partner/par2.png"
               alt="AAWSA Logo"
               width={96} 
               height={60}
-              className="flex-shrink-0 scale-[1.03]" // Scale up to push border out
+              className="flex-shrink-0" 
             />
           </div>
           <CardTitle className="text-3xl font-bold">AAWSA Billing Portal</CardTitle>

@@ -13,6 +13,7 @@ import {
   Gauge,
   ClipboardList,
   UploadCloud,
+  LibraryBig, // Added for Tariff Management
 } from "lucide-react";
 
 const adminSidebarNavItems: NavItemGroup[] = [
@@ -26,6 +27,7 @@ const adminSidebarNavItems: NavItemGroup[] = [
     items: [
       { title: "Branch Management", href: "/admin/branches", iconName: "Building" },
       { title: "Staff Management", href: "/admin/staff-management", iconName: "UserCog" },
+      { title: "Tariff Management", href: "/admin/tariffs", iconName: "LibraryBig" }, // Added Tariff Management
     ],
   },
   {

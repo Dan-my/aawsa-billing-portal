@@ -25,11 +25,12 @@ const commonChartLoading = (heightClass: string) => (
   </div>
 );
 
-// ResponsiveContainer import is kept if other parts of the app use it, but it's removed from chart rendering here.
+// ResponsiveContainer is used for the top pie charts.
 const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false, loading: () => commonChartLoading("h-full") });
+// BarChart, LineChart, etc., are direct children of ChartContainer (which has its own ResponsiveContainer) for the bottom charts.
 const BarChart = dynamic(() => import('recharts').then(mod => mod.BarChart), { ssr: false });
-const PieChart = dynamic(() => import('recharts').then(mod => mod.PieChart), { ssr: false });
-const LineChart = dynamic(() => import('recharts').then(mod => mod.LineChart), { ssr: false });
+const PieChartRecharts = dynamic(() => import('recharts').then(mod => mod.PieChart), { ssr: false }); // Renamed to avoid conflict with Icon
+const LineChartRecharts = dynamic(() => import('recharts').then(mod => mod.LineChart), { ssr: false }); // Renamed
 const XAxis = dynamic(() => import('recharts').then(mod => mod.XAxis), { ssr: false });
 const YAxis = dynamic(() => import('recharts').then(mod => mod.YAxis), { ssr: false });
 const Tooltip = dynamic(() => import('recharts').then(mod => mod.Tooltip), { ssr: false });
@@ -198,15 +199,17 @@ export default function AdminDashboardPage() {
             <div className="h-[120px] mt-4">
               {(totalBillsChartData.length > 0 && (totalBillsChartData.some(d => d.count > 0))) ? (
                 <ChartContainer config={chartConfig} className="w-full h-full">
-                  <PieChart>
-                    <Pie data={totalBillsChartData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={50} label>
-                      {totalBillsChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<ChartTooltipContent />} />
-                    <Legend verticalAlign="bottom" height={36} content={<ChartLegendContent nameKey="status" />} />
-                  </PieChart>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChartRecharts>
+                      <Pie data={totalBillsChartData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={50} label>
+                        {totalBillsChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<ChartTooltipContent />} />
+                      <Legend verticalAlign="bottom" height={36} content={<ChartLegendContent nameKey="status" />} />
+                    </PieChartRecharts>
+                  </ResponsiveContainer>
                 </ChartContainer>
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
@@ -228,15 +231,17 @@ export default function AdminDashboardPage() {
             <div className="h-[120px] mt-4">
               {(customerCountChartData.length > 0 && (customerCountChartData.some(d => d.value > 0))) ? (
                 <ChartContainer config={chartConfig} className="w-full h-full">
-                  <PieChart>
-                    <Pie data={customerCountChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={30} outerRadius={50} paddingAngle={2} label>
-                      {customerCountChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<ChartTooltipContent />} />
-                    <Legend verticalAlign="bottom" height={36} content={<ChartLegendContent nameKey="name" />} />
-                  </PieChart>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChartRecharts>
+                      <Pie data={customerCountChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={30} outerRadius={50} paddingAngle={2} label>
+                        {customerCountChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<ChartTooltipContent />} />
+                      <Legend verticalAlign="bottom" height={36} content={<ChartLegendContent nameKey="name" />} />
+                    </PieChartRecharts>
+                  </ResponsiveContainer>
                 </ChartContainer>
               ) : (
                  <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
@@ -381,13 +386,13 @@ export default function AdminDashboardPage() {
                 config={chartConfig} 
                 className="w-full h-full"
               >
-                <LineChart data={waterUsageTrendData}>
+                <LineChartRecharts data={waterUsageTrendData}>
                   <XAxis dataKey="month" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
                   <Legend />
                   <Line type="monotone" dataKey="usage" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--chart-1))", stroke: "hsl(var(--background))" }} activeDot={{ r:6, fill: "hsl(var(--chart-1))", stroke: "hsl(var(--background))"}} name={chartConfig.waterUsage.label} />
-                </LineChart>
+                </LineChartRecharts>
               </ChartContainer>
              )}
           </CardContent>
@@ -397,16 +402,3 @@ export default function AdminDashboardPage() {
   );
 }
     
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-

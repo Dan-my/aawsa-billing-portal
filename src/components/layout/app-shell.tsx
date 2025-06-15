@@ -3,11 +3,11 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import Image from 'next/image'; // Import next/image
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LogOut,
   Menu,
-  Droplets,
   UserCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -67,8 +67,15 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal" }: AppHeaderC
 
       <div className="flex flex-1 items-center justify-between">
         <Link href={dashboardHref} className="flex items-center gap-2 text-lg font-semibold">
-          <Droplets className="h-6 w-6 text-primary" />
-          <span className="hidden sm:inline-block">{appName}</span>
+          <Image
+            src="https://placehold.co/120x30.png"
+            alt="App Logo"
+            width={120}
+            height={30}
+            className="h-auto" // Maintain aspect ratio
+            data-ai-hint="company logo"
+          />
+          <span className="hidden sm:inline-block ml-2">{appName}</span>
         </Link>
         {user && (
           <DropdownMenu>

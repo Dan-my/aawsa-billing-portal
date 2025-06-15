@@ -1,187 +1,38 @@
 
 import type { z } from "zod";
-// Assuming individualCustomerDataEntrySchema already exists and is comprehensive
-import type { baseIndividualCustomerDataSchema } from "@/app/admin/data-entry/customer-data-entry-types"; 
+import type { baseIndividualCustomerDataSchemaNew } from "@/app/admin/data-entry/customer-data-entry-types"; 
 
 export const individualCustomerStatuses = ['Active', 'Inactive', 'Suspended'] as const;
 export type IndividualCustomerStatus = (typeof individualCustomerStatuses)[number];
 
-// Re-using customerTypes and sewerageConnections from data-entry as they are relevant for entity definition too
-export { customerTypes, sewerageConnections } from "@/app/admin/data-entry/customer-data-entry-types";
-export type { CustomerType, SewerageConnection } from "@/app/admin/data-entry/customer-data-entry-types";
-
-export const paymentStatuses = ['Paid', 'Unpaid'] as const;
-export type PaymentStatus = (typeof paymentStatuses)[number];
-
-
-// This type represents the data structure for an individual customer entity.
-// It combines the fields from the data entry schema with an ID and a specific status.
-export type IndividualCustomer = z.infer<typeof baseIndividualCustomerDataSchema> & {
+// This type represents the data structure for an individual customer entity based on the new schema.
+export type IndividualCustomer = z.infer<typeof baseIndividualCustomerDataSchemaNew> & {
   id: string;
   status: IndividualCustomerStatus;
-  paymentStatus: PaymentStatus; 
-  calculatedBill: number;
+  created_at?: string | null; // from new schema
+  updated_at?: string | null; // from new schema
 };
 
-interface TariffTier {
-  limit: number; // Upper limit of the tier (e.g., 5 for 0-5 M3)
-  rate: number;  // Rate for this tier
-  cumulativeUsage?: number; // Max usage covered by previous tiers
-  cumulativeCharge?: number; // Max charge from previous tiers
-}
-
-
-// Domestic tariff constants & values
-const DOMESTIC_METER_RENT = 15.00;
-const DOMESTIC_SEWERAGE_RATE_PER_M3 = 6.25;
-const DOMESTIC_MAINTENANCE_PERCENTAGE = 0.01; // 1% of base water charge
-const DOMESTIC_SANITATION_PERCENTAGE = 0.07; // 7% of base water charge
-
-export const domesticTariffTiers: TariffTier[] = [
-  { limit: 5, rate: 10.21 },    // 0-5 M3
-  { limit: 14, rate: 17.87 },   // >5-14 M3
-  { limit: 23, rate: 33.19 },   // >14-23 M3
-  { limit: 32, rate: 51.07 },   // >23-32 M3
-  { limit: 41, rate: 61.28 },   // >32-41 M3
-  { limit: 50, rate: 71.49 },   // >41-50 M3
-  { limit: Infinity, rate: 81.71 }, // >50 M3
-];
-
-// Pre-calculate cumulative values for domestic tariff
-let accumulatedDomesticUsage = 0;
-let accumulatedDomesticCharge = 0;
-for (const tier of domesticTariffTiers) {
-  if (tier.limit !== Infinity && tier.limit - accumulatedDomesticUsage > 0) {
-    tier.cumulativeUsage = accumulatedDomesticUsage;
-    tier.cumulativeCharge = accumulatedDomesticCharge;
-    const usageInTier = tier.limit - accumulatedDomesticUsage;
-    accumulatedDomesticCharge += usageInTier * tier.rate;
-    accumulatedDomesticUsage = tier.limit;
-  } else if (tier.limit === Infinity) {
-    tier.cumulativeUsage = accumulatedDomesticUsage;
-    tier.cumulativeCharge = accumulatedDomesticCharge;
-  }
-}
-
-// Non-domestic tariff constants & values
-// Non-domestic will use the same progressive water charge tiers as domestic.
-// Differences will be in other fees like sanitation percentage and sewerage rate.
-export const nonDomesticWaterTiers: TariffTier[] = [
-  { limit: 5, rate: 10.21 },
-  { limit: 14, rate: 17.87 },
-  { limit: 23, rate: 33.19 },
-  { limit: 32, rate: 51.07 },
-  { limit: 41, rate: 61.28 },
-  { limit: 50, rate: 71.49 },
-  { limit: Infinity, rate: 81.71 },
-];
-
-// Pre-calculate cumulative values for non-domestic water tiers
-let accumulatedNonDomesticUsage = 0;
-let accumulatedNonDomesticCharge = 0;
-for (const tier of nonDomesticWaterTiers) {
-  if (tier.limit !== Infinity && tier.limit - accumulatedNonDomesticUsage > 0) {
-    tier.cumulativeUsage = accumulatedNonDomesticUsage;
-    tier.cumulativeCharge = accumulatedNonDomesticCharge;
-    const usageInTier = tier.limit - accumulatedNonDomesticUsage;
-    accumulatedNonDomesticCharge += usageInTier * tier.rate;
-    accumulatedNonDomesticUsage = tier.limit;
-  } else if (tier.limit === Infinity) {
-    tier.cumulativeUsage = accumulatedNonDomesticUsage;
-    tier.cumulativeCharge = accumulatedNonDomesticCharge;
-  }
-}
-
-const NON_DOMESTIC_SANITATION_PERCENTAGE = 0.10; // 10% of water charge
-const NON_DOMESTIC_METER_RENT = 15.00;
-const NON_DOMESTIC_SEWERAGE_RATE_PER_M3 = 8.75;
-// Non-domestic does not have a maintenance percentage in this structure.
-
-
-// Helper function for progressive base water charge calculation
-function calculateProgressiveBaseWaterCharge(usage: number, tiers: TariffTier[]): number {
-  if (usage <= 0) return 0;
-  let totalCharge = 0;
-  let remainingUsage = usage;
-
-  for (const tier of tiers) {
-    const previousTiersUsage = tier.cumulativeUsage ?? 0;
-    if (usage > previousTiersUsage) {
-        const usageInThisTier = Math.min(remainingUsage, (tier.limit === Infinity ? Infinity : tier.limit) - previousTiersUsage);
-        totalCharge += usageInThisTier * tier.rate;
-        remainingUsage -= usageInThisTier;
-        if (remainingUsage <= 0) break;
-    } else { // Should not happen if logic is correct and usage > previousTiersUsage
-        break; 
-    }
-  }
-  return totalCharge;
-}
-
-
-function calculateDomesticBill(usage: number, sewerageConnection: SewerageConnection): number {
-  const baseWaterCharge = calculateProgressiveBaseWaterCharge(usage, domesticTariffTiers);
-  
-  const maintenanceFee = baseWaterCharge * DOMESTIC_MAINTENANCE_PERCENTAGE;
-  const sanitationFee = baseWaterCharge * DOMESTIC_SANITATION_PERCENTAGE;
-  const meterRentFee = DOMESTIC_METER_RENT;
-  const sewerageFee = sewerageConnection === "Yes" ? usage * DOMESTIC_SEWERAGE_RATE_PER_M3 : 0;
-
-  const totalBill = baseWaterCharge + maintenanceFee + sanitationFee + meterRentFee + sewerageFee;
-  return parseFloat(totalBill.toFixed(2));
-}
-
-function calculateNonDomesticBill(usage: number, sewerageConnection: SewerageConnection): number {
-  const baseWaterCharge = calculateProgressiveBaseWaterCharge(usage, nonDomesticWaterTiers);
-
-  const sanitationFee = baseWaterCharge * NON_DOMESTIC_SANITATION_PERCENTAGE;
-  const meterRentFee = NON_DOMESTIC_METER_RENT;
-  const sewerageFee = sewerageConnection === "Yes" ? usage * NON_DOMESTIC_SEWERAGE_RATE_PER_M3 : 0;
-  // No maintenance fee for non-domestic
-
-  const totalBill = baseWaterCharge + sanitationFee + meterRentFee + sewerageFee;
-  return parseFloat(totalBill.toFixed(2));
-}
-
-
-export function calculateBill(
-  usage: number, 
-  customerType: CustomerType, 
-  sewerageConnection: SewerageConnection
-): number {
-  if (usage < 0) usage = 0;
-
-  if (customerType === "Non-domestic") {
-    return calculateNonDomesticBill(usage, sewerageConnection);
-  }
-  // Domestic customer calculation
-  return calculateDomesticBill(usage, sewerageConnection);
-}
-
-
-export const TARIFF_RATES_BY_TYPE = {
-  Domestic: null, 
-  "Non-domestic": null, 
-} as const;
-
-
-export function getTariffRate(customerType: CustomerType): number | null {
-  console.warn(`getTariffRate called for ${customerType} customer. Use calculateBill for accurate billing. This function returns null.`);
-  return null;
-}
-
-// Constants for display in settings or info pages
-export const NonDomesticTariffInfo = {
-  tiers: nonDomesticWaterTiers, // Updated to new progressive tiers
-  sanitationPercentage: NON_DOMESTIC_SANITATION_PERCENTAGE,
-  meterRent: NON_DOMESTIC_METER_RENT,
-  sewerageRatePerM3: NON_DOMESTIC_SEWERAGE_RATE_PER_M3,
-};
-
+// Constants for display in settings or info pages might need to be removed or updated
+// if they relied on removed fields (like tariff tiers, etc.)
+// For now, keeping them as they are not directly impacted by the table structure change alone,
+// but their usage elsewhere might be.
 export const DomesticTariffInfo = {
-    tiers: domesticTariffTiers,
-    maintenancePercentage: DOMESTIC_MAINTENANCE_PERCENTAGE,
-    sanitationPercentage: DOMESTIC_SANITATION_PERCENTAGE,
-    meterRent: DOMESTIC_METER_RENT,
-    sewerageRatePerM3: DOMESTIC_SEWERAGE_RATE_PER_M3,
+    tiers: [], // Simplified as underlying data is removed
+    maintenancePercentage: 0.01,
+    sanitationPercentage: 0.07,
+    meterRent: 15.00,
+    sewerageRatePerM3: 6.25,
 };
+
+export const NonDomesticTariffInfo = {
+  tiers: [], // Simplified
+  sanitationPercentage: 0.10,
+  meterRent: 15.00,
+  sewerageRatePerM3: 8.75,
+};
+
+// The calculateBill function and related detailed tariff structures are removed
+// as the necessary input fields (currentReading, previousReading, customerType, sewerageConnection)
+// are no longer part of the IndividualCustomer entity.
+// If billing is still needed, it would have to be re-implemented based on a different data model or source.

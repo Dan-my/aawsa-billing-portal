@@ -10,26 +10,21 @@ import { IndividualCustomerDataEntryForm } from "./individual-customer-data-entr
 import { CsvUploadSection } from "./csv-upload-section";
 import { 
   bulkMeterDataEntrySchema, 
-  individualCustomerDataEntrySchema,
+  individualCustomerDataEntrySchemaNew, // Use new schema
   type BulkMeterDataEntryFormValues,
-  type IndividualCustomerDataEntryFormValues
+  type IndividualCustomerDataEntryFormValuesNew // Use new form values type
 } from "./customer-data-entry-types";
-import { addBulkMeter, addCustomer, initializeBulkMeters, initializeCustomers, getBulkMeters, getCustomers } from "@/lib/data-store";
-import type { CustomerType, SewerageConnection } from "../individual-customers/individual-customer-types";
+import { addBulkMeter, addCustomer, initializeBulkMeters, initializeCustomers } from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
-import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
-// Fallback initial data, not primary source anymore
-// import { initialBulkMeters } from "../bulk-meters/page";
-// import { initialCustomers } from "../individual-customers/page";
+import type { IndividualCustomer } from "../individual-customers/individual-customer-types"; // Uses updated type
 
 // Expected CSV Headers
 const bulkMeterCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward"];
-const individualCustomerCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward", "sewerageConnection", "assignedBulkMeterId"];
+const individualCustomerCsvHeadersNew = ["name", "ordinal", "month", "location", "ward", "assignedBulkMeterId"]; // Updated headers
 
 
 export default function AdminDataEntryPage() {
   React.useEffect(() => {
-    // Initialize data stores (these will attempt to fetch from Supabase)
     initializeBulkMeters();
     initializeCustomers();
   }, []);
@@ -41,13 +36,13 @@ export default function AdminDataEntryPage() {
       paymentStatus: "Unpaid", 
     };
     await addBulkMeter(bulkMeterDataForStore);
-    // Toast notifications for success/failure would be good here, handled by CsvUploadSection or here
   };
 
-  const handleIndividualCustomerCsvUpload = async (data: IndividualCustomerDataEntryFormValues) => {
+  const handleIndividualCustomerCsvUpload = async (data: IndividualCustomerDataEntryFormValuesNew) => { // Use new type
      const customerDataForStore = {
         ...data,
-    } as Omit<IndividualCustomer, 'id' | 'calculatedBill' | 'paymentStatus' | 'status'> & { customerType: CustomerType, currentReading: number, previousReading: number, sewerageConnection: SewerageConnection };
+        // status is defaulted in data-store or DB
+    } as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'status'>;
     await addCustomer(customerDataForStore);
   };
 
@@ -122,9 +117,9 @@ export default function AdminDataEntryPage() {
                 <CardContent>
                 <CsvUploadSection
                     entryType="individual"
-                    schema={individualCustomerDataEntrySchema} 
+                    schema={individualCustomerDataEntrySchemaNew} // Use new schema
                     addRecordFunction={handleIndividualCustomerCsvUpload}
-                    expectedHeaders={individualCustomerCsvHeaders}
+                    expectedHeaders={individualCustomerCsvHeadersNew} // Use new headers
                 />
                 </CardContent>
             </Card>

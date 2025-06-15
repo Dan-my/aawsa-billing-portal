@@ -8,8 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import type { IndividualCustomer, CustomerType, SewerageConnection } from "./individual-customer-types";
-import { calculateBill } from "./individual-customer-types"; 
+import type { IndividualCustomer, IndividualCustomerStatus } from "./individual-customer-types";
 import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "./individual-customer-form-dialog";
 import { IndividualCustomerTable } from "./individual-customer-table";
 import { 
@@ -23,13 +22,12 @@ import {
   subscribeToBulkMeters,
   initializeBulkMeters,
 } from "@/lib/data-store";
-// initialBulkMeters from page is no longer the primary source for bulk meters if store uses Supabase.
-// import { initialBulkMeters as defaultInitialBulkMeters } from "../bulk-meters/page";
 
+// Initial data updated to reflect new, simpler schema
 export const initialCustomers: IndividualCustomer[] = [
-  { id: "cust001", name: "Abebe Bikila", customerKeyNumber: "CUST001", contractNumber: "CON001", customerType: "Domestic", bookNumber: "B001", ordinal: 1, meterSize: 0.5, meterNumber: "MTR001", previousReading: 100, currentReading: 120, month: "2023-11", specificArea: "Kebele 1, House 101", location: "Bole", ward: "Woreda 3", sewerageConnection: "Yes", status: "Active", assignedBulkMeterId: "bm001", paymentStatus: "Paid", calculatedBill: calculateBill(120-100, "Domestic", "Yes") },
-  { id: "cust002", name: "Fatuma Roba", customerKeyNumber: "CUST002", contractNumber: "CON002", customerType: "Domestic", bookNumber: "B001", ordinal: 2, meterSize: 0.5, meterNumber: "MTR002", previousReading: 200, currentReading: 250, month: "2023-11", specificArea: "Kebele 2, House 202", location: "Kality", ward: "Woreda 5", sewerageConnection: "No", status: "Active", assignedBulkMeterId: "bm002", paymentStatus: "Unpaid", calculatedBill: calculateBill(250-200, "Domestic", "No") }, 
-  { id: "cust003", name: "Haile Gebrselassie", customerKeyNumber: "CUST003", contractNumber: "CON003", customerType: "Non-domestic", bookNumber: "B002", ordinal: 1, meterSize: 1, meterNumber: "MTR003", previousReading: 500, currentReading: 600, month: "2023-11", specificArea: "Industrial Area, Plot 3", location: "Megenagna", ward: "Woreda 7", sewerageConnection: "Yes", status: "Inactive", assignedBulkMeterId: "bm003", paymentStatus: "Paid", calculatedBill: calculateBill(600-500, "Non-domestic", "Yes")},
+  { id: "cust001", name: "Abebe Bikila", ordinal: 1, month: "2023-11", location: "Bole", ward: "Woreda 3", status: "Active", assignedBulkMeterId: "bm001", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: "cust002", name: "Fatuma Roba", ordinal: 2, month: "2023-11", location: "Kality", ward: "Woreda 5", status: "Active", assignedBulkMeterId: "bm002", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: "cust003", name: "Haile Gebrselassie", ordinal: 1, month: "2023-11", location: "Megenagna", ward: "Woreda 7", status: "Inactive", assignedBulkMeterId: "bm003", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
 ];
 
 
@@ -47,8 +45,8 @@ export default function IndividualCustomersPage() {
   React.useEffect(() => {
     setIsLoading(true);
     Promise.all([
-      initializeBulkMeters(), // Fetches from Supabase if cache empty
-      initializeCustomers()  // Fetches from Supabase if cache empty
+      initializeBulkMeters(),
+      initializeCustomers()
     ]).then(() => {
       setBulkMetersList(getBulkMeters().map(bm => ({id: bm.id, name: bm.name })));
       setCustomers(getCustomers());
@@ -60,7 +58,6 @@ export default function IndividualCustomersPage() {
     });
     const unsubscribeCustomers = subscribeToCustomers((updatedCustomers) => {
        setCustomers(updatedCustomers);
-       // Potentially set isLoading to false here too if this is the primary data source
        setIsLoading(false); 
     });
     
@@ -71,7 +68,7 @@ export default function IndividualCustomersPage() {
   }, []);
 
   const handleAddCustomer = () => {
-    if (bulkMetersList.length === 0 && !isLoading) { // Check isLoading to avoid premature toast
+    if (bulkMetersList.length === 0 && !isLoading) {
         toast({
             variant: "destructive",
             title: "No Bulk Meters Available",
@@ -103,23 +100,30 @@ export default function IndividualCustomersPage() {
   };
 
   const handleSubmitCustomer = async (data: IndividualCustomerFormValues) => {
-    const usage = data.currentReading - data.previousReading;
-    const calculatedBill = calculateBill(usage, data.customerType as CustomerType, data.sewerageConnection as SewerageConnection);
-    
     if (selectedCustomer) { 
       const updatedCustomerData: IndividualCustomer = { 
         id: selectedCustomer.id, 
-        ...data, 
-        calculatedBill,
+        name: data.name,
+        ordinal: data.ordinal,
+        month: data.month,
+        location: data.location,
+        ward: data.ward,
+        assignedBulkMeterId: data.assignedBulkMeterId,
+        status: data.status as IndividualCustomerStatus,
+        // created_at and updated_at are managed by DB or data-store
       };
       await updateCustomerInStore(updatedCustomerData);
       toast({ title: "Customer Updated", description: `${data.name} has been updated.` });
     } else {
-      // Ensure all required fields for Omit<IndividualCustomer, 'id' | 'calculatedBill' ...> are present from data
       const newCustomerData = {
-        ...data,
-        // id, calculatedBill, paymentStatus, status are handled by addCustomerToStore or Supabase
-      } as Omit<IndividualCustomer, 'id' | 'calculatedBill' | 'paymentStatus' | 'status'> & { customerType: CustomerType, currentReading: number, previousReading: number, sewerageConnection: SewerageConnection};
+        name: data.name,
+        ordinal: data.ordinal,
+        month: data.month,
+        location: data.location,
+        ward: data.ward,
+        assignedBulkMeterId: data.assignedBulkMeterId,
+        // status is handled by addCustomerToStore (defaults to Active)
+      } as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'status'>;
       await addCustomerToStore(newCustomerData); 
       toast({ title: "Customer Added", description: `${data.name} has been added.` });
     }
@@ -129,9 +133,9 @@ export default function IndividualCustomersPage() {
 
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.customerKeyNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.meterNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.location.toLowerCase().includes(searchTerm.toLowerCase())
+    customer.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    customer.ward.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (customer.assignedBulkMeterId && getBulkMeters().find(bm => bm.id === customer.assignedBulkMeterId)?.name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (

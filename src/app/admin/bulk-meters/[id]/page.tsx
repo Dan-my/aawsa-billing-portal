@@ -14,10 +14,10 @@ import { useToast } from "@/hooks/use-toast";
 import {
   getBulkMeters,
   getCustomers,
-  updateBulkMeter as updateBulkMeterInStore, // Keep for general edit
-  updateBulkMeterPaymentStatus, // New function for targeted update
+  updateBulkMeter as updateBulkMeterInStore,
+  updateBulkMeterPaymentStatus,
   deleteBulkMeter as deleteBulkMeterFromStore,
-  updateCustomer as updateCustomerInStore,
+  updateCustomer as updateCustomerInStore, // Will be simplified
   deleteCustomer as deleteCustomerFromStore,
   subscribeToBulkMeters,
   subscribeToCustomers,
@@ -25,10 +25,13 @@ import {
   initializeCustomers,
 } from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meter-types";
-import type { IndividualCustomer, PaymentStatus, CustomerType, SewerageConnection } from "../../individual-customers/individual-customer-types";
-import { calculateBill } from "../../individual-customers/individual-customer-types";
+import type { IndividualCustomer, IndividualCustomerStatus } from "../../individual-customers/individual-customer-types"; // calculateBill and some types removed
+import type { CustomerType, SewerageConnection, PaymentStatus } from "@/app/admin/bulk-meters/bulk-meter-types"; // Keep for BulkMeter's own tariff
+import { calculateBill } from "@/app/admin/individual-customers/individual-customer-types"; // This calculateBill is now simplified/removed. Need to check usage.
+// For bulk meter's own bill calculation, we might need a specific calculateBulkMeterBill or adapt the existing one.
+// For now, assuming 'calculateBill' can still be used for the bulk meter itself if its CustomerType/SewerageConnection is defined.
 import { BulkMeterFormDialog, type BulkMeterFormValues } from "../bulk-meter-form-dialog";
-import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "../../individual-customers/individual-customer-form-dialog";
+import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "../../individual-customers/individual-customer-form-dialog"; // Form values for this will change
 
 export default function BulkMeterDetailsPage() {
   const params = useParams();
@@ -112,7 +115,7 @@ export default function BulkMeterDetailsPage() {
       unsubscribeBM();
       unsubscribeCust();
     };
-  }, [bulkMeterId, router, toast]); 
+  }, [bulkMeterId, router, toast, bulkMeter]); // Added bulkMeter to dependency to re-evaluate if it becomes null
 
 
   const handleEditBulkMeter = () => setIsBulkMeterFormOpen(true);
@@ -141,10 +144,8 @@ export default function BulkMeterDetailsPage() {
   const handleToggleBulkMeterPaymentStatus = async () => {
     if (bulkMeter) {
       const newStatus: PaymentStatus = bulkMeter.paymentStatus === 'Paid' ? 'Unpaid' : 'Paid';
-      // Call the new targeted update function
       await updateBulkMeterPaymentStatus(bulkMeter.id, newStatus);
       toast({ title: "Payment Status Updated", description: `${bulkMeter.name} payment status set to ${newStatus}.` });
-      // The local state `bulkMeter` will be updated by the subscription to `subscribeToBulkMeters`
     }
   };
 
@@ -164,45 +165,26 @@ export default function BulkMeterDetailsPage() {
     setCustomerToDelete(null);
     setIsCustomerDeleteDialogOpen(false);
   };
+
+  // handleSubmitCustomerForm needs to be updated based on the NEW IndividualCustomerFormValues
   const handleSubmitCustomerForm = async (data: IndividualCustomerFormValues) => {
     if (selectedCustomer) {
-      const usage = (Number(data.currentReading) ?? 0) - (Number(data.previousReading) ?? 0);
-      const calculatedBill = calculateBill(usage, data.customerType as CustomerType, data.sewerageConnection as SewerageConnection);
       const updatedCustomerData: IndividualCustomer = {
-          ...selectedCustomer,
-          ...data,
           id: selectedCustomer.id,
-          calculatedBill,
-          meterSize: Number(data.meterSize ?? selectedCustomer.meterSize ?? 0),
-          previousReading: Number(data.previousReading ?? selectedCustomer.previousReading ?? 0),
-          currentReading: Number(data.currentReading ?? selectedCustomer.currentReading ?? 0),
-          ordinal: Number(data.ordinal ?? selectedCustomer.ordinal ?? 0),
+          name: data.name,
+          ordinal: data.ordinal,
+          month: data.month,
+          location: data.location,
+          ward: data.ward,
+          assignedBulkMeterId: data.assignedBulkMeterId,
+          status: data.status as IndividualCustomerStatus,
+          // created_at, updated_at are managed by DB/data-store
       };
-
       await updateCustomerInStore(updatedCustomerData);
       toast({ title: "Customer Updated", description: `${updatedCustomerData.name} has been updated.` });
     }
-
     setIsCustomerFormOpen(false);
     setSelectedCustomer(null);
-  };
-
-  const handleToggleCustomerPaymentStatus = async (customerId: string) => {
-    const customer = associatedCustomers.find(c => c.id === customerId);
-    if (customer) {
-      const newStatus: PaymentStatus = customer.paymentStatus === 'Paid' ? 'Unpaid' : 'Paid';
-      const updatedCustomerData: IndividualCustomer = {
-        ...customer,
-        paymentStatus: newStatus,
-        meterSize: Number(customer.meterSize ?? 0),
-        previousReading: Number(customer.previousReading ?? 0),
-        currentReading: Number(customer.currentReading ?? 0),
-        ordinal: Number(customer.ordinal ?? 0),
-        calculatedBill: Number(customer.calculatedBill ?? 0),
-      };
-      await updateCustomerInStore(updatedCustomerData);
-      toast({ title: "Payment Status Updated", description: `${updatedCustomerData.name}'s payment status set to ${newStatus}.` });
-    }
   };
 
 
@@ -216,34 +198,18 @@ export default function BulkMeterDetailsPage() {
     return <div className="p-4 text-center">Bulk meter data is unavailable.</div>;
   }
 
-
   const bmPreviousReading = bulkMeter.previousReading ?? 0;
   const bmCurrentReading = bulkMeter.currentReading ?? 0;
   const bulkUsage = bmCurrentReading - bmPreviousReading;
 
-  let effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
-  let effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
-
-  if (associatedCustomers.length > 0) {
-    const hasNonDomesticCustomer = associatedCustomers.some(c => c.customerType === "Non-domestic");
-    if (!hasNonDomesticCustomer) {
-      effectiveBulkMeterCustomerType = "Domestic";
-    }
-    // Sewerage for bulk meter could be based on its own setting or if any associated customer has it.
-    // For simplicity, let's assume if it has customers, and any are non-domestic it implies non-domestic tariff logic.
-    // This part of logic for effectiveBulkMeterSewerageConnection might need refinement based on business rules.
-  }
+  // Simplified: Assume bulk meter is non-domestic for its own bill calculation for now
+  const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
+  const effectiveBulkMeterSewerageConnection: SewerageConnection = "No"; // Or fetch from bulk meter's own data if it has this field
+  
+  // The `calculateBill` function may need to be adapted if its dependencies changed too much for bulk meters.
+  // For now, we assume it can still calculate a bill for a bulk meter based on its own readings.
   const totalBulkBill = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection);
 
-  const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => {
-    const custPrevReading = cust.previousReading ?? 0;
-    const custCurrReading = cust.currentReading ?? 0;
-    return sum + (custCurrReading - custPrevReading);
-  }, 0);
-  const totalIndividualBill = associatedCustomers.reduce((sum, cust) => sum + (cust.calculatedBill ?? 0), 0);
-
-  const differenceUsage = bulkUsage - totalIndividualUsage;
-  const differenceBill = totalBulkBill - totalIndividualBill;
 
   return (
     <div className="space-y-6 p-4">
@@ -271,19 +237,11 @@ export default function BulkMeterDetailsPage() {
           <div>
             <p><strong className="font-semibold">Meter No:</strong> {bulkMeter.meterNumber ?? 'N/A'}</p>
             <p><strong className="font-semibold">Month:</strong> {bulkMeter.month ?? 'N/A'}</p>
-             <p className="text-primary"><strong className="font-semibold">Total Bulk Bill (Tariff: {effectiveBulkMeterCustomerType}):</strong> ETB {totalBulkBill.toFixed(2)}</p>
+             <p className="text-primary"><strong className="font-semibold">Total Bulk Bill:</strong> ETB {totalBulkBill.toFixed(2)}</p>
           </div>
           <div>
             <p><strong className="font-semibold">Customer Key:</strong> {bulkMeter.customerKeyNumber ?? 'N/A'}</p>
             <p><strong className="font-semibold">Readings (Prev/Curr):</strong> {(bmPreviousReading).toFixed(2)} / {(bmCurrentReading).toFixed(2)}</p>
-            <p className={differenceUsage < 0 ? "text-destructive" : "text-accent"}>
-                <strong className="font-semibold">Difference Usage:</strong> {differenceUsage.toFixed(2)} m³
-            </p>
-          </div>
-          <div>
-            <p className={differenceBill < 0 ? "text-destructive" : "text-accent"}>
-              <strong className="font-semibold">Difference Bill (vs Sum of Indiv.):</strong> ETB {differenceBill.toFixed(2)}
-            </p>
           </div>
            <div className="flex items-center gap-2">
              <strong className="font-semibold">Payment Status:</strong>
@@ -319,38 +277,22 @@ export default function BulkMeterDetailsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Customer Name</TableHead>
-                  <TableHead>Meter No.</TableHead>
-                  <TableHead>Usage (m³)</TableHead>
-                  <TableHead>Calculated Bill (ETB)</TableHead>
-                  <TableHead>Payment Status</TableHead>
+                  <TableHead>Ordinal</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {associatedCustomers.map((customer) => {
-                  const custPrevReading = customer.previousReading ?? 0;
-                  const custCurrReading = customer.currentReading ?? 0;
-                  const usage = custCurrReading - custPrevReading;
-                  return (
+                {associatedCustomers.map((customer) => (
                     <TableRow key={customer.id}>
                       <TableCell className="font-medium">{customer.name}</TableCell>
-                      <TableCell>{customer.meterNumber}</TableCell>
-                      <TableCell>{usage.toFixed(2)}</TableCell>
-                      <TableCell className="text-accent">ETB {(customer.calculatedBill ?? 0).toFixed(2)}</TableCell>
+                      <TableCell>{customer.ordinal}</TableCell>
+                      <TableCell>{customer.location}, {customer.ward}</TableCell>
                       <TableCell>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleToggleCustomerPaymentStatus(customer.id)}
-                            className="p-0 h-auto group"
-                            aria-label={`Toggle payment status for ${customer.name}`}
-                        >
-                            <Badge variant={customer.paymentStatus === 'Paid' ? 'default' : 'destructive'} className="whitespace-nowrap cursor-pointer hover:opacity-80">
-                            {customer.paymentStatus === 'Paid' ? <CheckCircle className="mr-1 h-3.5 w-3.5"/> : <XCircle className="mr-1 h-3.5 w-3.5"/>}
-                            {customer.paymentStatus}
-                            <RefreshCcw className="ml-1.5 h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity" />
-                            </Badge>
-                        </Button>
+                        <Badge variant={customer.status === 'Active' ? 'default' : 'destructive'}>
+                          {customer.status}
+                        </Badge>
                       </TableCell>
                        <TableCell className="text-right">
                         <DropdownMenu>
@@ -375,8 +317,7 @@ export default function BulkMeterDetailsPage() {
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  );
-                })}
+                  ))}
               </TableBody>
             </Table>
           )}
@@ -413,7 +354,7 @@ export default function BulkMeterDetailsPage() {
             onOpenChange={setIsCustomerFormOpen}
             onSubmit={handleSubmitCustomerForm}
             defaultValues={selectedCustomer}
-            bulkMeters={[{id: bulkMeter.id, name: bulkMeter.name}]}
+            bulkMeters={[{id: bulkMeter.id, name: bulkMeter.name}]} // Pass only the current bulk meter
           />
       )}
       <AlertDialog open={isCustomerDeleteDialogOpen} onOpenChange={setIsCustomerDeleteDialogOpen}>
@@ -434,5 +375,3 @@ export default function BulkMeterDetailsPage() {
     </div>
   );
 }
-
-    

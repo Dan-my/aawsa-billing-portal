@@ -10,48 +10,46 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getCustomers, getBulkMeters, initializeCustomers, initializeBulkMeters } from "@/lib/data-store";
-import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
+import type { IndividualCustomer } from "../individual-customers/individual-customer-types"; // Uses updated type
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
-import { initialCustomers } from "../individual-customers/page";
+import { initialCustomers } from "../individual-customers/page"; // Uses updated initialCustomers
 import { initialBulkMeters } from "../bulk-meters/page";
-import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert"; // Renamed to avoid conflict
+import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
 
 interface ReportType {
   id: string;
   name: string;
   description: string;
-  headers?: string[]; // For XLSX export
-  getData?: () => any[]; // Function to fetch data for the report
+  headers?: string[]; 
+  getData?: () => any[]; 
 }
 
 const arrayToXlsxBlob = (data: any[], headers: string[]): Blob => {
   const worksheetData = [
-    headers, // First row is headers
+    headers, 
     ...data.map(row => headers.map(header => row[header] ?? '')),
   ];
 
   const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(worksheetData);
 
-  // Apply bold styling to header cells (first row)
   const range = XLSX.utils.decode_range(ws['!ref']!);
   for (let C = range.s.c; C <= range.e.c; ++C) {
     const address = XLSX.utils.encode_cell({ r: 0, c: C });
-    if (!ws[address]) { // If cell doesn't exist (e.g. empty header), create it
+    if (!ws[address]) { 
         XLSX.utils.sheet_add_aoa(ws, [[headers[C] || '']], { origin: address });
     }
     ws[address].s = { font: { bold: true } };
   }
 
-  // Calculate column widths based on header and data content
   const colWidths = headers.map((header, colIndex) => {
     let maxLength = (header || '').length;
-    for (const dataRow of worksheetData.slice(1)) { // Skip header row
+    for (const dataRow of worksheetData.slice(1)) { 
       const cellValue = dataRow[colIndex];
       if (cellValue != null) {
         maxLength = Math.max(maxLength, String(cellValue).length);
       }
     }
-    return { wch: Math.min(maxLength + 2, 60) }; // Add padding, max width 60
+    return { wch: Math.min(maxLength + 2, 60) }; 
   });
   ws['!cols'] = colWidths;
 
@@ -78,11 +76,9 @@ const availableReports: ReportType[] = [
   {
     id: "customer-data-export",
     name: "Customer Data Export (XLSX)",
-    description: "Download a comprehensive list of all individual customers, including their details and meter information.",
-    headers: [
-      "id", "name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal",
-      "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea",
-      "location", "ward", "sewerageConnection", "assignedBulkMeterId", "status", "paymentStatus", "calculatedBill"
+    description: "Download a comprehensive list of all individual customers with their new simplified details.",
+    headers: [ // Updated headers based on new schema
+      "id", "name", "ordinal", "month", "location", "ward", "assignedBulkMeterId", "status", "created_at", "updated_at"
     ],
     getData: () => getCustomers(),
   },
@@ -124,12 +120,11 @@ export default function AdminReportsPage() {
   const [isGenerating, setIsGenerating] = React.useState(false);
 
   React.useEffect(() => {
-    // Ensure data stores are initialized
     if (getCustomers().length === 0) {
-      initializeCustomers(initialCustomers);
+      initializeCustomers(); // Uses updated initialCustomers if store is empty
     }
     if (getBulkMeters().length === 0) {
-      initializeBulkMeters(initialBulkMeters);
+      initializeBulkMeters();
     }
   }, []);
 
@@ -257,4 +252,3 @@ export default function AdminReportsPage() {
     </div>
   );
 }
-

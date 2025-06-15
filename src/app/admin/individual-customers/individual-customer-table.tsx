@@ -50,9 +50,10 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead>
-            <TableHead>Key Number</TableHead>
-            <TableHead>Meter No.</TableHead>
+            <TableHead>Ordinal</TableHead>
+            <TableHead>Month</TableHead>
             <TableHead>Location</TableHead>
+            <TableHead>Ward</TableHead>
             <TableHead>Bulk Meter</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
@@ -62,9 +63,10 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
           {data.map((customer, index) => (
             <TableRow key={`${customer.id}-${index}`}>
               <TableCell className="font-medium">{customer.name}</TableCell>
-              <TableCell>{customer.customerKeyNumber}</TableCell>
-              <TableCell>{customer.meterNumber}</TableCell>
+              <TableCell>{customer.ordinal}</TableCell>
+              <TableCell>{customer.month}</TableCell>
               <TableCell>{customer.location}</TableCell>
+              <TableCell>{customer.ward}</TableCell>
               <TableCell>{getBulkMeterName(customer.assignedBulkMeterId)}</TableCell>
               <TableCell>
                 <Badge 

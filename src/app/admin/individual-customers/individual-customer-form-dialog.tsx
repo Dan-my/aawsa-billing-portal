@@ -25,32 +25,20 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  baseIndividualCustomerDataSchema,
-  customerTypes,
-  sewerageConnections,
+  baseIndividualCustomerDataSchemaNew, // Use the new schema
 } from "@/app/admin/data-entry/customer-data-entry-types";
-import type { IndividualCustomer } from "./individual-customer-types";
-import { individualCustomerStatuses, paymentStatuses } from "./individual-customer-types";
+import type { IndividualCustomer } from "./individual-customer-types"; // Uses updated IndividualCustomer type
+import { individualCustomerStatuses } from "./individual-customer-types";
 import { getBulkMeters, subscribeToBulkMeters, initializeBulkMeters } from "@/lib/data-store";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse, isValid } from "date-fns";
 
-const individualCustomerFormObjectSchema = baseIndividualCustomerDataSchema.extend({
+// Schema for the form, extending the base data entry schema with status
+const individualCustomerFormObjectSchema = baseIndividualCustomerDataSchemaNew.extend({
   status: z.enum(individualCustomerStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
-  paymentStatus: z.enum(paymentStatuses, { errorMap: () => ({ message: "Please select a valid payment status."}) }),
-});; // Explicit semicolon
+});
 
-const individualCustomerFormSchema = individualCustomerFormObjectSchema.refine(data => {
-  const prev = data.previousReading === null || data.previousReading === undefined ? -Infinity : Number(data.previousReading);
-  const curr = data.currentReading === null || data.currentReading === undefined ? -Infinity : Number(data.currentReading);
-  if (Number.isNaN(prev) || Number.isNaN(curr)) return true;
-  return curr >= prev;
-} , {
-  message: "Current Reading must be greater than or equal to Previous Reading.",
-  path: ["currentReading"],
-});; // Explicit semicolon
-
-export type IndividualCustomerFormValues = z.infer<typeof individualCustomerFormSchema>;
+export type IndividualCustomerFormValues = z.infer<typeof individualCustomerFormObjectSchema>;
 
 interface IndividualCustomerFormDialogProps {
   open: boolean;
@@ -65,26 +53,15 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
   const [isBulkMeterSelected, setIsBulkMeterSelected] = React.useState(!!defaultValues?.assignedBulkMeterId);
 
   const form = useForm<IndividualCustomerFormValues>({
-    resolver: zodResolver(individualCustomerFormSchema),
+    resolver: zodResolver(individualCustomerFormObjectSchema),
     defaultValues: {
       name: "",
-      customerKeyNumber: "",
-      contractNumber: "",
-      customerType: undefined,
-      bookNumber: "",
-      ordinal: null,
-      meterSize: null,
-      meterNumber: "",
-      previousReading: null,
-      currentReading: null,
+      ordinal: undefined, // Use undefined for empty number fields
       month: "",
-      specificArea: "",
       location: "",
       ward: "",
-      sewerageConnection: undefined,
       assignedBulkMeterId: undefined,
       status: "Active",
-      paymentStatus: "Unpaid",
     },
   });
 
@@ -108,55 +85,33 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
       });
     }
     return () => unsubscribe();
-  }, [propBulkMeters, open]);; // Explicit semicolon
+  }, [propBulkMeters, open]);
 
   React.useEffect(() => {
     if (defaultValues) {
       form.reset({
         name: defaultValues.name || "",
-        customerKeyNumber: defaultValues.customerKeyNumber || "",
-        contractNumber: defaultValues.contractNumber || "",
-        customerType: defaultValues.customerType,
-        bookNumber: defaultValues.bookNumber || "",
-        ordinal: defaultValues.ordinal ?? null,
-        meterSize: defaultValues.meterSize ?? null,
-        meterNumber: defaultValues.meterNumber || "",
-        previousReading: defaultValues.previousReading ?? null,
-        currentReading: defaultValues.currentReading ?? null,
+        ordinal: defaultValues.ordinal ?? undefined,
         month: defaultValues.month || "",
-        specificArea: defaultValues.specificArea || "",
         location: defaultValues.location || "",
         ward: defaultValues.ward || "",
-        sewerageConnection: defaultValues.sewerageConnection,
         assignedBulkMeterId: defaultValues.assignedBulkMeterId,
         status: defaultValues.status || "Active",
-        paymentStatus: defaultValues.paymentStatus || "Unpaid",
       });
       setIsBulkMeterSelected(!!defaultValues.assignedBulkMeterId);
     } else {
       form.reset({
         name: "",
-        customerKeyNumber: "",
-        contractNumber: "",
-        customerType: undefined,
-        bookNumber: "",
-        ordinal: null,
-        meterSize: null,
-        meterNumber: "",
-        previousReading: null,
-        currentReading: null,
+        ordinal: undefined,
         month: "",
-        specificArea: "",
         location: "",
         ward: "",
-        sewerageConnection: undefined,
         assignedBulkMeterId: undefined,
         status: "Active",
-        paymentStatus: "Unpaid",
       });
       setIsBulkMeterSelected(false);
     }
-  }, [defaultValues, form, open]);; // Explicit semicolon
+  }, [defaultValues, form, open]);
 
   React.useEffect(() => {
     const subscription = form.watch((value, { name }) => {
@@ -165,24 +120,24 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
       }
     });
     return () => subscription.unsubscribe();
-  }, [form, dynamicBulkMeters]);; // Explicit semicolon
+  }, [form, dynamicBulkMeters]);
 
   const handleSubmit = (data: IndividualCustomerFormValues) => {
     onSubmit(data);
     onOpenChange(false);
-  };; // Explicit semicolon
+  };
 
   const commonFormFieldProps = {
     disabled: !isBulkMeterSelected && !defaultValues,
-  };; // Explicit semicolon
+  };
 
   const commonSelectTriggerProps = {
     disabled: !isBulkMeterSelected && !defaultValues,
-  };; // Explicit semicolon
-
+  };
+  
   const commonDatePickerProps = {
     disabledTrigger: !isBulkMeterSelected && !defaultValues,
-  };; // Explicit semicolon
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -242,67 +197,6 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
               />
               <FormField
                 control={form.control}
-                name="customerKeyNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Customer Key Number *</FormLabel>
-                    <FormControl>
-                      <Input {...field} {...commonFormFieldProps} value={field.value || ""}/>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="contractNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contract Number *</FormLabel>
-                    <FormControl>
-                      <Input {...field} {...commonFormFieldProps} value={field.value || ""}/>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="customerType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Customer Type *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value || ""} {...commonSelectTriggerProps}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select customer type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {customerTypes.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="bookNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Book Number *</FormLabel>
-                    <FormControl>
-                      <Input {...field} {...commonFormFieldProps} value={field.value || ""}/>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
                 name="ordinal"
                 render={({ field }) => (
                   <FormItem>
@@ -318,104 +212,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                             field.onChange(undefined);
                           } else {
                             const parsed = parseInt(valStr, 10);
-                            field.onChange(Number.isNaN(parsed) ? NaN : parsed);
-                          }
-                        }}
-                         {...commonFormFieldProps}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="meterSize"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Meter Size (inch) *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        {...field}
-                        value={field.value === undefined || field.value === null || Number.isNaN(field.value as number) ? "" : String(field.value)}
-                        onChange={e => {
-                          const valStr = e.target.value;
-                           if (valStr === "") {
-                            field.onChange(undefined);
-                          } else {
-                            const parsed = parseFloat(valStr);
-                            field.onChange(Number.isNaN(parsed) ? NaN : parsed);
-                          }
-                        }}
-                         {...commonFormFieldProps}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="meterNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Meter Number *</FormLabel>
-                    <FormControl>
-                      <Input {...field} {...commonFormFieldProps} value={field.value || ""}/>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="previousReading"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Initial Previous Reading *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        {...field}
-                        value={field.value === undefined || field.value === null || Number.isNaN(field.value as number) ? "" : String(field.value)}
-                        onChange={e => {
-                          const valStr = e.target.value;
-                           if (valStr === "") {
-                            field.onChange(undefined);
-                          } else {
-                            const parsed = parseFloat(valStr);
-                            field.onChange(Number.isNaN(parsed) ? NaN : parsed);
-                          }
-                        }}
-                         {...commonFormFieldProps}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="currentReading"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Initial Current Reading *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        {...field}
-                        value={field.value === undefined || field.value === null || Number.isNaN(field.value as number) ? "" : String(field.value)}
-                        onChange={e => {
-                          const valStr = e.target.value;
-                           if (valStr === "") {
-                            field.onChange(undefined);
-                          } else {
-                            const parsed = parseFloat(valStr);
-                            field.onChange(Number.isNaN(parsed) ? NaN : parsed);
+                            field.onChange(Number.isNaN(parsed) ? undefined : parsed);
                           }
                         }}
                          {...commonFormFieldProps}
@@ -430,7 +227,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                 name="month"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Initial Reading Month *</FormLabel>
+                    <FormLabel>Registration Month *</FormLabel>
                      <DatePicker
                         date={field.value && isValid(parse(field.value, "yyyy-MM", new Date())) ? parse(field.value, "yyyy-MM", new Date()) : undefined}
                         setDate={(selectedDate) => {
@@ -438,19 +235,6 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                         }}
                         {...commonDatePickerProps}
                       />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="specificArea"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Specific Area *</FormLabel>
-                    <FormControl>
-                      <Input {...field} {...commonFormFieldProps} value={field.value || ""}/>
-                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -483,28 +267,6 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
               />
               <FormField
                 control={form.control}
-                name="sewerageConnection"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sewerage Connection *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value || ""} {...commonSelectTriggerProps}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select sewerage status"/>
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {sewerageConnections.map(status => (
-                          <SelectItem key={status} value={status}>{status}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
                 name="status"
                 render={({ field }) => (
                   <FormItem>
@@ -522,28 +284,6 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                       </SelectContent>
                     </Select>
                     <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="paymentStatus"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bill Payment Status *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || "Unpaid"} defaultValue={field.value || "Unpaid"} {...commonSelectTriggerProps}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select payment status"/>
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {paymentStatuses.map(status => (
-                          <SelectItem key={status} value={status}>{status}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                     <FormMessage />
                   </FormItem>
                 )}
               />

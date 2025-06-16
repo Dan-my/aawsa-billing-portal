@@ -94,7 +94,7 @@ export default function AdminDataEntryPage() {
                 <CardHeader>
                 <CardTitle>Bulk Meter CSV Upload</CardTitle>
                 <CardDescription>
-                    Upload a CSV file to add multiple bulk meters.
+                    Upload a CSV file to add multiple bulk meters. Refer to the project README.md for the required CSV format and template.
                 </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -111,7 +111,7 @@ export default function AdminDataEntryPage() {
                 <CardHeader>
                 <CardTitle>Individual Customer CSV Upload</CardTitle>
                 <CardDescription>
-                    Upload a CSV file to add multiple individual customers.
+                    Upload a CSV file to add multiple individual customers. Refer to the project README.md for the required CSV format and template.
                 </CardDescription>
                 </CardHeader>
                 <CardContent>

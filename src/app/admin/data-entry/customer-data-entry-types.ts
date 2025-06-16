@@ -58,7 +58,7 @@ export type MockBulkMeter = { id: string; name: string };
 // Schema for simplified staff individual customer data entry
 export const simplifiedStaffIndividualCustomerSchema = z.object({
   assignedBulkMeterId: z.string().min(1, {message: "Bulk meter selection is required."}).describe("The ID of the bulk meter this individual customer is assigned to."),
-  name: z.string().min(2, { message: "Name must be at least 2 characters." }),
+  name: z.string().min(2, { message: "Customer Name must be at least 2 characters." }),
   ordinal: z.coerce.number().int().min(1, { message: "Ordinal must be a positive integer." }),
   month: z.string().regex(/^\d{4}-\d{2}$/, { message: "Registration Month must be in YYYY-MM format." }),
   location: z.string().min(1, { message: "Location / Sub-City is required." }),

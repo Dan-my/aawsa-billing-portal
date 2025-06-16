@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -9,47 +10,73 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-interface MeterReading {
-  id: string; // Assuming each reading has a unique ID
-  meterNumber: string;
-  reading: number;
-  date: string; // Or Date object, depending on your data
-  status: string;
-}
+import { Badge } from "@/components/ui/badge";
+import type { DomainMeterReading } from "@/lib/data-store";
+import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
+import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
+import { format, parseISO } from "date-fns";
 
 interface MeterReadingsTableProps {
-  data: MeterReading[];
+  data: DomainMeterReading[];
+  customers: Pick<IndividualCustomer, 'id' | 'name' | 'meterNumber'>[];
+  bulkMeters: Pick<BulkMeter, 'id' | 'name' | 'meterNumber'>[];
 }
 
-const MeterReadingsTable: React.FC<MeterReadingsTableProps> = ({ data }) => {
+const MeterReadingsTable: React.FC<MeterReadingsTableProps> = ({ data, customers, bulkMeters }) => {
+
+  const getMeterIdentifier = (reading: DomainMeterReading): string => {
+    if (reading.meterType === 'individual_customer_meter' && reading.individualCustomerId) {
+      const customer = customers.find(c => c.id === reading.individualCustomerId);
+      return customer ? `${customer.name} (M: ${customer.meterNumber || 'N/A'})` : `Customer ID: ${reading.individualCustomerId}`;
+    }
+    if (reading.meterType === 'bulk_meter' && reading.bulkMeterId) {
+      const bulkMeter = bulkMeters.find(bm => bm.id === reading.bulkMeterId);
+      return bulkMeter ? `${bulkMeter.name} (M: ${bulkMeter.meterNumber || 'N/A'})` : `Bulk Meter ID: ${reading.bulkMeterId}`;
+    }
+    return "Unknown Meter";
+  };
+  
+  const formatDate = (dateString: string) => {
+    try {
+      return format(parseISO(dateString), "PP"); // e.g., Sep 21, 2023
+    } catch (e) {
+      return dateString; // Fallback if parsing fails
+    }
+  };
+
   return (
     <div>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Meter Number</TableHead>
-            <TableHead>Reading</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Status</TableHead>
-            {/* Add more headers if needed */}
+            <TableHead>Meter Identifier</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead className="text-right">Reading Value</TableHead>
+            <TableHead>Reading Date</TableHead>
+            <TableHead>Month/Year</TableHead>
+            <TableHead>Notes</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {data.length > 0 ? (
             data.map((reading) => (
               <TableRow key={reading.id}>
-                <TableCell>{reading.meterNumber}</TableCell>
-                <TableCell>{reading.reading}</TableCell>
-                <TableCell>{reading.date}</TableCell>
-                <TableCell>{reading.status}</TableCell>
-                {/* Add more cells if needed */}
+                <TableCell className="font-medium">{getMeterIdentifier(reading)}</TableCell>
+                <TableCell>
+                  <Badge variant={reading.meterType === 'bulk_meter' ? "secondary" : "default"}>
+                    {reading.meterType === 'individual_customer_meter' ? 'Individual' : 'Bulk'}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">{reading.readingValue.toFixed(2)}</TableCell>
+                <TableCell>{formatDate(reading.readingDate)}</TableCell>
+                <TableCell>{reading.monthYear}</TableCell>
+                <TableCell className="text-xs text-muted-foreground truncate max-w-xs">{reading.notes || "-"}</TableCell>
               </TableRow>
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={4} className="h-24 text-center">
-                No meter readings found.
+              <TableCell colSpan={6} className="h-24 text-center">
+                No meter readings found for this branch.
               </TableCell>
             </TableRow>
           )}
@@ -57,14 +84,11 @@ const MeterReadingsTable: React.FC<MeterReadingsTableProps> = ({ data }) => {
       </Table>
 
       {/* Placeholder for Pagination */}
-      <div className="mt-4 text-center text-muted-foreground">
-        Pagination coming soon.
-      </div>
-
-      {/* Placeholder for Sorting */}
-      <div className="mt-2 text-center text-muted-foreground">
-        Sorting coming soon.
-      </div>
+      {data.length > 10 && ( // Show pagination info if more than 10 items for example
+        <div className="mt-4 text-center text-sm text-muted-foreground">
+            Displaying {data.length} readings. Pagination coming soon.
+        </div>
+      )}
     </div>
   );
 };

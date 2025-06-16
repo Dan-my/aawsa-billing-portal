@@ -8,8 +8,20 @@ import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle as UIDi
 import { PlusCircle, Search, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AddMeterReadingForm, type AddMeterReadingFormValues } from "@/components/add-meter-reading-form";
+import MeterReadingsTable from "@/components/meter-readings-table"; // Import the table component
 import { useToast } from "@/hooks/use-toast";
-import { addMeterReading, getCustomers, initializeCustomers, getBulkMeters, initializeBulkMeters } from "@/lib/data-store";
+import { 
+  addMeterReading, 
+  getCustomers, 
+  initializeCustomers, 
+  getBulkMeters, 
+  initializeBulkMeters,
+  getMeterReadings,
+  initializeMeterReadings,
+  subscribeToMeterReadings,
+  subscribeToCustomers,
+  subscribeToBulkMeters
+} from "@/lib/data-store";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { DomainMeterReading } from "@/lib/data-store";
@@ -32,12 +44,14 @@ export default function StaffMeterReadingsPage() {
   
   const [allCustomers, setAllCustomers] = React.useState<IndividualCustomer[]>([]);
   const [allBulkMeters, setAllBulkMeters] = React.useState<BulkMeter[]>([]);
+  const [allMeterReadings, setAllMeterReadings] = React.useState<DomainMeterReading[]>([]);
+  const [branchMeterReadings, setBranchMeterReadings] = React.useState<DomainMeterReading[]>([]);
   
   const [customersForForm, setCustomersForForm] = React.useState<Pick<IndividualCustomer, 'id' | 'name' | 'meterNumber'>[]>([]);
   const [bulkMetersForForm, setBulkMetersForForm] = React.useState<Pick<BulkMeter, 'id' | 'name' | 'meterNumber'>[]>([]);
 
   const [isLoading, setIsLoading] = React.useState(true);
-  const [searchTerm, setSearchTerm] = React.useState(""); // For future table filtering
+  const [searchTerm, setSearchTerm] = React.useState(""); 
 
   React.useEffect(() => {
     let isMounted = true;
@@ -47,10 +61,12 @@ export default function StaffMeterReadingsPage() {
     if (storedUser) {
       try {
         const parsedUser: User = JSON.parse(storedUser);
-        if (isMounted) setCurrentUser(parsedUser);
-        if (parsedUser.role === "staff" && parsedUser.branchName) {
-          if (isMounted) setBranchName(parsedUser.branchName);
-          localBranchName = parsedUser.branchName;
+        if (isMounted) {
+            setCurrentUser(parsedUser);
+            if (parsedUser.role === "staff" && parsedUser.branchName) {
+            setBranchName(parsedUser.branchName);
+            localBranchName = parsedUser.branchName;
+            }
         }
       } catch (e) {
         console.error("Failed to parse user from localStorage", e);
@@ -60,43 +76,97 @@ export default function StaffMeterReadingsPage() {
     setIsLoading(true);
     Promise.all([
       initializeCustomers(),
-      initializeBulkMeters()
+      initializeBulkMeters(),
+      initializeMeterReadings()
     ]).then(() => {
       if (!isMounted) return;
 
       const fetchedCustomers = getCustomers();
       const fetchedBulkMeters = getBulkMeters();
+      const fetchedMeterReadings = getMeterReadings();
+      
       setAllCustomers(fetchedCustomers);
       setAllBulkMeters(fetchedBulkMeters);
-
-      // Filter customers and bulk meters for the form based on branch (if applicable)
-      // This is a simple filter; a more robust solution might involve direct branch_id links
-      const relevantCustomers = localBranchName 
-        ? fetchedCustomers.filter(c => 
-            c.location?.toLowerCase().includes(localBranchName!.toLowerCase()) || 
-            c.ward?.toLowerCase().includes(localBranchName!.toLowerCase()) ||
-            // If customer is linked to a bulk meter, check bulk meter's branch
-            (c.assignedBulkMeterId && fetchedBulkMeters.find(bm => bm.id === c.assignedBulkMeterId)?.location?.toLowerCase().includes(localBranchName!.toLowerCase()))
-          )
-        : fetchedCustomers;
+      setAllMeterReadings(fetchedMeterReadings);
       
-      const relevantBulkMeters = localBranchName
-        ? fetchedBulkMeters.filter(bm => bm.location?.toLowerCase().includes(localBranchName!.toLowerCase()))
-        : fetchedBulkMeters;
-
-      setCustomersForForm(relevantCustomers.map(c => ({ id: c.id, name: c.name, meterNumber: c.meterNumber })));
-      setBulkMetersForForm(relevantBulkMeters.map(bm => ({ id: bm.id, name: bm.name, meterNumber: bm.meterNumber })));
+      filterAndSetData(localBranchName, fetchedCustomers, fetchedBulkMeters, fetchedMeterReadings);
       
       setIsLoading(false);
     }).catch(error => {
       if (!isMounted) return;
       console.error("Error initializing data for meter readings page:", error);
-      toast({ title: "Error Loading Data", description: "Could not load necessary customer/meter data.", variant: "destructive" });
+      toast({ title: "Error Loading Data", description: "Could not load necessary data.", variant: "destructive" });
       setIsLoading(false);
     });
     
-    return () => { isMounted = false; };
-  }, [toast]);
+    const unsubscribeCustomers = subscribeToCustomers((updatedCustomers) => {
+        if (isMounted) {
+            setAllCustomers(updatedCustomers);
+            filterAndSetData(localBranchName, updatedCustomers, allBulkMeters, allMeterReadings);
+        }
+    });
+    const unsubscribeBulkMeters = subscribeToBulkMeters((updatedBulkMeters) => {
+        if (isMounted) {
+            setAllBulkMeters(updatedBulkMeters);
+            filterAndSetData(localBranchName, allCustomers, updatedBulkMeters, allMeterReadings);
+        }
+    });
+    const unsubscribeMeterReadings = subscribeToMeterReadings((updatedReadings) => {
+        if (isMounted) {
+            setAllMeterReadings(updatedReadings);
+            filterAndSetData(localBranchName, allCustomers, allBulkMeters, updatedReadings);
+        }
+    });
+    
+    return () => { 
+        isMounted = false; 
+        unsubscribeCustomers();
+        unsubscribeBulkMeters();
+        unsubscribeMeterReadings();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Dependencies ensure this runs once on mount and when localBranchName might change (though it's stable after init)
+
+  const filterAndSetData = (
+    currentBranchName: string | undefined,
+    customersList: IndividualCustomer[],
+    bulkMetersList: BulkMeter[],
+    meterReadingsList: DomainMeterReading[]
+  ) => {
+    // Filter customers and bulk meters for the form based on branch
+    const relevantCustomers = currentBranchName
+      ? customersList.filter(c =>
+          c.location?.toLowerCase().includes(currentBranchName!.toLowerCase()) ||
+          c.ward?.toLowerCase().includes(currentBranchName!.toLowerCase()) ||
+          (c.assignedBulkMeterId && bulkMetersList.find(bm => bm.id === c.assignedBulkMeterId)?.location?.toLowerCase().includes(currentBranchName!.toLowerCase()))
+        )
+      : customersList;
+
+    const relevantBulkMeters = currentBranchName
+      ? bulkMetersList.filter(bm => bm.location?.toLowerCase().includes(currentBranchName!.toLowerCase()))
+      : bulkMetersList;
+
+    setCustomersForForm(relevantCustomers.map(c => ({ id: c.id, name: c.name, meterNumber: c.meterNumber })));
+    setBulkMetersForForm(relevantBulkMeters.map(bm => ({ id: bm.id, name: bm.name, meterNumber: bm.meterNumber })));
+
+    // Filter meter readings for the table
+    const branchFilteredReadings = currentBranchName
+      ? meterReadingsList.filter(reading => {
+          if (reading.meterType === 'individual_customer_meter' && reading.individualCustomerId) {
+            const customer = relevantCustomers.find(c => c.id === reading.individualCustomerId);
+            return !!customer;
+          } else if (reading.meterType === 'bulk_meter' && reading.bulkMeterId) {
+            const bulkMeter = relevantBulkMeters.find(bm => bm.id === reading.bulkMeterId);
+            return !!bulkMeter;
+          }
+          return false;
+        })
+      : meterReadingsList; // Show all if no branch context (e.g. admin view, though this is staff page)
+      
+    const sortedReadings = branchFilteredReadings.sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
+    setBranchMeterReadings(sortedReadings);
+  };
+
 
   const handleAddReadingSubmit = async (formData: AddMeterReadingFormValues) => {
     if (!currentUser?.id) {
@@ -123,16 +193,16 @@ export default function StaffMeterReadingsPage() {
     };
 
     try {
-      setIsLoading(true);
+      setIsLoading(true); // Consider a more specific loading state for form submission
       const result = await addMeterReading(readingPayload);
-      setIsLoading(false);
+      // setIsLoading(false); // Set to false after operation
       if (result.success && result.data) {
         toast({
           title: "Meter Reading Added",
           description: `Reading for selected meter has been successfully recorded.`,
         });
         setIsModalOpen(false);
-        // TODO: Re-fetch or update local list of readings if displaying them.
+        // Data will be updated via subscription, no need to manually add to allMeterReadings
       } else {
         toast({
           variant: "destructive",
@@ -141,15 +211,36 @@ export default function StaffMeterReadingsPage() {
         });
       }
     } catch (error) {
-      setIsLoading(false);
+      // setIsLoading(false); // Set to false in case of error
       console.error("Error submitting meter reading:", error);
       toast({
         variant: "destructive",
         title: "Submission Error",
         description: "An unexpected error occurred while saving the reading.",
       });
+    } finally {
+        setIsLoading(false); // Ensure loading is set to false in all cases
     }
   };
+  
+  const displayedReadings = branchMeterReadings.filter(reading => {
+    if (!searchTerm) return true;
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    
+    let meterIdentifier = "";
+    if (reading.meterType === 'individual_customer_meter' && reading.individualCustomerId) {
+      const customer = allCustomers.find(c => c.id === reading.individualCustomerId);
+      if (customer) meterIdentifier = `${customer.name} ${customer.meterNumber}`.toLowerCase();
+    } else if (reading.meterType === 'bulk_meter' && reading.bulkMeterId) {
+      const bulkMeter = allBulkMeters.find(bm => bm.id === reading.bulkMeterId);
+      if (bulkMeter) meterIdentifier = `${bulkMeter.name} ${bulkMeter.meterNumber}`.toLowerCase();
+    }
+    
+    return meterIdentifier.includes(lowerSearchTerm) ||
+           String(reading.readingValue).includes(lowerSearchTerm) ||
+           reading.readingDate.includes(lowerSearchTerm) ||
+           reading.monthYear.includes(lowerSearchTerm);
+  });
 
   return (
     <div className="space-y-6">
@@ -164,12 +255,11 @@ export default function StaffMeterReadingsPage() {
               className="pl-8 w-full"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              disabled // Table and search not implemented yet
             />
           </div>
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DialogTrigger asChild>
-              <Button disabled={isLoading}>
+              <Button disabled={isLoading && (customersForForm.length === 0 && bulkMetersForForm.length === 0)}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add New Reading
               </Button>
             </DialogTrigger>
@@ -180,13 +270,13 @@ export default function StaffMeterReadingsPage() {
                   Select the meter type, then the specific meter, and enter the reading details.
                 </UIDialogDescription>
               </DialogHeader>
-              {isLoading ? <p>Loading meter data...</p> : (
-                (customersForForm.length === 0 && bulkMetersForForm.length === 0) ? (
+              {(isLoading && (customersForForm.length === 0 && bulkMetersForForm.length === 0)) ? <p>Loading meter data...</p> : (
+                (!isLoading && customersForForm.length === 0 && bulkMetersForForm.length === 0) ? (
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>No Meters Found</AlertTitle>
                         <AlertDescription>
-                            No customers or bulk meters could be loaded for your branch to add readings. Please check if data exists or contact an administrator.
+                            No customers or bulk meters could be loaded for your branch ({branchName}) to add readings. Please check if data exists or contact an administrator.
                         </AlertDescription>
                     </Alert>
                 ) : (
@@ -194,7 +284,7 @@ export default function StaffMeterReadingsPage() {
                         onSubmit={handleAddReadingSubmit} 
                         customers={customersForForm}
                         bulkMeters={bulkMetersForForm}
-                        isLoading={isLoading}
+                        isLoading={isLoading} // Pass overall loading state
                     />
                 )
               )}
@@ -205,14 +295,23 @@ export default function StaffMeterReadingsPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Meter Reading List</CardTitle>
-          <CardDescription>View and manage meter readings for {branchName}. (List display coming soon)</CardDescription>
+          <CardDescription>View and manage meter readings for {branchName}.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
-            Meter readings table and filtering functionality will be implemented here.
-          </div>
+          {isLoading ? (
+             <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
+                Loading meter readings...
+             </div>
+          ) : (
+            <MeterReadingsTable 
+              data={displayedReadings} 
+              customers={allCustomers} 
+              bulkMeters={allBulkMeters}
+            />
+          )}
         </CardContent>
       </Card>
     </div>
   );
 }
+

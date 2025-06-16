@@ -88,7 +88,7 @@ export function BulkMeterDataEntryForm() {
                     <FormItem>
                       <FormLabel>Bulk Meter Name / Identifier *</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input placeholder="Enter bulk meter name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -101,7 +101,7 @@ export function BulkMeterDataEntryForm() {
                     <FormItem>
                       <FormLabel>Customer Key Number *</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input placeholder="Enter customer key number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -114,7 +114,7 @@ export function BulkMeterDataEntryForm() {
                     <FormItem>
                       <FormLabel>Contract Number *</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input placeholder="Enter contract number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -130,6 +130,7 @@ export function BulkMeterDataEntryForm() {
                         <Input 
                           type="number" 
                           step="0.1" 
+                          placeholder="Enter meter size"
                           {...field} 
                           value={field.value ?? ""}
                           onChange={e => {
@@ -149,7 +150,7 @@ export function BulkMeterDataEntryForm() {
                     <FormItem>
                       <FormLabel>Meter Number *</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input placeholder="Enter meter number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -165,6 +166,7 @@ export function BulkMeterDataEntryForm() {
                         <Input 
                           type="number" 
                           step="0.01" 
+                          placeholder="Enter previous reading"
                           {...field} 
                           value={field.value ?? ""}
                           onChange={e => {
@@ -187,6 +189,7 @@ export function BulkMeterDataEntryForm() {
                         <Input 
                           type="number" 
                           step="0.01" 
+                          placeholder="Enter current reading"
                           {...field} 
                           value={field.value ?? ""}
                           onChange={e => {
@@ -222,7 +225,7 @@ export function BulkMeterDataEntryForm() {
                     <FormItem>
                       <FormLabel>Specific Area *</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input placeholder="Enter specific area" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -235,7 +238,7 @@ export function BulkMeterDataEntryForm() {
                     <FormItem>
                       <FormLabel>Location / Sub-City *</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input placeholder="Enter location / sub-city" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -248,7 +251,7 @@ export function BulkMeterDataEntryForm() {
                     <FormItem>
                       <FormLabel>Ward / Woreda *</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input placeholder="Enter ward / woreda" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

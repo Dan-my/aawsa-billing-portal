@@ -124,7 +124,7 @@ export function IndividualCustomerDataEntryForm() {
                   name="assignedBulkMeterId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Assign to Bulk Meter *</FormLabel>
+                      <FormLabel>Assign to Bulk Meter</FormLabel>
                       <Select
                         onValueChange={handleBulkMeterChange}
                         value={field.value}
@@ -190,3 +190,6 @@ export function IndividualCustomerDataEntryForm() {
     </ScrollArea>
   );
 }
+
+
+    

@@ -222,8 +222,8 @@ const mapSupabaseCustomerToDomain = (sc: SupabaseIndividualCustomerRow): DomainI
   month: sc.month,
   location: sc.location,
   ward: sc.ward,
-  assignedBulkMeterId: sc.assigned_bulk_meter_id || undefined,
-  status: sc.status as IndividualCustomerStatus, // Ensure enum compatibility
+  assignedBulkMeterId: sc.assignedBulkMeterId || undefined, // Changed from sc.assigned_bulk_meter_id
+  status: sc.status as IndividualCustomerStatus, 
   created_at: sc.created_at,
   updated_at: sc.updated_at,
 });
@@ -237,8 +237,8 @@ const mapDomainCustomerToInsert = (
     month: customer.month,
     location: customer.location,
     ward: customer.ward,
-    assigned_bulk_meter_id: customer.assignedBulkMeterId,
-    status: 'Active', // Default status for new entries
+    assignedBulkMeterId: customer.assignedBulkMeterId, // Changed from assigned_bulk_meter_id
+    status: 'Active', 
   };
 };
 
@@ -250,7 +250,7 @@ const mapDomainCustomerToUpdate = (customer: Partial<DomainIndividualCustomer>):
   if(customer.month !== undefined) updatePayload.month = customer.month;
   if(customer.location !== undefined) updatePayload.location = customer.location;
   if(customer.ward !== undefined) updatePayload.ward = customer.ward;
-  if(customer.assignedBulkMeterId !== undefined) updatePayload.assigned_bulk_meter_id = customer.assignedBulkMeterId;
+  if(customer.assignedBulkMeterId !== undefined) updatePayload.assignedBulkMeterId = customer.assignedBulkMeterId; // Changed from assigned_bulk_meter_id
   if(customer.status !== undefined) updatePayload.status = customer.status;
   
   return updatePayload;
@@ -648,10 +648,10 @@ export const updateBranch = async (updatedBranchData: DomainBranch): Promise<Sto
   console.error("DataStore: Failed to update branch. Error:", JSON.stringify(error, null, 2));
   let userMessage = "Failed to update branch.";
   let isNotFoundError = false;
-  if (error && error.code === 'PGRST204') {
+  if (error && typeof error === 'object' && 'code' in error && error.code === 'PGRST204') {
     userMessage = "Failed to update branch: Record not found.";
     isNotFoundError = true;
-  } else if (error?.message) {
+  } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
     userMessage = `Failed to update branch: ${error.message}`;
   }
   return { success: false, message: userMessage, isNotFoundError, error };
@@ -665,7 +665,7 @@ export const deleteBranch = async (branchId: string): Promise<StoreOperationResu
     return { success: true };
   }
   console.error("DataStore: Failed to delete branch. Error:", JSON.stringify(error, null, 2));
-  return { success: false, message: error?.message || "Failed to delete branch.", error };
+  return { success: false, message: (error as any)?.message || "Failed to delete branch.", error };
 };
 
 export const addCustomer = async (customerData: Omit<DomainIndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'status'>): Promise<StoreOperationResult<DomainIndividualCustomer>> => {
@@ -679,7 +679,7 @@ export const addCustomer = async (customerData: Omit<DomainIndividualCustomer, '
     return { success: true, data: newCustomer };
   }
   console.error("DataStore: Failed to add customer. Error:", JSON.stringify(error, null, 2));
-  return { success: false, message: error?.message || "Failed to add customer.", error };
+  return { success: false, message: (error as any)?.message || "Failed to add customer.", error };
 };
 
 export const updateCustomer = async (updatedCustomerData: DomainIndividualCustomer): Promise<StoreOperationResult<void>> => {
@@ -723,7 +723,7 @@ export const deleteCustomer = async (customerId: string): Promise<StoreOperation
     return { success: true };
   }
   console.error("DataStore: Failed to delete customer. Error:", JSON.stringify(error, null, 2));
-  return { success: false, message: error?.message || "Failed to delete customer.", error };
+  return { success: false, message: (error as any)?.message || "Failed to delete customer.", error };
 };
 
 export const addBulkMeter = async (bulkMeterDomainData: Omit<BulkMeter, 'id'>): Promise<StoreOperationResult<BulkMeter>> => {
@@ -736,7 +736,7 @@ export const addBulkMeter = async (bulkMeterDomainData: Omit<BulkMeter, 'id'>): 
     return { success: true, data: newBulkMeter };
   }
   console.error("DataStore: Failed to add bulk meter. Error:", JSON.stringify(error, null, 2));
-  return { success: false, message: error?.message || "Failed to add bulk meter.", error };
+  return { success: false, message: (error as any)?.message || "Failed to add bulk meter.", error };
 };
 
 export const updateBulkMeter = async (updatedBulkMeterData: BulkMeter): Promise<StoreOperationResult<void>> => {
@@ -752,10 +752,10 @@ export const updateBulkMeter = async (updatedBulkMeterData: BulkMeter): Promise<
   console.error("DataStore: Failed to update bulk meter. Error:", JSON.stringify(error, null, 2));
   let userMessage = "Failed to update bulk meter.";
   let isNotFoundError = false;
-  if (error && error.code === 'PGRST204') {
+  if (error && typeof error === 'object' && 'code' in error && error.code === 'PGRST204') {
     userMessage = "Failed to update bulk meter: Record not found.";
     isNotFoundError = true;
-  } else if (error?.message) {
+  } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
     userMessage = `Failed to update bulk meter: ${error.message}`;
   }
   return { success: false, message: userMessage, isNotFoundError, error };
@@ -777,10 +777,10 @@ export const updateBulkMeterPaymentStatus = async (id: string, newPaymentStatus:
   console.error("DataStore: Failed to update bulk meter payment status. Error:", JSON.stringify(error, null, 2));
   let userMessage = "Failed to update payment status.";
    let isNotFoundError = false;
-  if (error && error.code === 'PGRST204') {
+  if (error && typeof error === 'object' && 'code' in error && error.code === 'PGRST204') {
     userMessage = "Failed to update payment status: Record not found.";
     isNotFoundError = true;
-  } else if (error?.message) {
+  } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
     userMessage = `Failed to update payment status: ${error.message}`;
   }
   return { success: false, message: userMessage, isNotFoundError, error };
@@ -795,7 +795,7 @@ export const deleteBulkMeter = async (bulkMeterId: string): Promise<StoreOperati
     return { success: true };
   }
   console.error("DataStore: Failed to delete bulk meter. Error:", JSON.stringify(error, null, 2));
-  return { success: false, message: error?.message || "Failed to delete bulk meter.", error };
+  return { success: false, message: (error as any)?.message || "Failed to delete bulk meter.", error };
 };
 
 export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>): Promise<StoreOperationResult<StaffMember>> => {
@@ -808,7 +808,7 @@ export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>): Promis
     return { success: true, data: newStaff };
   }
   console.error("DataStore: Failed to add staff member. Error:", JSON.stringify(error, null, 2));
-  return { success: false, message: error?.message || "Failed to add staff member.", error };
+  return { success: false, message: (error as any)?.message || "Failed to add staff member.", error };
 };
 
 export const updateStaffMember = async (updatedStaffData: StaffMember): Promise<StoreOperationResult<void>> => {
@@ -824,10 +824,10 @@ export const updateStaffMember = async (updatedStaffData: StaffMember): Promise<
   console.error("DataStore: Failed to update staff member. Error:", JSON.stringify(error, null, 2));
   let userMessage = "Failed to update staff member.";
   let isNotFoundError = false;
-  if (error && error.code === 'PGRST204') {
+  if (error && typeof error === 'object' && 'code' in error && error.code === 'PGRST204') {
     userMessage = "Failed to update staff member: Record not found.";
     isNotFoundError = true;
-  } else if (error?.message) {
+  } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
     userMessage = `Failed to update staff member: ${error.message}`;
   }
   return { success: false, message: userMessage, isNotFoundError, error };
@@ -841,7 +841,7 @@ export const deleteStaffMember = async (staffId: string): Promise<StoreOperation
     return { success: true };
   }
   console.error("DataStore: Failed to delete staff member. Error:", JSON.stringify(error, null, 2));
-  return { success: false, message: error?.message || "Failed to delete staff member.", error };
+  return { success: false, message: (error as any)?.message || "Failed to delete staff member.", error };
 };
 
 export const addBill = async (billData: Omit<DomainBill, 'id'>): Promise<StoreOperationResult<DomainBill>> => { 
@@ -854,7 +854,7 @@ export const addBill = async (billData: Omit<DomainBill, 'id'>): Promise<StoreOp
         return { success: true, data: newBill };
     }
     console.error("DataStore: Failed to add bill. Supabase error:", JSON.stringify(error, null, 2)); 
-    return { success: false, message: error?.message || "Failed to add bill.", error };
+    return { success: false, message: (error as any)?.message || "Failed to add bill.", error };
 };
 export const updateExistingBill = async (id: string, billUpdateData: Partial<Omit<DomainBill, 'id'>>): Promise<StoreOperationResult<void>> => { 
     const payload = mapDomainBillToSupabase(billUpdateData) as BillUpdate;
@@ -868,10 +868,10 @@ export const updateExistingBill = async (id: string, billUpdateData: Partial<Omi
     console.error("DataStore: Failed to update bill. Supabase error:", JSON.stringify(error, null, 2));
     let userMessage = "Failed to update bill.";
     let isNotFoundError = false;
-    if (error && error.code === 'PGRST204') {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'PGRST204') {
       userMessage = "Failed to update bill: Record not found.";
       isNotFoundError = true;
-    } else if (error?.message) {
+    } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
       userMessage = `Failed to update bill: ${error.message}`;
     }
     return { success: false, message: userMessage, isNotFoundError, error };
@@ -884,7 +884,7 @@ export const removeBill = async (billId: string): Promise<StoreOperationResult<v
         return { success: true };
     }
     console.error("DataStore: Failed to delete bill. Supabase error:", JSON.stringify(error, null, 2));
-    return { success: false, message: error?.message || "Failed to delete bill.", error };
+    return { success: false, message: (error as any)?.message || "Failed to delete bill.", error };
 };
 
 export const addMeterReading = async (readingData: Omit<DomainMeterReading, 'id'>): Promise<StoreOperationResult<DomainMeterReading>> => { 
@@ -897,7 +897,7 @@ export const addMeterReading = async (readingData: Omit<DomainMeterReading, 'id'
         return { success: true, data: newReading };
     }
     console.error("DataStore: Failed to add meter reading. Supabase error:", JSON.stringify(error, null, 2)); 
-    return { success: false, message: error?.message || "Failed to add meter reading.", error };
+    return { success: false, message: (error as any)?.message || "Failed to add meter reading.", error };
 };
 export const updateExistingMeterReading = async (id: string, readingUpdateData: Partial<Omit<DomainMeterReading, 'id'>>): Promise<StoreOperationResult<void>> => { 
     const payload = mapDomainMeterReadingToSupabase(readingUpdateData) as MeterReadingUpdate;
@@ -911,10 +911,10 @@ export const updateExistingMeterReading = async (id: string, readingUpdateData: 
     console.error("DataStore: Failed to update meter reading. Supabase error:", JSON.stringify(error, null, 2));
     let userMessage = "Failed to update meter reading.";
     let isNotFoundError = false;
-    if (error && error.code === 'PGRST204') {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'PGRST204') {
       userMessage = "Failed to update meter reading: Record not found.";
       isNotFoundError = true;
-    } else if (error?.message) {
+    } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
       userMessage = `Failed to update meter reading: ${error.message}`;
     }
     return { success: false, message: userMessage, isNotFoundError, error };
@@ -927,7 +927,7 @@ export const removeMeterReading = async (readingId: string): Promise<StoreOperat
         return { success: true };
     }
     console.error("DataStore: Failed to delete meter reading. Supabase error:", JSON.stringify(error, null, 2));
-    return { success: false, message: error?.message || "Failed to delete meter reading.", error };
+    return { success: false, message: (error as any)?.message || "Failed to delete meter reading.", error };
 };
 
 export const addPayment = async (paymentData: Omit<DomainPayment, 'id'>): Promise<StoreOperationResult<DomainPayment>> => { 
@@ -940,7 +940,7 @@ export const addPayment = async (paymentData: Omit<DomainPayment, 'id'>): Promis
         return { success: true, data: newPayment };
     }
     console.error("DataStore: Failed to add payment. Supabase error:", JSON.stringify(error, null, 2)); 
-    return { success: false, message: error?.message || "Failed to add payment.", error };
+    return { success: false, message: (error as any)?.message || "Failed to add payment.", error };
 };
 export const updateExistingPayment = async (id: string, paymentUpdateData: Partial<Omit<DomainPayment, 'id'>>): Promise<StoreOperationResult<void>> => { 
     const payload = mapDomainPaymentToSupabase(paymentUpdateData) as PaymentUpdate;
@@ -954,10 +954,10 @@ export const updateExistingPayment = async (id: string, paymentUpdateData: Parti
     console.error("DataStore: Failed to update payment. Supabase error:", JSON.stringify(error, null, 2));
     let userMessage = "Failed to update payment.";
     let isNotFoundError = false;
-    if (error && error.code === 'PGRST204') {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'PGRST204') {
       userMessage = "Failed to update payment: Record not found.";
       isNotFoundError = true;
-    } else if (error?.message) {
+    } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
       userMessage = `Failed to update payment: ${error.message}`;
     }
     return { success: false, message: userMessage, isNotFoundError, error };
@@ -970,7 +970,7 @@ export const removePayment = async (paymentId: string): Promise<StoreOperationRe
         return { success: true };
     }
     console.error("DataStore: Failed to delete payment. Supabase error:", JSON.stringify(error, null, 2));
-    return { success: false, message: error?.message || "Failed to delete payment.", error };
+    return { success: false, message: (error as any)?.message || "Failed to delete payment.", error };
 };
 
 export const addReportLog = async (logData: Omit<DomainReportLog, 'id' | 'generatedAt'> & { generatedAt?: string } ): Promise<StoreOperationResult<DomainReportLog>> => { 
@@ -984,7 +984,7 @@ export const addReportLog = async (logData: Omit<DomainReportLog, 'id' | 'genera
         return { success: true, data: newLog };
     }
     console.error("DataStore: Failed to add report log. Supabase error:", JSON.stringify(error, null, 2)); 
-    return { success: false, message: error?.message || "Failed to add report log.", error };
+    return { success: false, message: (error as any)?.message || "Failed to add report log.", error };
 };
 export const updateExistingReportLog = async (id: string, logUpdateData: Partial<Omit<DomainReportLog, 'id'>>): Promise<StoreOperationResult<void>> => { 
     const payload = mapDomainReportLogToSupabase(logUpdateData) as ReportLogUpdate;
@@ -998,10 +998,10 @@ export const updateExistingReportLog = async (id: string, logUpdateData: Partial
     console.error("DataStore: Failed to update report log. Supabase error:", JSON.stringify(error, null, 2));
     let userMessage = "Failed to update report log.";
     let isNotFoundError = false;
-    if (error && error.code === 'PGRST204') {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'PGRST204') {
       userMessage = "Failed to update report log: Record not found.";
       isNotFoundError = true;
-    } else if (error?.message) {
+    } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
       userMessage = `Failed to update report log: ${error.message}`;
     }
     return { success: false, message: userMessage, isNotFoundError, error };
@@ -1014,7 +1014,7 @@ export const removeReportLog = async (logId: string): Promise<StoreOperationResu
         return { success: true };
     }
     console.error("DataStore: Failed to delete report log. Supabase error:", JSON.stringify(error, null, 2));
-    return { success: false, message: error?.message || "Failed to delete report log.", error };
+    return { success: false, message: (error as any)?.message || "Failed to delete report log.", error };
 };
 
 export const subscribeToBranches = (listener: Listener<DomainBranch>): (() => void) => {
@@ -1074,3 +1074,4 @@ export async function loadInitialData() {
     initializeReportLogs(),
   ]);
 }
+

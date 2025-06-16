@@ -30,7 +30,7 @@ export interface Database {
           name: string;
           location: string;
           contactPerson?: string | null;
-          contactPhone?: number | null;  // Changed to number | null
+          contactPhone?: number | null;
           status: 'Active' | 'Inactive';
           created_at?: string | null;
           updated_at?: string | null;
@@ -40,7 +40,7 @@ export interface Database {
           name: string;
           location: string;
           contactPerson?: string | null;
-          contactPhone?: number | null;  // Changed to number | null
+          contactPhone?: number | null;
           status: 'Active' | 'Inactive';
           created_at?: string | null;
           updated_at?: string | null;
@@ -50,7 +50,7 @@ export interface Database {
           name?: string;
           location?: string;
           contactPerson?: string | null;
-          contactPhone?: number | null;  // Changed to number | null
+          contactPhone?: number | null;
           status?: 'Active' | 'Inactive';
           created_at?: string | null;
           updated_at?: string | null;
@@ -120,8 +120,8 @@ export interface Database {
           month: string;
           location: string;
           ward: string;
-          status: 'Active' | 'Inactive' | 'Suspended'; // Corresponds to individual_customer_status_enum
-          assigned_bulk_meter_id?: string | null;
+          status: 'Active' | 'Inactive' | 'Suspended';
+          assignedBulkMeterId?: string | null; // Changed from assigned_bulk_meter_id
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -133,7 +133,7 @@ export interface Database {
           location: string;
           ward: string;
           status: 'Active' | 'Inactive' | 'Suspended';
-          assigned_bulk_meter_id?: string | null;
+          assignedBulkMeterId?: string | null; // Changed from assigned_bulk_meter_id
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -145,7 +145,7 @@ export interface Database {
           location?: string;
           ward?: string;
           status?: 'Active' | 'Inactive' | 'Suspended';
-          assigned_bulk_meter_id?: string | null;
+          assignedBulkMeterId?: string | null; // Changed from assigned_bulk_meter_id
           created_at?: string | null;
           updated_at?: string | null;
         };

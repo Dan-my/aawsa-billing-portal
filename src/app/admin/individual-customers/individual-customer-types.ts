@@ -9,30 +9,12 @@ export type IndividualCustomerStatus = (typeof individualCustomerStatuses)[numbe
 export type IndividualCustomer = z.infer<typeof baseIndividualCustomerDataSchemaNew> & {
   id: string;
   status: IndividualCustomerStatus;
-  created_at?: string | null; // from new schema
-  updated_at?: string | null; // from new schema
+  created_at?: string | null; 
+  updated_at?: string | null; 
 };
 
-// Constants for display in settings or info pages might need to be removed or updated
-// if they relied on removed fields (like tariff tiers, etc.)
-// For now, keeping them as they are not directly impacted by the table structure change alone,
-// but their usage elsewhere might be.
-export const DomesticTariffInfo = {
-    tiers: [], // Simplified as underlying data is removed
-    maintenancePercentage: 0.01,
-    sanitationPercentage: 0.07,
-    meterRent: 15.00,
-    sewerageRatePerM3: 6.25,
-};
+// Constants for TariffTier, DomesticTariffInfo, NonDomesticTariffInfo, PaymentStatus, and calculateBill
+// have been moved to src/lib/billing.ts to centralize billing logic.
+// If billing for individual customers is re-introduced with different fields,
+// that logic would need to be added here or in a dedicated billing service for individuals.
 
-export const NonDomesticTariffInfo = {
-  tiers: [], // Simplified
-  sanitationPercentage: 0.10,
-  meterRent: 15.00,
-  sewerageRatePerM3: 8.75,
-};
-
-// The calculateBill function and related detailed tariff structures are removed
-// as the necessary input fields (currentReading, previousReading, customerType, sewerageConnection)
-// are no longer part of the IndividualCustomer entity.
-// If billing is still needed, it would have to be re-implemented based on a different data model or source.

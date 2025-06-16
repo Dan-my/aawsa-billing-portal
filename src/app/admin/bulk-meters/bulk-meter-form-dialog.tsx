@@ -27,7 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { baseBulkMeterDataSchema } from "@/app/admin/data-entry/customer-data-entry-types";
 import type { BulkMeter } from "./bulk-meter-types";
 import { bulkMeterStatuses } from "./bulk-meter-types";
-import { paymentStatuses } from "../individual-customers/individual-customer-types"; 
+import { paymentStatuses } from "@/lib/billing"; // Import from new location
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse } from "date-fns";
 
@@ -349,4 +349,3 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
     </Dialog>
   );
 }
-

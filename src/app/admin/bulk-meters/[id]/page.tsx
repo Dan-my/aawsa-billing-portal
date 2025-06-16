@@ -17,7 +17,7 @@ import {
   updateBulkMeter as updateBulkMeterInStore,
   updateBulkMeterPaymentStatus,
   deleteBulkMeter as deleteBulkMeterFromStore,
-  updateCustomer as updateCustomerInStore, // Will be simplified
+  updateCustomer as updateCustomerInStore, 
   deleteCustomer as deleteCustomerFromStore,
   subscribeToBulkMeters,
   subscribeToCustomers,
@@ -25,13 +25,10 @@ import {
   initializeCustomers,
 } from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meter-types";
-import type { IndividualCustomer, IndividualCustomerStatus } from "../../individual-customers/individual-customer-types"; // calculateBill and some types removed
-import type { CustomerType, SewerageConnection, PaymentStatus } from "@/app/admin/bulk-meters/bulk-meter-types"; // Keep for BulkMeter's own tariff
-import { calculateBill } from "@/app/admin/individual-customers/individual-customer-types"; // This calculateBill is now simplified/removed. Need to check usage.
-// For bulk meter's own bill calculation, we might need a specific calculateBulkMeterBill or adapt the existing one.
-// For now, assuming 'calculateBill' can still be used for the bulk meter itself if its CustomerType/SewerageConnection is defined.
+import type { IndividualCustomer, IndividualCustomerStatus } from "../../individual-customers/individual-customer-types"; 
+import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus } from "@/lib/billing"; 
 import { BulkMeterFormDialog, type BulkMeterFormValues } from "../bulk-meter-form-dialog";
-import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "../../individual-customers/individual-customer-form-dialog"; // Form values for this will change
+import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "../../individual-customers/individual-customer-form-dialog"; 
 
 export default function BulkMeterDetailsPage() {
   const params = useParams();
@@ -115,7 +112,7 @@ export default function BulkMeterDetailsPage() {
       unsubscribeBM();
       unsubscribeCust();
     };
-  }, [bulkMeterId, router, toast, bulkMeter]); // Added bulkMeter to dependency to re-evaluate if it becomes null
+  }, [bulkMeterId, router, toast, bulkMeter]); 
 
 
   const handleEditBulkMeter = () => setIsBulkMeterFormOpen(true);
@@ -166,7 +163,6 @@ export default function BulkMeterDetailsPage() {
     setIsCustomerDeleteDialogOpen(false);
   };
 
-  // handleSubmitCustomerForm needs to be updated based on the NEW IndividualCustomerFormValues
   const handleSubmitCustomerForm = async (data: IndividualCustomerFormValues) => {
     if (selectedCustomer) {
       const updatedCustomerData: IndividualCustomer = {
@@ -178,7 +174,6 @@ export default function BulkMeterDetailsPage() {
           ward: data.ward,
           assignedBulkMeterId: data.assignedBulkMeterId,
           status: data.status as IndividualCustomerStatus,
-          // created_at, updated_at are managed by DB/data-store
       };
       await updateCustomerInStore(updatedCustomerData);
       toast({ title: "Customer Updated", description: `${updatedCustomerData.name} has been updated.` });
@@ -202,12 +197,9 @@ export default function BulkMeterDetailsPage() {
   const bmCurrentReading = bulkMeter.currentReading ?? 0;
   const bulkUsage = bmCurrentReading - bmPreviousReading;
 
-  // Simplified: Assume bulk meter is non-domestic for its own bill calculation for now
   const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
-  const effectiveBulkMeterSewerageConnection: SewerageConnection = "No"; // Or fetch from bulk meter's own data if it has this field
+  const effectiveBulkMeterSewerageConnection: SewerageConnection = "No"; 
   
-  // The `calculateBill` function may need to be adapted if its dependencies changed too much for bulk meters.
-  // For now, we assume it can still calculate a bill for a bulk meter based on its own readings.
   const totalBulkBill = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection);
 
 
@@ -354,7 +346,7 @@ export default function BulkMeterDetailsPage() {
             onOpenChange={setIsCustomerFormOpen}
             onSubmit={handleSubmitCustomerForm}
             defaultValues={selectedCustomer}
-            bulkMeters={[{id: bulkMeter.id, name: bulkMeter.name}]} // Pass only the current bulk meter
+            bulkMeters={[{id: bulkMeter.id, name: bulkMeter.name}]} 
           />
       )}
       <AlertDialog open={isCustomerDeleteDialogOpen} onOpenChange={setIsCustomerDeleteDialogOpen}>

@@ -1,14 +1,6 @@
 
 import * as z from "zod";
-
-// These are kept for potential use in other parts of the system (e.g. Bulk Meters)
-// but are no longer directly part of the simplified IndividualCustomer schema.
-export const customerTypes = ["Domestic", "Non-domestic"] as const;
-export type CustomerType = (typeof customerTypes)[number];
-
-export const sewerageConnections = ["Yes", "No"] as const;
-export type SewerageConnection = (typeof sewerageConnections)[number];
-
+// CustomerType and SewerageConnection types are now imported from @/lib/billing
 
 // Base Schema for Individual Customer Data (NEW - based on image)
 export const baseIndividualCustomerDataSchemaNew = z.object({
@@ -18,12 +10,10 @@ export const baseIndividualCustomerDataSchemaNew = z.object({
   location: z.string().min(1, { message: "Location / Sub-City is required." }),
   ward: z.string().min(1, { message: "Ward / Woreda is required." }),
   assignedBulkMeterId: z.string({ required_error: "Assigning to a bulk meter is required." }).min(1, "Assigning to a bulk meter is required.").describe("The ID of the bulk meter this individual customer is assigned to."),
-  // status will be handled by the entity type, not directly in data entry form as a user-editable field for *new* entries.
-  // created_at and updated_at are handled by the database.
 });
 
 // Schema for Individual Customer Data Entry (NEW)
-export const individualCustomerDataEntrySchemaNew = baseIndividualCustomerDataSchemaNew; // No specific refinements for these fields yet
+export const individualCustomerDataEntrySchemaNew = baseIndividualCustomerDataSchemaNew; 
 
 export type IndividualCustomerDataEntryFormValuesNew = z.infer<typeof individualCustomerDataEntrySchemaNew>;
 
@@ -52,4 +42,3 @@ export const bulkMeterDataEntrySchema = baseBulkMeterDataSchema.refine(data => d
 export type BulkMeterDataEntryFormValues = z.infer<typeof bulkMeterDataEntrySchema>;
 
 export type MockBulkMeter = { id: string; name: string };
-

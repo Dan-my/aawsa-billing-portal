@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Save, AlertTriangle, Info, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { DomesticTariffInfo, NonDomesticTariffInfo } from "@/app/admin/individual-customers/individual-customer-types"; 
+import { DomesticTariffInfo, NonDomesticTariffInfo } from "@/lib/billing"; 
 
 const APP_NAME_KEY = "aawsa-app-name";
 const CURRENCY_KEY = "aawsa-default-currency";
@@ -221,5 +221,4 @@ export default function AdminSettingsPage() {
     </div>
   );
 }
-
     

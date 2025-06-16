@@ -9,9 +9,7 @@ import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, getCustomers, subscribeToCustomers, initializeCustomers } from "@/lib/data-store";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
-import { initialBulkMeters } from "@/app/admin/bulk-meters/page";
-import { initialCustomers } from "@/app/admin/individual-customers/page";
-
+// Removed import of initialBulkMeters and initialCustomers as they are not used.
 
 interface User {
   email: string;
@@ -39,71 +37,96 @@ const chartConfig = {
 } satisfies import("@/components/ui/chart").ChartConfig;
 
 export default function StaffDashboardPage() {
-  const [branchName, setBranchName] = React.useState<string>("Your Branch");
+  const [branchNameForDisplay, setBranchNameForDisplay] = React.useState<string>("Your Branch");
   const [totalBulkMetersInBranch, setTotalBulkMetersInBranch] = React.useState<number>(0);
   const [totalCustomersInBranch, setTotalCustomersInBranch] = React.useState<number>(0);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+
+  const updateBranchData = React.useCallback((
+    allBulkMeters: BulkMeter[],
+    allCustomers: IndividualCustomer[],
+    currentStaffBranch: string | undefined
+  ) => {
+    if (currentStaffBranch) {
+      const simpleBranchName = currentStaffBranch.replace(/ Branch$/i, "").toLowerCase().trim();
+
+      const branchFilteredBulkMeters = allBulkMeters.filter(bm =>
+        (bm.location?.toLowerCase() || "").includes(simpleBranchName) ||
+        (bm.name?.toLowerCase() || "").includes(simpleBranchName) ||
+        (bm.ward?.toLowerCase() || "").includes(simpleBranchName)
+      );
+      setTotalBulkMetersInBranch(branchFilteredBulkMeters.length);
+
+      const branchBulkMeterIds = branchFilteredBulkMeters.map(bm => bm.id);
+      const branchFilteredCustomers = allCustomers.filter(c => {
+        return c.assignedBulkMeterId && branchBulkMeterIds.includes(c.assignedBulkMeterId);
+      });
+      setTotalCustomersInBranch(branchFilteredCustomers.length);
+    } else {
+      setTotalBulkMetersInBranch(0);
+      setTotalCustomersInBranch(0);
+    }
+  }, []);
 
 
   React.useEffect(() => {
-    let staffBranch: string | undefined;
+    let isMounted = true;
+    let localStaffBranch: string | undefined;
+    
+    setIsLoading(true);
+
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
         const parsedUser: User = JSON.parse(storedUser);
         if (parsedUser.role === "staff" && parsedUser.branchName) {
-          setBranchName(parsedUser.branchName);
-          staffBranch = parsedUser.branchName;
+          if (isMounted) setBranchNameForDisplay(parsedUser.branchName);
+          localStaffBranch = parsedUser.branchName;
         }
       } catch (e) {
         console.error("Failed to parse user from localStorage", e);
       }
     }
-
-    // Initialize data stores if empty
-    if (getBulkMeters().length === 0) {
-      initializeBulkMeters(initialBulkMeters);
-    }
-    if (getCustomers().length === 0) {
-        initializeCustomers(initialCustomers);
-    }
     
+    Promise.all([
+      initializeBulkMeters(), // Fetches from Supabase via data-store
+      initializeCustomers()   // Fetches from Supabase via data-store
+    ]).then(() => {
+      if (!isMounted) return;
+      // Use current state of stores after initialization
+      updateBranchData(getBulkMeters(), getCustomers(), localStaffBranch);
+      setIsLoading(false);
+    }).catch(error => {
+      if (!isMounted) return;
+      console.error("Error initializing dashboard data:", error);
+      setIsLoading(false);
+    });
 
-    const updateBranchData = (allBulkMeters: BulkMeter[], allCustomers: IndividualCustomer[]) => {
-        if (staffBranch) {
-            const branchFilteredBulkMeters = allBulkMeters.filter(bm => 
-                bm.location.toLowerCase().includes(staffBranch!.toLowerCase()) || 
-                bm.name.toLowerCase().includes(staffBranch!.toLowerCase()) ||
-                bm.ward.toLowerCase().includes(staffBranch!.toLowerCase())
-            );
-            setTotalBulkMetersInBranch(branchFilteredBulkMeters.length);
-
-            const branchBulkMeterIds = branchFilteredBulkMeters.map(bm => bm.id);
-            const branchFilteredCustomers = allCustomers.filter(c => 
-                c.assignedBulkMeterId && branchBulkMeterIds.includes(c.assignedBulkMeterId)
-            );
-            setTotalCustomersInBranch(branchFilteredCustomers.length);
-
-        } else {
-            // If no specific branch, show all or 0, based on desired logic
-            setTotalBulkMetersInBranch(allBulkMeters.length); 
-            setTotalCustomersInBranch(allCustomers.length);
-        }
+    const handleBulkMetersUpdate = (updatedMeters: BulkMeter[]) => {
+        if (isMounted) updateBranchData(updatedMeters, getCustomers(), localStaffBranch);
     };
-    
-    updateBranchData(getBulkMeters(), getCustomers());
+    const handleCustomersUpdate = (updatedCustomers: IndividualCustomer[]) => {
+        if (isMounted) updateBranchData(getBulkMeters(), updatedCustomers, localStaffBranch);
+    };
 
-    const unsubscribeBulkMeters = subscribeToBulkMeters((updatedMeters) => updateBranchData(updatedMeters, getCustomers()));
-    const unsubscribeCustomers = subscribeToCustomers((updatedCustomers) => updateBranchData(getBulkMeters(), updatedCustomers));
+    const unsubscribeBulkMeters = subscribeToBulkMeters(handleBulkMetersUpdate);
+    const unsubscribeCustomers = subscribeToCustomers(handleCustomersUpdate);
 
     return () => {
+      isMounted = false;
       unsubscribeBulkMeters();
       unsubscribeCustomers();
     };
-  }, []);
+  }, [updateBranchData]); // updateBranchData is memoized with useCallback
+
+  if (isLoading) {
+    return <div className="p-4 text-center">Loading dashboard data...</div>;
+  }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Staff Dashboard - {branchName}</h1>
+      <h1 className="text-3xl font-bold">Staff Dashboard - {branchNameForDisplay}</h1>
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="shadow-lg">
@@ -113,7 +136,7 @@ export default function StaffDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">100 Bills</div>
-            <p className="text-xs text-muted-foreground">85% paid rate</p>
+            <p className="text-xs text-muted-foreground">85% paid rate (Sample Data)</p>
             <div className="h-[120px] mt-4">
                <ChartContainer config={chartConfig} className="w-full h-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -124,6 +147,7 @@ export default function StaffDashboardPage() {
                             ))}
                         </Pie>
                         <ChartTooltipContent />
+                        <Legend verticalAlign="bottom" height={36} />
                     </PieChart>
                 </ResponsiveContainer>
                </ChartContainer>
@@ -133,12 +157,12 @@ export default function StaffDashboardPage() {
 
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Customers in {branchName}</CardTitle>
+            <CardTitle className="text-sm font-medium">Customers in {branchNameForDisplay}</CardTitle>
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalCustomersInBranch}</div>
-            <p className="text-xs text-muted-foreground">Total customers in branch</p>
+            <p className="text-xs text-muted-foreground">Total customers assigned to bulk meters in your branch</p>
              <div className="h-[120px] mt-4 flex items-center justify-center">
                 <Users className="h-16 w-16 text-primary opacity-50" />
             </div>
@@ -147,12 +171,12 @@ export default function StaffDashboardPage() {
 
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Bulk Meters ({branchName})</CardTitle>
+            <CardTitle className="text-sm font-medium">Bulk Meters in {branchNameForDisplay}</CardTitle>
             <Gauge className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalBulkMetersInBranch}</div>
-            <p className="text-xs text-muted-foreground">Bulk meters in your branch</p>
+            <p className="text-xs text-muted-foreground">Bulk meters identified for your branch</p>
              <div className="h-[120px] mt-4 flex items-center justify-center">
                 <Gauge className="h-16 w-16 text-primary opacity-50" />
             </div>
@@ -162,8 +186,8 @@ export default function StaffDashboardPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Monthly Billing Performance ({branchName})</CardTitle>
-          <CardDescription>Paid vs. Unpaid bills over the last few months in your branch.</CardDescription>
+          <CardTitle>Monthly Billing Performance ({branchNameForDisplay})</CardTitle>
+          <CardDescription>Paid vs. Unpaid bills over the last few months in your branch. (Sample Data)</CardDescription>
         </CardHeader>
         <CardContent className="h-[300px]">
           <ChartContainer config={chartConfig} className="w-full h-full">

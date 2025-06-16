@@ -55,8 +55,13 @@ export type BulkMeterDataEntryFormValues = z.infer<typeof bulkMeterDataEntrySche
 
 export type MockBulkMeter = { id: string; name: string };
 
-// Schema for staff individual customer data entry (simplified version from previous state)
-// This one might need review if staff also needs a different form. For now, keeping it separate.
-// This schema is now aligned with the more comprehensive data entry used elsewhere.
-export const individualCustomerDataEntrySchemaNew = baseIndividualCustomerDataSchema.extend({}); // No new fields, just inherits
-export type IndividualCustomerDataEntryFormValuesNew = z.infer<typeof individualCustomerDataEntrySchemaNew>;
+// Schema for simplified staff individual customer data entry
+export const simplifiedStaffIndividualCustomerSchema = z.object({
+  assignedBulkMeterId: z.string().min(1, {message: "Bulk meter selection is required."}).describe("The ID of the bulk meter this individual customer is assigned to."),
+  name: z.string().min(2, { message: "Name must be at least 2 characters." }),
+  ordinal: z.coerce.number().int().min(1, { message: "Ordinal must be a positive integer." }),
+  month: z.string().regex(/^\d{4}-\d{2}$/, { message: "Registration Month must be in YYYY-MM format." }),
+  location: z.string().min(1, { message: "Location / Sub-City is required." }),
+  ward: z.string().min(1, { message: "Ward / Woreda is required." }),
+});
+export type SimplifiedStaffIndividualCustomerFormValues = z.infer<typeof simplifiedStaffIndividualCustomerSchema>;

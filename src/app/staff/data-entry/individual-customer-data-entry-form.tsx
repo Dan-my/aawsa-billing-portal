@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { baseIndividualCustomerDataSchema } from "@/app/admin/data-entry/customer-data-entry-types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { addCustomer as addCustomerToStore, getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, initializeCustomers } from "@/lib/data-store";
-import type { IndividualCustomer, IndividualCustomerStatus } from "@/app/admin/individual-customers/individual-customer-types";
+import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import { individualCustomerStatuses } from "@/app/admin/individual-customers/individual-customer-types";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse, isValid } from "date-fns";
@@ -63,8 +63,8 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
       location: "", 
       ward: "",
       sewerageConnection: undefined,
-      status: "Active", // Default status
-      paymentStatus: "Unpaid", // Default payment status
+      status: "Active", 
+      paymentStatus: "Unpaid", 
     },
   });
 
@@ -93,7 +93,6 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
       assignedBulkMeterId: data.assignedBulkMeterId === UNASSIGNED_BULK_METER_VALUE ? undefined : data.assignedBulkMeterId,
     };
     
-    // Data now includes status and paymentStatus from the form itself
     const result = await addCustomerToStore(submissionData as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'calculatedBill'>);
     if (result.success && result.data) {
         toast({

@@ -135,7 +135,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         location: "",
         ward: "",
         sewerageConnection: undefined,
-        assignedBulkMeterId: undefined, // Default to "None" effectively by being undefined
+        assignedBulkMeterId: undefined, 
         status: "Active",
         paymentStatus: "Unpaid",
       });

@@ -128,7 +128,7 @@ export default function AdminDataEntryPage() {
                         </Button>
                     </div>
                     <CardDescription className="mt-2">
-                        Upload a CSV file to add multiple bulk meters. Refer to the project <code>README.md</code> for the required CSV format and column details.
+                        {/* Removed descriptive text as requested */}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -155,7 +155,7 @@ export default function AdminDataEntryPage() {
                         </Button>
                     </div>
                     <CardDescription className="mt-2">
-                        Upload a CSV file to add multiple individual customers. Refer to the project <code>README.md</code> for the required CSV format and column details.
+                         {/* Removed descriptive text as requested */}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>

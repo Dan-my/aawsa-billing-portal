@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { UploadCloud, FileWarning, CheckCircle, AlertCircle } from "lucide-react";
+import { UploadCloud, FileWarning, CheckCircle, Info } from "lucide-react"; // Changed AlertCircle to Info
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface CsvUploadSectionProps<TFormValues> {
@@ -216,7 +216,7 @@ export function CsvUploadSection<TFormValues>({
       )}
        {!file && processingSuccessCount === 0 && processingErrors.length === 0 && !isProcessing && (
         <Alert variant="default" className="border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30">
-            <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             <AlertTitle className="text-blue-700 dark:text-blue-300">Ready to Upload</AlertTitle>
             <AlertDescription className="text-blue-600 dark:text-blue-400">
                 Select a CSV file and click "Upload" to begin data entry.

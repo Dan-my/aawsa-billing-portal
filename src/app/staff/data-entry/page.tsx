@@ -13,12 +13,12 @@ import {
 import { FileText, UploadCloud, Building, ChevronDown } from "lucide-react";
 import { StaffBulkMeterEntryForm } from "./staff-bulk-meter-entry-form";
 import { StaffIndividualCustomerEntryForm } from "./staff-individual-customer-entry-form";
-import { CsvUploadSection } from "@/app/admin/data-entry/csv-upload-section";
+import { CsvUploadSection } from "@/app/admin/data-entry/csv-upload-section"; // Re-use admin component
 import {
   bulkMeterDataEntrySchema,
-  individualCustomerDataEntrySchema,
+  individualCustomerDataEntrySchema, // Use the restored complex schema
   type BulkMeterDataEntryFormValues,
-  type IndividualCustomerDataEntryFormValues
+  type IndividualCustomerDataEntryFormValues // Use the restored complex form values
 } from "@/app/admin/data-entry/customer-data-entry-types";
 import {
   addBulkMeter,
@@ -28,14 +28,11 @@ import {
   getBulkMeters,
   getCustomers,
 } from "@/lib/data-store";
-import type { CustomerType, SewerageConnection } from "@/app/admin/individual-customers/individual-customer-types";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
-import { initialBulkMeters as defaultInitialBulkMeters } from "@/app/admin/bulk-meters/page";
-import { initialCustomers as defaultInitialCustomers } from "@/app/admin/individual-customers/page";
-
 
 const bulkMeterCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward"];
+// Updated CSV headers for individual customers to match the restored complex schema
 const individualCustomerCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward", "sewerageConnection", "assignedBulkMeterId"];
 
 interface User {
@@ -58,9 +55,10 @@ export default function StaffDataEntryPage() {
   const [selectedEntryType, setSelectedEntryType] = React.useState<DataEntryType>("manual-individual");
 
   React.useEffect(() => {
-    if (getBulkMeters().length === 0) initializeBulkMeters(defaultInitialBulkMeters);
-    if (getCustomers().length === 0) initializeCustomers(defaultInitialCustomers);
-    
+    // Initialize data stores (they handle fetching from Supabase if needed)
+    initializeBulkMeters();
+    initializeCustomers();
+
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
@@ -68,7 +66,7 @@ export default function StaffDataEntryPage() {
         if (parsedUser.role === "staff" && parsedUser.branchName) {
           setStaffBranchName(parsedUser.branchName);
         } else if (parsedUser.role === "staff" && !parsedUser.branchName) {
-          setStaffBranchName("Unassigned Branch"); 
+          setStaffBranchName("Unassigned Branch");
         }
       } catch (e) {
         console.error("Failed to parse user from localStorage", e);
@@ -81,20 +79,21 @@ export default function StaffDataEntryPage() {
   }, []);
 
 
-  const handleBulkMeterCsvUpload = (data: BulkMeterDataEntryFormValues) => {
+  const handleBulkMeterCsvUpload = async (data: BulkMeterDataEntryFormValues) => {
     const bulkMeterDataForStore: Omit<BulkMeter, 'id'> = {
       ...data,
       status: "Active",
       paymentStatus: "Unpaid",
     };
-    addBulkMeter(bulkMeterDataForStore);
+    await addBulkMeter(bulkMeterDataForStore);
   };
 
-  const handleIndividualCustomerCsvUpload = (data: IndividualCustomerDataEntryFormValues) => {
+  const handleIndividualCustomerCsvUpload = async (data: IndividualCustomerDataEntryFormValues) => {
      const customerDataForStore = {
         ...data,
-    } as Omit<IndividualCustomer, 'id' | 'calculatedBill' | 'paymentStatus' | 'status'> & { customerType: CustomerType, currentReading: number, previousReading: number, sewerageConnection: SewerageConnection };
-    addCustomer(customerDataForStore);
+        // status, paymentStatus, calculatedBill are handled by addCustomer in data-store or DB
+    } as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill'>;
+    await addCustomer(customerDataForStore);
   };
 
   if (!isBranchDetermined) {
@@ -114,7 +113,7 @@ export default function StaffDataEntryPage() {
         </div>
     );
   }
-  
+
   const canProceedWithDataEntry = staffBranchName !== "Error: Not Logged In" && staffBranchName !== "Error: Branch Undefined" && staffBranchName !== "Unassigned Branch";
 
 
@@ -160,7 +159,7 @@ export default function StaffDataEntryPage() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">
-                {staffBranchName === "Unassigned Branch" 
+                {staffBranchName === "Unassigned Branch"
                     ? "You are not assigned to a specific branch. Please contact an administrator."
                     : "Could not determine your branch. Please ensure you are logged in correctly or contact an administrator."
                 }
@@ -222,9 +221,9 @@ export default function StaffDataEntryPage() {
                 <CardContent>
                   <CsvUploadSection
                     entryType="individual"
-                    schema={individualCustomerDataEntrySchema}
+                    schema={individualCustomerDataEntrySchema} // Use restored complex schema
                     addRecordFunction={handleIndividualCustomerCsvUpload}
-                    expectedHeaders={individualCustomerCsvHeaders}
+                    expectedHeaders={individualCustomerCsvHeaders} // Use restored complex headers
                   />
                 </CardContent>
               </Card>
@@ -235,4 +234,3 @@ export default function StaffDataEntryPage() {
     </div>
   );
 }
-

@@ -5,14 +5,14 @@ import * as React from "react";
 import * as XLSX from 'xlsx';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileSpreadsheet, AlertCircle } from "lucide-react";
+import { Download, FileSpreadsheet, Info } from "lucide-react"; // Changed AlertCircle to Info
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getCustomers, getBulkMeters, initializeCustomers, initializeBulkMeters } from "@/lib/data-store";
-import type { IndividualCustomer } from "../individual-customers/individual-customer-types"; // Uses updated type
+import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
-import { initialCustomers } from "../individual-customers/page"; // Uses updated initialCustomers
+import { initialCustomers } from "../individual-customers/page";
 import { initialBulkMeters } from "../bulk-meters/page";
 import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
 
@@ -20,13 +20,13 @@ interface ReportType {
   id: string;
   name: string;
   description: string;
-  headers?: string[]; 
-  getData?: () => any[]; 
+  headers?: string[];
+  getData?: () => any[];
 }
 
 const arrayToXlsxBlob = (data: any[], headers: string[]): Blob => {
   const worksheetData = [
-    headers, 
+    headers,
     ...data.map(row => headers.map(header => row[header] ?? '')),
   ];
 
@@ -35,7 +35,7 @@ const arrayToXlsxBlob = (data: any[], headers: string[]): Blob => {
   const range = XLSX.utils.decode_range(ws['!ref']!);
   for (let C = range.s.c; C <= range.e.c; ++C) {
     const address = XLSX.utils.encode_cell({ r: 0, c: C });
-    if (!ws[address]) { 
+    if (!ws[address]) {
         XLSX.utils.sheet_add_aoa(ws, [[headers[C] || '']], { origin: address });
     }
     ws[address].s = { font: { bold: true } };
@@ -43,13 +43,13 @@ const arrayToXlsxBlob = (data: any[], headers: string[]): Blob => {
 
   const colWidths = headers.map((header, colIndex) => {
     let maxLength = (header || '').length;
-    for (const dataRow of worksheetData.slice(1)) { 
+    for (const dataRow of worksheetData.slice(1)) {
       const cellValue = dataRow[colIndex];
       if (cellValue != null) {
         maxLength = Math.max(maxLength, String(cellValue).length);
       }
     }
-    return { wch: Math.min(maxLength + 2, 60) }; 
+    return { wch: Math.min(maxLength + 2, 60) };
   });
   ws['!cols'] = colWidths;
 
@@ -76,9 +76,12 @@ const availableReports: ReportType[] = [
   {
     id: "customer-data-export",
     name: "Customer Data Export (XLSX)",
-    description: "Download a comprehensive list of all individual customers with their new simplified details.",
-    headers: [ // Updated headers based on new schema
-      "id", "name", "ordinal", "month", "location", "ward", "assignedBulkMeterId", "status", "created_at", "updated_at"
+    description: "Download a comprehensive list of all individual customers with their details.",
+    headers: [
+      "id", "name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal",
+      "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea",
+      "location", "ward", "sewerageConnection", "assignedBulkMeterId", "status", "paymentStatus", "calculatedBill",
+      "created_at", "updated_at"
     ],
     getData: () => getCustomers(),
   },
@@ -121,7 +124,7 @@ export default function AdminReportsPage() {
 
   React.useEffect(() => {
     if (getCustomers().length === 0) {
-      initializeCustomers(); // Uses updated initialCustomers if store is empty
+      initializeCustomers();
     }
     if (getBulkMeters().length === 0) {
       initializeBulkMeters();
@@ -143,7 +146,6 @@ export default function AdminReportsPage() {
     }
 
     setIsGenerating(true);
-    console.log(`Generating ${selectedReport.name}...`);
 
     try {
       const data = selectedReport.getData();
@@ -159,7 +161,7 @@ export default function AdminReportsPage() {
       const xlsxBlob = arrayToXlsxBlob(data, selectedReport.headers);
       const fileName = `${selectedReport.id}_${new Date().toISOString().split('T')[0]}.xlsx`;
       downloadFile(xlsxBlob, fileName);
-      
+
       toast({
         title: "Report Generated",
         description: `${selectedReport.name} has been downloaded as ${fileName}.`,
@@ -216,7 +218,7 @@ export default function AdminReportsPage() {
                 <p className="text-sm text-muted-foreground">{selectedReport.description}</p>
                 {!selectedReport.getData && (
                    <Alert variant="default" className="mt-4 border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30">
-                     <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                     <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                      <AlertTitle className="text-blue-700 dark:text-blue-300">Coming Soon</AlertTitle>
                      <UIAlertDescription className="text-blue-600 dark:text-blue-400">
                          This report is currently under development and will be available in a future update.

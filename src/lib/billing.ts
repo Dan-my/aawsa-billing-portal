@@ -68,9 +68,6 @@ export function calculateBill(
     lastTierLimit = tier.limit;
 
     if (tier.limit === Infinity && remainingUsage > 0) {
-      // This case should ideally not be hit if last tier is Infinity and remainingUsage is positive
-      // because Math.min(remainingUsage, Infinity - lastTierLimit) would cover it.
-      // However, as a safeguard:
       baseWaterCharge += remainingUsage * tier.rate;
       remainingUsage = 0;
     }
@@ -79,22 +76,18 @@ export function calculateBill(
 
   let totalBill = baseWaterCharge;
 
-  // Maintenance (Domestic only as per current DomesticTariffInfo structure)
   if (customerType === "Domestic" && tariffConfig.maintenancePercentage) {
     totalBill += baseWaterCharge * tariffConfig.maintenancePercentage;
   }
 
-  // Sanitation
   if (tariffConfig.sanitationPercentage) {
     totalBill += baseWaterCharge * tariffConfig.sanitationPercentage;
   }
 
-  // Meter Rent
   if (tariffConfig.meterRent) {
     totalBill += tariffConfig.meterRent;
   }
 
-  // Sewerage Charge
   if (sewerageConnection === "Yes" && tariffConfig.sewerageRatePerM3) {
     totalBill += usageM3 * tariffConfig.sewerageRatePerM3;
   }

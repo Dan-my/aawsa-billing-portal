@@ -24,18 +24,18 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  baseIndividualCustomerDataSchemaNew, // Use the new schema
-} from "@/app/admin/data-entry/customer-data-entry-types";
-import type { IndividualCustomer } from "./individual-customer-types"; // Uses updated IndividualCustomer type
+import { baseIndividualCustomerDataSchema } from "@/app/admin/data-entry/customer-data-entry-types";
+import type { IndividualCustomer } from "./individual-customer-types";
 import { individualCustomerStatuses } from "./individual-customer-types";
 import { getBulkMeters, subscribeToBulkMeters, initializeBulkMeters } from "@/lib/data-store";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse, isValid } from "date-fns";
+import { customerTypes, sewerageConnections, paymentStatuses } from "@/lib/billing";
 
-// Schema for the form, extending the base data entry schema with status
-const individualCustomerFormObjectSchema = baseIndividualCustomerDataSchemaNew.extend({
+// Schema for the form, extending the base data entry schema with status and paymentStatus
+const individualCustomerFormObjectSchema = baseIndividualCustomerDataSchema.extend({
   status: z.enum(individualCustomerStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
+  paymentStatus: z.enum(paymentStatuses, { errorMap: () => ({ message: "Please select a valid payment status."}) }),
 });
 
 export type IndividualCustomerFormValues = z.infer<typeof individualCustomerFormObjectSchema>;
@@ -45,23 +45,33 @@ interface IndividualCustomerFormDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: IndividualCustomerFormValues) => void;
   defaultValues?: IndividualCustomer | null;
-  bulkMeters?: { id: string; name: string }[];
+  bulkMeters?: { id: string; name: string }[]; // Optional, can be fetched if not provided
 }
 
 export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, defaultValues, bulkMeters: propBulkMeters }: IndividualCustomerFormDialogProps) {
   const [dynamicBulkMeters, setDynamicBulkMeters] = React.useState<{ id: string; name: string }[]>(propBulkMeters || []);
-  const [isBulkMeterSelected, setIsBulkMeterSelected] = React.useState(!!defaultValues?.assignedBulkMeterId);
 
   const form = useForm<IndividualCustomerFormValues>({
     resolver: zodResolver(individualCustomerFormObjectSchema),
     defaultValues: {
       name: "",
-      ordinal: undefined, // Use undefined for empty number fields
+      customerKeyNumber: "",
+      contractNumber: "",
+      customerType: undefined,
+      bookNumber: "",
+      ordinal: undefined,
+      meterSize: undefined,
+      meterNumber: "",
+      previousReading: undefined,
+      currentReading: undefined,
       month: "",
+      specificArea: "",
       location: "",
       ward: "",
+      sewerageConnection: undefined,
       assignedBulkMeterId: undefined,
       status: "Active",
+      paymentStatus: "Unpaid",
     },
   });
 
@@ -70,9 +80,6 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
       initializeBulkMeters().then(() => {
         const fetchedBms = getBulkMeters().map(bm => ({ id: bm.id, name: bm.name }));
         setDynamicBulkMeters(fetchedBms);
-        if (fetchedBms.length === 0 && open) {
-            console.warn("IndividualCustomerFormDialog: No bulk meters available on mount for selection.");
-        }
       });
     } else {
          setDynamicBulkMeters(propBulkMeters);
@@ -91,57 +98,57 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
     if (defaultValues) {
       form.reset({
         name: defaultValues.name || "",
+        customerKeyNumber: defaultValues.customerKeyNumber || "",
+        contractNumber: defaultValues.contractNumber || "",
+        customerType: defaultValues.customerType || undefined,
+        bookNumber: defaultValues.bookNumber || "",
         ordinal: defaultValues.ordinal ?? undefined,
+        meterSize: defaultValues.meterSize ?? undefined,
+        meterNumber: defaultValues.meterNumber || "",
+        previousReading: defaultValues.previousReading ?? undefined,
+        currentReading: defaultValues.currentReading ?? undefined,
         month: defaultValues.month || "",
+        specificArea: defaultValues.specificArea || "",
         location: defaultValues.location || "",
         ward: defaultValues.ward || "",
-        assignedBulkMeterId: defaultValues.assignedBulkMeterId,
+        sewerageConnection: defaultValues.sewerageConnection || undefined,
+        assignedBulkMeterId: defaultValues.assignedBulkMeterId || undefined,
         status: defaultValues.status || "Active",
+        paymentStatus: defaultValues.paymentStatus || "Unpaid",
       });
-      setIsBulkMeterSelected(!!defaultValues.assignedBulkMeterId);
     } else {
       form.reset({
         name: "",
+        customerKeyNumber: "",
+        contractNumber: "",
+        customerType: undefined,
+        bookNumber: "",
         ordinal: undefined,
+        meterSize: undefined,
+        meterNumber: "",
+        previousReading: undefined,
+        currentReading: undefined,
         month: "",
+        specificArea: "",
         location: "",
         ward: "",
+        sewerageConnection: undefined,
         assignedBulkMeterId: undefined,
         status: "Active",
+        paymentStatus: "Unpaid",
       });
-      setIsBulkMeterSelected(false);
     }
   }, [defaultValues, form, open]);
 
-  React.useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name === "assignedBulkMeterId") {
-        setIsBulkMeterSelected(!!value.assignedBulkMeterId && dynamicBulkMeters.length > 0);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form, dynamicBulkMeters]);
 
   const handleSubmit = (data: IndividualCustomerFormValues) => {
     onSubmit(data);
     onOpenChange(false);
   };
 
-  const commonFormFieldProps = {
-    disabled: !isBulkMeterSelected && !defaultValues,
-  };
-
-  const commonSelectTriggerProps = {
-    disabled: !isBulkMeterSelected && !defaultValues,
-  };
-  
-  const commonDatePickerProps = {
-    disabledTrigger: !isBulkMeterSelected && !defaultValues,
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{defaultValues ? "Edit Customer" : "Add New Customer"}</DialogTitle>
           <DialogDescription>
@@ -150,147 +157,29 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <FormField
-                control={form.control}
-                name="assignedBulkMeterId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Assign to Bulk Meter *</FormLabel>
-                    <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          setIsBulkMeterSelected(!!value && dynamicBulkMeters.length > 0);
-                        }}
-                        value={field.value || ""}
-                        defaultValue={field.value || ""}
-                        disabled={!!defaultValues && !!propBulkMeters && propBulkMeters.length === 1 && propBulkMeters[0].id === defaultValues.assignedBulkMeterId}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a bulk meter first" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {dynamicBulkMeters.length === 0 && <SelectItem value="no-bms-available" disabled>No bulk meters available</SelectItem>}
-                        {dynamicBulkMeters.map((bm) => (
-                          <SelectItem key={bm.id} value={bm.id}>{bm.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Customer Name *</FormLabel>
-                    <FormControl>
-                      <Input {...field} {...commonFormFieldProps} value={field.value || ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="ordinal"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ordinal *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        {...field}
-                        value={field.value === undefined || field.value === null || Number.isNaN(field.value as number) ? "" : String(field.value)}
-                        onChange={e => {
-                          const valStr = e.target.value;
-                          if (valStr === "") {
-                            field.onChange(undefined);
-                          } else {
-                            const parsed = parseInt(valStr, 10);
-                            field.onChange(Number.isNaN(parsed) ? undefined : parsed);
-                          }
-                        }}
-                         {...commonFormFieldProps}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="month"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Registration Month *</FormLabel>
-                     <DatePicker
-                        date={field.value && isValid(parse(field.value, "yyyy-MM", new Date())) ? parse(field.value, "yyyy-MM", new Date()) : undefined}
-                        setDate={(selectedDate) => {
-                          field.onChange(selectedDate ? format(selectedDate, "yyyy-MM") : "");
-                        }}
-                        {...commonDatePickerProps}
-                      />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Location / Sub-City *</FormLabel>
-                    <FormControl>
-                      <Input {...field} {...commonFormFieldProps} value={field.value || ""}/>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="ward"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ward / Woreda *</FormLabel>
-                    <FormControl>
-                      <Input {...field} {...commonFormFieldProps} value={field.value || ""}/>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Customer Status *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || "Active"} defaultValue={field.value || "Active"} {...commonSelectTriggerProps}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status"/>
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {individualCustomerStatuses.map(status => (
-                          <SelectItem key={status} value={status}>{status}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Name *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="customerKeyNumber" render={({ field }) => (<FormItem><FormLabel>Cust. Key No. *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="contractNumber" render={({ field }) => (<FormItem><FormLabel>Contract No. *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="customerType" render={({ field }) => (<FormItem><FormLabel>Customer Type *</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger></FormControl><SelectContent>{customerTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="bookNumber" render={({ field }) => (<FormItem><FormLabel>Book No. *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="ordinal" render={({ field }) => (<FormItem><FormLabel>Ordinal *</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseInt(e.target.value,10))} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="meterSize" render={({ field }) => (<FormItem><FormLabel>Meter Size (inch) *</FormLabel><FormControl><Input type="number" step="0.1" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseFloat(e.target.value))} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="meterNumber" render={({ field }) => (<FormItem><FormLabel>Meter No. *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="previousReading" render={({ field }) => (<FormItem><FormLabel>Previous Reading *</FormLabel><FormControl><Input type="number" step="0.01" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseFloat(e.target.value))} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="currentReading" render={({ field }) => (<FormItem><FormLabel>Current Reading *</FormLabel><FormControl><Input type="number" step="0.01" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseFloat(e.target.value))} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="month" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Reading Month *</FormLabel><DatePicker date={field.value && isValid(parse(field.value, "yyyy-MM", new Date())) ? parse(field.value, "yyyy-MM", new Date()) : undefined} setDate={(date) => field.onChange(date ? format(date, "yyyy-MM") : "")} /><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="specificArea" render={({ field }) => (<FormItem><FormLabel>Specific Area *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="location" render={({ field }) => (<FormItem><FormLabel>Location / Sub-City *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="ward" render={({ field }) => (<FormItem><FormLabel>Ward / Woreda *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="sewerageConnection" render={({ field }) => (<FormItem><FormLabel>Sewerage Conn. *</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select connection" /></SelectTrigger></FormControl><SelectContent>{sewerageConnections.map(conn => <SelectItem key={conn} value={conn}>{conn}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="assignedBulkMeterId" render={({ field }) => (<FormItem><FormLabel>Assign to Bulk Meter</FormLabel><Select onValueChange={field.onChange} value={field.value || ""}><FormControl><SelectTrigger><SelectValue placeholder="Select bulk meter" /></SelectTrigger></FormControl><SelectContent>{dynamicBulkMeters.length === 0 && <SelectItem value="no-bms-available" disabled>No bulk meters available</SelectItem>}{dynamicBulkMeters.length > 0 && <SelectItem value="">None</SelectItem>}{dynamicBulkMeters.map((bm) => (<SelectItem key={bm.id} value={bm.id}>{bm.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="status" render={({ field }) => (<FormItem><FormLabel>Customer Status *</FormLabel><Select onValueChange={field.onChange} value={field.value || "Active"} defaultValue={field.value || "Active"}><FormControl><SelectTrigger><SelectValue placeholder="Select status"/></SelectTrigger></FormControl><SelectContent>{individualCustomerStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="paymentStatus" render={({ field }) => (<FormItem><FormLabel>Payment Status *</FormLabel><Select onValueChange={field.onChange} value={field.value || "Unpaid"} defaultValue={field.value || "Unpaid"}><FormControl><SelectTrigger><SelectValue placeholder="Select payment status"/></SelectTrigger></FormControl><SelectContent>{paymentStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit" disabled={form.formState.isSubmitting || (!isBulkMeterSelected && !defaultValues)}>
+              <Button type="submit" disabled={form.formState.isSubmitting}>
                 {defaultValues ? "Save Changes" : "Add Customer"}
               </Button>
             </DialogFooter>
@@ -300,4 +189,3 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
     </Dialog>
   );
 }
-

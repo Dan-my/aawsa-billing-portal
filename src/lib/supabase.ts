@@ -1,18 +1,7 @@
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-
-// IMPORTANT:
-// 1. You MUST generate the actual Supabase types for your project.
-//    Run this command in your terminal (replace YOUR_PROJECT_ID):
-//    npx supabase gen types typescript --project-id YOUR_PROJECT_ID --schema public > src/types/supabase.ts
-// 2. Once src/types/supabase.ts is generated, you can remove the placeholder Database type below.
-// 3. Update the import path if your types file is located elsewhere.
-
-// Attempt to import actual generated types
 import type { Database as ActualDatabase } from '@/types/supabase';
 
-// --- Placeholder Database Type (Remove after generating src/types/supabase.ts) ---
-// This placeholder allows the code to compile if src/types/supabase.ts doesn't exist yet.
 export type Json =
   | string
   | number
@@ -112,40 +101,76 @@ export interface Database {
           updatedAt?: string | null;
         };
       };
-      individual_customers: {
+      individual_customers: { // Restored complex structure
         Row: {
           id: string;
           name: string;
+          customerKeyNumber: string;
+          contractNumber: string;
+          customerType: 'Domestic' | 'Non-domestic';
+          bookNumber: string;
           ordinal: number;
-          month: string;
+          meterSize: number;
+          meterNumber: string;
+          previousReading: number;
+          currentReading: number;
+          month: string; // YYYY-MM
+          specificArea: string;
           location: string;
           ward: string;
+          sewerageConnection: 'Yes' | 'No';
+          assignedBulkMeterId?: string | null;
           status: 'Active' | 'Inactive' | 'Suspended';
-          assignedBulkMeterId?: string | null; // Changed from assigned_bulk_meter_id
+          paymentStatus: 'Paid' | 'Unpaid' | 'Pending'; // For the customer's latest bill
+          calculatedBill: number; // Stored calculated bill for the readings
           created_at?: string | null;
           updated_at?: string | null;
         };
         Insert: {
           id?: string;
           name: string;
+          customerKeyNumber: string;
+          contractNumber: string;
+          customerType: 'Domestic' | 'Non-domestic';
+          bookNumber: string;
           ordinal: number;
-          month: string;
+          meterSize: number;
+          meterNumber: string;
+          previousReading: number;
+          currentReading: number;
+          month: string; // YYYY-MM
+          specificArea: string;
           location: string;
           ward: string;
-          status: 'Active' | 'Inactive' | 'Suspended';
-          assignedBulkMeterId?: string | null; // Changed from assigned_bulk_meter_id
+          sewerageConnection: 'Yes' | 'No';
+          assignedBulkMeterId?: string | null;
+          status?: 'Active' | 'Inactive' | 'Suspended';
+          paymentStatus?: 'Paid' | 'Unpaid' | 'Pending';
+          calculatedBill?: number;
           created_at?: string | null;
           updated_at?: string | null;
         };
         Update: {
           id?: string;
           name?: string;
+          customerKeyNumber?: string;
+          contractNumber?: string;
+          customerType?: 'Domestic' | 'Non-domestic';
+          bookNumber?: string;
           ordinal?: number;
-          month?: string;
+          meterSize?: number;
+          meterNumber?: string;
+          previousReading?: number;
+          currentReading?: number;
+          month?: string; // YYYY-MM
+          specificArea?: string;
           location?: string;
           ward?: string;
+          sewerageConnection?: 'Yes' | 'No';
+          assignedBulkMeterId?: string | null;
           status?: 'Active' | 'Inactive' | 'Suspended';
-          assignedBulkMeterId?: string | null; // Changed from assigned_bulk_meter_id
+          paymentStatus?: 'Paid' | 'Unpaid' | 'Pending';
+          calculatedBill?: number;
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -400,7 +425,7 @@ export interface Database {
     Enums: {
         branch_status_enum: 'Active' | 'Inactive';
         bulk_meter_status_enum: 'Active' | 'Maintenance' | 'Decommissioned';
-        payment_status_enum: 'Paid' | 'Unpaid';
+        payment_status_enum: 'Paid' | 'Unpaid' | 'Pending';
         customer_type_enum: 'Domestic' | 'Non-domestic';
         sewerage_connection_enum: 'Yes' | 'No';
         individual_customer_status_enum: 'Active' | 'Inactive' | 'Suspended';
@@ -415,12 +440,9 @@ export interface Database {
     };
   };
 }
-// --- End Placeholder Database Type ---
 
-// Use ActualDatabase if available (after type generation), otherwise fall back to the placeholder
 type ResolvedDatabase = ActualDatabase extends { public: any } ? ActualDatabase : Database;
 
-// Define types for each table based on the resolved Database type
 export type Branch = ResolvedDatabase['public']['Tables']['branches']['Row'];
 export type BranchInsert = ResolvedDatabase['public']['Tables']['branches']['Insert'];
 export type BranchUpdate = ResolvedDatabase['public']['Tables']['branches']['Update'];
@@ -449,7 +471,7 @@ export type Payment = ResolvedDatabase['public']['Tables']['payments']['Row'];
 export type PaymentInsert = ResolvedDatabase['public']['Tables']['payments']['Insert'];
 export type PaymentUpdate = ResolvedDatabase['public']['Tables']['payments']['Update'];
 
-export type ReportLog = ResolvedDatabase['public']['Tables']['reports']['Row']; // 'reports' is the table name
+export type ReportLog = ResolvedDatabase['public']['Tables']['reports']['Row'];
 export type ReportLogInsert = ResolvedDatabase['public']['Tables']['reports']['Insert'];
 export type ReportLogUpdate = ResolvedDatabase['public']['Tables']['reports']['Update'];
 
@@ -513,4 +535,3 @@ export const getAllReportLogs = async () => supabase.from('reports').select('*')
 export const createReportLog = async (reportLog: ReportLogInsert) => supabase.from('reports').insert(reportLog).select().single();
 export const updateReportLog = async (id: string, reportLog: ReportLogUpdate) => supabase.from('reports').update(reportLog).eq('id', id).select().single();
 export const deleteReportLog = async (id: string) => supabase.from('reports').delete().eq('id', id).select().single();
-    

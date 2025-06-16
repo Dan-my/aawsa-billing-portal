@@ -4,23 +4,23 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, UploadCloud } from "lucide-react";
+import { FileText, UploadCloud, Info } from "lucide-react";
 import { BulkMeterDataEntryForm } from "./bulk-meter-data-entry-form";
 import { IndividualCustomerDataEntryForm } from "./individual-customer-data-entry-form";
 import { CsvUploadSection } from "./csv-upload-section";
-import { 
-  bulkMeterDataEntrySchema, 
-  individualCustomerDataEntrySchemaNew, // Use new schema
+import {
+  bulkMeterDataEntrySchema,
+  individualCustomerDataEntrySchema,
   type BulkMeterDataEntryFormValues,
-  type IndividualCustomerDataEntryFormValuesNew // Use new form values type
+  type IndividualCustomerDataEntryFormValues
 } from "./customer-data-entry-types";
 import { addBulkMeter, addCustomer, initializeBulkMeters, initializeCustomers } from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
-import type { IndividualCustomer } from "../individual-customers/individual-customer-types"; // Uses updated type
+import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
+import type { CustomerType, SewerageConnection } from "@/lib/billing";
 
-// Expected CSV Headers
 const bulkMeterCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward"];
-const individualCustomerCsvHeadersNew = ["name", "ordinal", "month", "location", "ward", "assignedBulkMeterId"]; // Updated headers
+const individualCustomerCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward", "sewerageConnection", "assignedBulkMeterId"];
 
 
 export default function AdminDataEntryPage() {
@@ -32,17 +32,17 @@ export default function AdminDataEntryPage() {
   const handleBulkMeterCsvUpload = async (data: BulkMeterDataEntryFormValues) => {
     const bulkMeterDataForStore: Omit<BulkMeter, 'id'> = {
       ...data,
-      status: "Active", 
-      paymentStatus: "Unpaid", 
+      status: "Active",
+      paymentStatus: "Unpaid",
     };
     await addBulkMeter(bulkMeterDataForStore);
   };
 
-  const handleIndividualCustomerCsvUpload = async (data: IndividualCustomerDataEntryFormValuesNew) => { // Use new type
+  const handleIndividualCustomerCsvUpload = async (data: IndividualCustomerDataEntryFormValues) => {
      const customerDataForStore = {
         ...data,
-        // status is defaulted in data-store or DB
-    } as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'status'>;
+        // status, paymentStatus, calculatedBill are handled by addCustomer in data-store or DB
+    } as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill'>;
     await addCustomer(customerDataForStore);
   };
 
@@ -87,7 +87,7 @@ export default function AdminDataEntryPage() {
             </CardContent>
             </Card>
         </TabsContent>
-        
+
         <TabsContent value="csv-upload">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
             <Card className="shadow-lg">
@@ -100,7 +100,7 @@ export default function AdminDataEntryPage() {
                 <CardContent>
                 <CsvUploadSection
                     entryType="bulk"
-                    schema={bulkMeterDataEntrySchema} 
+                    schema={bulkMeterDataEntrySchema}
                     addRecordFunction={handleBulkMeterCsvUpload}
                     expectedHeaders={bulkMeterCsvHeaders}
                 />
@@ -117,9 +117,9 @@ export default function AdminDataEntryPage() {
                 <CardContent>
                 <CsvUploadSection
                     entryType="individual"
-                    schema={individualCustomerDataEntrySchemaNew} // Use new schema
+                    schema={individualCustomerDataEntrySchema}
                     addRecordFunction={handleIndividualCustomerCsvUpload}
-                    expectedHeaders={individualCustomerCsvHeadersNew} // Use new headers
+                    expectedHeaders={individualCustomerCsvHeaders}
                 />
                 </CardContent>
             </Card>

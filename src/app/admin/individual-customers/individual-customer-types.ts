@@ -1,20 +1,23 @@
 
 import type { z } from "zod";
-import type { baseIndividualCustomerDataSchemaNew } from "@/app/admin/data-entry/customer-data-entry-types"; 
+import type { individualCustomerDataEntrySchema } from "@/app/admin/data-entry/customer-data-entry-types";
+import type { PaymentStatus, CustomerType, SewerageConnection } from "@/lib/billing";
 
 export const individualCustomerStatuses = ['Active', 'Inactive', 'Suspended'] as const;
 export type IndividualCustomerStatus = (typeof individualCustomerStatuses)[number];
 
-// This type represents the data structure for an individual customer entity based on the new schema.
-export type IndividualCustomer = z.infer<typeof baseIndividualCustomerDataSchemaNew> & {
+// This type represents the data structure for an individual customer entity.
+// It combines the fields from the data entry schema with an ID and operational/billing fields.
+export type IndividualCustomer = z.infer<typeof individualCustomerDataEntrySchema> & {
   id: string;
   status: IndividualCustomerStatus;
-  created_at?: string | null; 
-  updated_at?: string | null; 
+  paymentStatus: PaymentStatus; // e.g., 'Paid', 'Unpaid' for their current/last bill cycle
+  calculatedBill: number; // The calculated bill amount for the current/last cycle
+  created_at?: string | null;
+  updated_at?: string | null;
 };
 
-// Constants for TariffTier, DomesticTariffInfo, NonDomesticTariffInfo, PaymentStatus, and calculateBill
-// have been moved to src/lib/billing.ts to centralize billing logic.
-// If billing for individual customers is re-introduced with different fields,
-// that logic would need to be added here or in a dedicated billing service for individuals.
-
+// Note: CustomerType, SewerageConnection, PaymentStatus, TariffTier, calculateBill,
+// DomesticTariffInfo, NonDomesticTariffInfo are now managed in src/lib/billing.ts
+// to centralize billing logic and make it reusable.
+// IndividualCustomer imports CustomerType and SewerageConnection types from there.

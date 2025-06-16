@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Droplets, Edit, Trash2, MoreHorizontal, User, CheckCircle, XCircle, FileEdit, RefreshCcw } from "lucide-react";
+import { Droplets, Edit, Trash2, MoreHorizontal, User, CheckCircle, XCircle, FileEdit, RefreshCcw, Gauge, Users as UsersIcon, DollarSign, TrendingUp, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,7 +17,7 @@ import {
   updateBulkMeter as updateBulkMeterInStore,
   updateBulkMeterPaymentStatus,
   deleteBulkMeter as deleteBulkMeterFromStore,
-  updateCustomer as updateCustomerInStore, 
+  updateCustomer as updateCustomerInStore,
   deleteCustomer as deleteCustomerFromStore,
   subscribeToBulkMeters,
   subscribeToCustomers,
@@ -25,10 +25,11 @@ import {
   initializeCustomers,
 } from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meter-types";
-import type { IndividualCustomer, IndividualCustomerStatus } from "../../individual-customers/individual-customer-types"; 
-import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus } from "@/lib/billing"; 
+import type { IndividualCustomer, IndividualCustomerStatus } from "../../individual-customers/individual-customer-types";
+import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus } from "@/lib/billing";
 import { BulkMeterFormDialog, type BulkMeterFormValues } from "../bulk-meter-form-dialog";
-import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "../../individual-customers/individual-customer-form-dialog"; 
+import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "../../individual-customers/individual-customer-form-dialog";
+import { cn } from "@/lib/utils";
 
 export default function BulkMeterDetailsPage() {
   const params = useParams();
@@ -98,9 +99,9 @@ export default function BulkMeterDetailsPage() {
         setBulkMeter(foundBM);
         const associated = currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId);
         setAssociatedCustomers(associated);
-      } else if (bulkMeter) { 
+      } else if (bulkMeter) {
          toast({ title: "Bulk Meter Update", description: "The bulk meter being viewed may have been deleted or is no longer accessible.", variant: "destructive" });
-         setBulkMeter(null); 
+         setBulkMeter(null);
       }
     };
 
@@ -112,7 +113,7 @@ export default function BulkMeterDetailsPage() {
       unsubscribeBM();
       unsubscribeCust();
     };
-  }, [bulkMeterId, router, toast, bulkMeter]); 
+  }, [bulkMeterId, router, toast, bulkMeter]);
 
 
   const handleEditBulkMeter = () => setIsBulkMeterFormOpen(true);
@@ -129,8 +130,8 @@ export default function BulkMeterDetailsPage() {
   const handleSubmitBulkMeterForm = async (data: BulkMeterFormValues) => {
     if (bulkMeter) {
         const updatedBulkMeterData: BulkMeter = {
-          id: bulkMeter.id, 
-          ...data, 
+          id: bulkMeter.id,
+          ...data,
         };
         await updateBulkMeterInStore(updatedBulkMeterData);
         toast({ title: "Bulk Meter Updated", description: `${updatedBulkMeterData.name} has been updated.` });
@@ -166,14 +167,19 @@ export default function BulkMeterDetailsPage() {
   const handleSubmitCustomerForm = async (data: IndividualCustomerFormValues) => {
     if (selectedCustomer) {
       const updatedCustomerData: IndividualCustomer = {
-          id: selectedCustomer.id,
-          name: data.name,
-          ordinal: data.ordinal,
-          month: data.month,
-          location: data.location,
-          ward: data.ward,
-          assignedBulkMeterId: data.assignedBulkMeterId,
+          ...selectedCustomer, // Persist id, created_at, etc.
+          ...data, // Apply form data
+          // Ensure numeric types if zod string|number was used
+          ordinal: Number(data.ordinal),
+          meterSize: Number(data.meterSize),
+          previousReading: Number(data.previousReading),
+          currentReading: Number(data.currentReading),
           status: data.status as IndividualCustomerStatus,
+          paymentStatus: data.paymentStatus as PaymentStatus,
+          customerType: data.customerType as CustomerType,
+          sewerageConnection: data.sewerageConnection as SewerageConnection,
+          assignedBulkMeterId: data.assignedBulkMeterId || undefined,
+          // calculatedBill will be handled by data-store or DB
       };
       await updateCustomerInStore(updatedCustomerData);
       toast({ title: "Customer Updated", description: `${updatedCustomerData.name} has been updated.` });
@@ -197,9 +203,10 @@ export default function BulkMeterDetailsPage() {
   const bmCurrentReading = bulkMeter.currentReading ?? 0;
   const bulkUsage = bmCurrentReading - bmPreviousReading;
 
+  // Assuming bulk meters are always "Non-domestic" and "No" sewerage for their own bill calculation
   const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
-  const effectiveBulkMeterSewerageConnection: SewerageConnection = "No"; 
-  
+  const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
+
   const totalBulkBill = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection);
 
 
@@ -208,8 +215,8 @@ export default function BulkMeterDetailsPage() {
       <Card className="shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <Droplets className="h-6 w-6 text-primary" />
-            <CardTitle className="text-2xl">Bulk Meter Details</CardTitle>
+            <Gauge className="h-6 w-6 text-primary" />
+            <CardTitle className="text-2xl">Bulk Meter: {bulkMeter.name}</CardTitle>
           </div>
           <div>
             <Button variant="outline" size="sm" onClick={handleEditBulkMeter} className="mr-2">
@@ -222,42 +229,44 @@ export default function BulkMeterDetailsPage() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
-            <p><strong className="font-semibold">Name:</strong> {bulkMeter.name}</p>
             <p><strong className="font-semibold">Location:</strong> {bulkMeter.location ?? 'N/A'}, {bulkMeter.ward ?? 'N/A'}</p>
-            <p><strong className="font-semibold">Bulk Usage:</strong> {bulkUsage.toFixed(2)} m³</p>
-          </div>
-          <div>
+            <p><strong className="font-semibold">Specific Area:</strong> {bulkMeter.specificArea ?? 'N/A'}</p>
             <p><strong className="font-semibold">Meter No:</strong> {bulkMeter.meterNumber ?? 'N/A'}</p>
-            <p><strong className="font-semibold">Month:</strong> {bulkMeter.month ?? 'N/A'}</p>
-             <p className="text-primary"><strong className="font-semibold">Total Bulk Bill:</strong> ETB {totalBulkBill.toFixed(2)}</p>
+            <p><strong className="font-semibold">Meter Size:</strong> {bulkMeter.meterSize} inch</p>
           </div>
           <div>
             <p><strong className="font-semibold">Customer Key:</strong> {bulkMeter.customerKeyNumber ?? 'N/A'}</p>
+            <p><strong className="font-semibold">Contract No:</strong> {bulkMeter.contractNumber ?? 'N/A'}</p>
+            <p><strong className="font-semibold">Month:</strong> {bulkMeter.month ?? 'N/A'}</p>
             <p><strong className="font-semibold">Readings (Prev/Curr):</strong> {(bmPreviousReading).toFixed(2)} / {(bmCurrentReading).toFixed(2)}</p>
           </div>
-           <div className="flex items-center gap-2">
-             <strong className="font-semibold">Payment Status:</strong>
-             <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleToggleBulkMeterPaymentStatus}
-                className="p-0 h-auto group"
-                aria-label={`Toggle payment status for ${bulkMeter.name}`}
-              >
-                <Badge variant={bulkMeter.paymentStatus === 'Paid' ? 'default' : 'destructive'} className="cursor-pointer hover:opacity-80">
-                  {bulkMeter.paymentStatus === 'Paid' ? <CheckCircle className="mr-1 h-3.5 w-3.5"/> : <XCircle className="mr-1 h-3.5 w-3.5"/>}
-                  {bulkMeter.paymentStatus}
-                  <RefreshCcw className="ml-1.5 h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </Badge>
-              </Button>
-           </div>
+          <div>
+             <p className="text-lg"><strong className="font-semibold">Bulk Usage:</strong> {bulkUsage.toFixed(2)} m³</p>
+             <p className="text-xl text-primary"><strong className="font-semibold">Total Bulk Bill:</strong> ETB {totalBulkBill.toFixed(2)}</p>
+             <div className="flex items-center gap-2 mt-1">
+               <strong className="font-semibold">Payment Status:</strong>
+               <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleToggleBulkMeterPaymentStatus}
+                  className="p-0 h-auto group"
+                  aria-label={`Toggle payment status for ${bulkMeter.name}`}
+                >
+                  <Badge variant={bulkMeter.paymentStatus === 'Paid' ? 'default' : 'destructive'} className="cursor-pointer hover:opacity-80">
+                    {bulkMeter.paymentStatus === 'Paid' ? <CheckCircle className="mr-1 h-3.5 w-3.5"/> : <XCircle className="mr-1 h-3.5 w-3.5"/>}
+                    {bulkMeter.paymentStatus}
+                    <RefreshCcw className="ml-1.5 h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </Badge>
+                </Button>
+             </div>
+          </div>
         </CardContent>
       </Card>
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Associated Individual Customers</CardTitle>
-          <CardDescription>List of individual customers connected to this bulk meter.</CardDescription>
+          <CardTitle className="flex items-center gap-2"><UsersIcon className="h-5 w-5 text-primary" />Associated Individual Customers</CardTitle>
+          <CardDescription>List of individual customers connected to this bulk meter ({associatedCustomers.length} found).</CardDescription>
         </CardHeader>
         <CardContent>
           {associatedCustomers.length === 0 ? (
@@ -265,22 +274,44 @@ export default function BulkMeterDetailsPage() {
               No individual customers are currently associated with this bulk meter.
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Customer Name</TableHead>
-                  <TableHead>Ordinal</TableHead>
-                  <TableHead>Location</TableHead>
+                  <TableHead>Meter No.</TableHead>
+                  <TableHead>Usage (m³)</TableHead>
+                  <TableHead>Bill (ETB)</TableHead>
+                  <TableHead>Pay Status</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {associatedCustomers.map((customer) => (
+                {associatedCustomers.map((customer) => {
+                    const usage = customer.currentReading - customer.previousReading;
+                    return (
                     <TableRow key={customer.id}>
                       <TableCell className="font-medium">{customer.name}</TableCell>
-                      <TableCell>{customer.ordinal}</TableCell>
-                      <TableCell>{customer.location}, {customer.ward}</TableCell>
+                      <TableCell>{customer.meterNumber}</TableCell>
+                      <TableCell>{usage.toFixed(2)}</TableCell>
+                      <TableCell>{customer.calculatedBill.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <Badge
+                            variant={
+                            customer.paymentStatus === 'Paid' ? 'default'
+                            : customer.paymentStatus === 'Unpaid' ? 'destructive'
+                            : 'secondary'
+                            }
+                             className={cn(
+                                customer.paymentStatus === 'Paid' && "bg-green-500 hover:bg-green-600",
+                                customer.paymentStatus === 'Pending' && "bg-yellow-500 hover:bg-yellow-600"
+                            )}
+                        >
+                            {customer.paymentStatus === 'Paid' ? <CheckCircle className="mr-1 h-3.5 w-3.5"/> : customer.paymentStatus === 'Unpaid' ? <XCircle className="mr-1 h-3.5 w-3.5"/> : <Clock className="mr-1 h-3.5 w-3.5"/>}
+                            {customer.paymentStatus}
+                        </Badge>
+                      </TableCell>
                       <TableCell>
                         <Badge variant={customer.status === 'Active' ? 'default' : 'destructive'}>
                           {customer.status}
@@ -309,9 +340,11 @@ export default function BulkMeterDetailsPage() {
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  );
+                })}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -346,7 +379,7 @@ export default function BulkMeterDetailsPage() {
             onOpenChange={setIsCustomerFormOpen}
             onSubmit={handleSubmitCustomerForm}
             defaultValues={selectedCustomer}
-            bulkMeters={[{id: bulkMeter.id, name: bulkMeter.name}]} 
+            bulkMeters={[{id: bulkMeter.id, name: bulkMeter.name}]}
           />
       )}
       <AlertDialog open={isCustomerDeleteDialogOpen} onOpenChange={setIsCustomerDeleteDialogOpen}>

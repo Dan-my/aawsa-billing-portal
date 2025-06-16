@@ -48,6 +48,8 @@ interface IndividualCustomerFormDialogProps {
   bulkMeters?: { id: string; name: string }[]; // Optional, can be fetched if not provided
 }
 
+const UNASSIGNED_BULK_METER_VALUE = "_SELECT_NONE_BULK_METER_";
+
 export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, defaultValues, bulkMeters: propBulkMeters }: IndividualCustomerFormDialogProps) {
   const [dynamicBulkMeters, setDynamicBulkMeters] = React.useState<{ id: string; name: string }[]>(propBulkMeters || []);
 
@@ -173,7 +175,41 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
               <FormField control={form.control} name="location" render={({ field }) => (<FormItem><FormLabel>Location / Sub-City *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={form.control} name="ward" render={({ field }) => (<FormItem><FormLabel>Ward / Woreda *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={form.control} name="sewerageConnection" render={({ field }) => (<FormItem><FormLabel>Sewerage Conn. *</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select connection" /></SelectTrigger></FormControl><SelectContent>{sewerageConnections.map(conn => <SelectItem key={conn} value={conn}>{conn}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
-              <FormField control={form.control} name="assignedBulkMeterId" render={({ field }) => (<FormItem><FormLabel>Assign to Bulk Meter</FormLabel><Select onValueChange={field.onChange} value={field.value || ""}><FormControl><SelectTrigger><SelectValue placeholder="Select bulk meter" /></SelectTrigger></FormControl><SelectContent>{dynamicBulkMeters.length === 0 && <SelectItem value="no-bms-available" disabled>No bulk meters available</SelectItem>}{dynamicBulkMeters.length > 0 && <SelectItem value="">None</SelectItem>}{dynamicBulkMeters.map((bm) => (<SelectItem key={bm.id} value={bm.id}>{bm.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+              <FormField
+                control={form.control}
+                name="assignedBulkMeterId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assign to Bulk Meter</FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(value === UNASSIGNED_BULK_METER_VALUE ? undefined : value)}
+                      value={field.value || ""} // For placeholder to work when field.value is undefined
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select bulk meter" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {dynamicBulkMeters.length === 0 && (
+                          <SelectItem value="no-bms-available" disabled>
+                            No bulk meters available
+                          </SelectItem>
+                        )}
+                        {dynamicBulkMeters.length > 0 && (
+                          <SelectItem value={UNASSIGNED_BULK_METER_VALUE}>None</SelectItem>
+                        )}
+                        {dynamicBulkMeters.map((bm) => (
+                          <SelectItem key={bm.id} value={bm.id}>
+                            {bm.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField control={form.control} name="status" render={({ field }) => (<FormItem><FormLabel>Customer Status *</FormLabel><Select onValueChange={field.onChange} value={field.value || "Active"} defaultValue={field.value || "Active"}><FormControl><SelectTrigger><SelectValue placeholder="Select status"/></SelectTrigger></FormControl><SelectContent>{individualCustomerStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
               <FormField control={form.control} name="paymentStatus" render={({ field }) => (<FormItem><FormLabel>Payment Status *</FormLabel><Select onValueChange={field.onChange} value={field.value || "Unpaid"} defaultValue={field.value || "Unpaid"}><FormControl><SelectTrigger><SelectValue placeholder="Select payment status"/></SelectTrigger></FormControl><SelectContent>{paymentStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
             </div>
@@ -189,3 +225,4 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
     </Dialog>
   );
 }
+

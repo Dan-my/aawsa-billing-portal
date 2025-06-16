@@ -2,7 +2,7 @@
 import * as z from "zod";
 import { customerTypes, sewerageConnections } from "@/lib/billing";
 
-// Base Schema for Individual Customer Data Entry (restored complex version)
+// Base Schema for Individual Customer Data Entry (remains the comprehensive version for CSV, editing, etc.)
 export const baseIndividualCustomerDataSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   customerKeyNumber: z.string().min(1, { message: "Customer Key Number is required." }),
@@ -22,13 +22,37 @@ export const baseIndividualCustomerDataSchema = z.object({
   assignedBulkMeterId: z.string().optional().describe("The ID of the bulk meter this individual customer is assigned to."),
 });
 
-// Schema for Individual Customer Data Entry (with refinement)
+// Schema for full Individual Customer Data Entry (e.g., CSV, comprehensive edits)
 export const individualCustomerDataEntrySchema = baseIndividualCustomerDataSchema.refine(data => data.currentReading >= data.previousReading, {
   message: "Current Reading must be greater than or equal to Previous Reading.",
   path: ["currentReading"],
 });
-
 export type IndividualCustomerDataEntryFormValues = z.infer<typeof individualCustomerDataEntrySchema>;
+
+
+// --- New Schema for the Admin Manual Individual Customer Entry Form (as per the image) ---
+export const adminManualIndividualCustomerEntrySchema = z.object({
+  customerKeyNumber: z.string().min(1, { message: "Customer Key Number is required." }),
+  contractNumber: z.string().min(1, { message: "Contract Number is required." }),
+  customerType: z.enum(customerTypes, { errorMap: () => ({ message: "Please select a valid customer type."}) }),
+  bookNumber: z.string().min(1, { message: "Book Number is required." }),
+  ordinal: z.coerce.number().int().min(1, { message: "Ordinal must be a positive integer." }),
+  meterSize: z.coerce.number().positive({ message: "Meter Size must be a positive number (inch)." }),
+  meterNumber: z.string().min(1, { message: "Meter Number is required." }),
+  previousReading: z.coerce.number().min(0, { message: "Previous Reading cannot be negative." }),
+  currentReading: z.coerce.number().min(0, { message: "Current Reading cannot be negative." }),
+  month: z.string().regex(/^\d{4}-\d{2}$/, { message: "Month must be in YYYY-MM format." }),
+  specificArea: z.string().min(1, { message: "Specific Area is required." }),
+  location: z.string().min(1, { message: "Location / Sub-City is required." }),
+  ward: z.string().min(1, { message: "Ward / Woreda is required." }),
+  sewerageConnection: z.enum(sewerageConnections, { errorMap: () => ({ message: "Please select sewerage connection status."}) }),
+  // Note: `name` and `assignedBulkMeterId` are intentionally omitted from this specific schema.
+}).refine(data => data.currentReading >= data.previousReading, {
+  message: "Current Reading must be greater than or equal to Previous Reading.",
+  path: ["currentReading"],
+});
+export type AdminManualIndividualCustomerEntryFormValues = z.infer<typeof adminManualIndividualCustomerEntrySchema>;
+// --- End of New Schema ---
 
 
 // Base Schema for Bulk Meter Data (remains unchanged)
@@ -55,3 +79,15 @@ export const bulkMeterDataEntrySchema = baseBulkMeterDataSchema.refine(data => d
 export type BulkMeterDataEntryFormValues = z.infer<typeof bulkMeterDataEntrySchema>;
 
 export type MockBulkMeter = { id: string; name: string };
+
+// Schema for staff individual customer data entry (simplified version from previous state)
+// This one might need review if staff also needs a different form. For now, keeping it separate.
+export const individualCustomerDataEntrySchemaNew = z.object({
+  name: z.string().min(2, { message: "Name must be at least 2 characters." }),
+  ordinal: z.coerce.number().int().min(1, { message: "Ordinal must be a positive integer." }),
+  month: z.string().regex(/^\d{4}-\d{2}$/, { message: "Month must be in YYYY-MM format." }), // e.g., 2023-12
+  location: z.string().min(1, { message: "Location / Sub-City is required." }),
+  ward: z.string().min(1, { message: "Ward / Woreda is required." }),
+  assignedBulkMeterId: z.string().min(1, { message: "Bulk meter assignment is required for this entry type." }),
+});
+export type IndividualCustomerDataEntryFormValuesNew = z.infer<typeof individualCustomerDataEntrySchemaNew>;

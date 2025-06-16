@@ -17,8 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
-  individualCustomerDataEntrySchema,
-  type IndividualCustomerDataEntryFormValues,
+  adminManualIndividualCustomerEntrySchema, // Use the new specific schema for this form
+  type AdminManualIndividualCustomerEntryFormValues, // Use the new specific type
 } from "./customer-data-entry-types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,6 +30,8 @@ import { customerTypes, sewerageConnections } from "@/lib/billing";
 
 export function IndividualCustomerDataEntryForm() {
   const { toast } = useToast();
+  // Bulk meters list is not used in this form as per the image, but keeping the fetch logic
+  // in case it's needed for other context or future adjustments.
   const [availableBulkMeters, setAvailableBulkMeters] = React.useState<{id: string, name: string}[]>([]);
   const [isLoadingBulkMeters, setIsLoadingBulkMeters] = React.useState(true);
 
@@ -52,10 +54,9 @@ export function IndividualCustomerDataEntryForm() {
     return () => unsubscribe();
   }, []);
 
-  const form = useForm<IndividualCustomerDataEntryFormValues>({
-    resolver: zodResolver(individualCustomerDataEntrySchema),
+  const form = useForm<AdminManualIndividualCustomerEntryFormValues>({ // Use new specific form values type
+    resolver: zodResolver(adminManualIndividualCustomerEntrySchema), // Use new specific schema
     defaultValues: {
-      name: "",
       customerKeyNumber: "",
       contractNumber: "",
       customerType: undefined,
@@ -70,12 +71,19 @@ export function IndividualCustomerDataEntryForm() {
       location: "",
       ward: "",
       sewerageConnection: undefined,
-      assignedBulkMeterId: undefined,
+      // name and assignedBulkMeterId are not part of this form's defaultValues
     },
   });
 
-  async function onSubmit(data: IndividualCustomerDataEntryFormValues) {
-    const customerDataForStore = data as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill'>;
+  async function onSubmit(data: AdminManualIndividualCustomerEntryFormValues) {
+    // Construct the full object required by addCustomerToStore
+    // `name` is required by the backend, so we provide a placeholder.
+    // `assignedBulkMeterId` is optional in the backend.
+    const customerDataForStore: Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill'> = {
+      ...data,
+      name: `Cust-${data.customerKeyNumber || Date.now()}`, // Placeholder for name
+      // `assignedBulkMeterId` will be undefined as it's not in `data`, which is fine.
+    };
 
     const result = await addCustomerToStore(customerDataForStore);
     if (result.success && result.data) {
@@ -99,18 +107,7 @@ export function IndividualCustomerDataEntryForm() {
         <CardContent className="pt-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Customer Name *</FormLabel>
-                      <FormControl><Input {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
                   name="customerKeyNumber"
@@ -140,7 +137,7 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Customer Type *</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger></FormControl>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Select customer type" /></SelectTrigger></FormControl>
                         <SelectContent>
                           {customerTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
                         </SelectContent>
@@ -215,7 +212,7 @@ export function IndividualCustomerDataEntryForm() {
                     </FormItem>
                   )}
                 />
-                 <FormField
+                <FormField
                   control={form.control}
                   name="month"
                   render={({ field }) => (
@@ -269,39 +266,9 @@ export function IndividualCustomerDataEntryForm() {
                     <FormItem>
                       <FormLabel>Sewerage Connection *</FormLabel>
                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select connection" /></SelectTrigger></FormControl>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Select sewerage status" /></SelectTrigger></FormControl>
                         <SelectContent>
                           {sewerageConnections.map(conn => <SelectItem key={conn} value={conn}>{conn}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="assignedBulkMeterId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Assign to Bulk Meter (Optional)</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value || ""}
-                        defaultValue={field.value || ""}
-                        disabled={isLoadingBulkMeters}
-                       >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={isLoadingBulkMeters ? "Loading bulk meters..." : "Select bulk meter"} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                           {isLoadingBulkMeters && <SelectItem value="loading-bms" disabled>Loading...</SelectItem>}
-                           {!isLoadingBulkMeters && availableBulkMeters.length === 0 && <SelectItem value="no-bms" disabled>No bulk meters available</SelectItem>}
-                           {!isLoadingBulkMeters && availableBulkMeters.length > 0 && <SelectItem value="">None</SelectItem>}
-                          {availableBulkMeters.map((bm) => (
-                            <SelectItem key={bm.id} value={bm.id}>{bm.name}</SelectItem>
-                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -311,7 +278,7 @@ export function IndividualCustomerDataEntryForm() {
               </div>
 
               <Button type="submit" className="w-full md:w-auto" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Submitting..." : "Submit Individual Customer Data"}
+                {form.formState.isSubmitting ? "Submitting..." : "Submit Individual Customer Reading"}
               </Button>
             </form>
           </Form>

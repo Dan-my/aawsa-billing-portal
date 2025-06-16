@@ -53,6 +53,54 @@ export default function StaffMeterReadingsPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState(""); 
 
+  const filterAndSetData = React.useCallback((
+    currentBranchNameInput: string | undefined,
+    customersList: IndividualCustomer[],
+    bulkMetersList: BulkMeter[],
+    meterReadingsList: DomainMeterReading[]
+  ) => {
+    const simpleBranchName = currentBranchNameInput
+      ? currentBranchNameInput.replace(/ Branch$/i, "").toLowerCase().trim()
+      : undefined;
+
+    const relevantBulkMeters = simpleBranchName
+      ? bulkMetersList.filter(bm =>
+          (bm.location?.toLowerCase() || "").includes(simpleBranchName) ||
+          (bm.name?.toLowerCase() || "").includes(simpleBranchName) ||
+          (bm.ward?.toLowerCase() || "").includes(simpleBranchName)
+        )
+      : bulkMetersList;
+    
+    setBulkMetersForForm(relevantBulkMeters.map(bm => ({ id: bm.id, name: bm.name, meterNumber: bm.meterNumber })));
+
+    const relevantCustomers = simpleBranchName
+      ? customersList.filter(c =>
+          (c.location?.toLowerCase() || "").includes(simpleBranchName) ||
+          (c.ward?.toLowerCase() || "").includes(simpleBranchName) ||
+          (c.assignedBulkMeterId &&
+            relevantBulkMeters.some(bm => bm.id === c.assignedBulkMeterId) // Check if assigned BM is in the relevant list
+          )
+        )
+      : customersList;
+
+    setCustomersForForm(relevantCustomers.map(c => ({ id: c.id, name: c.name, meterNumber: c.meterNumber })));
+
+    const branchFilteredReadings = simpleBranchName
+      ? meterReadingsList.filter(reading => {
+          if (reading.meterType === 'individual_customer_meter' && reading.individualCustomerId) {
+            return relevantCustomers.some(c => c.id === reading.individualCustomerId);
+          } else if (reading.meterType === 'bulk_meter' && reading.bulkMeterId) {
+            return relevantBulkMeters.some(bm => bm.id === reading.bulkMeterId);
+          }
+          return false;
+        })
+      : meterReadingsList;
+      
+    const sortedReadings = branchFilteredReadings.sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
+    setBranchMeterReadings(sortedReadings);
+  }, []);
+
+
   React.useEffect(() => {
     let isMounted = true;
     const storedUser = localStorage.getItem("user");
@@ -124,48 +172,7 @@ export default function StaffMeterReadingsPage() {
         unsubscribeBulkMeters();
         unsubscribeMeterReadings();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Dependencies ensure this runs once on mount and when localBranchName might change (though it's stable after init)
-
-  const filterAndSetData = (
-    currentBranchName: string | undefined,
-    customersList: IndividualCustomer[],
-    bulkMetersList: BulkMeter[],
-    meterReadingsList: DomainMeterReading[]
-  ) => {
-    // Filter customers and bulk meters for the form based on branch
-    const relevantCustomers = currentBranchName
-      ? customersList.filter(c =>
-          c.location?.toLowerCase().includes(currentBranchName!.toLowerCase()) ||
-          c.ward?.toLowerCase().includes(currentBranchName!.toLowerCase()) ||
-          (c.assignedBulkMeterId && bulkMetersList.find(bm => bm.id === c.assignedBulkMeterId)?.location?.toLowerCase().includes(currentBranchName!.toLowerCase()))
-        )
-      : customersList;
-
-    const relevantBulkMeters = currentBranchName
-      ? bulkMetersList.filter(bm => bm.location?.toLowerCase().includes(currentBranchName!.toLowerCase()))
-      : bulkMetersList;
-
-    setCustomersForForm(relevantCustomers.map(c => ({ id: c.id, name: c.name, meterNumber: c.meterNumber })));
-    setBulkMetersForForm(relevantBulkMeters.map(bm => ({ id: bm.id, name: bm.name, meterNumber: bm.meterNumber })));
-
-    // Filter meter readings for the table
-    const branchFilteredReadings = currentBranchName
-      ? meterReadingsList.filter(reading => {
-          if (reading.meterType === 'individual_customer_meter' && reading.individualCustomerId) {
-            const customer = relevantCustomers.find(c => c.id === reading.individualCustomerId);
-            return !!customer;
-          } else if (reading.meterType === 'bulk_meter' && reading.bulkMeterId) {
-            const bulkMeter = relevantBulkMeters.find(bm => bm.id === reading.bulkMeterId);
-            return !!bulkMeter;
-          }
-          return false;
-        })
-      : meterReadingsList; // Show all if no branch context (e.g. admin view, though this is staff page)
-      
-    const sortedReadings = branchFilteredReadings.sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
-    setBranchMeterReadings(sortedReadings);
-  };
+  }, [filterAndSetData, toast]);
 
 
   const handleAddReadingSubmit = async (formData: AddMeterReadingFormValues) => {
@@ -193,16 +200,14 @@ export default function StaffMeterReadingsPage() {
     };
 
     try {
-      setIsLoading(true); // Consider a more specific loading state for form submission
+      setIsLoading(true); 
       const result = await addMeterReading(readingPayload);
-      // setIsLoading(false); // Set to false after operation
       if (result.success && result.data) {
         toast({
           title: "Meter Reading Added",
           description: `Reading for selected meter has been successfully recorded.`,
         });
         setIsModalOpen(false);
-        // Data will be updated via subscription, no need to manually add to allMeterReadings
       } else {
         toast({
           variant: "destructive",
@@ -211,7 +216,6 @@ export default function StaffMeterReadingsPage() {
         });
       }
     } catch (error) {
-      // setIsLoading(false); // Set to false in case of error
       console.error("Error submitting meter reading:", error);
       toast({
         variant: "destructive",
@@ -219,7 +223,7 @@ export default function StaffMeterReadingsPage() {
         description: "An unexpected error occurred while saving the reading.",
       });
     } finally {
-        setIsLoading(false); // Ensure loading is set to false in all cases
+        setIsLoading(false);
     }
   };
   
@@ -284,7 +288,7 @@ export default function StaffMeterReadingsPage() {
                         onSubmit={handleAddReadingSubmit} 
                         customers={customersForForm}
                         bulkMeters={bulkMetersForForm}
-                        isLoading={isLoading} // Pass overall loading state
+                        isLoading={isLoading}
                     />
                 )
               )}
@@ -298,7 +302,7 @@ export default function StaffMeterReadingsPage() {
           <CardDescription>View and manage meter readings for {branchName}.</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {isLoading && branchMeterReadings.length === 0 ? ( // Changed condition to show loading when also no readings yet
              <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
                 Loading meter readings...
              </div>

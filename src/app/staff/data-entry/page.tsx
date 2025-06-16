@@ -4,35 +4,27 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { FileText, UploadCloud, Building, ChevronDown } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FileText, UploadCloud, Building, FileSpreadsheet } from "lucide-react";
 import { StaffBulkMeterEntryForm } from "./staff-bulk-meter-entry-form";
-import { StaffIndividualCustomerEntryForm } from "./staff-individual-customer-entry-form";
-import { CsvUploadSection } from "@/app/admin/data-entry/csv-upload-section"; // Re-use admin component
+import { StaffIndividualCustomerEntryForm } from "./staff-individual-customer-data-entry-form";
+import { CsvUploadSection } from "@/app/admin/data-entry/csv-upload-section";
 import {
   bulkMeterDataEntrySchema,
-  individualCustomerDataEntrySchema, // Use the restored complex schema
+  individualCustomerDataEntrySchema,
   type BulkMeterDataEntryFormValues,
-  type IndividualCustomerDataEntryFormValues // Use the restored complex form values
+  type IndividualCustomerDataEntryFormValues
 } from "@/app/admin/data-entry/customer-data-entry-types";
 import {
   addBulkMeter,
   addCustomer,
   initializeBulkMeters,
   initializeCustomers,
-  getBulkMeters,
-  getCustomers,
 } from "@/lib/data-store";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 
 const bulkMeterCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward"];
-// Updated CSV headers for individual customers to match the restored complex schema
 const individualCustomerCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward", "sewerageConnection", "assignedBulkMeterId"];
 
 interface User {
@@ -41,21 +33,11 @@ interface User {
   branchName?: string;
 }
 
-type DataEntryType = "manual-individual" | "manual-bulk" | "csv-upload";
-
-const entryTypeLabels: Record<DataEntryType, string> = {
-  "manual-individual": "Individual (Manual)",
-  "manual-bulk": "Bulk Meter (Manual)",
-  "csv-upload": "CSV Upload",
-};
-
 export default function StaffDataEntryPage() {
   const [staffBranchName, setStaffBranchName] = React.useState<string>("Your Branch");
   const [isBranchDetermined, setIsBranchDetermined] = React.useState(false);
-  const [selectedEntryType, setSelectedEntryType] = React.useState<DataEntryType>("manual-individual");
 
   React.useEffect(() => {
-    // Initialize data stores (they handle fetching from Supabase if needed)
     initializeBulkMeters();
     initializeCustomers();
 
@@ -91,10 +73,26 @@ export default function StaffDataEntryPage() {
   const handleIndividualCustomerCsvUpload = async (data: IndividualCustomerDataEntryFormValues) => {
      const customerDataForStore = {
         ...data,
-        // status, paymentStatus, calculatedBill are handled by addCustomer in data-store or DB
     } as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill'>;
     await addCustomer(customerDataForStore);
   };
+  
+  const downloadCsvTemplate = (headers: string[], fileName: string) => {
+    const csvString = headers.join(',') + '\n';
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", fileName);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+  };
+
 
   if (!isBranchDetermined) {
     return (
@@ -116,38 +114,10 @@ export default function StaffDataEntryPage() {
 
   const canProceedWithDataEntry = staffBranchName !== "Error: Not Logged In" && staffBranchName !== "Error: Branch Undefined" && staffBranchName !== "Unassigned Branch";
 
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-3xl font-bold">Customer Data Entry ({staffBranchName})</h1>
-        {canProceedWithDataEntry && (
-            <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-full md:w-auto">
-                {selectedEntryType === "manual-individual" && <FileText className="mr-2 h-4 w-4" />}
-                {selectedEntryType === "manual-bulk" && <FileText className="mr-2 h-4 w-4" />}
-                {selectedEntryType === "csv-upload" && <UploadCloud className="mr-2 h-4 w-4" />}
-                {entryTypeLabels[selectedEntryType]}
-                <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-full md:w-[--radix-dropdown-menu-trigger-width]">
-              <DropdownMenuItem onClick={() => setSelectedEntryType("manual-individual")}>
-                <FileText className="mr-2 h-4 w-4" />
-                Individual (Manual)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSelectedEntryType("manual-bulk")}>
-                <FileText className="mr-2 h-4 w-4" />
-                Bulk Meter (Manual)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSelectedEntryType("csv-upload")}>
-                <UploadCloud className="mr-2 h-4 w-4" />
-                CSV Upload
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
       </div>
 
       {!canProceedWithDataEntry && (
@@ -169,67 +139,105 @@ export default function StaffDataEntryPage() {
       )}
 
       {canProceedWithDataEntry && (
-        <div className="mt-4">
-          {selectedEntryType === "manual-individual" && (
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle>Individual Customer Data Entry</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <StaffIndividualCustomerEntryForm branchName={staffBranchName} />
-              </CardContent>
-            </Card>
-          )}
+         <Tabs defaultValue="manual-individual" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 md:w-auto md:inline-flex">
+                <TabsTrigger value="manual-individual">
+                <FileText className="mr-2 h-4 w-4" /> Individual (Manual)
+                </TabsTrigger>
+                <TabsTrigger value="manual-bulk">
+                <FileText className="mr-2 h-4 w-4" /> Bulk Meter (Manual)
+                </TabsTrigger>
+                <TabsTrigger value="csv-upload">
+                <UploadCloud className="mr-2 h-4 w-4" /> CSV Upload
+                </TabsTrigger>
+            </TabsList>
 
-          {selectedEntryType === "manual-bulk" && (
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle>Bulk Meter Data Entry</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <StaffBulkMeterEntryForm branchName={staffBranchName} />
-              </CardContent>
-            </Card>
-          )}
-
-          {selectedEntryType === "csv-upload" && (
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="shadow-lg">
+            <TabsContent value="manual-individual">
+                <Card className="shadow-lg mt-4">
                 <CardHeader>
-                  <CardTitle>Bulk Meter CSV Upload</CardTitle>
-                  <CardDescription>
-                    Upload a CSV file to add multiple bulk meters for {staffBranchName}.
-                  </CardDescription>
+                    <CardTitle>Individual Customer Data Entry</CardTitle>
+                    <CardDescription>
+                        Manually enter data for a single individual customer for branch: {staffBranchName}.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <CsvUploadSection
-                    entryType="bulk"
-                    schema={bulkMeterDataEntrySchema}
-                    addRecordFunction={handleBulkMeterCsvUpload}
-                    expectedHeaders={bulkMeterCsvHeaders}
-                  />
+                    <StaffIndividualCustomerEntryForm branchName={staffBranchName} />
                 </CardContent>
-              </Card>
+                </Card>
+            </TabsContent>
 
-              <Card className="shadow-lg">
+            <TabsContent value="manual-bulk">
+                <Card className="shadow-lg mt-4">
                 <CardHeader>
-                  <CardTitle>Individual Customer CSV Upload</CardTitle>
-                  <CardDescription>
-                    Upload a CSV file to add multiple individual customers for {staffBranchName}.
-                  </CardDescription>
+                    <CardTitle>Bulk Meter Data Entry</CardTitle>
+                    <CardDescription>
+                        Manually enter data for a single bulk meter for branch: {staffBranchName}.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <CsvUploadSection
-                    entryType="individual"
-                    schema={individualCustomerDataEntrySchema} // Use restored complex schema
-                    addRecordFunction={handleIndividualCustomerCsvUpload}
-                    expectedHeaders={individualCustomerCsvHeaders} // Use restored complex headers
-                  />
+                    <StaffBulkMeterEntryForm branchName={staffBranchName} />
                 </CardContent>
-              </Card>
-            </div>
-          )}
-        </div>
+                </Card>
+            </TabsContent>
+
+            <TabsContent value="csv-upload">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+                    <Card className="shadow-lg">
+                        <CardHeader>
+                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <CardTitle>Bulk Meter CSV Upload</CardTitle>
+                                <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => downloadCsvTemplate(bulkMeterCsvHeaders, 'bulk_meter_template.csv')}
+                                >
+                                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                                    Download Template
+                                </Button>
+                            </div>
+                            <CardDescription className="mt-2">
+                                Upload a CSV file to add multiple bulk meters for branch: {staffBranchName}.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                        <CsvUploadSection
+                            entryType="bulk"
+                            schema={bulkMeterDataEntrySchema}
+                            addRecordFunction={handleBulkMeterCsvUpload}
+                            expectedHeaders={bulkMeterCsvHeaders}
+                        />
+                        </CardContent>
+                    </Card>
+
+                    <Card className="shadow-lg">
+                        <CardHeader>
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <CardTitle>Individual Customer CSV Upload</CardTitle>
+                                <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => downloadCsvTemplate(individualCustomerCsvHeaders, 'individual_customer_template.csv')}
+                                >
+                                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                                    Download Template
+                                </Button>
+                            </div>
+                            <CardDescription className="mt-2">
+                                Upload a CSV file to add multiple individual customers for branch: {staffBranchName}.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                        <CsvUploadSection
+                            entryType="individual"
+                            schema={individualCustomerDataEntrySchema}
+                            addRecordFunction={handleIndividualCustomerCsvUpload}
+                            expectedHeaders={individualCustomerCsvHeaders}
+                        />
+                        </CardContent>
+                    </Card>
+                </div>
+            </TabsContent>
+        </Tabs>
       )}
     </div>
   );

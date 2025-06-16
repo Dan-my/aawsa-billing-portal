@@ -4,7 +4,8 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, UploadCloud, Info } from "lucide-react";
+import { FileText, UploadCloud, Info, FileSpreadsheet } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { BulkMeterDataEntryForm } from "./bulk-meter-data-entry-form";
 import { IndividualCustomerDataEntryForm } from "./individual-customer-data-entry-form";
 import { CsvUploadSection } from "./csv-upload-section";
@@ -46,6 +47,22 @@ export default function AdminDataEntryPage() {
     await addCustomer(customerDataForStore);
   };
 
+  const downloadCsvTemplate = (headers: string[], fileName: string) => {
+    const csvString = headers.join(',') + '\n';
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", fileName);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+  };
+
 
   return (
     <div className="space-y-6">
@@ -70,6 +87,10 @@ export default function AdminDataEntryPage() {
             <Card className="shadow-lg mt-4">
             <CardHeader>
                 <CardTitle>Individual Customer Data Entry</CardTitle>
+                <CardDescription>
+                    Manually enter data for a single individual customer.
+                    This form is designed for quick, one-off entries for admins.
+                </CardDescription>
             </CardHeader>
             <CardContent>
                 <IndividualCustomerDataEntryForm />
@@ -81,6 +102,9 @@ export default function AdminDataEntryPage() {
             <Card className="shadow-lg mt-4">
             <CardHeader>
                 <CardTitle>Bulk Meter Data Entry</CardTitle>
+                 <CardDescription>
+                    Manually enter data for a single bulk meter.
+                </CardDescription>
             </CardHeader>
             <CardContent>
                 <BulkMeterDataEntryForm />
@@ -92,10 +116,20 @@ export default function AdminDataEntryPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
             <Card className="shadow-lg">
                 <CardHeader>
-                <CardTitle>Bulk Meter CSV Upload</CardTitle>
-                <CardDescription>
-                    Upload a CSV file to add multiple bulk meters. Refer to the project README.md for the required CSV format and template.
-                </CardDescription>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <CardTitle>Bulk Meter CSV Upload</CardTitle>
+                        <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => downloadCsvTemplate(bulkMeterCsvHeaders, 'bulk_meter_template.csv')}
+                        >
+                            <FileSpreadsheet className="mr-2 h-4 w-4" />
+                            Download Template
+                        </Button>
+                    </div>
+                    <CardDescription className="mt-2">
+                        Upload a CSV file to add multiple bulk meters. Refer to the project <code>README.md</code> for the required CSV format and column details.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
                 <CsvUploadSection
@@ -109,10 +143,20 @@ export default function AdminDataEntryPage() {
 
             <Card className="shadow-lg">
                 <CardHeader>
-                <CardTitle>Individual Customer CSV Upload</CardTitle>
-                <CardDescription>
-                    Upload a CSV file to add multiple individual customers. Refer to the project README.md for the required CSV format and template.
-                </CardDescription>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <CardTitle>Individual Customer CSV Upload</CardTitle>
+                         <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => downloadCsvTemplate(individualCustomerCsvHeaders, 'individual_customer_template.csv')}
+                        >
+                            <FileSpreadsheet className="mr-2 h-4 w-4" />
+                            Download Template
+                        </Button>
+                    </div>
+                    <CardDescription className="mt-2">
+                        Upload a CSV file to add multiple individual customers. Refer to the project <code>README.md</code> for the required CSV format and column details.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
                 <CsvUploadSection

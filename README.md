@@ -27,7 +27,9 @@ The application supports data entry through manual forms and CSV file uploads fo
 - Values should not be enclosed in quotes unless they contain a comma. If values are quoted, ensure they are standard double quotes.
 - Dates (e.g., `month`) should be in `YYYY-MM` format (e.g., `2023-12`).
 - Numerical fields (e.g., `meterSize`, `previousReading`, `currentReading`, `ordinal`) should contain valid numbers.
-- `assignedBulkMeterId` for individual customers must correspond to an **existing Bulk Meter ID** in the system. You may need to upload bulk meters first.
+- `assignedBulkMeterId` for individual customers must correspond to an **existing Bulk Meter ID** in the system. You may need to upload bulk meters first (can be blank if not assigned).
+- `customerType` must be one of "Domestic" or "Non-domestic".
+- `sewerageConnection` must be one of "Yes" or "No".
 
 #### Bulk Meter CSV Columns
 The CSV file for bulk meter data entry must have the following columns in this specific order:
@@ -49,13 +51,23 @@ The CSV file for bulk meter data entry must have the following columns in this s
 #### Individual Customer CSV Columns
 The CSV file for individual customer data entry must have the following columns in this specific order:
 1.  `name` (Text, e.g., John Doe)
-2.  `ordinal` (Number, e.g., 1)
-3.  `month` (Text, format YYYY-MM, e.g., 2023-11 - This is the registration month)
-4.  `location` (Text, e.g., Bole Sub-City)
-5.  `ward` (Text, e.g., Woreda 03)
-6.  `assignedBulkMeterId` (Text, ID of an existing bulk meter, e.g., bm001)
+2.  `customerKeyNumber` (Text, e.g., CUST001)
+3.  `contractNumber` (Text, e.g., CONTR001)
+4.  `customerType` (Text, "Domestic" or "Non-domestic")
+5.  `bookNumber` (Text, e.g., B001)
+6.  `ordinal` (Number, e.g., 1)
+7.  `meterSize` (Number, e.g., 0.75 for 0.75 inches)
+8.  `meterNumber` (Text, e.g., MTR001)
+9.  `previousReading` (Number, e.g., 100.00)
+10. `currentReading` (Number, e.g., 120.50)
+11. `month` (Text, format YYYY-MM, e.g., 2023-11)
+12. `specificArea` (Text, e.g., Kebele 01)
+13. `location` (Text, e.g., Bole Sub-City)
+14. `ward` (Text, e.g., Woreda 03)
+15. `sewerageConnection` (Text, "Yes" or "No")
+16. `assignedBulkMeterId` (Text, ID of an existing bulk meter, e.g., bm001, or blank)
 
 **Example Individual Customer CSV Row (after header):**
-`Jane Smith,1,2023-11,Arada,Woreda 1,bm002`
+`Jane Smith,CUST002,CONTR002,Domestic,B002,1,0.75,MTR002,120,150,2023-11,Kebele 02,Arada,Woreda 1,No,bm002`
 
 Processing feedback, including any errors per row, will be displayed after attempting to upload the CSV file.

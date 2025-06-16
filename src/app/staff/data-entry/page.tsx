@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, UploadCloud, Building, FileSpreadsheet } from "lucide-react";
 import { StaffBulkMeterEntryForm } from "./staff-bulk-meter-entry-form";
-import { StaffIndividualCustomerEntryForm } from "./staff-individual-customer-data-entry-form";
+import { StaffIndividualCustomerEntryForm } from "./individual-customer-data-entry-form"; // Corrected import
 import { CsvUploadSection } from "@/app/admin/data-entry/csv-upload-section";
 import {
   bulkMeterDataEntrySchema,

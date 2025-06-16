@@ -71,7 +71,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
       location: "",
       ward: "",
       sewerageConnection: undefined,
-      assignedBulkMeterId: undefined,
+      assignedBulkMeterId: UNASSIGNED_BULK_METER_VALUE,
       status: "Active",
       paymentStatus: "Unpaid",
     },
@@ -114,7 +114,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         location: defaultValues.location || "",
         ward: defaultValues.ward || "",
         sewerageConnection: defaultValues.sewerageConnection || undefined,
-        assignedBulkMeterId: defaultValues.assignedBulkMeterId || undefined,
+        assignedBulkMeterId: defaultValues.assignedBulkMeterId || UNASSIGNED_BULK_METER_VALUE,
         status: defaultValues.status || "Active",
         paymentStatus: defaultValues.paymentStatus || "Unpaid",
       });
@@ -135,7 +135,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         location: "",
         ward: "",
         sewerageConnection: undefined,
-        assignedBulkMeterId: undefined, 
+        assignedBulkMeterId: UNASSIGNED_BULK_METER_VALUE, 
         status: "Active",
         paymentStatus: "Unpaid",
       });
@@ -152,8 +152,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
   };
 
   const handleBulkMeterChange = (value: string | undefined) => {
-    const actualValue = value === UNASSIGNED_BULK_METER_VALUE ? undefined : value;
-    form.setValue("assignedBulkMeterId", actualValue);
+    form.setValue("assignedBulkMeterId", value);
   };
   
   return (
@@ -175,11 +174,11 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                   <FormLabel>Assign to Bulk Meter *</FormLabel>
                   <Select
                     onValueChange={handleBulkMeterChange}
-                    value={field.value || UNASSIGNED_BULK_METER_VALUE} 
+                    value={field.value} 
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select bulk meter" />
+                        <SelectValue placeholder="None" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -224,8 +223,8 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField control={form.control} name="status" render={({ field }) => (<FormItem><FormLabel>Customer Status *</FormLabel><Select onValueChange={field.onChange} value={field.value || "Active"} defaultValue={field.value || "Active"}><FormControl><SelectTrigger><SelectValue placeholder="Select status"/></SelectTrigger></FormControl><SelectContent>{individualCustomerStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
-              <FormField control={form.control} name="paymentStatus" render={({ field }) => (<FormItem><FormLabel>Payment Status *</FormLabel><Select onValueChange={field.onChange} value={field.value || "Unpaid"} defaultValue={field.value || "Unpaid"}><FormControl><SelectTrigger><SelectValue placeholder="Select payment status"/></SelectTrigger></FormControl><SelectContent>{paymentStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="status" render={({ field }) => (<FormItem><FormLabel>Customer Status *</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select status"/></SelectTrigger></FormControl><SelectContent>{individualCustomerStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="paymentStatus" render={({ field }) => (<FormItem><FormLabel>Payment Status *</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select payment status"/></SelectTrigger></FormControl><SelectContent>{paymentStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
             </div>
 
             <DialogFooter>

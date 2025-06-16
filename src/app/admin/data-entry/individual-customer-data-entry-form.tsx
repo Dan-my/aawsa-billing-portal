@@ -65,7 +65,7 @@ export function IndividualCustomerDataEntryForm() {
   const form = useForm<AdminDataEntryFormValues>({ 
     resolver: zodResolver(FormSchemaForAdminDataEntry), 
     defaultValues: {
-      assignedBulkMeterId: undefined,
+      assignedBulkMeterId: UNASSIGNED_BULK_METER_VALUE,
       name: "",
       customerKeyNumber: "",
       contractNumber: "",
@@ -109,8 +109,7 @@ export function IndividualCustomerDataEntryForm() {
   }
   
   const handleBulkMeterChange = (value: string | undefined) => {
-    const actualValue = value === UNASSIGNED_BULK_METER_VALUE ? undefined : value;
-    form.setValue("assignedBulkMeterId", actualValue);
+    form.setValue("assignedBulkMeterId", value);
   };
 
 
@@ -128,12 +127,12 @@ export function IndividualCustomerDataEntryForm() {
                       <FormLabel>Assign to Bulk Meter *</FormLabel>
                       <Select
                         onValueChange={handleBulkMeterChange}
-                        value={field.value || UNASSIGNED_BULK_METER_VALUE}
+                        value={field.value}
                         disabled={isLoadingBulkMeters || form.formState.isSubmitting}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder={isLoadingBulkMeters ? "Loading..." : "Select bulk meter"} />
+                            <SelectValue placeholder={isLoadingBulkMeters ? "Loading..." : "None"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -177,13 +176,12 @@ export function IndividualCustomerDataEntryForm() {
                 <FormField control={form.control} name="sewerageConnection" render={({ field }) => (<FormItem><FormLabel>Sewerage Conn. *</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={form.formState.isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select connection" /></SelectTrigger></FormControl><SelectContent>{sewerageConnections.map(conn => <SelectItem key={conn} value={conn}>{conn}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
               </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <FormField control={form.control} name="status" render={({ field }) => (<FormItem><FormLabel>Customer Status *</FormLabel><Select onValueChange={field.onChange} value={field.value || "Active"} defaultValue={field.value || "Active"} disabled={form.formState.isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select status"/></SelectTrigger></FormControl><SelectContent>{individualCustomerStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
-                 <FormField control={form.control} name="paymentStatus" render={({ field }) => (<FormItem><FormLabel>Payment Status *</FormLabel><Select onValueChange={field.onChange} value={field.value || "Unpaid"} defaultValue={field.value || "Unpaid"} disabled={form.formState.isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select payment status"/></SelectTrigger></FormControl><SelectContent>{paymentStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="status" render={({ field }) => (<FormItem><FormLabel>Customer Status *</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={form.formState.isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select status"/></SelectTrigger></FormControl><SelectContent>{individualCustomerStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="paymentStatus" render={({ field }) => (<FormItem><FormLabel>Payment Status *</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={form.formState.isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select payment status"/></SelectTrigger></FormControl><SelectContent>{paymentStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
                </div>
 
-
               <Button type="submit" className="w-full md:w-auto" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Submitting..." : "Submit Individual Customer"}
+                {form.formState.isSubmitting ? "Submitting..." : "Submit Individual Customer Reading"}
               </Button>
             </form>
           </Form>

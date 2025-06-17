@@ -38,8 +38,8 @@ body {
     --sidebar-foreground: 210 50% 10%;
     --sidebar-primary: 211 100% 50%; /* Blue */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 145 63% 42%; /* Green */
-    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-accent: 211 100% 50%; /* Blue (Changed from Green) */
+    --sidebar-accent-foreground: 0 0% 100%; /* White (Text for Blue) */
     --sidebar-border: 210 20% 85%;
     --sidebar-ring: 211 100% 50%; /* Blue */
   }
@@ -73,8 +73,8 @@ body {
     --sidebar-foreground: 210 20% 95.9%;
     --sidebar-primary: 211 100% 60%; /* Lighter Blue */
     --sidebar-primary-foreground: 210 50% 10%;
-    --sidebar-accent: 145 53% 52%; /* Lighter Green */
-    --sidebar-accent-foreground: 210 50% 10%;
+    --sidebar-accent: 211 100% 60%; /* Lighter Blue (Changed from Lighter Green) */
+    --sidebar-accent-foreground: 210 50% 10%; /* Dark text for Lighter Blue */
     --sidebar-border: 210 20% 15.9%;
     --sidebar-ring: 211 100% 60%; /* Lighter Blue */
   }
@@ -88,3 +88,4 @@ body {
     @apply bg-background text-foreground;
   }
 }
+

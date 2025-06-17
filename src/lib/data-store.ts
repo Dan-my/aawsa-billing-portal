@@ -2,7 +2,7 @@
 "use client";
 
 import type { IndividualCustomer as DomainIndividualCustomer, IndividualCustomerStatus } from '@/app/admin/individual-customers/individual-customer-types';
-import type { BulkMeter } from '@/app/admin/bulk-meters/bulk-meter-types';
+import type { BulkMeter as DomainBulkMeterTypeFromTypes } from '@/app/admin/bulk-meters/bulk-meter-types'; // Renamed to avoid conflict
 import type { Branch as DomainBranch } from '@/app/admin/branches/branch-types';
 import type { StaffMember } from '@/app/admin/staff-management/staff-types';
 import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus } from '@/lib/billing';
@@ -139,6 +139,9 @@ interface StoreOperationResult<T = any> {
     isNotFoundError?: boolean;
     error?: any;
 }
+
+// Use the imported type for BulkMeter
+type BulkMeter = DomainBulkMeterTypeFromTypes;
 
 
 let branches: DomainBranch[] = [];
@@ -310,39 +313,60 @@ const mapDomainCustomerToUpdate = (customer: Partial<DomainIndividualCustomer>):
 };
 
 
-const mapSupabaseBulkMeterToDomain = (sbm: SupabaseBulkMeterRow): BulkMeter => ({
-  id: sbm.id,
-  name: sbm.name,
-  customerKeyNumber: sbm.customerKeyNumber,
-  contractNumber: sbm.contractNumber,
-  meterSize: Number(sbm.meterSize),
-  meterNumber: sbm.meterNumber,
-  previousReading: Number(sbm.previousReading),
-  currentReading: Number(sbm.currentReading),
-  month: sbm.month,
-  specificArea: sbm.specificArea,
-  location: sbm.location,
-  ward: sbm.ward,
-  status: sbm.status,
-  paymentStatus: sbm.paymentStatus,
-});
+const mapSupabaseBulkMeterToDomain = (sbm: SupabaseBulkMeterRow): BulkMeter => {
+  const bmUsage = sbm.bulk_usage === null || sbm.bulk_usage === undefined 
+                  ? (sbm.currentReading ?? 0) - (sbm.previousReading ?? 0) 
+                  : Number(sbm.bulk_usage);
+  const bmTotalBill = sbm.total_bulk_bill === null || sbm.total_bulk_bill === undefined
+                      ? calculateBill(bmUsage, "Non-domestic", "No") // Assuming default for calculation
+                      : Number(sbm.total_bulk_bill);
+  return {
+    id: sbm.id,
+    name: sbm.name,
+    customerKeyNumber: sbm.customerKeyNumber,
+    contractNumber: sbm.contractNumber,
+    meterSize: Number(sbm.meterSize),
+    meterNumber: sbm.meterNumber,
+    previousReading: Number(sbm.previousReading),
+    currentReading: Number(sbm.currentReading),
+    month: sbm.month,
+    specificArea: sbm.specificArea,
+    location: sbm.location,
+    ward: sbm.ward,
+    status: sbm.status,
+    paymentStatus: sbm.paymentStatus,
+    bulkUsage: bmUsage,
+    totalBulkBill: bmTotalBill,
+    differenceUsage: sbm.difference_usage === null || sbm.difference_usage === undefined ? undefined : Number(sbm.difference_usage),
+    differenceBill: sbm.difference_bill === null || sbm.difference_bill === undefined ? undefined : Number(sbm.difference_bill),
+  };
+};
 
 
-const mapDomainBulkMeterToInsert = (bm: Omit<BulkMeter, 'id'>): BulkMeterInsert => ({
-  name: bm.name,
-  customerKeyNumber: bm.customerKeyNumber,
-  contractNumber: bm.contractNumber,
-  meterSize: Number(bm.meterSize) || 0,
-  meterNumber: bm.meterNumber,
-  previousReading: Number(bm.previousReading) || 0,
-  currentReading: Number(bm.currentReading) || 0,
-  month: bm.month,
-  specificArea: bm.specificArea,
-  location: bm.location,
-  ward: bm.ward,
-  status: bm.status || 'Active',
-  paymentStatus: bm.paymentStatus || 'Unpaid',
-});
+const mapDomainBulkMeterToInsert = (bm: Omit<BulkMeter, 'id'>): BulkMeterInsert => {
+  const calculatedBulkUsage = (bm.currentReading ?? 0) - (bm.previousReading ?? 0);
+  const calculatedTotalBulkBill = calculateBill(calculatedBulkUsage, "Non-domestic", "No"); // Assuming default type for bulk meter bill calc
+
+  return {
+    name: bm.name,
+    customerKeyNumber: bm.customerKeyNumber,
+    contractNumber: bm.contractNumber,
+    meterSize: Number(bm.meterSize) || 0,
+    meterNumber: bm.meterNumber,
+    previousReading: Number(bm.previousReading) || 0,
+    currentReading: Number(bm.currentReading) || 0,
+    month: bm.month,
+    specificArea: bm.specificArea,
+    location: bm.location,
+    ward: bm.ward,
+    status: bm.status || 'Active',
+    paymentStatus: bm.paymentStatus || 'Unpaid',
+    bulk_usage: calculatedBulkUsage,
+    total_bulk_bill: calculatedTotalBulkBill,
+    difference_usage: calculatedBulkUsage, // Initially, difference is the bulk usage itself
+    difference_bill: calculatedTotalBulkBill, // Initially, difference is the bulk bill itself
+  };
+};
 
 
 const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { id?: string } ): BulkMeterUpdate => {
@@ -360,6 +384,37 @@ const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { id?: string } ): 
     if (bm.ward !== undefined) updatePayload.ward = bm.ward;
     if (bm.status !== undefined) updatePayload.status = bm.status;
     if (bm.paymentStatus !== undefined) updatePayload.paymentStatus = bm.paymentStatus;
+
+    // If readings change, recalculate derived fields
+    if (bm.currentReading !== undefined || bm.previousReading !== undefined) {
+        const existingBM = bulkMeters.find(b => b.id === bm.id);
+        const currentReading = bm.currentReading ?? existingBM?.currentReading ?? 0;
+        const previousReading = bm.previousReading ?? existingBM?.previousReading ?? 0;
+        
+        const newBulkUsage = currentReading - previousReading;
+        const newTotalBulkBill = calculateBill(newBulkUsage, "Non-domestic", "No"); // Default calculation for bulk meter
+
+        updatePayload.bulk_usage = newBulkUsage;
+        updatePayload.total_bulk_bill = newTotalBulkBill;
+
+        // Recalculate differences based on associated customers
+        if (bm.id) {
+            const allIndividualCustomers = getCustomers(); // Assumes customers are loaded
+            const associatedCustomers = allIndividualCustomers.filter(c => c.assignedBulkMeterId === bm.id);
+            
+            const sumIndividualUsage = associatedCustomers.reduce((acc, cust) => {
+                const usage = (cust.currentReading ?? 0) - (cust.previousReading ?? 0);
+                return acc + usage;
+            }, 0);
+            
+            const sumIndividualBill = associatedCustomers.reduce((acc, cust) => {
+                return acc + (cust.calculatedBill ?? 0);
+            }, 0);
+
+            updatePayload.difference_usage = newBulkUsage - sumIndividualUsage;
+            updatePayload.difference_bill = newTotalBulkBill - sumIndividualBill;
+        }
+    }
     return updatePayload;
 };
 

@@ -12,4 +12,8 @@ export type BulkMeter = z.infer<typeof baseBulkMeterDataSchema> & {
   id: string;
   status: BulkMeterStatus;
   paymentStatus: PaymentStatus; 
+  bulkUsage?: number;
+  totalBulkBill?: number;
+  differenceUsage?: number;
+  differenceBill?: number;
 };

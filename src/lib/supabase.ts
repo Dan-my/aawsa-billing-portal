@@ -61,6 +61,10 @@ export interface Database {
           ward: string;
           status: 'Active' | 'Maintenance' | 'Decommissioned';
           paymentStatus: 'Paid' | 'Unpaid';
+          bulk_usage?: number | null;
+          total_bulk_bill?: number | null;
+          difference_usage?: number | null;
+          difference_bill?: number | null;
           createdAt?: string | null;
           updatedAt?: string | null;
         };
@@ -79,6 +83,10 @@ export interface Database {
           ward: string;
           status: 'Active' | 'Maintenance' | 'Decommissioned';
           paymentStatus: 'Paid' | 'Unpaid';
+          bulk_usage?: number | null;
+          total_bulk_bill?: number | null;
+          difference_usage?: number | null;
+          difference_bill?: number | null;
           createdAt?: string | null;
           updatedAt?: string | null;
         };
@@ -97,6 +105,10 @@ export interface Database {
           ward?: string;
           status?: 'Active' | 'Maintenance' | 'Decommissioned';
           paymentStatus?: 'Paid' | 'Unpaid';
+          bulk_usage?: number | null;
+          total_bulk_bill?: number | null;
+          difference_usage?: number | null;
+          difference_bill?: number | null;
           createdAt?: string | null;
           updatedAt?: string | null;
         };

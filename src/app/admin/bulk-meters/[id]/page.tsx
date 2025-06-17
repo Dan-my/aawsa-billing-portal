@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Droplets, Edit, Trash2, MoreHorizontal, User, CheckCircle, XCircle, FileEdit, RefreshCcw, Gauge, Users as UsersIcon, DollarSign, TrendingUp, Clock } from "lucide-react";
+import { Droplets, Edit, Trash2, MoreHorizontal, User, CheckCircle, XCircle, FileEdit, RefreshCcw, Gauge, Users as UsersIcon, DollarSign, TrendingUp, Clock, MinusCircle, PlusCircle as PlusCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -167,9 +167,8 @@ export default function BulkMeterDetailsPage() {
   const handleSubmitCustomerForm = async (data: IndividualCustomerFormValues) => {
     if (selectedCustomer) {
       const updatedCustomerData: IndividualCustomer = {
-          ...selectedCustomer, // Persist id, created_at, etc.
-          ...data, // Apply form data
-          // Ensure numeric types if zod string|number was used
+          ...selectedCustomer, 
+          ...data, 
           ordinal: Number(data.ordinal),
           meterSize: Number(data.meterSize),
           previousReading: Number(data.previousReading),
@@ -179,7 +178,6 @@ export default function BulkMeterDetailsPage() {
           customerType: data.customerType as CustomerType,
           sewerageConnection: data.sewerageConnection as SewerageConnection,
           assignedBulkMeterId: data.assignedBulkMeterId || undefined,
-          // calculatedBill will be handled by data-store or DB
       };
       await updateCustomerInStore(updatedCustomerData);
       toast({ title: "Customer Updated", description: `${updatedCustomerData.name} has been updated.` });
@@ -203,12 +201,15 @@ export default function BulkMeterDetailsPage() {
   const bmCurrentReading = bulkMeter.currentReading ?? 0;
   const bulkUsage = bmCurrentReading - bmPreviousReading;
 
-  // Assuming bulk meters are always "Non-domestic" and "No" sewerage for their own bill calculation
   const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
   const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
-
   const totalBulkBill = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection);
 
+  const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + (cust.currentReading - cust.previousReading), 0);
+  const totalIndividualBill = associatedCustomers.reduce((sum, cust) => sum + cust.calculatedBill, 0);
+
+  const differenceUsage = bulkUsage - totalIndividualUsage;
+  const differenceBill = totalBulkBill - totalIndividualBill;
 
   return (
     <div className="space-y-6 p-4">
@@ -240,7 +241,7 @@ export default function BulkMeterDetailsPage() {
             <p><strong className="font-semibold">Month:</strong> {bulkMeter.month ?? 'N/A'}</p>
             <p><strong className="font-semibold">Readings (Prev/Curr):</strong> {(bmPreviousReading).toFixed(2)} / {(bmCurrentReading).toFixed(2)}</p>
           </div>
-          <div>
+          <div className="space-y-1">
              <p className="text-lg"><strong className="font-semibold">Bulk Usage:</strong> {bulkUsage.toFixed(2)} m³</p>
              <p className="text-xl text-primary"><strong className="font-semibold">Total Bulk Bill:</strong> ETB {totalBulkBill.toFixed(2)}</p>
              <div className="flex items-center gap-2 mt-1">
@@ -259,6 +260,16 @@ export default function BulkMeterDetailsPage() {
                   </Badge>
                 </Button>
              </div>
+            <p className={cn("text-sm", differenceUsage < 0 ? "text-amber-600" : "text-green-600")}>
+                <strong className="font-semibold">Difference Usage:</strong>
+                {differenceUsage >= 0 ? <PlusCircleIcon className="inline h-3.5 w-3.5 mr-1" /> : <MinusCircle className="inline h-3.5 w-3.5 mr-1" />}
+                {differenceUsage.toFixed(2)} m³
+            </p>
+            <p className={cn("text-sm", differenceBill < 0 ? "text-amber-600" : "text-green-600")}>
+                <strong className="font-semibold">Difference Bill:</strong>
+                {differenceBill >= 0 ? <PlusCircleIcon className="inline h-3.5 w-3.5 mr-1" /> : <MinusCircle className="inline h-3.5 w-3.5 mr-1" />}
+                ETB {differenceBill.toFixed(2)}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -400,3 +411,5 @@ export default function BulkMeterDetailsPage() {
     </div>
   );
 }
+
+    

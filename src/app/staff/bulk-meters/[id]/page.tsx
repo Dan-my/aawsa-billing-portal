@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Droplets, Edit, Trash2, MoreHorizontal, User, CheckCircle, XCircle, FileEdit, RefreshCcw, Gauge, Users as UsersIcon, DollarSign, TrendingUp, Clock, AlertTriangle } from "lucide-react";
+import { Droplets, Edit, Trash2, MoreHorizontal, User, CheckCircle, XCircle, FileEdit, RefreshCcw, Gauge, Users as UsersIcon, DollarSign, TrendingUp, Clock, AlertTriangle, MinusCircle, PlusCircle as PlusCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -47,7 +47,7 @@ export default function StaffBulkMeterDetailsPage() {
   const [associatedCustomers, setAssociatedCustomers] = useState<IndividualCustomer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [staffBranchName, setStaffBranchName] = React.useState<string | undefined>(undefined);
-  const [isAuthorized, setIsAuthorized] = useState(false); // New state for authorization
+  const [isAuthorized, setIsAuthorized] = useState(false); 
 
   const [isBulkMeterFormOpen, setIsBulkMeterFormOpen] = React.useState(false);
   const [isBulkMeterDeleteDialogOpen, setIsBulkMeterDeleteDialogOpen] = React.useState(false);
@@ -107,7 +107,6 @@ export default function StaffBulkMeterDetailsPage() {
           const associated = currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId);
           setAssociatedCustomers(associated);
           setIsAuthorized(true);
-          // Filter bulk meters for the customer form, scoped to staff's branch
           const simpleBranch = localBranchName?.replace(/ Branch$/i, "").toLowerCase().trim();
           const branchMeters = currentGlobalMeters.filter(bm => 
               simpleBranch && (
@@ -137,7 +136,7 @@ export default function StaffBulkMeterDetailsPage() {
       const foundBM = currentGlobalMeters.find(bm => bm.id === bulkMeterId);
 
       if (foundBM) {
-        if (checkAuthorization(foundBM, localBranchName)) { // Re-check auth on update
+        if (checkAuthorization(foundBM, localBranchName)) { 
             setBulkMeter(foundBM);
             const associated = currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId);
             setAssociatedCustomers(associated);
@@ -156,11 +155,10 @@ export default function StaffBulkMeterDetailsPage() {
         } else {
             setBulkMeter(null);
             setIsAuthorized(false);
-            // Optionally toast again or handle silently
         }
-      } else if (bulkMeter) { // If it existed before but now not found
+      } else if (bulkMeter) { 
          setBulkMeter(null);
-         setIsAuthorized(false); // If it's gone, not authorized to see it
+         setIsAuthorized(false); 
          toast({ title: "Bulk Meter Update", description: "The bulk meter being viewed may have been deleted or is no longer accessible.", variant: "destructive" });
       }
     };
@@ -173,7 +171,7 @@ export default function StaffBulkMeterDetailsPage() {
       unsubscribeBM();
       unsubscribeCust();
     };
-  }, [bulkMeterId, router, toast, checkAuthorization, bulkMeter]); // Added bulkMeter to dependencies
+  }, [bulkMeterId, router, toast, checkAuthorization, bulkMeter]); 
 
 
   const handleEditBulkMeter = () => setIsBulkMeterFormOpen(true);
@@ -260,6 +258,12 @@ export default function StaffBulkMeterDetailsPage() {
   const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
   const totalBulkBill = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection);
 
+  const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + (cust.currentReading - cust.previousReading), 0);
+  const totalIndividualBill = associatedCustomers.reduce((sum, cust) => sum + cust.calculatedBill, 0);
+
+  const differenceUsage = bulkUsage - totalIndividualUsage;
+  const differenceBill = totalBulkBill - totalIndividualBill;
+
   return (
     <div className="space-y-6 p-4">
       <Card className="shadow-lg">
@@ -290,7 +294,7 @@ export default function StaffBulkMeterDetailsPage() {
             <p><strong className="font-semibold">Month:</strong> {bulkMeter.month ?? 'N/A'}</p>
             <p><strong className="font-semibold">Readings (Prev/Curr):</strong> {(bmPreviousReading).toFixed(2)} / {(bmCurrentReading).toFixed(2)}</p>
           </div>
-          <div>
+          <div className="space-y-1">
              <p className="text-lg"><strong className="font-semibold">Bulk Usage:</strong> {bulkUsage.toFixed(2)} m³</p>
              <p className="text-xl text-primary"><strong className="font-semibold">Total Bulk Bill:</strong> ETB {totalBulkBill.toFixed(2)}</p>
              <div className="flex items-center gap-2 mt-1">
@@ -303,6 +307,16 @@ export default function StaffBulkMeterDetailsPage() {
                   </Badge>
                 </Button>
              </div>
+            <p className={cn("text-sm", differenceUsage < 0 ? "text-amber-600" : "text-green-600")}>
+                <strong className="font-semibold">Difference Usage:</strong>
+                {differenceUsage >= 0 ? <PlusCircleIcon className="inline h-3.5 w-3.5 mr-1" /> : <MinusCircle className="inline h-3.5 w-3.5 mr-1" />}
+                {differenceUsage.toFixed(2)} m³
+            </p>
+            <p className={cn("text-sm", differenceBill < 0 ? "text-amber-600" : "text-green-600")}>
+                <strong className="font-semibold">Difference Bill:</strong>
+                {differenceBill >= 0 ? <PlusCircleIcon className="inline h-3.5 w-3.5 mr-1" /> : <MinusCircle className="inline h-3.5 w-3.5 mr-1" />}
+                ETB {differenceBill.toFixed(2)}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -382,3 +396,5 @@ export default function StaffBulkMeterDetailsPage() {
     </div>
   );
 }
+
+    

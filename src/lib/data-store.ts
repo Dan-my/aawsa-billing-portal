@@ -179,7 +179,7 @@ const notifyStaffMemberListeners = () => staffMemberListeners.forEach(listener =
 const notifyBillListeners = () => billListeners.forEach(listener => listener([...bills]));
 const notifyMeterReadingListeners = () => meterReadingListeners.forEach(listener => listener([...meterReadings]));
 const notifyPaymentListeners = () => payments.forEach(listener => listener([...payments]));
-const notifyReportLogListeners = () => reportLogs.forEach(listener => listener([...reportLogs]));
+const notifyReportLogListeners = () => reportLogListeners.forEach(listener => listener([...reportLogs]));
 
 // --- Mappers ---
 const mapSupabaseBranchToDomain = (sb: SupabaseBranchRow): DomainBranch => ({
@@ -194,7 +194,7 @@ const mapSupabaseBranchToDomain = (sb: SupabaseBranchRow): DomainBranch => ({
 const parsePhoneNumberForDB = (phoneString?: string): number | null => {
   if (!phoneString) return null;
   const digits = phoneString.replace(/\D/g, '');
-  if (digits === '') return null;
+  if (digits === '' return null;
   const parsedNumber = parseInt(digits, 10);
   return isNaN(parsedNumber) ? null : parsedNumber;
 };
@@ -319,7 +319,7 @@ const mapSupabaseBulkMeterToDomain = (sbm: SupabaseBulkMeterRow): BulkMeter => {
                   ? calculatedBmUsage
                   : Number(sbm.bulk_usage);
 
-  const calculatedBmTotalBill = calculateBill(bmUsage, "Non-domestic", "No"); // Calculate based on actual or derived bmUsage
+  const calculatedBmTotalBill = calculateBill(bmUsage, "Non-domestic", "No");
   const bmTotalBill = sbm.total_bulk_bill === null || sbm.total_bulk_bill === undefined
                       ? calculatedBmTotalBill
                       : Number(sbm.total_bulk_bill);
@@ -366,8 +366,8 @@ const mapDomainBulkMeterToInsert = (bm: Omit<BulkMeter, 'id'>): BulkMeterInsert 
     paymentStatus: bm.paymentStatus || 'Unpaid',
     bulk_usage: calculatedBulkUsage,
     total_bulk_bill: calculatedTotalBulkBill,
-    difference_usage: calculatedBulkUsage, // Initially, difference is the bulk usage itself
-    difference_bill: calculatedTotalBulkBill, // Initially, difference is the bulk bill itself
+    difference_usage: calculatedBulkUsage,
+    difference_bill: calculatedTotalBulkBill,
   };
 };
 
@@ -388,7 +388,6 @@ const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { id?: string } ): 
     if (bm.status !== undefined) updatePayload.status = bm.status;
     if (bm.paymentStatus !== undefined) updatePayload.paymentStatus = bm.paymentStatus;
 
-    // If readings change, recalculate derived fields
     if (bm.id && (bm.currentReading !== undefined || bm.previousReading !== undefined)) {
         const existingBM = bulkMeters.find(b => b.id === bm.id);
         const currentReading = bm.currentReading ?? existingBM?.currentReading ?? 0;
@@ -400,7 +399,6 @@ const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { id?: string } ): 
         updatePayload.bulk_usage = newBulkUsage;
         updatePayload.total_bulk_bill = newTotalBulkBill;
 
-        // Recalculate differences based on associated customers
         const allIndividualCustomers = getCustomers(); 
         const associatedCustomers = allIndividualCustomers.filter(c => c.assignedBulkMeterId === bm.id);
         
@@ -614,16 +612,85 @@ async function fetchAllCustomers() {
 }
 
 async function fetchAllBulkMeters() {
-  const { data, error } = await supabaseGetAllBulkMeters();
-  if (data) {
-    bulkMeters = data.map(mapSupabaseBulkMeterToDomain);
-    notifyBulkMeterListeners();
-  } else {
-    console.error("DataStore: Failed to fetch bulk meters. Supabase error:", JSON.stringify(error, null, 2));
+  const { data: rawBulkMeters, error: fetchError } = await supabaseGetAllBulkMeters();
+
+  if (fetchError) {
+    console.error("DataStore: Failed to fetch bulk meters. Supabase error:", JSON.stringify(fetchError, null, 2));
+    bulkMetersFetched = true;
+    return [];
   }
+
+  if (!rawBulkMeters) {
+    bulkMeters = [];
+    notifyBulkMeterListeners();
+    bulkMetersFetched = true;
+    return [];
+  }
+
+  let processedBulkMeters = rawBulkMeters;
+  
+  // Ensure customers are loaded for difference calculation during backfill
+  // Calling initializeCustomers directly here ensures it completes before proceeding.
+  if (!customersFetched) { // Check if already fetched to avoid redundant calls if initializeBulkMeters is called multiple times.
+    await initializeCustomers();
+  }
+  
+  const updatedRowsFromBackfill: SupabaseBulkMeterRow[] = [];
+  let backfillPerformed = false;
+
+  for (const sbm of rawBulkMeters) {
+    if (
+      sbm.bulk_usage === null ||
+      sbm.total_bulk_bill === null ||
+      sbm.difference_usage === null ||
+      sbm.difference_bill === null
+    ) {
+      backfillPerformed = true;
+      const currentReading = Number(sbm.currentReading) || 0;
+      const previousReading = Number(sbm.previousReading) || 0;
+
+      const calculatedBulkUsage = currentReading - previousReading;
+      const calculatedTotalBulkBill = calculateBill(calculatedBulkUsage, "Non-domestic", "No");
+
+      // Use getCustomers() which now returns the synchronized 'customers' array
+      const associatedCustomersData = getCustomers().filter(c => c.assignedBulkMeterId === sbm.id);
+      const sumIndividualUsage = associatedCustomersData.reduce((acc, cust) => acc + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
+      const sumIndividualBill = associatedCustomersData.reduce((acc, cust) => acc + (cust.calculatedBill ?? 0), 0);
+
+      const calculatedDifferenceUsage = calculatedBulkUsage - sumIndividualUsage;
+      const calculatedDifferenceBill = calculatedTotalBulkBill - sumIndividualBill;
+
+      const updatePayload: BulkMeterUpdate = {
+        bulk_usage: calculatedBulkUsage,
+        total_bulk_bill: calculatedTotalBulkBill,
+        difference_usage: calculatedDifferenceUsage,
+        difference_bill: calculatedDifferenceBill,
+      };
+
+      const { data: updatedRow, error: updateError } = await supabaseUpdateBulkMeter(sbm.id, updatePayload);
+      if (updateError) {
+        console.error(`DataStore: Failed to backfill bulk meter ${sbm.id}. Error:`, JSON.stringify(updateError, null, 2));
+        updatedRowsFromBackfill.push(sbm); 
+      } else if (updatedRow) {
+        updatedRowsFromBackfill.push(updatedRow); 
+      } else {
+        // Fallback: if updatedRow is unexpectedly null/undefined but no error, push original to maintain list structure
+        updatedRowsFromBackfill.push(sbm);
+      }
+    } else {
+      updatedRowsFromBackfill.push(sbm); 
+    }
+  }
+  if (backfillPerformed) {
+      processedBulkMeters = updatedRowsFromBackfill; 
+  }
+  
+  bulkMeters = processedBulkMeters.map(mapSupabaseBulkMeterToDomain);
+  notifyBulkMeterListeners();
   bulkMetersFetched = true;
   return bulkMeters;
 }
+
 
 async function fetchAllStaffMembers() {
   const { data, error } = await supabaseGetAllStaffMembers();
@@ -698,7 +765,7 @@ export const initializeCustomers = async () => {
 };
 
 export const initializeBulkMeters = async () => {
-  if (!bulkMetersFetched || bulkMeters.length === 0) {
+  if (!bulkMetersFetched || bulkMeters.length === 0) { 
     await fetchAllBulkMeters();
   }
 };
@@ -1174,10 +1241,11 @@ export const subscribeToReportLogs = (listener: Listener<DomainReportLog>): (() 
 };
 
 export async function loadInitialData() {
+  // Ensure customers are initialized first, as bulk meter backfilling might depend on it.
+  await initializeCustomers();
   await Promise.all([
     initializeBranches(),
-    initializeCustomers(),
-    initializeBulkMeters(),
+    initializeBulkMeters(), // Now relies on customers being initialized for backfill
     initializeStaffMembers(),
     initializeBills(),
     initializeMeterReadings(),
@@ -1185,3 +1253,4 @@ export async function loadInitialData() {
     initializeReportLogs(),
   ]);
 }
+

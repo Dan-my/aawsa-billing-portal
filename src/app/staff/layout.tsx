@@ -7,6 +7,8 @@ import {
   FileText,
   ClipboardList,
   BarChart2, // Added for Reports icon
+  Gauge,    // For Bulk Meters
+  Users,    // For Individual Customers
 } from "lucide-react";
 
 const staffSidebarNavItems: NavItemGroup[] = [
@@ -20,13 +22,19 @@ const staffSidebarNavItems: NavItemGroup[] = [
     items: [
       { title: "Data Entry", href: "/staff/data-entry", iconName: "FileText" },
       { title: "Meter Readings", href: "/staff/meter-readings", iconName: "ClipboardList" },
-      { title: "Reports", href: "/staff/reports", iconName: "BarChart2" }, // Added Reports item
+      { title: "Reports", href: "/staff/reports", iconName: "BarChart2" }, 
     ],
   },
+  {
+    title: "Management",
+    items: [
+      { title: "Bulk Meters", href: "/staff/bulk-meters", iconName: "Gauge" },
+      { title: "Individual Customers", href: "/staff/individual-customers", iconName: "Users" },
+    ],
+  }
 ];
 
 
 export default function StaffLayout({ children }: { children: ReactNode }) {
   return <AppShell userRole="staff" sidebar={<SidebarNav items={staffSidebarNavItems} />} >{children}</AppShell>;
 }
-

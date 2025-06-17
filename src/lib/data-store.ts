@@ -314,11 +314,14 @@ const mapDomainCustomerToUpdate = (customer: Partial<DomainIndividualCustomer>):
 
 
 const mapSupabaseBulkMeterToDomain = (sbm: SupabaseBulkMeterRow): BulkMeter => {
-  const bmUsage = sbm.bulk_usage === null || sbm.bulk_usage === undefined 
-                  ? (sbm.currentReading ?? 0) - (sbm.previousReading ?? 0) 
+  const calculatedBmUsage = (sbm.currentReading ?? 0) - (sbm.previousReading ?? 0);
+  const bmUsage = sbm.bulk_usage === null || sbm.bulk_usage === undefined
+                  ? calculatedBmUsage
                   : Number(sbm.bulk_usage);
+
+  const calculatedBmTotalBill = calculateBill(bmUsage, "Non-domestic", "No"); // Calculate based on actual or derived bmUsage
   const bmTotalBill = sbm.total_bulk_bill === null || sbm.total_bulk_bill === undefined
-                      ? calculateBill(bmUsage, "Non-domestic", "No") // Assuming default for calculation
+                      ? calculatedBmTotalBill
                       : Number(sbm.total_bulk_bill);
   return {
     id: sbm.id,
@@ -345,7 +348,7 @@ const mapSupabaseBulkMeterToDomain = (sbm: SupabaseBulkMeterRow): BulkMeter => {
 
 const mapDomainBulkMeterToInsert = (bm: Omit<BulkMeter, 'id'>): BulkMeterInsert => {
   const calculatedBulkUsage = (bm.currentReading ?? 0) - (bm.previousReading ?? 0);
-  const calculatedTotalBulkBill = calculateBill(calculatedBulkUsage, "Non-domestic", "No"); // Assuming default type for bulk meter bill calc
+  const calculatedTotalBulkBill = calculateBill(calculatedBulkUsage, "Non-domestic", "No");
 
   return {
     name: bm.name,
@@ -386,34 +389,32 @@ const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { id?: string } ): 
     if (bm.paymentStatus !== undefined) updatePayload.paymentStatus = bm.paymentStatus;
 
     // If readings change, recalculate derived fields
-    if (bm.currentReading !== undefined || bm.previousReading !== undefined) {
+    if (bm.id && (bm.currentReading !== undefined || bm.previousReading !== undefined)) {
         const existingBM = bulkMeters.find(b => b.id === bm.id);
         const currentReading = bm.currentReading ?? existingBM?.currentReading ?? 0;
         const previousReading = bm.previousReading ?? existingBM?.previousReading ?? 0;
         
         const newBulkUsage = currentReading - previousReading;
-        const newTotalBulkBill = calculateBill(newBulkUsage, "Non-domestic", "No"); // Default calculation for bulk meter
+        const newTotalBulkBill = calculateBill(newBulkUsage, "Non-domestic", "No");
 
         updatePayload.bulk_usage = newBulkUsage;
         updatePayload.total_bulk_bill = newTotalBulkBill;
 
         // Recalculate differences based on associated customers
-        if (bm.id) {
-            const allIndividualCustomers = getCustomers(); // Assumes customers are loaded
-            const associatedCustomers = allIndividualCustomers.filter(c => c.assignedBulkMeterId === bm.id);
-            
-            const sumIndividualUsage = associatedCustomers.reduce((acc, cust) => {
-                const usage = (cust.currentReading ?? 0) - (cust.previousReading ?? 0);
-                return acc + usage;
-            }, 0);
-            
-            const sumIndividualBill = associatedCustomers.reduce((acc, cust) => {
-                return acc + (cust.calculatedBill ?? 0);
-            }, 0);
+        const allIndividualCustomers = getCustomers(); 
+        const associatedCustomers = allIndividualCustomers.filter(c => c.assignedBulkMeterId === bm.id);
+        
+        const sumIndividualUsage = associatedCustomers.reduce((acc, cust) => {
+            const usage = (cust.currentReading ?? 0) - (cust.previousReading ?? 0);
+            return acc + usage;
+        }, 0);
+        
+        const sumIndividualBill = associatedCustomers.reduce((acc, cust) => {
+            return acc + (cust.calculatedBill ?? 0);
+        }, 0);
 
-            updatePayload.difference_usage = newBulkUsage - sumIndividualUsage;
-            updatePayload.difference_bill = newTotalBulkBill - sumIndividualBill;
-        }
+        updatePayload.difference_usage = newBulkUsage - sumIndividualUsage;
+        updatePayload.difference_bill = newTotalBulkBill - sumIndividualBill;
     }
     return updatePayload;
 };

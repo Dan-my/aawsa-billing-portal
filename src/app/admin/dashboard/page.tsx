@@ -18,12 +18,8 @@ import {
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
 import type { Bill as DomainBill } from "@/lib/data-store"; 
+import { cn } from "@/lib/utils";
 
-const commonChartLoading = (heightClass: string) => (
-  <div className={`w-full flex items-center justify-center text-xs text-muted-foreground ${heightClass}`}>
-    Loading chart...
-  </div>
-);
 
 // ResponsiveContainer is used for the top pie charts.
 const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
@@ -198,8 +194,7 @@ export default function AdminDashboardPage() {
             </p>
             <div className="h-[120px] mt-4">
               {(totalBillsChartData.length > 0 && (totalBillsChartData.some(d => d.count > 0))) ? (
-                <ChartContainer config={chartConfig} className="w-full h-full">
-                  <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%">
                     <PieChartRecharts>
                       <Pie data={totalBillsChartData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={50} label>
                         {totalBillsChartData.map((entry, index) => (
@@ -209,8 +204,7 @@ export default function AdminDashboardPage() {
                       <Tooltip content={<ChartTooltipContent />} />
                       <Legend verticalAlign="bottom" height={36} content={<ChartLegendContent nameKey="status" />} />
                     </PieChartRecharts>
-                  </ResponsiveContainer>
-                </ChartContainer>
+                </ResponsiveContainer>
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
                   No bill data available for chart.
@@ -230,8 +224,7 @@ export default function AdminDashboardPage() {
             <p className="text-xs text-muted-foreground">Total registered entities</p>
             <div className="h-[120px] mt-4">
               {(customerCountChartData.length > 0 && (customerCountChartData.some(d => d.value > 0))) ? (
-                <ChartContainer config={chartConfig} className="w-full h-full">
-                  <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%">
                     <PieChartRecharts>
                       <Pie data={customerCountChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={30} outerRadius={50} paddingAngle={2} label>
                         {customerCountChartData.map((entry, index) => (
@@ -241,8 +234,7 @@ export default function AdminDashboardPage() {
                       <Tooltip content={<ChartTooltipContent />} />
                       <Legend verticalAlign="bottom" height={36} content={<ChartLegendContent nameKey="name" />} />
                     </PieChartRecharts>
-                  </ResponsiveContainer>
-                </ChartContainer>
+                </ResponsiveContainer>
               ) : (
                  <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
                   No customer/meter data for chart.
@@ -309,8 +301,19 @@ export default function AdminDashboardPage() {
             </Button>
           </CardHeader>
           <CardContent className="h-[300px]">
-            {showBranchPerformanceTable ? (
-              <div className="overflow-auto h-full">
+            <div className={cn("w-full h-full", { "hidden": showBranchPerformanceTable })}>
+              <ChartContainer config={chartConfig} className="w-full h-full">
+                <BarChart data={branchPerformanceData}>
+                  <XAxis dataKey="branch" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                  <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
+                  <Legend />
+                  <Bar dataKey="paid" stackId="a" fill="hsl(var(--chart-1))" name={chartConfig.paid.label} />
+                  <Bar dataKey="unpaid" stackId="a" fill="hsl(var(--chart-2))" name={chartConfig.unpaid.label} />
+                </BarChart>
+              </ChartContainer>
+            </div>
+            <div className={cn("overflow-auto h-full", { "hidden": !showBranchPerformanceTable })}>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -329,23 +332,7 @@ export default function AdminDashboardPage() {
                     ))}
                   </TableBody>
                 </Table>
-              </div>
-            ) : (
-              <ChartContainer 
-                key={showBranchPerformanceTable ? 'bp-table-mode' : 'bp-chart-mode'} 
-                config={chartConfig} 
-                className="w-full h-full"
-              >
-                <BarChart key={showBranchPerformanceTable ? 'barchart-table' : 'barchart-chart'} data={branchPerformanceData}>
-                  <XAxis dataKey="branch" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
-                  <Legend />
-                  <Bar dataKey="paid" stackId="a" fill="hsl(var(--chart-1))" name={chartConfig.paid.label} />
-                  <Bar dataKey="unpaid" stackId="a" fill="hsl(var(--chart-2))" name={chartConfig.unpaid.label} />
-                </BarChart>
-              </ChartContainer>
-            )}
+            </div>
           </CardContent>
         </Card>
 
@@ -361,32 +348,9 @@ export default function AdminDashboardPage() {
             </Button>
           </CardHeader>
           <CardContent className="h-[300px]">
-             {showWaterUsageTable ? (
-                <div className="overflow-auto h-full">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Month</TableHead>
-                      <TableHead className="text-right">Water Usage (m³)</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {waterUsageTrendData.map((item) => (
-                      <TableRow key={item.month}>
-                        <TableCell className="font-medium">{item.month}</TableCell>
-                        <TableCell className="text-right" style={{color: chartConfig.waterUsage.color}}>{item.usage.toLocaleString()}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-             ) : (
-              <ChartContainer 
-                key={showWaterUsageTable ? 'wu-table-mode' : 'wu-chart-mode'}
-                config={chartConfig} 
-                className="w-full h-full"
-              >
-                <LineChartRecharts key={showWaterUsageTable ? 'linechart-table' : 'linechart-chart'} data={waterUsageTrendData}>
+            <div className={cn("w-full h-full", { "hidden": showWaterUsageTable })}>
+              <ChartContainer config={chartConfig} className="w-full h-full">
+                <LineChartRecharts data={waterUsageTrendData}>
                   <XAxis dataKey="month" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
@@ -394,7 +358,25 @@ export default function AdminDashboardPage() {
                   <Line type="monotone" dataKey="usage" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--chart-1))", stroke: "hsl(var(--background))" }} activeDot={{ r:6, fill: "hsl(var(--chart-1))", stroke: "hsl(var(--background))"}} name={chartConfig.waterUsage.label} />
                 </LineChartRecharts>
               </ChartContainer>
-             )}
+            </div>
+            <div className={cn("overflow-auto h-full", { "hidden": !showWaterUsageTable })}>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Month</TableHead>
+                    <TableHead className="text-right">Water Usage (m³)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {waterUsageTrendData.map((item) => (
+                    <TableRow key={item.month}>
+                      <TableCell className="font-medium">{item.month}</TableCell>
+                      <TableCell className="text-right" style={{color: chartConfig.waterUsage.color}}>{item.usage.toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>

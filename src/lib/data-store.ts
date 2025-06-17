@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { IndividualCustomer as DomainIndividualCustomer, IndividualCustomerStatus } from '@/app/admin/individual-customers/individual-customer-types';
@@ -194,7 +195,7 @@ const mapSupabaseBranchToDomain = (sb: SupabaseBranchRow): DomainBranch => ({
 const parsePhoneNumberForDB = (phoneString?: string): number | null => {
   if (!phoneString) return null;
   const digits = phoneString.replace(/\D/g, '');
-  if (digits === '' return null;
+  if (digits === '') return null;
   const parsedNumber = parseInt(digits, 10);
   return isNaN(parsedNumber) ? null : parsedNumber;
 };
@@ -1253,4 +1254,5 @@ export async function loadInitialData() {
     initializeReportLogs(),
   ]);
 }
+
 

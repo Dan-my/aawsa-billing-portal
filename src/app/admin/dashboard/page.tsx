@@ -26,7 +26,7 @@ const commonChartLoading = (heightClass: string) => (
 );
 
 // ResponsiveContainer is used for the top pie charts.
-const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false, loading: () => commonChartLoading("h-full") });
+const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
 // BarChart, LineChart, etc., are direct children of ChartContainer (which has its own ResponsiveContainer) for the bottom charts.
 const BarChart = dynamic(() => import('recharts').then(mod => mod.BarChart), { ssr: false });
 const PieChartRecharts = dynamic(() => import('recharts').then(mod => mod.PieChart), { ssr: false }); // Renamed to avoid conflict with Icon

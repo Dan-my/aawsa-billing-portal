@@ -336,7 +336,7 @@ export default function AdminDashboardPage() {
                 config={chartConfig} 
                 className="w-full h-full"
               >
-                <BarChart data={branchPerformanceData}>
+                <BarChart key={showBranchPerformanceTable ? 'barchart-table' : 'barchart-chart'} data={branchPerformanceData}>
                   <XAxis dataKey="branch" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
@@ -386,7 +386,7 @@ export default function AdminDashboardPage() {
                 config={chartConfig} 
                 className="w-full h-full"
               >
-                <LineChartRecharts data={waterUsageTrendData}>
+                <LineChartRecharts key={showWaterUsageTable ? 'linechart-table' : 'linechart-chart'} data={waterUsageTrendData}>
                   <XAxis dataKey="month" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />

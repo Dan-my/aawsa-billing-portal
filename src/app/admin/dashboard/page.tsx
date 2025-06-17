@@ -301,7 +301,7 @@ export default function AdminDashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div>
               <CardTitle>Branch Performance (Paid vs Unpaid)</CardTitle>
-               <CardDescription>Comparison of bills status across branches. (Currently displaying sample data from design diagram).</CardDescription>
+               <CardDescription>Comparison of bills status across branches.</CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={() => setShowBranchPerformanceTable(!showBranchPerformanceTable)}>
               {showBranchPerformanceTable ? <BarChartBig className="mr-2 h-4 w-4" /> : <TableIcon className="mr-2 h-4 w-4" />}
@@ -341,8 +341,8 @@ export default function AdminDashboardPage() {
                   <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
                   <Legend />
-                  <Bar dataKey="paid" stackId="a" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} name={chartConfig.paid.label} />
-                  <Bar dataKey="unpaid" stackId="a" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} name={chartConfig.unpaid.label} />
+                  <Bar dataKey="paid" stackId="a" fill="hsl(var(--chart-1))" name={chartConfig.paid.label} />
+                  <Bar dataKey="unpaid" stackId="a" fill="hsl(var(--chart-2))" name={chartConfig.unpaid.label} />
                 </BarChart>
               </ChartContainer>
             )}
@@ -353,7 +353,7 @@ export default function AdminDashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div>
               <CardTitle>Overall Water Usage Trend</CardTitle>
-              <CardDescription>Monthly water consumption across all meters. (Currently displaying sample data from design diagram).</CardDescription>
+              <CardDescription>Monthly water consumption across all meters.</CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={() => setShowWaterUsageTable(!showWaterUsageTable)}>
               {showWaterUsageTable ? <TrendingUp className="mr-2 h-4 w-4" /> : <TableIcon className="mr-2 h-4 w-4" />}

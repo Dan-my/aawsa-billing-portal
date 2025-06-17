@@ -1,19 +1,10 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+// Removed Geist and Geist_Mono imports
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import Providers from './providers';
 
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
+// Removed geistSans and geistMono constant declarations
 
 export const metadata: Metadata = {
   title: 'AAWSA Billing Portal',
@@ -27,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className="antialiased"> {/* Removed font variables */}
         <Providers>
           {children}
           <Toaster />

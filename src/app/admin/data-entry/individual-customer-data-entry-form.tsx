@@ -4,6 +4,7 @@
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import * as z from "zod"; // Added this import
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -26,7 +27,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse, isValid } from "date-fns";
 import { customerTypes, sewerageConnections, paymentStatuses } from "@/lib/billing";
 import { individualCustomerStatuses } from "../individual-customers/individual-customer-types";
-import type * as z from "zod";
+
 
 // Use the same schema as the dialog for consistency, which includes status and paymentStatus
 const FormSchemaForAdminDataEntry = baseIndividualCustomerDataSchema.extend({
@@ -190,6 +191,3 @@ export function IndividualCustomerDataEntryForm() {
     </ScrollArea>
   );
 }
-
-
-    

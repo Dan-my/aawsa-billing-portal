@@ -3,13 +3,14 @@
 
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart as BarChartIcon, PieChart as PieChartIcon, Gauge, Users } from 'lucide-react'; 
+import { BarChart as BarChartIcon, PieChart as PieChartIcon, Gauge, Users, ArrowRight } from 'lucide-react'; 
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { ResponsiveContainer, BarChart, PieChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Bar } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, getCustomers, subscribeToCustomers, initializeCustomers } from "@/lib/data-store";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
-// Removed import of initialBulkMeters and initialCustomers as they are not used.
 
 interface User {
   email: string;
@@ -90,11 +91,10 @@ export default function StaffDashboardPage() {
     }
     
     Promise.all([
-      initializeBulkMeters(), // Fetches from Supabase via data-store
-      initializeCustomers()   // Fetches from Supabase via data-store
+      initializeBulkMeters(), 
+      initializeCustomers()  
     ]).then(() => {
       if (!isMounted) return;
-      // Use current state of stores after initialization
       updateBranchData(getBulkMeters(), getCustomers(), localStaffBranch);
       setIsLoading(false);
     }).catch(error => {
@@ -118,7 +118,7 @@ export default function StaffDashboardPage() {
       unsubscribeBulkMeters();
       unsubscribeCustomers();
     };
-  }, [updateBranchData]); // updateBranchData is memoized with useCallback
+  }, [updateBranchData]); 
 
   if (isLoading) {
     return <div className="p-4 text-center">Loading dashboard data...</div>;
@@ -183,6 +183,35 @@ export default function StaffDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="shadow-lg">
+        <CardHeader>
+            <CardTitle>Quick Access</CardTitle>
+            <CardDescription>Navigate quickly to key management areas for your branch.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Link href="/staff/bulk-meters" passHref>
+                <Button variant="outline" className="w-full justify-start p-4 h-auto">
+                 <Gauge className="mr-3 h-6 w-6 text-primary" />
+                    <div>
+                        <p className="font-semibold text-base">View Bulk Meters</p>
+                        <p className="text-xs text-muted-foreground">Manage bulk water meters in your branch.</p>
+                    </div>
+                    <ArrowRight className="ml-auto h-5 w-5 text-muted-foreground" />
+                </Button>
+            </Link>
+             <Link href="/staff/individual-customers" passHref>
+                <Button variant="outline" className="w-full justify-start p-4 h-auto">
+                    <Users className="mr-3 h-6 w-6 text-primary" />
+                    <div>
+                        <p className="font-semibold text-base">View Individual Customers</p>
+                        <p className="text-xs text-muted-foreground">Manage individual customer accounts in your branch.</p>
+                    </div>
+                    <ArrowRight className="ml-auto h-5 w-5 text-muted-foreground" />
+                </Button>
+            </Link>
+        </CardContent>
+      </Card>
 
       <Card className="shadow-lg">
         <CardHeader>

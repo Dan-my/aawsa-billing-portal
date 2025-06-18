@@ -90,6 +90,7 @@ export function IndividualCustomerDataEntryForm() {
     resolver: zodResolver(FormSchemaForAdminDataEntry), 
     defaultValues: {
       assignedBulkMeterId: UNASSIGNED_BULK_METER_VALUE,
+      branchId: undefined, // Initialize branchId
       name: "",
       customerKeyNumber: "",
       contractNumber: "",
@@ -102,7 +103,7 @@ export function IndividualCustomerDataEntryForm() {
       currentReading: undefined,
       month: "",
       specificArea: "",
-      location: "",
+      location: "", // Will be set by branch selection
       ward: "",
       sewerageConnection: undefined,
       status: "Active", 
@@ -114,6 +115,7 @@ export function IndividualCustomerDataEntryForm() {
     const submissionData = {
       ...data,
       assignedBulkMeterId: data.assignedBulkMeterId === UNASSIGNED_BULK_METER_VALUE ? undefined : data.assignedBulkMeterId,
+      branchId: data.branchId === BRANCH_UNASSIGNED_VALUE ? undefined : data.branchId,
     };
     
     const result = await addCustomerToStore(submissionData as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'calculatedBill'>);
@@ -136,12 +138,14 @@ export function IndividualCustomerDataEntryForm() {
     form.setValue("assignedBulkMeterId", value);
   };
 
-  const handleBranchChange = (branchId: string) => {
-    const selectedBranch = availableBranches.find(b => b.id === branchId);
+  const handleBranchChange = (branchIdValue: string) => {
+    const selectedBranch = availableBranches.find(b => b.id === branchIdValue);
     if (selectedBranch) {
       form.setValue("location", selectedBranch.name); 
-    } else if (branchId === BRANCH_UNASSIGNED_VALUE) {
+      form.setValue("branchId", selectedBranch.id);
+    } else if (branchIdValue === BRANCH_UNASSIGNED_VALUE) {
       form.setValue("location", ""); 
+      form.setValue("branchId", undefined);
     }
   };
 
@@ -155,13 +159,13 @@ export function IndividualCustomerDataEntryForm() {
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="name" // Dummy field for Branch Select
-                  render={({ field }) => (
+                  name="branchId" 
+                  render={({ field }) => ( 
                     <FormItem>
                       <FormLabel>Assign to Branch (sets Location)</FormLabel>
                       <Select
                         onValueChange={(value) => handleBranchChange(value)}
-                        value={availableBranches.find(b => b.name === form.getValues().location)?.id || BRANCH_UNASSIGNED_VALUE}
+                        value={field.value || BRANCH_UNASSIGNED_VALUE}
                         disabled={isLoadingBranches || form.formState.isSubmitting}
                       >
                         <FormControl>
@@ -236,7 +240,7 @@ export function IndividualCustomerDataEntryForm() {
                 <FormField control={form.control} name="month" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Reading Month *</FormLabel><DatePicker date={field.value && isValid(parse(field.value, "yyyy-MM", new Date())) ? parse(field.value, "yyyy-MM", new Date()) : undefined} setDate={(date) => field.onChange(date ? format(date, "yyyy-MM") : "")} disabledTrigger={form.formState.isSubmitting} /><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="specificArea" render={({ field }) => (<FormItem><FormLabel>Specific Area *</FormLabel><FormControl><Input {...field} disabled={form.formState.isSubmitting} /></FormControl><FormMessage /></FormItem>)} />
                 
-                <FormField control={form.control} name="location" render={({ field }) => (<FormItem><FormLabel>Location / Sub-City * (set by Branch)</FormLabel><FormControl><Input {...field} disabled={form.formState.isSubmitting} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="location" render={({ field }) => (<FormItem><FormLabel>Location / Sub-City * (set by Branch)</FormLabel><FormControl><Input {...field} disabled={form.formState.isSubmitting} readOnly={!!form.getValues().branchId && form.getValues().branchId !== BRANCH_UNASSIGNED_VALUE} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="ward" render={({ field }) => (<FormItem><FormLabel>Ward / Woreda *</FormLabel><FormControl><Input {...field} disabled={form.formState.isSubmitting} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="sewerageConnection" render={({ field }) => (<FormItem><FormLabel>Sewerage Conn. *</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={form.formState.isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select connection" /></SelectTrigger></FormControl><SelectContent>{sewerageConnections.map(conn => <SelectItem key={conn} value={conn}>{conn}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
               </div>

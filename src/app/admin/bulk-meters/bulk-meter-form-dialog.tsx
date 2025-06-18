@@ -27,17 +27,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { baseBulkMeterDataSchema } from "@/app/admin/data-entry/customer-data-entry-types";
 import type { BulkMeter } from "./bulk-meter-types";
 import { bulkMeterStatuses } from "./bulk-meter-types";
-import { paymentStatuses } from "@/lib/billing"; // Import from new location
+import { paymentStatuses } from "@/lib/billing"; 
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse } from "date-fns";
+import { getBranches, subscribeToBranches, initializeBranches as initializeAdminBranches } from "@/lib/data-store";
+import type { Branch } from "../branches/branch-types";
 
+const BRANCH_UNASSIGNED_VALUE = "_SELECT_BRANCH_BULK_METER_DIALOG_";
 
 const bulkMeterFormObjectSchema = baseBulkMeterDataSchema.extend({
   status: z.enum(bulkMeterStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
   paymentStatus: z.enum(paymentStatuses, { errorMap: () => ({ message: "Please select a valid payment status."}) }),
+  branchId: z.string().optional(), // Add branchId to schema
 });
 
-// Re-apply the refinement to the extended schema
 const bulkMeterFormSchema = bulkMeterFormObjectSchema.refine(data => data.currentReading >= data.previousReading, {
   message: "Current Reading must be greater than or equal to Previous Reading.",
   path: ["currentReading"],
@@ -54,6 +57,22 @@ interface BulkMeterFormDialogProps {
 }
 
 export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValues }: BulkMeterFormDialogProps) {
+  const [availableBranches, setAvailableBranches] = React.useState<Branch[]>([]);
+  const [isLoadingBranches, setIsLoadingBranches] = React.useState(true);
+
+  React.useEffect(() => {
+    setIsLoadingBranches(true);
+    initializeAdminBranches().then(() => {
+        setAvailableBranches(getBranches());
+        setIsLoadingBranches(false);
+    });
+    const unsubscribeBranches = subscribeToBranches((updatedBranches) => {
+        setAvailableBranches(updatedBranches);
+        setIsLoadingBranches(false);
+    });
+    return () => unsubscribeBranches();
+  }, []);
+  
   const form = useForm<BulkMeterFormValues>({
     resolver: zodResolver(bulkMeterFormSchema),
     defaultValues: {
@@ -68,8 +87,9 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
       specificArea: "",
       location: "",
       ward: "",
-      status: "Active", // Default status
-      paymentStatus: "Unpaid", // Default payment status
+      branchId: undefined,
+      status: "Active", 
+      paymentStatus: "Unpaid", 
     },
   });
 
@@ -80,6 +100,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
         meterSize: defaultValues.meterSize ?? undefined,
         previousReading: defaultValues.previousReading ?? undefined,
         currentReading: defaultValues.currentReading ?? undefined,
+        branchId: defaultValues.branchId || undefined,
         status: defaultValues.status || "Active",
         paymentStatus: defaultValues.paymentStatus || "Unpaid",
       });
@@ -96,6 +117,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
         specificArea: "",
         location: "",
         ward: "",
+        branchId: undefined,
         status: "Active",
         paymentStatus: "Unpaid",
       });
@@ -103,8 +125,23 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
   }, [defaultValues, form, open]);
 
   const handleSubmit = (data: BulkMeterFormValues) => {
-    onSubmit(data); 
+     const submissionData = {
+      ...data,
+      branchId: data.branchId === BRANCH_UNASSIGNED_VALUE ? undefined : data.branchId,
+    };
+    onSubmit(submissionData); 
     onOpenChange(false); 
+  };
+  
+  const handleBranchChange = (branchIdValue: string) => {
+    const selectedBranch = availableBranches.find(b => b.id === branchIdValue);
+    if (selectedBranch) {
+      form.setValue("location", selectedBranch.name); 
+      form.setValue("branchId", selectedBranch.id);
+    } else if (branchIdValue === BRANCH_UNASSIGNED_VALUE) {
+      form.setValue("location", ""); 
+      form.setValue("branchId", undefined);
+    }
   };
 
   return (
@@ -119,6 +156,35 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="branchId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assign to Branch (sets Location)</FormLabel>
+                    <Select
+                      onValueChange={(value) => handleBranchChange(value)}
+                      value={field.value || BRANCH_UNASSIGNED_VALUE}
+                      disabled={isLoadingBranches || form.formState.isSubmitting}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={isLoadingBranches ? "Loading branches..." : "Select a branch"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={BRANCH_UNASSIGNED_VALUE}>None (Manual Location)</SelectItem>
+                        {availableBranches.map((branch) => (
+                          <SelectItem key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="name"
@@ -271,9 +337,9 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 name="location"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Location / Sub-City *</FormLabel>
+                    <FormLabel>Location / Sub-City * (set by Branch selection)</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} readOnly={!!form.getValues().branchId && form.getValues().branchId !== BRANCH_UNASSIGNED_VALUE} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

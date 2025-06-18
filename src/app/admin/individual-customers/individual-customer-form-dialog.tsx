@@ -27,15 +27,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { baseIndividualCustomerDataSchema } from "@/app/admin/data-entry/customer-data-entry-types";
 import type { IndividualCustomer } from "./individual-customer-types";
 import { individualCustomerStatuses } from "./individual-customer-types";
-import { getBulkMeters, subscribeToBulkMeters, initializeBulkMeters } from "@/lib/data-store";
+import { getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, getBranches, subscribeToBranches, initializeBranches as initializeAdminBranches } from "@/lib/data-store";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse, isValid } from "date-fns";
 import { customerTypes, sewerageConnections, paymentStatuses } from "@/lib/billing";
+import type { Branch } from "../branches/branch-types";
 
-// Schema for the form, extending the base data entry schema with status and paymentStatus
 const individualCustomerFormObjectSchema = baseIndividualCustomerDataSchema.extend({
   status: z.enum(individualCustomerStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
   paymentStatus: z.enum(paymentStatuses, { errorMap: () => ({ message: "Please select a valid payment status."}) }),
+  branchId: z.string().optional(), // Add branchId to schema
 });
 
 export type IndividualCustomerFormValues = z.infer<typeof individualCustomerFormObjectSchema>;
@@ -45,13 +46,16 @@ interface IndividualCustomerFormDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: IndividualCustomerFormValues) => void;
   defaultValues?: IndividualCustomer | null;
-  bulkMeters?: { id: string; name: string }[]; // Optional, can be fetched if not provided
+  bulkMeters?: { id: string; name: string }[]; 
 }
 
 const UNASSIGNED_BULK_METER_VALUE = "_SELECT_NONE_BULK_METER_";
+const BRANCH_UNASSIGNED_VALUE = "_SELECT_BRANCH_INDIVIDUAL_DIALOG_";
 
 export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, defaultValues, bulkMeters: propBulkMeters }: IndividualCustomerFormDialogProps) {
   const [dynamicBulkMeters, setDynamicBulkMeters] = React.useState<{ id: string; name: string }[]>(propBulkMeters || []);
+  const [availableBranches, setAvailableBranches] = React.useState<Branch[]>([]);
+  const [isLoadingBranches, setIsLoadingBranches] = React.useState(true);
   
   const form = useForm<IndividualCustomerFormValues>({
     resolver: zodResolver(individualCustomerFormObjectSchema),
@@ -72,12 +76,23 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
       ward: "",
       sewerageConnection: undefined,
       assignedBulkMeterId: UNASSIGNED_BULK_METER_VALUE,
+      branchId: undefined,
       status: "Active",
       paymentStatus: "Unpaid",
     },
   });
 
   React.useEffect(() => {
+    setIsLoadingBranches(true);
+    initializeAdminBranches().then(() => {
+        setAvailableBranches(getBranches());
+        setIsLoadingBranches(false);
+    });
+    const unsubscribeAdminBranches = subscribeToBranches((updatedBranches) => {
+        setAvailableBranches(updatedBranches);
+        setIsLoadingBranches(false);
+    });
+
     if (!propBulkMeters || propBulkMeters.length === 0) {
       initializeBulkMeters().then(() => {
         const fetchedBms = getBulkMeters().map(bm => ({ id: bm.id, name: bm.name }));
@@ -87,13 +102,16 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
          setDynamicBulkMeters(propBulkMeters);
     }
 
-    let unsubscribe = () => {};
+    let unsubscribeBMs = () => {};
     if (!propBulkMeters || propBulkMeters.length === 0) {
-      unsubscribe = subscribeToBulkMeters((updatedBulkMeters) => {
+      unsubscribeBMs = subscribeToBulkMeters((updatedBulkMeters) => {
         setDynamicBulkMeters(updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
       });
     }
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAdminBranches();
+      unsubscribeBMs();
+    }
   }, [propBulkMeters, open]);
 
   React.useEffect(() => {
@@ -115,6 +133,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         ward: defaultValues.ward || "",
         sewerageConnection: defaultValues.sewerageConnection || undefined,
         assignedBulkMeterId: defaultValues.assignedBulkMeterId || UNASSIGNED_BULK_METER_VALUE,
+        branchId: defaultValues.branchId || undefined,
         status: defaultValues.status || "Active",
         paymentStatus: defaultValues.paymentStatus || "Unpaid",
       });
@@ -136,6 +155,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         ward: "",
         sewerageConnection: undefined,
         assignedBulkMeterId: UNASSIGNED_BULK_METER_VALUE, 
+        branchId: undefined,
         status: "Active",
         paymentStatus: "Unpaid",
       });
@@ -146,6 +166,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
     const submissionData = {
         ...data,
         assignedBulkMeterId: data.assignedBulkMeterId === UNASSIGNED_BULK_METER_VALUE ? undefined : data.assignedBulkMeterId,
+        branchId: data.branchId === BRANCH_UNASSIGNED_VALUE ? undefined : data.branchId,
     };
     onSubmit(submissionData);
     onOpenChange(false);
@@ -153,6 +174,17 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
 
   const handleBulkMeterChange = (value: string | undefined) => {
     form.setValue("assignedBulkMeterId", value);
+  };
+
+  const handleBranchChange = (branchIdValue: string) => {
+    const selectedBranch = availableBranches.find(b => b.id === branchIdValue);
+    if (selectedBranch) {
+      form.setValue("location", selectedBranch.name); 
+      form.setValue("branchId", selectedBranch.id);
+    } else if (branchIdValue === BRANCH_UNASSIGNED_VALUE) {
+      form.setValue("location", ""); 
+      form.setValue("branchId", undefined);
+    }
   };
   
   return (
@@ -166,39 +198,70 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
-            <FormField
-              control={form.control}
-              name="assignedBulkMeterId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Assign to Bulk Meter *</FormLabel>
-                  <Select
-                    onValueChange={handleBulkMeterChange}
-                    value={field.value} 
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="None" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value={UNASSIGNED_BULK_METER_VALUE}>None</SelectItem>
-                      {dynamicBulkMeters.length === 0 && (
-                        <SelectItem value="no-bms-available" disabled>
-                          No bulk meters available
-                        </SelectItem>
-                      )}
-                      {dynamicBulkMeters.map((bm) => (
-                        <SelectItem key={bm.id} value={bm.id}>
-                          {bm.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                control={form.control}
+                name="branchId"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Assign to Branch (sets Location)</FormLabel>
+                    <Select
+                        onValueChange={(value) => handleBranchChange(value)}
+                        value={field.value || BRANCH_UNASSIGNED_VALUE}
+                        disabled={isLoadingBranches || form.formState.isSubmitting}
+                    >
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder={isLoadingBranches ? "Loading branches..." : "Select a branch"} />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        <SelectItem value={BRANCH_UNASSIGNED_VALUE}>None (Manual Location)</SelectItem>
+                        {availableBranches.map((branch) => (
+                            <SelectItem key={branch.id} value={branch.id}>
+                            {branch.name}
+                            </SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="assignedBulkMeterId"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Assign to Bulk Meter</FormLabel>
+                    <Select
+                        onValueChange={handleBulkMeterChange}
+                        value={field.value} 
+                    >
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="None" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        <SelectItem value={UNASSIGNED_BULK_METER_VALUE}>None</SelectItem>
+                        {dynamicBulkMeters.length === 0 && (
+                            <SelectItem value="no-bms-available" disabled>
+                            No bulk meters available
+                            </SelectItem>
+                        )}
+                        {dynamicBulkMeters.map((bm) => (
+                            <SelectItem key={bm.id} value={bm.id}>
+                            {bm.name}
+                            </SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Name *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
@@ -217,7 +280,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
               <FormField control={form.control} name="month" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Reading Month *</FormLabel><DatePicker date={field.value && isValid(parse(field.value, "yyyy-MM", new Date())) ? parse(field.value, "yyyy-MM", new Date()) : undefined} setDate={(date) => field.onChange(date ? format(date, "yyyy-MM") : "")} /><FormMessage /></FormItem>)} />
               <FormField control={form.control} name="specificArea" render={({ field }) => (<FormItem><FormLabel>Specific Area *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
               
-              <FormField control={form.control} name="location" render={({ field }) => (<FormItem><FormLabel>Location / Sub-City *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="location" render={({ field }) => (<FormItem><FormLabel>Location / Sub-City *</FormLabel><FormControl><Input {...field} readOnly={!!form.getValues().branchId && form.getValues().branchId !== BRANCH_UNASSIGNED_VALUE} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={form.control} name="ward" render={({ field }) => (<FormItem><FormLabel>Ward / Woreda *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={form.control} name="sewerageConnection" render={({ field }) => (<FormItem><FormLabel>Sewerage Conn. *</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select connection" /></SelectTrigger></FormControl><SelectContent>{sewerageConnections.map(conn => <SelectItem key={conn} value={conn}>{conn}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
             </div>

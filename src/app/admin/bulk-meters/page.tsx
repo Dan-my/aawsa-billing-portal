@@ -17,8 +17,12 @@ import {
   updateBulkMeter as updateBulkMeterInStore, 
   deleteBulkMeter as deleteBulkMeterFromStore,
   subscribeToBulkMeters,
-  initializeBulkMeters 
+  initializeBulkMeters,
+  getBranches, // Added
+  initializeBranches, // Added
+  subscribeToBranches // Added
 } from "@/lib/data-store";
+import type { Branch } from "../branches/branch-types"; // Added
 
 // Initial data is now mainly for reference or if Supabase fetch fails and a fallback is desired.
 export const initialBulkMeters: BulkMeter[] = [
@@ -31,6 +35,7 @@ export const initialBulkMeters: BulkMeter[] = [
 export default function BulkMetersPage() {
   const { toast } = useToast();
   const [bulkMeters, setBulkMeters] = React.useState<BulkMeter[]>([]);
+  const [branches, setBranches] = React.useState<Branch[]>([]); // Added
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
@@ -40,16 +45,27 @@ export default function BulkMetersPage() {
 
   React.useEffect(() => {
     setIsLoading(true);
-    initializeBulkMeters().then(() => {
+    Promise.all([
+      initializeBulkMeters(),
+      initializeBranches() // Added
+    ]).then(() => {
       setBulkMeters(getBulkMeters());
+      setBranches(getBranches()); // Added
       setIsLoading(false);
     });
     
-    const unsubscribe = subscribeToBulkMeters((updatedBulkMeters) => {
+    const unsubscribeBM = subscribeToBulkMeters((updatedBulkMeters) => {
        setBulkMeters(updatedBulkMeters);
-       setIsLoading(false);
+       // setIsLoading(false); // Removed to avoid multiple setIsLoading calls
     });
-    return () => unsubscribe();
+    const unsubscribeBranches = subscribeToBranches((updatedBranches) => { // Added
+      setBranches(updatedBranches);
+    });
+
+    return () => {
+      unsubscribeBM();
+      unsubscribeBranches(); // Added
+    };
   }, []);
 
   const handleAddBulkMeter = () => {
@@ -95,6 +111,7 @@ export default function BulkMetersPage() {
   const filteredBulkMeters = bulkMeters.filter(bm =>
     bm.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     bm.meterNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (bm.branchId && branches.find(b => b.id === bm.branchId)?.name.toLowerCase().includes(searchTerm.toLowerCase())) || // Search by branch name
     bm.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
     bm.ward.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -139,6 +156,7 @@ export default function BulkMetersPage() {
               data={filteredBulkMeters}
               onEdit={handleEditBulkMeter}
               onDelete={handleDeleteBulkMeter}
+              branches={branches} // Added
             />
           )}
         </CardContent>

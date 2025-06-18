@@ -23,14 +23,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import type { BulkMeter } from "./bulk-meter-types";
+import type { Branch } from "../branches/branch-types"; // Added
 
 interface BulkMeterTableProps {
   data: BulkMeter[];
   onEdit: (bulkMeter: BulkMeter) => void;
   onDelete: (bulkMeter: BulkMeter) => void;
+  branches: Branch[]; // Added
 }
 
-export function BulkMeterTable({ data, onEdit, onDelete }: BulkMeterTableProps) {
+export function BulkMeterTable({ data, onEdit, onDelete, branches }: BulkMeterTableProps) { // Added branches to props
   if (data.length === 0) {
     return (
       <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
@@ -38,6 +40,15 @@ export function BulkMeterTable({ data, onEdit, onDelete }: BulkMeterTableProps) 
       </div>
     );
   }
+
+  const getBranchName = (branchId?: string, fallbackLocation?: string) => {
+    if (branchId) {
+      const branch = branches.find(b => b.id === branchId);
+      if (branch) return branch.name;
+    }
+    return fallbackLocation || "-";
+  };
+
   return (
     <div className="rounded-md border mt-4">
       <Table>
@@ -45,7 +56,7 @@ export function BulkMeterTable({ data, onEdit, onDelete }: BulkMeterTableProps) 
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Meter Number</TableHead>
-            <TableHead>Location</TableHead>
+            <TableHead>Branch / Location</TableHead> 
             <TableHead>Ward</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
@@ -56,7 +67,7 @@ export function BulkMeterTable({ data, onEdit, onDelete }: BulkMeterTableProps) 
             <TableRow key={bulkMeter.id}>
               <TableCell className="font-medium">{bulkMeter.name}</TableCell>
               <TableCell>{bulkMeter.meterNumber}</TableCell>
-              <TableCell>{bulkMeter.location}</TableCell>
+              <TableCell>{getBranchName(bulkMeter.branchId, bulkMeter.location)}</TableCell> 
               <TableCell>{bulkMeter.ward}</TableCell>
               <TableCell>
                 <Badge 
@@ -104,4 +115,3 @@ export function BulkMeterTable({ data, onEdit, onDelete }: BulkMeterTableProps) 
     </div>
   );
 }
-

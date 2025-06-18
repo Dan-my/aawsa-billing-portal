@@ -11,13 +11,9 @@ export type IndividualCustomerStatus = (typeof individualCustomerStatuses)[numbe
 export type IndividualCustomer = z.infer<typeof individualCustomerDataEntrySchema> & {
   id: string;
   status: IndividualCustomerStatus;
-  paymentStatus: PaymentStatus; // e.g., 'Paid', 'Unpaid' for their current/last bill cycle
-  calculatedBill: number; // The calculated bill amount for the current/last cycle
+  paymentStatus: PaymentStatus; 
+  calculatedBill: number; 
+  branchId?: string; // New field for branch association
   created_at?: string | null;
   updated_at?: string | null;
 };
-
-// Note: CustomerType, SewerageConnection, PaymentStatus, TariffTier, calculateBill,
-// DomesticTariffInfo, NonDomesticTariffInfo are now managed in src/lib/billing.ts
-// to centralize billing logic and make it reusable.
-// IndividualCustomer imports CustomerType and SewerageConnection types from there.

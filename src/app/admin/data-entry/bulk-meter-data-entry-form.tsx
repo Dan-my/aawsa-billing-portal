@@ -60,14 +60,16 @@ export function BulkMeterDataEntryForm() {
       currentReading: undefined,
       month: "", 
       specificArea: "",
-      location: "",
+      location: "", // Will be set by branch selection
       ward: "",
+      branchId: undefined, // Initialize branchId
     },
   });
 
   async function onSubmit(data: BulkMeterDataEntryFormValues) {
     const bulkMeterDataForStore: Omit<BulkMeter, 'id'> = { 
       ...data, 
+      branchId: data.branchId === BRANCH_UNASSIGNED_VALUE ? undefined : data.branchId,
       status: "Active", 
       paymentStatus: "Unpaid", 
     };
@@ -88,12 +90,14 @@ export function BulkMeterDataEntryForm() {
     }
   }
   
-  const handleBranchChange = (branchId: string) => {
-    const selectedBranch = availableBranches.find(b => b.id === branchId);
+  const handleBranchChange = (branchIdValue: string) => {
+    const selectedBranch = availableBranches.find(b => b.id === branchIdValue);
     if (selectedBranch) {
-      form.setValue("location", selectedBranch.name); // Or selectedBranch.location if that's preferred
-    } else if (branchId === BRANCH_UNASSIGNED_VALUE) {
-      form.setValue("location", ""); // Clear location if "None" is selected
+      form.setValue("location", selectedBranch.name); 
+      form.setValue("branchId", selectedBranch.id);
+    } else if (branchIdValue === BRANCH_UNASSIGNED_VALUE) {
+      form.setValue("location", ""); 
+      form.setValue("branchId", undefined);
     }
   };
 
@@ -106,13 +110,13 @@ export function BulkMeterDataEntryForm() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
-                  name="name" // This is a dummy field for the Select, actual value is handled by onChange
-                  render={({ field }) => ( // field is not directly used for value but needed for control
+                  name="branchId" 
+                  render={({ field }) => ( 
                     <FormItem>
                       <FormLabel>Assign to Branch (sets Location)</FormLabel>
                       <Select
                         onValueChange={(value) => handleBranchChange(value)}
-                        value={availableBranches.find(b => b.name === form.getValues().location)?.id || BRANCH_UNASSIGNED_VALUE}
+                        value={field.value || BRANCH_UNASSIGNED_VALUE}
                         disabled={isLoadingBranches || form.formState.isSubmitting}
                       >
                         <FormControl>
@@ -290,7 +294,7 @@ export function BulkMeterDataEntryForm() {
                     <FormItem>
                       <FormLabel>Location / Sub-City * (set by Branch selection)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter location / sub-city" {...field} />
+                        <Input placeholder="Enter location / sub-city" {...field} readOnly={!!form.getValues().branchId && form.getValues().branchId !== BRANCH_UNASSIGNED_VALUE} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

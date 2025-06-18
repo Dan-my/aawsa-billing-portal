@@ -57,10 +57,11 @@ export interface Database {
           currentReading: number;
           month: string;
           specificArea: string;
-          location: string;
+          location: string; // This can store the branch name for easy filtering/display
           ward: string;
           status: 'Active' | 'Maintenance' | 'Decommissioned';
           paymentStatus: 'Paid' | 'Unpaid';
+          branch_id?: string | null; // New field for foreign key
           bulk_usage?: number | null;
           total_bulk_bill?: number | null;
           difference_usage?: number | null;
@@ -83,6 +84,7 @@ export interface Database {
           ward: string;
           status: 'Active' | 'Maintenance' | 'Decommissioned';
           paymentStatus: 'Paid' | 'Unpaid';
+          branch_id?: string | null; // New field
           bulk_usage?: number | null;
           total_bulk_bill?: number | null;
           difference_usage?: number | null;
@@ -105,6 +107,7 @@ export interface Database {
           ward?: string;
           status?: 'Active' | 'Maintenance' | 'Decommissioned';
           paymentStatus?: 'Paid' | 'Unpaid';
+          branch_id?: string | null; // New field
           bulk_usage?: number | null;
           total_bulk_bill?: number | null;
           difference_usage?: number | null;
@@ -113,7 +116,7 @@ export interface Database {
           updatedAt?: string | null;
         };
       };
-      individual_customers: { // Restored complex structure
+      individual_customers: {
         Row: {
           id: string;
           name: string;
@@ -126,15 +129,16 @@ export interface Database {
           meterNumber: string;
           previousReading: number;
           currentReading: number;
-          month: string; // YYYY-MM
+          month: string; 
           specificArea: string;
-          location: string;
+          location: string; // This can store the branch name
           ward: string;
           sewerageConnection: 'Yes' | 'No';
           assignedBulkMeterId?: string | null;
           status: 'Active' | 'Inactive' | 'Suspended';
-          paymentStatus: 'Paid' | 'Unpaid' | 'Pending'; // For the customer's latest bill
-          calculatedBill: number; // Stored calculated bill for the readings
+          paymentStatus: 'Paid' | 'Unpaid' | 'Pending';
+          calculatedBill: number;
+          branch_id?: string | null; // New field for foreign key
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -150,7 +154,7 @@ export interface Database {
           meterNumber: string;
           previousReading: number;
           currentReading: number;
-          month: string; // YYYY-MM
+          month: string; 
           specificArea: string;
           location: string;
           ward: string;
@@ -159,6 +163,7 @@ export interface Database {
           status?: 'Active' | 'Inactive' | 'Suspended';
           paymentStatus?: 'Paid' | 'Unpaid' | 'Pending';
           calculatedBill?: number;
+          branch_id?: string | null; // New field
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -174,7 +179,7 @@ export interface Database {
           meterNumber?: string;
           previousReading?: number;
           currentReading?: number;
-          month?: string; // YYYY-MM
+          month?: string; 
           specificArea?: string;
           location?: string;
           ward?: string;
@@ -183,6 +188,7 @@ export interface Database {
           status?: 'Active' | 'Inactive' | 'Suspended';
           paymentStatus?: 'Paid' | 'Unpaid' | 'Pending';
           calculatedBill?: number;
+          branch_id?: string | null; // New field
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -547,3 +553,4 @@ export const getAllReportLogs = async () => supabase.from('reports').select('*')
 export const createReportLog = async (reportLog: ReportLogInsert) => supabase.from('reports').insert(reportLog).select().single();
 export const updateReportLog = async (id: string, reportLog: ReportLogUpdate) => supabase.from('reports').update(reportLog).eq('id', id).select().single();
 export const deleteReportLog = async (id: string) => supabase.from('reports').delete().eq('id', id).select().single();
+

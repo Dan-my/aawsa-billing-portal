@@ -21,8 +21,12 @@ import {
   getBulkMeters,
   subscribeToBulkMeters,
   initializeBulkMeters,
+  getBranches, // Added
+  initializeBranches, // Added
+  subscribeToBranches // Added
 } from "@/lib/data-store";
 import type { PaymentStatus, CustomerType, SewerageConnection } from "@/lib/billing";
+import type { Branch } from "../branches/branch-types"; // Added
 
 // Fallback initial data, actual data comes from Supabase via data-store
 export const initialCustomers: IndividualCustomer[] = [
@@ -35,6 +39,7 @@ export default function IndividualCustomersPage() {
   const { toast } = useToast();
   const [customers, setCustomers] = React.useState<IndividualCustomer[]>([]);
   const [bulkMetersList, setBulkMetersList] = React.useState<{id: string, name: string}[]>([]);
+  const [branches, setBranches] = React.useState<Branch[]>([]); // Added
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
@@ -46,10 +51,12 @@ export default function IndividualCustomersPage() {
     setIsLoading(true);
     Promise.all([
       initializeBulkMeters(),
-      initializeCustomers()
+      initializeCustomers(),
+      initializeBranches() // Added
     ]).then(() => {
       setBulkMetersList(getBulkMeters().map(bm => ({id: bm.id, name: bm.name })));
       setCustomers(getCustomers());
+      setBranches(getBranches()); // Added
       setIsLoading(false);
     });
 
@@ -58,12 +65,16 @@ export default function IndividualCustomersPage() {
     });
     const unsubscribeCustomers = subscribeToCustomers((updatedCustomers) => {
        setCustomers(updatedCustomers);
-       setIsLoading(false);
+       // setIsLoading(false); // Removed to avoid multiple calls
+    });
+    const unsubscribeBranches = subscribeToBranches((updatedBranches) => { // Added
+      setBranches(updatedBranches);
     });
 
     return () => {
       unsubscribeCustomers();
       unsubscribeBulkMeters();
+      unsubscribeBranches(); // Added
     };
   }, []);
 
@@ -98,9 +109,8 @@ export default function IndividualCustomersPage() {
   const handleSubmitCustomer = async (data: IndividualCustomerFormValues) => {
     if (selectedCustomer) {
       const updatedCustomerData: IndividualCustomer = {
-        ...selectedCustomer, // Spread existing data like id, created_at, calculatedBill
-        ...data, // Spread form values
-        // Ensure types are correct if Zod coerced them
+        ...selectedCustomer, 
+        ...data, 
         ordinal: Number(data.ordinal),
         meterSize: Number(data.meterSize),
         previousReading: Number(data.previousReading),
@@ -110,7 +120,6 @@ export default function IndividualCustomersPage() {
         customerType: data.customerType as CustomerType,
         sewerageConnection: data.sewerageConnection as SewerageConnection,
         assignedBulkMeterId: data.assignedBulkMeterId || undefined,
-        // calculatedBill will be re-calculated in data-store or by DB trigger
       };
       const result = await updateCustomerInStore(updatedCustomerData);
       if (result.success) {
@@ -123,14 +132,12 @@ export default function IndividualCustomersPage() {
         });
       }
     } else {
-      // For new customer, calculatedBill will be handled by addCustomerToStore
       const newCustomerData = {
         ...data,
         ordinal: Number(data.ordinal),
         meterSize: Number(data.meterSize),
         previousReading: Number(data.previousReading),
         currentReading: Number(data.currentReading),
-        // status and paymentStatus are handled by form defaults and then addCustomerToStore
       } as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'calculatedBill'>;
 
       const result = await addCustomerToStore(newCustomerData);
@@ -143,14 +150,25 @@ export default function IndividualCustomersPage() {
     setIsFormOpen(false);
     setSelectedCustomer(null);
   };
+  
+  const getBranchNameFromList = (branchId?: string, fallbackLocation?: string) => {
+    if (branchId) {
+      const branch = branches.find(b => b.id === branchId);
+      if (branch) return branch.name;
+    }
+    return fallbackLocation || "";
+  };
 
-  const filteredCustomers = customers.filter(customer =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.meterNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.ward.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (customer.assignedBulkMeterId && getBulkMeters().find(bm => bm.id === customer.assignedBulkMeterId)?.name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredCustomers = customers.filter(customer => {
+    const branchName = getBranchNameFromList(customer.branchId, customer.location);
+    return (
+        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.meterNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        branchName.toLowerCase().includes(searchTerm.toLowerCase()) || // Search by derived/actual branch name
+        customer.ward.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (customer.assignedBulkMeterId && bulkMetersList.find(bm => bm.id === customer.assignedBulkMeterId)?.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  });
 
   return (
     <div className="space-y-6">
@@ -193,6 +211,7 @@ export default function IndividualCustomersPage() {
               onEdit={handleEditCustomer}
               onDelete={handleDeleteCustomer}
               bulkMetersList={bulkMetersList}
+              branches={branches} // Added
             />
           )}
         </CardContent>

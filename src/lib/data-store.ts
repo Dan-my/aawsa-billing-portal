@@ -3,7 +3,7 @@
 "use client";
 
 import type { IndividualCustomer as DomainIndividualCustomer, IndividualCustomerStatus } from '@/app/admin/individual-customers/individual-customer-types';
-import type { BulkMeter as DomainBulkMeterTypeFromTypes } from '@/app/admin/bulk-meters/bulk-meter-types'; // Renamed to avoid conflict
+import type { BulkMeter as DomainBulkMeterTypeFromTypes } from '@/app/admin/bulk-meters/bulk-meter-types'; 
 import type { Branch as DomainBranch } from '@/app/admin/branches/branch-types';
 import type { StaffMember } from '@/app/admin/staff-management/staff-types';
 import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus } from '@/lib/billing';
@@ -240,6 +240,7 @@ const mapSupabaseCustomerToDomain = (sc: SupabaseIndividualCustomerRow): DomainI
     ward: sc.ward,
     sewerageConnection: sc.sewerageConnection,
     assignedBulkMeterId: sc.assignedBulkMeterId || undefined,
+    branchId: sc.branch_id || undefined, // Map branch_id
     status: sc.status as IndividualCustomerStatus,
     paymentStatus: sc.paymentStatus as PaymentStatus,
     calculatedBill: bill,
@@ -270,8 +271,9 @@ const mapDomainCustomerToInsert = (
     ward: customer.ward,
     sewerageConnection: customer.sewerageConnection,
     assignedBulkMeterId: customer.assignedBulkMeterId,
-    status: 'Active', // Default status for new customers
-    paymentStatus: 'Unpaid', // Default payment status
+    branch_id: customer.branchId, // Include branch_id
+    status: 'Active', 
+    paymentStatus: 'Unpaid', 
     calculatedBill: bill,
   };
 };
@@ -295,10 +297,10 @@ const mapDomainCustomerToUpdate = (customer: Partial<DomainIndividualCustomer>):
   if(customer.ward !== undefined) updatePayload.ward = customer.ward;
   if(customer.sewerageConnection !== undefined) updatePayload.sewerageConnection = customer.sewerageConnection;
   if(customer.assignedBulkMeterId !== undefined) updatePayload.assignedBulkMeterId = customer.assignedBulkMeterId;
+  if(customer.branchId !== undefined) updatePayload.branch_id = customer.branchId; // Include branch_id
   if(customer.status !== undefined) updatePayload.status = customer.status;
   if(customer.paymentStatus !== undefined) updatePayload.paymentStatus = customer.paymentStatus;
 
-  // Recalculate bill if relevant fields change
   if (customer.currentReading !== undefined || customer.previousReading !== undefined || customer.customerType !== undefined || customer.sewerageConnection !== undefined) {
     const existingCustomer = customers.find(c => c.id === customer.id);
     if (existingCustomer) {
@@ -337,6 +339,7 @@ const mapSupabaseBulkMeterToDomain = (sbm: SupabaseBulkMeterRow): BulkMeter => {
     specificArea: sbm.specificArea,
     location: sbm.location,
     ward: sbm.ward,
+    branchId: sbm.branch_id || undefined, // Map branch_id
     status: sbm.status,
     paymentStatus: sbm.paymentStatus,
     bulkUsage: bmUsage,
@@ -363,6 +366,7 @@ const mapDomainBulkMeterToInsert = (bm: Omit<BulkMeter, 'id'>): BulkMeterInsert 
     specificArea: bm.specificArea,
     location: bm.location,
     ward: bm.ward,
+    branch_id: bm.branchId, // Include branch_id
     status: bm.status || 'Active',
     paymentStatus: bm.paymentStatus || 'Unpaid',
     bulk_usage: calculatedBulkUsage,
@@ -386,6 +390,7 @@ const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { id?: string } ): 
     if (bm.specificArea !== undefined) updatePayload.specificArea = bm.specificArea;
     if (bm.location !== undefined) updatePayload.location = bm.location;
     if (bm.ward !== undefined) updatePayload.ward = bm.ward;
+    if (bm.branchId !== undefined) updatePayload.branch_id = bm.branchId; // Include branch_id
     if (bm.status !== undefined) updatePayload.status = bm.status;
     if (bm.paymentStatus !== undefined) updatePayload.paymentStatus = bm.paymentStatus;
 
@@ -630,9 +635,7 @@ async function fetchAllBulkMeters() {
 
   let processedBulkMeters = rawBulkMeters;
   
-  // Ensure customers are loaded for difference calculation during backfill
-  // Calling initializeCustomers directly here ensures it completes before proceeding.
-  if (!customersFetched) { // Check if already fetched to avoid redundant calls if initializeBulkMeters is called multiple times.
+  if (!customersFetched) { 
     await initializeCustomers();
   }
   
@@ -653,7 +656,6 @@ async function fetchAllBulkMeters() {
       const calculatedBulkUsage = currentReading - previousReading;
       const calculatedTotalBulkBill = calculateBill(calculatedBulkUsage, "Non-domestic", "No");
 
-      // Use getCustomers() which now returns the synchronized 'customers' array
       const associatedCustomersData = getCustomers().filter(c => c.assignedBulkMeterId === sbm.id);
       const sumIndividualUsage = associatedCustomersData.reduce((acc, cust) => acc + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
       const sumIndividualBill = associatedCustomersData.reduce((acc, cust) => acc + (cust.calculatedBill ?? 0), 0);
@@ -675,7 +677,6 @@ async function fetchAllBulkMeters() {
       } else if (updatedRow) {
         updatedRowsFromBackfill.push(updatedRow); 
       } else {
-        // Fallback: if updatedRow is unexpectedly null/undefined but no error, push original to maintain list structure
         updatedRowsFromBackfill.push(sbm);
       }
     } else {
@@ -1242,11 +1243,10 @@ export const subscribeToReportLogs = (listener: Listener<DomainReportLog>): (() 
 };
 
 export async function loadInitialData() {
-  // Ensure customers are initialized first, as bulk meter backfilling might depend on it.
   await initializeCustomers();
   await Promise.all([
     initializeBranches(),
-    initializeBulkMeters(), // Now relies on customers being initialized for backfill
+    initializeBulkMeters(), 
     initializeStaffMembers(),
     initializeBills(),
     initializeMeterReadings(),
@@ -1254,5 +1254,4 @@ export async function loadInitialData() {
     initializeReportLogs(),
   ]);
 }
-
 

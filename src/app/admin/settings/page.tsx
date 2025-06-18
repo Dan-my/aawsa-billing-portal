@@ -172,7 +172,21 @@ export default function AdminSettingsPage() {
                    <li>Sewerage Charge: {defaultCurrency} {DomesticTariffInfo.sewerageRatePerM3.toFixed(2)} / m³ (if applicable)</li>
                 </ul>
               </div>
-              {/* Non-domestic tariff info removed here */}
+              <div>
+                <p className="text-sm font-medium">Non-domestic Customers:</p>
+                <ul className="list-disc list-inside text-sm text-accent pl-2 space-y-1">
+                  {NonDomesticTariffInfo.tiers.map((tier, index) => (
+                     <li key={`nondomestic-tier-${index}`}>
+                      {tier.cumulativeUsage !== undefined && tier.cumulativeUsage > 0
+                        ? `${(tier.cumulativeUsage + 0.000001).toFixed(0)}` 
+                        : '0'} - {tier.limit === Infinity ? 'Above' : tier.limit} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
+                    </li>
+                  ))}
+                   <li>Sanitation Fee: {(NonDomesticTariffInfo.sanitationPercentage * 100).toFixed(0)}% of Base Water Charge</li>
+                   <li>Meter Rent: {defaultCurrency} {NonDomesticTariffInfo.meterRent.toFixed(2)}</li>
+                   <li>Sewerage Charge: {defaultCurrency} {NonDomesticTariffInfo.sewerageRatePerM3.toFixed(2)} / m³ (if applicable)</li>
+                </ul>
+              </div>
             </div>
             <p className="text-xs text-muted-foreground mt-3">
               Tariff details are managed centrally. Contact system administrators for changes to the underlying rates or structure.
@@ -206,4 +220,6 @@ export default function AdminSettingsPage() {
     </div>
   );
 }
+    
+
     

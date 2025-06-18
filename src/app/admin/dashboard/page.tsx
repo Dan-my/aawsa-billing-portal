@@ -85,46 +85,36 @@ export default function AdminDashboardPage() {
 
     currentBills.forEach(bill => {
       let billBranchId: string | null = null;
-      if (bill.individualCustomerId) {
-        const customer = currentCustomers.find(c => c.id === bill.individualCustomerId);
-        if (customer) {
-          if (customer.assignedBulkMeterId) {
-            const bm = currentBulkMeters.find(b => b.id === customer.assignedBulkMeterId);
-            if (bm) {
-              // Match bulk meter to branch
-              currentBranches.forEach(branch => {
-                const simpleBranchName = branch.name.replace(/ Branch$/i, "").toLowerCase().trim();
-                const simpleBranchLocation = branch.location.toLowerCase().trim();
-                if ((bm.location?.toLowerCase().includes(simpleBranchName) || bm.location?.toLowerCase().includes(simpleBranchLocation)) ||
-                    (bm.ward?.toLowerCase().includes(simpleBranchName) || bm.ward?.toLowerCase().includes(simpleBranchLocation)) ||
-                    (bm.name?.toLowerCase().includes(simpleBranchName) || bm.name?.toLowerCase().includes(simpleBranchLocation))) {
-                  billBranchId = branch.id;
-                }
-              });
-            }
-          } else { // Customer not assigned to BM, match customer location to branch
-             currentBranches.forEach(branch => {
-                const simpleBranchName = branch.name.replace(/ Branch$/i, "").toLowerCase().trim();
-                const simpleBranchLocation = branch.location.toLowerCase().trim();
-                 if ((customer.location?.toLowerCase().includes(simpleBranchName) || customer.location?.toLowerCase().includes(simpleBranchLocation)) ||
-                    (customer.ward?.toLowerCase().includes(simpleBranchName) || customer.ward?.toLowerCase().includes(simpleBranchLocation))) {
-                    billBranchId = branch.id;
-                 }
-             });
-          }
+      const customer = bill.individualCustomerId ? currentCustomers.find(c => c.id === bill.individualCustomerId) : null;
+      const bulkMeterForBill = bill.bulkMeterId ? currentBulkMeters.find(b => b.id === bill.bulkMeterId) : null;
+      
+      let entityForBranchMatching: { location?: string; ward?: string; name?: string } | null = null;
+
+      if (customer) {
+        if (customer.assignedBulkMeterId) {
+          entityForBranchMatching = currentBulkMeters.find(b => b.id === customer.assignedBulkMeterId) || null;
+        } else {
+          entityForBranchMatching = customer;
         }
-      } else if (bill.bulkMeterId) {
-        const bm = currentBulkMeters.find(b => b.id === bill.bulkMeterId);
-        if (bm) {
-           currentBranches.forEach(branch => {
-            const simpleBranchName = branch.name.replace(/ Branch$/i, "").toLowerCase().trim();
-            const simpleBranchLocation = branch.location.toLowerCase().trim();
-            if ((bm.location?.toLowerCase().includes(simpleBranchName) || bm.location?.toLowerCase().includes(simpleBranchLocation)) ||
-                (bm.ward?.toLowerCase().includes(simpleBranchName) || bm.ward?.toLowerCase().includes(simpleBranchLocation)) ||
-                (bm.name?.toLowerCase().includes(simpleBranchName) || bm.name?.toLowerCase().includes(simpleBranchLocation))) {
-              billBranchId = branch.id;
-            }
-          });
+      } else if (bulkMeterForBill) {
+        entityForBranchMatching = bulkMeterForBill;
+      }
+
+      if (entityForBranchMatching) {
+        for (const branch of currentBranches) {
+          const simpleBranchName = branch.name.replace(/ Branch$/i, "").toLowerCase().trim();
+          const simpleBranchLocation = branch.location.toLowerCase().trim();
+
+          const entityLocation = (entityForBranchMatching.location?.toLowerCase() || "");
+          const entityWard = (entityForBranchMatching.ward?.toLowerCase() || "");
+          const entityName = (entityForBranchMatching.name?.toLowerCase() || "");
+
+          if (entityLocation.includes(simpleBranchName) || entityLocation.includes(simpleBranchLocation) ||
+              entityWard.includes(simpleBranchName) || entityWard.includes(simpleBranchLocation) ||
+              entityName.includes(simpleBranchName) || entityName.includes(simpleBranchLocation)) {
+            billBranchId = branch.id;
+            break; 
+          }
         }
       }
 
@@ -145,7 +135,7 @@ export default function AdminDashboardPage() {
     });
     const trendData = Array.from(usageMap.entries())
       .map(([month, usage]) => ({ month, usage }))
-      .sort((a, b) => new Date(a.month + "-01").getTime() - new Date(b.month + "-01").getTime()); // Ensure YYYY-MM format
+      .sort((a, b) => new Date(a.month + "-01").getTime() - new Date(b.month + "-01").getTime()); 
     setDynamicWaterUsageTrendData(trendData);
 
   }, []);

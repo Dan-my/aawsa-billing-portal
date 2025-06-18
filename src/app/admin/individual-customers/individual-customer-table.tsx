@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { MoreHorizontal, Edit, Trash2, User, CheckCircle, XCircle, Clock, Building } from "lucide-react"; // Added Building
+import { MoreHorizontal, Edit, Trash2, User, CheckCircle, XCircle, Clock, Building } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -23,18 +23,18 @@ import {
 import { Badge } from "@/components/ui/badge";
 import type { IndividualCustomer } from "./individual-customer-types";
 import { cn } from "@/lib/utils";
-import type { Branch } from "../branches/branch-types"; // Added
+import type { Branch } from "../branches/branch-types";
 
 interface IndividualCustomerTableProps {
   data: IndividualCustomer[];
   onEdit: (customer: IndividualCustomer) => void;
   onDelete: (customer: IndividualCustomer) => void;
   bulkMetersList?: { id: string; name: string }[];
-  branches: Branch[]; // Added
+  branches: Branch[];
   currency?: string;
 }
 
-export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList = [], branches, currency = "ETB" }: IndividualCustomerTableProps) { // Added branches
+export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList = [], branches, currency = "ETB" }: IndividualCustomerTableProps) {
 
   const getBulkMeterName = (id?: string) => {
     if (!id) return "-";
@@ -46,7 +46,7 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
       const branch = branches.find(b => b.id === branchId);
       if (branch) return branch.name;
     }
-    return "-"; // Return "-" if no branchId or branch not found
+    return "-";
   };
 
   if (data.length === 0) {
@@ -63,7 +63,7 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Meter No.</TableHead>
-            <TableHead>Cust. Branch/Location</TableHead> {/* Added/Renamed */}
+            <TableHead>Cust. Branch/Location</TableHead>
             <TableHead>Cust. Type</TableHead>
             <TableHead>Usage (m³)</TableHead>
             <TableHead>Bill ({currency})</TableHead>
@@ -85,7 +85,7 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
                     <Building className="h-3.5 w-3.5 mr-1.5 text-muted-foreground flex-shrink-0" />
                     {getCustomerBranchName(customer.branchId)}
                   </div>
-                </TableCell> {/* Updated to use new logic */}
+                </TableCell>
                 <TableCell>{customer.customerType}</TableCell>
                 <TableCell>{usage.toFixed(2)}</TableCell>
                 <TableCell>{customer.calculatedBill.toFixed(2)}</TableCell>

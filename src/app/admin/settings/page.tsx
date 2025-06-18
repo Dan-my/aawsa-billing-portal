@@ -173,7 +173,7 @@ export default function AdminSettingsPage() {
                 </ul>
               </div>
               <div>
-                <p className="text-sm font-medium">Non-domestic Customers:</p>
+                <p className="text-sm font-medium mt-3">Non-domestic Customers:</p>
                  <ul className="list-disc list-inside text-sm text-accent pl-2 space-y-1">
                     {NonDomesticTariffInfo.tiers.map((tier, index) => (
                         <li key={`nondomestic-tier-${index}`}>

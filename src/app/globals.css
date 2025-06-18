@@ -89,3 +89,55 @@ body {
   }
 }
 
+/* Custom styles for Quick Access buttons */
+.quick-access-btn {
+  /* Normal state: Ensure text and icons are primary for outline variant */
+  color: hsl(var(--primary)) !important; /* Text color */
+}
+.quick-access-btn svg {
+  color: hsl(var(--primary)) !important; /* Icon color */
+}
+
+.quick-access-btn:hover {
+  background-color: hsl(211, 100%, 96%) !important; /* Light blue BG */
+  border-color: hsl(211, 100%, 90%) !important; /* Light blue border */
+  color: hsl(var(--primary)) !important; /* Text color remains primary */
+}
+.quick-access-btn:hover svg {
+  color: hsl(var(--primary)) !important; /* Icon color remains primary */
+}
+
+.quick-access-btn:active {
+  background-color: hsl(var(--primary)) !important; /* Primary blue BG */
+  border-color: hsl(var(--primary)) !important; /* Primary blue border */
+  color: hsl(var(--primary-foreground)) !important; /* Text becomes primary-foreground */
+}
+.quick-access-btn:active svg {
+  color: hsl(var(--primary-foreground)) !important; /* Icon color becomes primary-foreground */
+}
+
+/* Dark mode overrides for Quick Access buttons */
+.dark .quick-access-btn {
+  color: hsl(var(--primary)) !important; /* Primary (lighter blue in dark mode) */
+}
+.dark .quick-access-btn svg {
+  color: hsl(var(--primary)) !important;
+}
+
+.dark .quick-access-btn:hover {
+  background-color: hsl(211, 30%, 18%) !important; /* Darker light blue BG for dark mode hover */
+  border-color: hsl(211, 30%, 25%) !important;
+  color: hsl(var(--primary)) !important; /* Text remains primary (lighter blue) */
+}
+.dark .quick-access-btn:hover svg {
+  color: hsl(var(--primary)) !important;
+}
+
+.dark .quick-access-btn:active {
+  background-color: hsl(var(--primary)) !important;
+  border-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+.dark .quick-access-btn:active svg {
+  color: hsl(var(--primary-foreground)) !important;
+}

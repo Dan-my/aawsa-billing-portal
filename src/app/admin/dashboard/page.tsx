@@ -34,7 +34,7 @@ const Legend = dynamic(() => import('recharts').then(mod => mod.Legend), { ssr: 
 const Pie = dynamic(() => import('recharts').then(mod => mod.Pie), { ssr: false });
 const Cell = dynamic(() => import('recharts').then(mod => mod.Cell), { ssr: false });
 const Line = dynamic(() => import('recharts').then(mod => mod.Line), { ssr: false });
-const Bar = dynamic(() => import('recharts').then(mod => mod.Bar), { ssr: false });
+const RechartsBar = dynamic(() => import('recharts').then(mod => mod.Bar), { ssr: false }); // Renamed Bar to RechartsBar
 
 
 const branchPerformanceData = [
@@ -266,23 +266,23 @@ export default function AdminDashboardPage() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Link href="/admin/bulk-meters" passHref>
-                <Button variant="default" className="w-full justify-start p-4 h-auto">
-                 <Gauge className="mr-3 h-6 w-6 text-primary-foreground" />
+                <Button variant="outline" className="w-full justify-start p-4 h-auto quick-access-btn">
+                 <Gauge className="mr-3 h-6 w-6 text-primary" />
                     <div>
                         <p className="font-semibold text-base">View Bulk Meters</p>
-                        <p className="text-xs text-primary-foreground/80">Manage all bulk water meters.</p>
+                        <p className="text-xs text-muted-foreground">Manage all bulk water meters.</p>
                     </div>
-                    <ArrowRight className="ml-auto h-5 w-5 text-primary-foreground/80" />
+                    <ArrowRight className="ml-auto h-5 w-5 text-primary" />
                 </Button>
             </Link>
              <Link href="/admin/individual-customers" passHref>
-                <Button variant="outline" className="w-full justify-start p-4 h-auto">
+                <Button variant="outline" className="w-full justify-start p-4 h-auto quick-access-btn">
                     <Users className="mr-3 h-6 w-6 text-primary" />
                     <div>
                         <p className="font-semibold text-base">View Individual Customers</p>
                         <p className="text-xs text-muted-foreground">Manage all individual customer accounts.</p>
                     </div>
-                    <ArrowRight className="ml-auto h-5 w-5 text-muted-foreground" />
+                    <ArrowRight className="ml-auto h-5 w-5 text-primary" />
                 </Button>
             </Link>
         </CardContent>
@@ -308,8 +308,8 @@ export default function AdminDashboardPage() {
                   <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
                   <Legend />
-                  <Bar dataKey="paid" fill="hsl(var(--chart-1))" name={chartConfig.paid.label} />
-                  <Bar dataKey="unpaid" fill="hsl(var(--chart-2))" name={chartConfig.unpaid.label} />
+                  <RechartsBar dataKey="paid" fill="hsl(var(--chart-1))" name={chartConfig.paid.label} />
+                  <RechartsBar dataKey="unpaid" fill="hsl(var(--chart-2))" name={chartConfig.unpaid.label} />
                 </BarChart>
               </ChartContainer>
             </div>

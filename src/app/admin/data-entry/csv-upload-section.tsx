@@ -17,6 +17,9 @@ interface CsvUploadSectionProps<TFormValues> {
   expectedHeaders: string[];
 }
 
+// Regex to split CSV by comma, but not if comma is inside double quotes
+const CSV_SPLIT_REGEX = /,(?=(?:[^"]*"[^"]*")*[^"]*$)/;
+
 export function CsvUploadSection<TFormValues>({
   entryType,
   schema,
@@ -83,7 +86,7 @@ export function CsvUploadSection<TFormValues>({
         return;
       }
 
-      const headerLine = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, '')); // Trim and remove surrounding quotes
+      const headerLine = lines[0].split(CSV_SPLIT_REGEX).map(h => h.trim().replace(/^"|"$/g, ''));
       
       // Validate headers
       if (headerLine.length !== expectedHeaders.length || !expectedHeaders.every((h, i) => h === headerLine[i])) {
@@ -93,7 +96,7 @@ export function CsvUploadSection<TFormValues>({
       }
 
       for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(",").map(v => v.trim().replace(/^"|"$/g, '')); // Trim and remove surrounding quotes
+        const values = lines[i].split(CSV_SPLIT_REGEX).map(v => v.trim().replace(/^"|"$/g, ''));
         if (values.length !== headerLine.length) {
           localErrors.push(`Row ${i + 1}: Incorrect number of columns. Expected ${headerLine.length}, found ${values.length}.`);
           continue;

@@ -4,7 +4,7 @@
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import * as z from "zod"; // Added this import
+import * as z from "zod"; 
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -21,15 +21,24 @@ import { baseIndividualCustomerDataSchema } from "./customer-data-entry-types";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
-import { addCustomer as addCustomerToStore, getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, initializeCustomers } from "@/lib/data-store";
+import { 
+    addCustomer as addCustomerToStore, 
+    getBulkMeters, 
+    subscribeToBulkMeters, 
+    initializeBulkMeters, 
+    initializeCustomers,
+    getBranches,
+    subscribeToBranches,
+    initializeBranches as initializeAdminBranches
+} from "@/lib/data-store";
 import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
+import type { Branch } from "../branches/branch-types";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse, isValid } from "date-fns";
 import { customerTypes, sewerageConnections, paymentStatuses } from "@/lib/billing";
 import { individualCustomerStatuses } from "../individual-customers/individual-customer-types";
 
 
-// Use the same schema as the dialog for consistency, which includes status and paymentStatus
 const FormSchemaForAdminDataEntry = baseIndividualCustomerDataSchema.extend({
   status: z.enum(individualCustomerStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
   paymentStatus: z.enum(paymentStatuses, { errorMap: () => ({ message: "Please select a valid payment status."}) }),
@@ -38,29 +47,43 @@ type AdminDataEntryFormValues = z.infer<typeof FormSchemaForAdminDataEntry>;
 
 
 const UNASSIGNED_BULK_METER_VALUE = "_SELECT_NONE_BULK_METER_";
+const BRANCH_UNASSIGNED_VALUE = "_SELECT_BRANCH_INDIVIDUAL_";
 
 export function IndividualCustomerDataEntryForm() {
   const { toast } = useToast();
   const [availableBulkMeters, setAvailableBulkMeters] = React.useState<{id: string, name: string}[]>([]);
   const [isLoadingBulkMeters, setIsLoadingBulkMeters] = React.useState(true);
+  const [availableBranches, setAvailableBranches] = React.useState<Branch[]>([]);
+  const [isLoadingBranches, setIsLoadingBranches] = React.useState(true);
 
   React.useEffect(() => {
     setIsLoadingBulkMeters(true);
     Promise.all([
         initializeBulkMeters(),
-        initializeCustomers()
+        initializeCustomers(),
+        initializeAdminBranches()
     ]).then(() => {
         const fetchedBms = getBulkMeters().map(bm => ({ id: bm.id, name: bm.name }));
         setAvailableBulkMeters(fetchedBms);
         setIsLoadingBulkMeters(false);
+        
+        setAvailableBranches(getBranches());
+        setIsLoadingBranches(false);
     });
 
-    const unsubscribe = subscribeToBulkMeters((updatedBulkMeters) => {
+    const unsubscribeBMs = subscribeToBulkMeters((updatedBulkMeters) => {
       const newBms = updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name }));
       setAvailableBulkMeters(newBms);
       setIsLoadingBulkMeters(false);
     });
-    return () => unsubscribe();
+    const unsubscribeBranches = subscribeToBranches((updatedBranches) => {
+        setAvailableBranches(updatedBranches);
+        setIsLoadingBranches(false);
+    });
+    return () => {
+        unsubscribeBMs();
+        unsubscribeBranches();
+    }
   }, []);
 
   const form = useForm<AdminDataEntryFormValues>({ 
@@ -113,6 +136,15 @@ export function IndividualCustomerDataEntryForm() {
     form.setValue("assignedBulkMeterId", value);
   };
 
+  const handleBranchChange = (branchId: string) => {
+    const selectedBranch = availableBranches.find(b => b.id === branchId);
+    if (selectedBranch) {
+      form.setValue("location", selectedBranch.name); 
+    } else if (branchId === BRANCH_UNASSIGNED_VALUE) {
+      form.setValue("location", ""); 
+    }
+  };
+
 
   return (
     <ScrollArea className="h-[calc(100vh-280px)]">
@@ -120,32 +152,28 @@ export function IndividualCustomerDataEntryForm() {
         <CardContent className="pt-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-               <FormField
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
                   control={form.control}
-                  name="assignedBulkMeterId"
+                  name="name" // Dummy field for Branch Select
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Assign to Bulk Meter</FormLabel>
+                      <FormLabel>Assign to Branch (sets Location)</FormLabel>
                       <Select
-                        onValueChange={handleBulkMeterChange}
-                        value={field.value}
-                        disabled={isLoadingBulkMeters || form.formState.isSubmitting}
+                        onValueChange={(value) => handleBranchChange(value)}
+                        value={availableBranches.find(b => b.name === form.getValues().location)?.id || BRANCH_UNASSIGNED_VALUE}
+                        disabled={isLoadingBranches || form.formState.isSubmitting}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder={isLoadingBulkMeters ? "Loading..." : "None"} />
+                            <SelectValue placeholder={isLoadingBranches ? "Loading branches..." : "Select a branch"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value={UNASSIGNED_BULK_METER_VALUE}>None</SelectItem>
-                          {availableBulkMeters.length === 0 && !isLoadingBulkMeters && (
-                            <SelectItem value="no-bms-available" disabled>
-                              No bulk meters available
-                            </SelectItem>
-                          )}
-                          {availableBulkMeters.map((bm) => (
-                            <SelectItem key={bm.id} value={bm.id}>
-                              {bm.name}
+                          <SelectItem value={BRANCH_UNASSIGNED_VALUE}>None (Manual Location)</SelectItem>
+                          {availableBranches.map((branch) => (
+                            <SelectItem key={branch.id} value={branch.id}>
+                              {branch.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -154,6 +182,42 @@ export function IndividualCustomerDataEntryForm() {
                     </FormItem>
                   )}
                 />
+                <FormField
+                    control={form.control}
+                    name="assignedBulkMeterId"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Assign to Bulk Meter</FormLabel>
+                        <Select
+                            onValueChange={handleBulkMeterChange}
+                            value={field.value}
+                            disabled={isLoadingBulkMeters || form.formState.isSubmitting}
+                        >
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder={isLoadingBulkMeters ? "Loading..." : "None"} />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            <SelectItem value={UNASSIGNED_BULK_METER_VALUE}>None</SelectItem>
+                            {availableBulkMeters.length === 0 && !isLoadingBulkMeters && (
+                                <SelectItem value="no-bms-available" disabled>
+                                No bulk meters available
+                                </SelectItem>
+                            )}
+                            {availableBulkMeters.map((bm) => (
+                                <SelectItem key={bm.id} value={bm.id}>
+                                {bm.name}
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                </div>
+
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Name *</FormLabel><FormControl><Input {...field} disabled={form.formState.isSubmitting} /></FormControl><FormMessage /></FormItem>)} />
@@ -172,7 +236,7 @@ export function IndividualCustomerDataEntryForm() {
                 <FormField control={form.control} name="month" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Reading Month *</FormLabel><DatePicker date={field.value && isValid(parse(field.value, "yyyy-MM", new Date())) ? parse(field.value, "yyyy-MM", new Date()) : undefined} setDate={(date) => field.onChange(date ? format(date, "yyyy-MM") : "")} disabledTrigger={form.formState.isSubmitting} /><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="specificArea" render={({ field }) => (<FormItem><FormLabel>Specific Area *</FormLabel><FormControl><Input {...field} disabled={form.formState.isSubmitting} /></FormControl><FormMessage /></FormItem>)} />
                 
-                <FormField control={form.control} name="location" render={({ field }) => (<FormItem><FormLabel>Location / Sub-City *</FormLabel><FormControl><Input {...field} disabled={form.formState.isSubmitting} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="location" render={({ field }) => (<FormItem><FormLabel>Location / Sub-City * (set by Branch)</FormLabel><FormControl><Input {...field} disabled={form.formState.isSubmitting} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="ward" render={({ field }) => (<FormItem><FormLabel>Ward / Woreda *</FormLabel><FormControl><Input {...field} disabled={form.formState.isSubmitting} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="sewerageConnection" render={({ field }) => (<FormItem><FormLabel>Sewerage Conn. *</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={form.formState.isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select connection" /></SelectTrigger></FormControl><SelectContent>{sewerageConnections.map(conn => <SelectItem key={conn} value={conn}>{conn}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
               </div>

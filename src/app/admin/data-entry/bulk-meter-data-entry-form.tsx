@@ -14,24 +14,38 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { bulkMeterDataEntrySchema, type BulkMeterDataEntryFormValues } from "./customer-data-entry-types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
-import { addBulkMeter as addBulkMeterToStore, initializeBulkMeters, initializeCustomers } from "@/lib/data-store";
-// import { initialBulkMeters as defaultInitialBulkMeters } from "../bulk-meters/page"; // Fallback, not primary
-// import { initialCustomers as defaultInitialCustomers } from "../individual-customers/page"; // Fallback
+import { addBulkMeter as addBulkMeterToStore, initializeBulkMeters, initializeCustomers, getBranches, subscribeToBranches, initializeBranches as initializeAdminBranches } from "@/lib/data-store";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse } from "date-fns";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
+import type { Branch } from "../branches/branch-types";
+
+const BRANCH_UNASSIGNED_VALUE = "_SELECT_BRANCH_BULK_METER_";
 
 export function BulkMeterDataEntryForm() {
   const { toast } = useToast();
+  const [availableBranches, setAvailableBranches] = React.useState<Branch[]>([]);
+  const [isLoadingBranches, setIsLoadingBranches] = React.useState(true);
 
   React.useEffect(() => {
-    // Ensure stores are initialized (these will try to fetch from Supabase)
     initializeCustomers();
     initializeBulkMeters();
+    
+    setIsLoadingBranches(true);
+    initializeAdminBranches().then(() => {
+        setAvailableBranches(getBranches());
+        setIsLoadingBranches(false);
+    });
+    const unsubscribeBranches = subscribeToBranches((updatedBranches) => {
+        setAvailableBranches(updatedBranches);
+        setIsLoadingBranches(false);
+    });
+    return () => unsubscribeBranches();
   }, []);
 
   const form = useForm<BulkMeterDataEntryFormValues>({
@@ -59,20 +73,29 @@ export function BulkMeterDataEntryForm() {
     };
     
     const result = await addBulkMeterToStore(bulkMeterDataForStore);
-    if (result) {
+    if (result.success && result.data) {
       toast({
         title: "Data Entry Submitted",
-        description: `Data for bulk meter ${data.name} has been successfully recorded.`,
+        description: `Data for bulk meter ${result.data.name} has been successfully recorded.`,
       });
       form.reset(); 
     } else {
       toast({
         variant: "destructive",
         title: "Submission Failed",
-        description: "Could not record bulk meter data. Please check console for errors.",
+        description: result.message || "Could not record bulk meter data. Please check console for errors.",
       });
     }
   }
+  
+  const handleBranchChange = (branchId: string) => {
+    const selectedBranch = availableBranches.find(b => b.id === branchId);
+    if (selectedBranch) {
+      form.setValue("location", selectedBranch.name); // Or selectedBranch.location if that's preferred
+    } else if (branchId === BRANCH_UNASSIGNED_VALUE) {
+      form.setValue("location", ""); // Clear location if "None" is selected
+    }
+  };
 
   return (
     <ScrollArea className="h-[calc(100vh-280px)]"> 
@@ -81,6 +104,35 @@ export function BulkMeterDataEntryForm() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="name" // This is a dummy field for the Select, actual value is handled by onChange
+                  render={({ field }) => ( // field is not directly used for value but needed for control
+                    <FormItem>
+                      <FormLabel>Assign to Branch (sets Location)</FormLabel>
+                      <Select
+                        onValueChange={(value) => handleBranchChange(value)}
+                        value={availableBranches.find(b => b.name === form.getValues().location)?.id || BRANCH_UNASSIGNED_VALUE}
+                        disabled={isLoadingBranches || form.formState.isSubmitting}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={isLoadingBranches ? "Loading branches..." : "Select a branch"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value={BRANCH_UNASSIGNED_VALUE}>None (Manual Location)</SelectItem>
+                          {availableBranches.map((branch) => (
+                            <SelectItem key={branch.id} value={branch.id}>
+                              {branch.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="name"
@@ -236,7 +288,7 @@ export function BulkMeterDataEntryForm() {
                   name="location"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Location / Sub-City *</FormLabel>
+                      <FormLabel>Location / Sub-City * (set by Branch selection)</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter location / sub-city" {...field} />
                       </FormControl>

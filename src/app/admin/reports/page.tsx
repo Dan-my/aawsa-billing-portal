@@ -20,8 +20,10 @@ import {
   initializeMeterReadings,
   getPayments,
   initializePayments,
-  getStaffMembers, // Added
-  initializeStaffMembers // Added
+  getStaffMembers, 
+  initializeStaffMembers,
+  getBranches, // Added
+  initializeBranches // Added
 } from "@/lib/data-store";
 import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
@@ -29,6 +31,7 @@ import { initialCustomers } from "../individual-customers/page";
 import { initialBulkMeters } from "../bulk-meters/page";
 import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
 import type { StaffMember } from "../staff-management/staff-types";
+import type { Branch } from "../branches/branch-types"; // Added
 
 interface ReportType {
   id: string;
@@ -95,9 +98,19 @@ const availableReports: ReportType[] = [
       "id", "name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal",
       "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea",
       "location", "ward", "sewerageConnection", "assignedBulkMeterId", "status", "paymentStatus", "calculatedBill",
-      "created_at", "updated_at"
+      "Assigned Branch Name", "created_at", "updated_at"
     ],
-    getData: () => getCustomers(),
+    getData: () => {
+      const customers = getCustomers();
+      const branches = getBranches();
+      return customers.map(customer => {
+        const branch = customer.branchId ? branches.find(b => b.id === customer.branchId) : null;
+        return {
+          ...customer,
+          "Assigned Branch Name": branch ? branch.name : "N/A",
+        };
+      });
+    },
   },
   {
     id: "bulk-meter-data-export",
@@ -106,9 +119,19 @@ const availableReports: ReportType[] = [
     headers: [
       "id", "name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber",
       "previousReading", "currentReading", "month", "specificArea", "location", "ward", "status", "paymentStatus",
-      "bulkUsage", "totalBulkBill", "differenceUsage", "differenceBill"
+      "Assigned Branch Name", "bulkUsage", "totalBulkBill", "differenceUsage", "differenceBill"
     ],
-    getData: () => getBulkMeters(),
+    getData: () => {
+      const bulkMeters = getBulkMeters();
+      const branches = getBranches();
+      return bulkMeters.map(bm => {
+        const branch = bm.branchId ? branches.find(b => b.id === bm.branchId) : null;
+        return {
+          ...bm,
+          "Assigned Branch Name": branch ? branch.name : "N/A",
+        };
+      });
+    },
   },
   {
     id: "billing-summary",
@@ -176,7 +199,7 @@ const availableReports: ReportType[] = [
           "Reading ID": r.id,
           "Meter Identifier": meterIdentifier,
           "Meter Type": r.meterType === 'individual_customer_meter' ? 'Individual' : 'Bulk',
-          "Reading Date": r.readingDate, // Consider formatting if needed, e.g., using date-fns
+          "Reading Date": r.readingDate, 
           "Month/Year": r.monthYear,
           "Reading Value": r.readingValue,
           "Is Estimate": r.isEstimate ? "Yes" : "No",
@@ -195,14 +218,14 @@ export default function AdminReportsPage() {
   const [isGenerating, setIsGenerating] = React.useState(false);
 
   React.useEffect(() => {
-    // Ensure all necessary data stores are initialized
     const initializeData = async () => {
         await initializeCustomers();
         await initializeBulkMeters();
         await initializeBills();
         await initializeMeterReadings();
         await initializePayments();
-        await initializeStaffMembers(); // Added
+        await initializeStaffMembers();
+        await initializeBranches(); // Ensure branches are loaded
     };
     initializeData();
   }, []);

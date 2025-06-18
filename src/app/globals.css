@@ -16,7 +16,7 @@ body {
     --popover-foreground: 210 50% 10%;
     --primary: 211 100% 50%; /* Blue */
     --primary-foreground: 0 0% 100%;
-    --primary-hover-bg: 210 100% 85%; /* Lighter blue for hover */
+    --primary-hover-bg: 211 100% 45%; /* Slightly darker blue for hover */
     --secondary: 210 20% 96.1%; /* Lighter Gray */
     --secondary-foreground: 210 50% 10%;
     --muted: 210 20% 96.1%; /* Lighter Gray */
@@ -52,7 +52,7 @@ body {
     --popover-foreground: 210 20% 98%;
     --primary: 211 100% 60%; /* Lighter Blue for dark mode */
     --primary-foreground: 210 50% 10%;
-    --primary-hover-bg: 211 100% 80%; /* Lighter blue for dark mode hover */
+    --primary-hover-bg: 211 100% 55%; /* Slightly darker blue for dark mode hover */
     --secondary: 210 20% 14.9%; 
     --secondary-foreground: 210 20% 98%;
     --muted: 210 20% 14.9%; 

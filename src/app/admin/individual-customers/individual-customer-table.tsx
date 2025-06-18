@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { MoreHorizontal, Edit, Trash2, User, CheckCircle, XCircle, Clock, Building } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, User, CheckCircle, XCircle, Clock } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -81,10 +81,7 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
                 <TableCell className="font-medium">{customer.name}</TableCell>
                 <TableCell>{customer.meterNumber}</TableCell>
                 <TableCell>
-                  <div className="flex items-center">
-                    <Building className="h-3.5 w-3.5 mr-1.5 text-muted-foreground flex-shrink-0" />
-                    {getCustomerBranchName(customer.branchId)}
-                  </div>
+                  {getCustomerBranchName(customer.branchId)}
                 </TableCell>
                 <TableCell>{customer.customerType}</TableCell>
                 <TableCell>{usage.toFixed(2)}</TableCell>

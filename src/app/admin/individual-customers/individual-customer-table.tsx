@@ -67,9 +67,9 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
             <TableHead>Cust. Type</TableHead>
             <TableHead>Usage (m³)</TableHead>
             <TableHead>Bill ({currency})</TableHead>
+            <TableHead>Bulk Meter</TableHead>
             <TableHead>Pay Status</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Bulk Meter</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -89,6 +89,7 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
                 <TableCell>{customer.customerType}</TableCell>
                 <TableCell>{usage.toFixed(2)}</TableCell>
                 <TableCell>{customer.calculatedBill.toFixed(2)}</TableCell>
+                <TableCell>{getBulkMeterName(customer.assignedBulkMeterId)}</TableCell>
                 <TableCell>
                   <Badge
                     variant={
@@ -116,7 +117,6 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
                     {customer.status}
                   </Badge>
                 </TableCell>
-                <TableCell>{getBulkMeterName(customer.assignedBulkMeterId)}</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

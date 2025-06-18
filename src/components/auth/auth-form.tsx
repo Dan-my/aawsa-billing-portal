@@ -165,11 +165,9 @@ export function AuthForm() {
               </Button>
             </form>
           </Form>
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            Admin: admin@aawsa.com. Staff: use assigned email (e.g. kality@aawsa.com). Default password is 'password'.
-          </p>
         </CardContent>
       </Card>
     </div>
   );
 }
+

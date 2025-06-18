@@ -41,12 +41,12 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
     return bulkMetersList.find(bm => bm.id === id)?.name || "Unknown BM";
   };
 
-  const getCustomerBranchName = (branchId?: string, fallbackLocation?: string) => { // Added
+  const getCustomerBranchName = (branchId?: string) => {
     if (branchId) {
       const branch = branches.find(b => b.id === branchId);
       if (branch) return branch.name;
     }
-    return fallbackLocation || "-";
+    return "-"; // Return "-" if no branchId or branch not found
   };
 
   if (data.length === 0) {
@@ -83,9 +83,9 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
                 <TableCell>
                   <div className="flex items-center">
                     <Building className="h-3.5 w-3.5 mr-1.5 text-muted-foreground flex-shrink-0" />
-                    {getCustomerBranchName(customer.branchId, customer.location)}
+                    {getCustomerBranchName(customer.branchId)}
                   </div>
-                </TableCell> {/* Added */}
+                </TableCell> {/* Updated to use new logic */}
                 <TableCell>{customer.customerType}</TableCell>
                 <TableCell>{usage.toFixed(2)}</TableCell>
                 <TableCell>{customer.calculatedBill.toFixed(2)}</TableCell>

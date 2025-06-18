@@ -266,13 +266,13 @@ export default function AdminDashboardPage() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Link href="/admin/bulk-meters" passHref>
-                <Button variant="outline" className="w-full justify-start p-4 h-auto">
-                 <Gauge className="mr-3 h-6 w-6 text-primary" />
+                <Button variant="default" className="w-full justify-start p-4 h-auto">
+                 <Gauge className="mr-3 h-6 w-6 text-primary-foreground" />
                     <div>
                         <p className="font-semibold text-base">View Bulk Meters</p>
-                        <p className="text-xs text-muted-foreground">Manage all bulk water meters.</p>
+                        <p className="text-xs text-primary-foreground/80">Manage all bulk water meters.</p>
                     </div>
-                    <ArrowRight className="ml-auto h-5 w-5 text-muted-foreground" />
+                    <ArrowRight className="ml-auto h-5 w-5 text-primary-foreground/80" />
                 </Button>
             </Link>
              <Link href="/admin/individual-customers" passHref>
@@ -303,13 +303,13 @@ export default function AdminDashboardPage() {
           <CardContent className="h-[300px]">
             <div className={cn("w-full h-full", { "hidden": showBranchPerformanceTable })}>
               <ChartContainer config={chartConfig} className="w-full h-full">
-                <BarChart data={branchPerformanceData}>
+                <BarChart data={branchPerformanceData} barCategoryGap="20%">
                   <XAxis dataKey="branch" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
                   <Legend />
-                  <Bar dataKey="paid" stackId="a" fill="hsl(var(--chart-1))" name={chartConfig.paid.label} />
-                  <Bar dataKey="unpaid" stackId="a" fill="hsl(var(--chart-2))" name={chartConfig.unpaid.label} />
+                  <Bar dataKey="paid" fill="hsl(var(--chart-1))" name={chartConfig.paid.label} />
+                  <Bar dataKey="unpaid" fill="hsl(var(--chart-2))" name={chartConfig.unpaid.label} />
                 </BarChart>
               </ChartContainer>
             </div>

@@ -19,13 +19,16 @@ import {
   getMeterReadings,
   initializeMeterReadings,
   getPayments,
-  initializePayments
+  initializePayments,
+  getStaffMembers, // Added
+  initializeStaffMembers // Added
 } from "@/lib/data-store";
 import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 import { initialCustomers } from "../individual-customers/page";
 import { initialBulkMeters } from "../bulk-meters/page";
 import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
+import type { StaffMember } from "../staff-management/staff-types";
 
 interface ReportType {
   id: string;
@@ -144,8 +147,45 @@ const availableReports: ReportType[] = [
   },
   {
     id: "meter-reading-accuracy",
-    name: "Meter Reading Accuracy Report (Coming Soon)",
-    description: "Analysis of meter reading consistency and potential discrepancies, highlighting meters needing inspection.",
+    name: "Meter Reading Accuracy Report (XLSX)",
+    description: "Detailed export of meter readings with reader information for accuracy analysis.",
+    headers: [
+      "Reading ID", "Meter Identifier", "Meter Type", "Reading Date", "Month/Year", 
+      "Reading Value", "Is Estimate", "Reader Name", "Reader Staff ID", "Notes"
+    ],
+    getData: () => {
+      const readings = getMeterReadings();
+      const customers = getCustomers();
+      const bulkMeters = getBulkMeters();
+      const staffList = getStaffMembers();
+
+      return readings.map(r => {
+        let meterIdentifier = "N/A";
+        if (r.meterType === 'individual_customer_meter' && r.individualCustomerId) {
+          const cust = customers.find(c => c.id === r.individualCustomerId);
+          meterIdentifier = cust ? `${cust.name} (M: ${cust.meterNumber || 'N/A'})` : `Cust ID: ${r.individualCustomerId}`;
+        } else if (r.meterType === 'bulk_meter' && r.bulkMeterId) {
+          const bm = bulkMeters.find(b => b.id === r.bulkMeterId);
+          meterIdentifier = bm ? `${bm.name} (M: ${bm.meterNumber || 'N/A'})` : `BM ID: ${r.bulkMeterId}`;
+        }
+
+        const reader = r.readerStaffId ? staffList.find(s => s.id === r.readerStaffId) : null;
+        const readerName = reader ? reader.name : (r.readerStaffId ? `Staff ID: ${r.readerStaffId}` : "N/A");
+
+        return {
+          "Reading ID": r.id,
+          "Meter Identifier": meterIdentifier,
+          "Meter Type": r.meterType === 'individual_customer_meter' ? 'Individual' : 'Bulk',
+          "Reading Date": r.readingDate, // Consider formatting if needed, e.g., using date-fns
+          "Month/Year": r.monthYear,
+          "Reading Value": r.readingValue,
+          "Is Estimate": r.isEstimate ? "Yes" : "No",
+          "Reader Name": readerName,
+          "Reader Staff ID": r.readerStaffId || "N/A",
+          "Notes": r.notes || "",
+        };
+      });
+    },
   },
 ];
 
@@ -162,6 +202,7 @@ export default function AdminReportsPage() {
         await initializeBills();
         await initializeMeterReadings();
         await initializePayments();
+        await initializeStaffMembers(); // Added
     };
     initializeData();
   }, []);

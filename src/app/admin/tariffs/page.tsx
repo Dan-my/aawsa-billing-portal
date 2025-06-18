@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { LibraryBig, ListChecks, PlusCircle, RotateCcw, Edit, Trash2 } from "lucide-react";
-import type { TariffTier } from "@/app/admin/individual-customers/individual-customer-types";
-import { DomesticTariffInfo, NonDomesticTariffInfo } from "@/app/admin/individual-customers/individual-customer-types";
+import type { TariffTier } from "@/lib/billing"; // Corrected import
+import { DomesticTariffInfo, NonDomesticTariffInfo } from "@/lib/billing"; // Corrected import
 import { TariffRateTable, type DisplayTariffRate } from "./tariff-rate-table";
 import { TariffFormDialog, type TariffFormValues } from "./tariff-form-dialog";
 

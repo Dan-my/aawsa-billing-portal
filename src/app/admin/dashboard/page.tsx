@@ -311,13 +311,13 @@ export default function AdminDashboardPage() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Link href="/admin/bulk-meters" passHref>
-                <Button variant="default" className="w-full justify-start p-4 h-auto quick-access-btn">
-                 <Gauge className="mr-3 h-6 w-6 text-primary-foreground" />
+                <Button variant="outline" className="w-full justify-start p-4 h-auto quick-access-btn">
+                 <Gauge className="mr-3 h-6 w-6 text-primary" />
                     <div>
                         <p className="font-semibold text-base">View Bulk Meters</p>
-                        <p className="text-xs text-primary-foreground/80">Manage all bulk water meters.</p>
+                        <p className="text-xs text-muted-foreground">Manage all bulk water meters.</p>
                     </div>
-                    <ArrowRight className="ml-auto h-5 w-5 text-primary-foreground/80" />
+                    <ArrowRight className="ml-auto h-5 w-5 text-primary" />
                 </Button>
             </Link>
              <Link href="/admin/individual-customers" passHref>

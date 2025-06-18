@@ -13,20 +13,19 @@ import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/com
 import { 
   getBulkMeters, subscribeToBulkMeters, initializeBulkMeters,
   getCustomers, subscribeToCustomers, initializeCustomers,
-  getBills, subscribeToBills, initializeBills 
+  getBills, subscribeToBills, initializeBills,
+  getBranches, subscribeToBranches, initializeBranches,
+  getMeterReadings, subscribeToMeterReadings, initializeMeterReadings
 } from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
-import type { Bill as DomainBill } from "@/lib/data-store"; 
+import type { Bill as DomainBill, DomainMeterReading, DomainBranch } from "@/lib/data-store"; 
 import { cn } from "@/lib/utils";
 
-
-// ResponsiveContainer is used for the top pie charts.
 const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
-// BarChart, LineChart, etc., are direct children of ChartContainer (which has its own ResponsiveContainer) for the bottom charts.
 const BarChart = dynamic(() => import('recharts').then(mod => mod.BarChart), { ssr: false });
-const PieChartRecharts = dynamic(() => import('recharts').then(mod => mod.PieChart), { ssr: false }); // Renamed to avoid conflict with Icon
-const LineChartRecharts = dynamic(() => import('recharts').then(mod => mod.LineChart), { ssr: false }); // Renamed
+const PieChartRecharts = dynamic(() => import('recharts').then(mod => mod.PieChart), { ssr: false });
+const LineChartRecharts = dynamic(() => import('recharts').then(mod => mod.LineChart), { ssr: false });
 const XAxis = dynamic(() => import('recharts').then(mod => mod.XAxis), { ssr: false });
 const YAxis = dynamic(() => import('recharts').then(mod => mod.YAxis), { ssr: false });
 const Tooltip = dynamic(() => import('recharts').then(mod => mod.Tooltip), { ssr: false });
@@ -34,26 +33,8 @@ const Legend = dynamic(() => import('recharts').then(mod => mod.Legend), { ssr: 
 const Pie = dynamic(() => import('recharts').then(mod => mod.Pie), { ssr: false });
 const Cell = dynamic(() => import('recharts').then(mod => mod.Cell), { ssr: false });
 const Line = dynamic(() => import('recharts').then(mod => mod.Line), { ssr: false });
-const RechartsBar = dynamic(() => import('recharts').then(mod => mod.Bar), { ssr: false }); // Renamed Bar to RechartsBar
+const RechartsBar = dynamic(() => import('recharts').then(mod => mod.Bar), { ssr: false });
 
-
-const branchPerformanceData = [
-  { branch: 'Branch A', paid: 400, unpaid: 50 },
-  { branch: 'Branch B', paid: 300, unpaid: 30 },
-  { branch: 'Branch C', paid: 500, unpaid: 70 },
-  { branch: 'Branch D', paid: 250, unpaid: 20 },
-  { branch: 'Branch E', paid: 350, unpaid: 60 },
-];
-
-const waterUsageTrendData = [
-  { month: 'Jan', usage: 4000 },
-  { month: 'Feb', usage: 3000 },
-  { month: 'Mar', usage: 2000 },
-  { month: 'Apr', usage: 2780 },
-  { month: 'May', usage: 1890 },
-  { month: 'Jun', usage: 2390 },
-  { month: 'Jul', usage: 3490 },
-];
 
 const chartConfig = {
   paid: { label: "Paid", color: "hsl(var(--chart-1))" },
@@ -76,6 +57,98 @@ export default function AdminDashboardPage() {
   const [dynamicUnpaidBillCount, setDynamicUnpaidBillCount] = React.useState<number>(0);
   const [dynamicTotalIndividualCustomerCount, setDynamicTotalIndividualCustomerCount] = React.useState<number>(0);
   const [dynamicTotalBulkMeterCount, setDynamicTotalBulkMeterCount] = React.useState<number>(0);
+  
+  const [dynamicBranchPerformanceData, setDynamicBranchPerformanceData] = React.useState<{ branch: string; paid: number; unpaid: number }[]>([]);
+  const [dynamicWaterUsageTrendData, setDynamicWaterUsageTrendData] = React.useState<{ month: string; usage: number }[]>([]);
+
+  const processDashboardData = React.useCallback(() => {
+    const currentBranches = getBranches();
+    const currentBulkMeters = getBulkMeters();
+    const currentCustomers = getCustomers();
+    const currentBills = getBills();
+    const currentMeterReadings = getMeterReadings();
+
+    setDynamicTotalBulkMeterCount(currentBulkMeters.length);
+    setDynamicTotalIndividualCustomerCount(currentCustomers.length);
+    
+    const paid = currentBills.filter(b => b.paymentStatus === 'Paid').length;
+    const unpaid = currentBills.filter(b => b.paymentStatus === 'Unpaid').length;
+    setDynamicTotalBillCount(currentBills.length);
+    setDynamicPaidBillCount(paid);
+    setDynamicUnpaidBillCount(unpaid);
+
+    // Process Branch Performance Data
+    const performanceMap = new Map<string, { branchName: string, paid: number, unpaid: number }>();
+    currentBranches.forEach(branch => {
+      performanceMap.set(branch.id, { branchName: branch.name, paid: 0, unpaid: 0 });
+    });
+
+    currentBills.forEach(bill => {
+      let billBranchId: string | null = null;
+      if (bill.individualCustomerId) {
+        const customer = currentCustomers.find(c => c.id === bill.individualCustomerId);
+        if (customer) {
+          if (customer.assignedBulkMeterId) {
+            const bm = currentBulkMeters.find(b => b.id === customer.assignedBulkMeterId);
+            if (bm) {
+              // Match bulk meter to branch
+              currentBranches.forEach(branch => {
+                const simpleBranchName = branch.name.replace(/ Branch$/i, "").toLowerCase().trim();
+                const simpleBranchLocation = branch.location.toLowerCase().trim();
+                if ((bm.location?.toLowerCase().includes(simpleBranchName) || bm.location?.toLowerCase().includes(simpleBranchLocation)) ||
+                    (bm.ward?.toLowerCase().includes(simpleBranchName) || bm.ward?.toLowerCase().includes(simpleBranchLocation)) ||
+                    (bm.name?.toLowerCase().includes(simpleBranchName) || bm.name?.toLowerCase().includes(simpleBranchLocation))) {
+                  billBranchId = branch.id;
+                }
+              });
+            }
+          } else { // Customer not assigned to BM, match customer location to branch
+             currentBranches.forEach(branch => {
+                const simpleBranchName = branch.name.replace(/ Branch$/i, "").toLowerCase().trim();
+                const simpleBranchLocation = branch.location.toLowerCase().trim();
+                 if ((customer.location?.toLowerCase().includes(simpleBranchName) || customer.location?.toLowerCase().includes(simpleBranchLocation)) ||
+                    (customer.ward?.toLowerCase().includes(simpleBranchName) || customer.ward?.toLowerCase().includes(simpleBranchLocation))) {
+                    billBranchId = branch.id;
+                 }
+             });
+          }
+        }
+      } else if (bill.bulkMeterId) {
+        const bm = currentBulkMeters.find(b => b.id === bill.bulkMeterId);
+        if (bm) {
+           currentBranches.forEach(branch => {
+            const simpleBranchName = branch.name.replace(/ Branch$/i, "").toLowerCase().trim();
+            const simpleBranchLocation = branch.location.toLowerCase().trim();
+            if ((bm.location?.toLowerCase().includes(simpleBranchName) || bm.location?.toLowerCase().includes(simpleBranchLocation)) ||
+                (bm.ward?.toLowerCase().includes(simpleBranchName) || bm.ward?.toLowerCase().includes(simpleBranchLocation)) ||
+                (bm.name?.toLowerCase().includes(simpleBranchName) || bm.name?.toLowerCase().includes(simpleBranchLocation))) {
+              billBranchId = branch.id;
+            }
+          });
+        }
+      }
+
+      if (billBranchId && performanceMap.has(billBranchId)) {
+        const entry = performanceMap.get(billBranchId)!;
+        if (bill.paymentStatus === 'Paid') entry.paid++;
+        else if (bill.paymentStatus === 'Unpaid') entry.unpaid++;
+        performanceMap.set(billBranchId, entry);
+      }
+    });
+    setDynamicBranchPerformanceData(Array.from(performanceMap.values()).map(p => ({ branch: p.branchName, paid: p.paid, unpaid: p.unpaid })));
+
+    // Process Water Usage Trend Data
+    const usageMap = new Map<string, number>();
+    currentMeterReadings.forEach(reading => {
+      const currentUsage = usageMap.get(reading.monthYear) || 0;
+      usageMap.set(reading.monthYear, currentUsage + reading.readingValue);
+    });
+    const trendData = Array.from(usageMap.entries())
+      .map(([month, usage]) => ({ month, usage }))
+      .sort((a, b) => new Date(a.month + "-01").getTime() - new Date(b.month + "-01").getTime()); // Ensure YYYY-MM format
+    setDynamicWaterUsageTrendData(trendData);
+
+  }, []);
 
 
   React.useEffect(() => {
@@ -86,25 +159,15 @@ export default function AdminDashboardPage() {
     const fetchData = async () => {
       try {
         await Promise.all([
+          initializeBranches(),
           initializeBulkMeters(),
           initializeCustomers(),
           initializeBills(),
+          initializeMeterReadings(),
         ]);
 
         if (!isMounted) return;
-
-        const currentBulkMeters = getBulkMeters();
-        const currentCustomers = getCustomers();
-        const currentBills = getBills();
-
-        setDynamicTotalBulkMeterCount(currentBulkMeters.length);
-        setDynamicTotalIndividualCustomerCount(currentCustomers.length);
-        
-        const paid = currentBills.filter(b => b.paymentStatus === 'Paid').length;
-        const unpaid = currentBills.filter(b => b.paymentStatus === 'Unpaid').length;
-        setDynamicTotalBillCount(currentBills.length);
-        setDynamicPaidBillCount(paid);
-        setDynamicUnpaidBillCount(unpaid);
+        processDashboardData();
 
       } catch (err) {
         console.error("Error initializing dashboard data:", err);
@@ -120,29 +183,21 @@ export default function AdminDashboardPage() {
 
     fetchData();
 
-    const unsubscribeBulkMeters = subscribeToBulkMeters((meters) => {
-      if (isMounted) setDynamicTotalBulkMeterCount(meters.length);
-    });
-    const unsubscribeCustomers = subscribeToCustomers((customers) => {
-      if (isMounted) setDynamicTotalIndividualCustomerCount(customers.length);
-    });
-    const unsubscribeBills = subscribeToBills((bills) => {
-      if (isMounted) {
-        const paid = bills.filter(b => b.paymentStatus === 'Paid').length;
-        const unpaid = bills.filter(b => b.paymentStatus === 'Unpaid').length;
-        setDynamicTotalBillCount(bills.length);
-        setDynamicPaidBillCount(paid);
-        setDynamicUnpaidBillCount(unpaid);
-      }
-    });
+    const unsubBranches = subscribeToBranches(() => { if (isMounted) processDashboardData(); });
+    const unsubBulkMeters = subscribeToBulkMeters(() => { if (isMounted) processDashboardData(); });
+    const unsubCustomers = subscribeToCustomers(() => { if (isMounted) processDashboardData(); });
+    const unsubBills = subscribeToBills(() => { if (isMounted) processDashboardData(); });
+    const unsubMeterReadings = subscribeToMeterReadings(() => { if (isMounted) processDashboardData(); });
     
     return () => {
       isMounted = false;
-      unsubscribeBulkMeters();
-      unsubscribeCustomers();
-      unsubscribeBills();
+      unsubBranches();
+      unsubBulkMeters();
+      unsubCustomers();
+      unsubBills();
+      unsubMeterReadings();
     };
-  }, []);
+  }, [processDashboardData]);
 
   const totalBillsChartData = React.useMemo(() => {
     return [
@@ -266,13 +321,13 @@ export default function AdminDashboardPage() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Link href="/admin/bulk-meters" passHref>
-                <Button variant="outline" className="w-full justify-start p-4 h-auto quick-access-btn">
-                 <Gauge className="mr-3 h-6 w-6 text-primary" />
+                <Button variant="default" className="w-full justify-start p-4 h-auto quick-access-btn">
+                 <Gauge className="mr-3 h-6 w-6 text-primary-foreground" />
                     <div>
                         <p className="font-semibold text-base">View Bulk Meters</p>
-                        <p className="text-xs text-muted-foreground">Manage all bulk water meters.</p>
+                        <p className="text-xs text-primary-foreground/80">Manage all bulk water meters.</p>
                     </div>
-                    <ArrowRight className="ml-auto h-5 w-5 text-primary" />
+                    <ArrowRight className="ml-auto h-5 w-5 text-primary-foreground/80" />
                 </Button>
             </Link>
              <Link href="/admin/individual-customers" passHref>
@@ -302,8 +357,9 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent className="h-[300px]">
             <div className={cn("w-full h-full", { "hidden": showBranchPerformanceTable })}>
+             {dynamicBranchPerformanceData.length > 0 ? (
               <ChartContainer config={chartConfig} className="w-full h-full">
-                <BarChart data={branchPerformanceData} barCategoryGap="20%">
+                <BarChart data={dynamicBranchPerformanceData} barCategoryGap="20%">
                   <XAxis dataKey="branch" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
@@ -312,8 +368,14 @@ export default function AdminDashboardPage() {
                   <RechartsBar dataKey="unpaid" fill="hsl(var(--chart-2))" name={chartConfig.unpaid.label} />
                 </BarChart>
               </ChartContainer>
+              ) : (
+                 <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                    No branch performance data available for chart.
+                </div>
+              )}
             </div>
             <div className={cn("overflow-auto h-full", { "hidden": !showBranchPerformanceTable })}>
+              {dynamicBranchPerformanceData.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -323,7 +385,7 @@ export default function AdminDashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {branchPerformanceData.map((item) => (
+                    {dynamicBranchPerformanceData.map((item) => (
                       <TableRow key={item.branch}>
                         <TableCell className="font-medium">{item.branch}</TableCell>
                         <TableCell className="text-right" style={{color: chartConfig.paid.color }}>{item.paid}</TableCell>
@@ -332,6 +394,11 @@ export default function AdminDashboardPage() {
                     ))}
                   </TableBody>
                 </Table>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                      No branch performance data available for table.
+                  </div>
+                )}
             </div>
           </CardContent>
         </Card>
@@ -349,8 +416,9 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent className="h-[300px]">
             <div className={cn("w-full h-full", { "hidden": showWaterUsageTable })}>
+            {dynamicWaterUsageTrendData.length > 0 ? (
               <ChartContainer config={chartConfig} className="w-full h-full">
-                <LineChartRecharts data={waterUsageTrendData}>
+                <LineChartRecharts data={dynamicWaterUsageTrendData}>
                   <XAxis dataKey="month" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
@@ -358,8 +426,14 @@ export default function AdminDashboardPage() {
                   <Line type="monotone" dataKey="usage" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--chart-1))", stroke: "hsl(var(--background))" }} activeDot={{ r:6, fill: "hsl(var(--chart-1))", stroke: "hsl(var(--background))"}} name={chartConfig.waterUsage.label} />
                 </LineChartRecharts>
               </ChartContainer>
+              ) : (
+                 <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                    No water usage data available for chart.
+                </div>
+              )}
             </div>
             <div className={cn("overflow-auto h-full", { "hidden": !showWaterUsageTable })}>
+            {dynamicWaterUsageTrendData.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -368,7 +442,7 @@ export default function AdminDashboardPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {waterUsageTrendData.map((item) => (
+                  {dynamicWaterUsageTrendData.map((item) => (
                     <TableRow key={item.month}>
                       <TableCell className="font-medium">{item.month}</TableCell>
                       <TableCell className="text-right" style={{color: chartConfig.waterUsage.color}}>{item.usage.toLocaleString()}</TableCell>
@@ -376,6 +450,11 @@ export default function AdminDashboardPage() {
                   ))}
                 </TableBody>
               </Table>
+              ) : (
+                 <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                    No water usage data available for table.
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

@@ -5,11 +5,22 @@ import * as React from "react";
 import * as XLSX from 'xlsx';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileSpreadsheet, Info } from "lucide-react"; // Changed AlertCircle to Info
+import { Download, FileSpreadsheet, Info } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { getCustomers, getBulkMeters, initializeCustomers, initializeBulkMeters } from "@/lib/data-store";
+import { 
+  getCustomers, 
+  getBulkMeters, 
+  initializeCustomers, 
+  initializeBulkMeters,
+  getBills,
+  initializeBills,
+  getMeterReadings,
+  initializeMeterReadings,
+  getPayments,
+  initializePayments
+} from "@/lib/data-store";
 import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 import { initialCustomers } from "../individual-customers/page";
@@ -91,24 +102,45 @@ const availableReports: ReportType[] = [
     description: "Download a comprehensive list of all bulk meters, including their details and readings.",
     headers: [
       "id", "name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber",
-      "previousReading", "currentReading", "month", "specificArea", "location", "ward", "status", "paymentStatus"
+      "previousReading", "currentReading", "month", "specificArea", "location", "ward", "status", "paymentStatus",
+      "bulkUsage", "totalBulkBill", "differenceUsage", "differenceBill"
     ],
     getData: () => getBulkMeters(),
   },
   {
     id: "billing-summary",
-    name: "Billing Summary Report (Coming Soon)",
-    description: "Summary of paid and unpaid bills for a selected period. Includes totals, payment rates, and overdue amounts.",
+    name: "Billing Summary Report (XLSX)",
+    description: "Summary of all generated bills, including amounts and payment statuses.",
+    headers: [
+        "id", "individualCustomerId", "bulkMeterId", "billPeriodStartDate", "billPeriodEndDate", 
+        "monthYear", "previousReadingValue", "currentReadingValue", "usageM3", 
+        "baseWaterCharge", "sewerageCharge", "maintenanceFee", "sanitationFee", 
+        "meterRent", "totalAmountDue", "amountPaid", "balanceDue", "dueDate", 
+        "paymentStatus", "billNumber", "notes", "createdAt", "updatedAt"
+    ],
+    getData: () => getBills(),
   },
   {
     id: "water-usage",
-    name: "Water Usage Report (Coming Soon)",
-    description: "Detailed water consumption report by customer type, branch, or geographical area. Helps identify trends and anomalies.",
+    name: "Water Usage Report (XLSX)",
+    description: "Detailed water consumption report from all meter readings.",
+    headers: [
+        "id", "meterType", "individualCustomerId", "bulkMeterId", "readerStaffId", 
+        "readingDate", "monthYear", "readingValue", "isEstimate", "notes", 
+        "createdAt", "updatedAt"
+    ],
+    getData: () => getMeterReadings(),
   },
   {
     id: "payment-history",
-    name: "Payment History Report (Coming Soon)",
-    description: "Detailed log of all payments received, filterable by date, customer, or payment method.",
+    name: "Payment History Report (XLSX)",
+    description: "Detailed log of all payments received.",
+    headers: [
+        "id", "billId", "individualCustomerId", "paymentDate", "amountPaid", 
+        "paymentMethod", "transactionReference", "processedByStaffId", "notes", 
+        "createdAt", "updatedAt"
+    ],
+    getData: () => getPayments(),
   },
   {
     id: "meter-reading-accuracy",
@@ -123,12 +155,15 @@ export default function AdminReportsPage() {
   const [isGenerating, setIsGenerating] = React.useState(false);
 
   React.useEffect(() => {
-    if (getCustomers().length === 0) {
-      initializeCustomers();
-    }
-    if (getBulkMeters().length === 0) {
-      initializeBulkMeters();
-    }
+    // Ensure all necessary data stores are initialized
+    const initializeData = async () => {
+        await initializeCustomers();
+        await initializeBulkMeters();
+        await initializeBills();
+        await initializeMeterReadings();
+        await initializePayments();
+    };
+    initializeData();
   }, []);
 
   const selectedReport = availableReports.find(report => report.id === selectedReportId);
@@ -254,3 +289,4 @@ export default function AdminReportsPage() {
     </div>
   );
 }
+

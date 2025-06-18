@@ -63,7 +63,7 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Meter No.</TableHead>
-            <TableHead>Cust. Branch/Location</TableHead>
+            <TableHead>Branch</TableHead>
             <TableHead>Cust. Type</TableHead>
             <TableHead>Usage (m³)</TableHead>
             <TableHead>Bill ({currency})</TableHead>
@@ -147,3 +147,4 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
     </div>
   );
 }
+

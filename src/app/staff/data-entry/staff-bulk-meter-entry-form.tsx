@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { bulkMeterDataEntrySchema, type BulkMeterDataEntryFormValues } from "@/app/admin/data-entry/customer-data-entry-types"; // Re-use admin schema
+import { bulkMeterDataEntrySchema, type BulkMeterDataEntryFormValues } from "@/app/admin/data-entry/customer-data-entry-types"; 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { addBulkMeter as addBulkMeterToStore, initializeBulkMeters, getBulkMeters } from "@/lib/data-store";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
@@ -24,14 +24,13 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse } from "date-fns";
 
 interface StaffBulkMeterEntryFormProps {
-  branchName: string; // To potentially filter or for display
+  branchName: string; 
 }
 
 export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormProps) {
   const { toast } = useToast();
 
   React.useEffect(() => {
-    // Ensure store is initialized if not already
     if (getBulkMeters().length === 0) initializeBulkMeters(defaultInitialBulkMeters);
   }, []);
 
@@ -47,32 +46,56 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
       currentReading: undefined,
       month: "", 
       specificArea: "",
-      location: "", // Could be pre-filled based on branchName if logic allows
+      location: branchName || "", 
       ward: "",
     },
   });
 
+  React.useEffect(() => {
+    // Reset location if branchName changes and form is pristine for location
+    if (form.formState.isDirty && form.getFieldState('location').isDirty) return;
+    form.reset({ ...form.getValues(), location: branchName });
+  }, [branchName, form]);
+
+
   function onSubmit(data: BulkMeterDataEntryFormValues) {
-    // Staff entries default to Active status
     const bulkMeterDataForStore: Omit<BulkMeter, 'id' | 'status' | 'paymentStatus'> & { status: 'Active' | 'Maintenance' | 'Decommissioned'; paymentStatus: 'Paid' | 'Unpaid' } = { 
         ...data, 
         status: "Active",
-        paymentStatus: "Unpaid" // Default payment status for new entries
+        paymentStatus: "Unpaid" 
     };
     
-    addBulkMeterToStore(bulkMeterDataForStore as Omit<BulkMeter, 'id'>); // Type assertion matches store function
+    addBulkMeterToStore(bulkMeterDataForStore as Omit<BulkMeter, 'id'>); 
     toast({
       title: "Bulk Meter Data Submitted",
       description: `Data for bulk meter ${data.name} (Branch: ${branchName}) has been successfully recorded.`,
     });
-    form.reset(); 
+    form.reset({
+        name: "",
+        customerKeyNumber: "",
+        contractNumber: "",
+        meterSize: undefined,
+        meterNumber: "",
+        previousReading: undefined,
+        currentReading: undefined,
+        month: "",
+        specificArea: "",
+        location: branchName || "", // Reset location to current branchName
+        ward: "",
+    }); 
   }
 
   return (
-    <ScrollArea className="h-[calc(100vh-380px)]"> {/* Adjusted height */}
+    <ScrollArea className="h-[calc(100vh-380px)]"> 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-1">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormItem>
+                <FormLabel>Branch</FormLabel>
+                <FormControl>
+                    <Input value={branchName} readOnly disabled className="bg-muted/50"/>
+                </FormControl>
+            </FormItem>
             <FormField
               control={form.control}
               name="name"
@@ -256,4 +279,3 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
     </ScrollArea>
   );
 }
-

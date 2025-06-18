@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, UploadCloud, Building, FileSpreadsheet } from "lucide-react";
 import { StaffBulkMeterEntryForm } from "./staff-bulk-meter-entry-form";
-import { StaffIndividualCustomerEntryForm } from "./individual-customer-data-entry-form"; // Corrected import
+import { StaffIndividualCustomerEntryForm } from "./individual-customer-data-entry-form"; 
 import { CsvUploadSection } from "@/app/admin/data-entry/csv-upload-section";
 import {
   bulkMeterDataEntrySchema,
@@ -157,7 +157,7 @@ export default function StaffDataEntryPage() {
                 <CardHeader>
                     <CardTitle>Individual Customer Data Entry</CardTitle>
                     <CardDescription>
-                        Manually enter data for a single individual customer for branch: {staffBranchName}.
+                        Manually enter data for a single individual customer.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -171,7 +171,7 @@ export default function StaffDataEntryPage() {
                 <CardHeader>
                     <CardTitle>Bulk Meter Data Entry</CardTitle>
                     <CardDescription>
-                        Manually enter data for a single bulk meter for branch: {staffBranchName}.
+                        Manually enter data for a single bulk meter.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -196,7 +196,7 @@ export default function StaffDataEntryPage() {
                                 </Button>
                             </div>
                             <CardDescription className="mt-2">
-                                Upload a CSV file to add multiple bulk meters for branch: {staffBranchName}.
+                                Upload a CSV file to add multiple bulk meters.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -223,7 +223,7 @@ export default function StaffDataEntryPage() {
                                 </Button>
                             </div>
                             <CardDescription className="mt-2">
-                                Upload a CSV file to add multiple individual customers for branch: {staffBranchName}.
+                                Upload a CSV file to add multiple individual customers.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>

@@ -31,7 +31,6 @@ interface StaffIndividualCustomerEntryFormProps {
   branchName: string; 
 }
 
-// Schema for the form, extending baseIndividualCustomerDataSchema with status and paymentStatus
 const StaffEntryFormSchema = baseIndividualCustomerDataSchema.extend({
   status: z.enum(individualCustomerStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
   paymentStatus: z.enum(paymentStatuses, { errorMap: () => ({ message: "Please select a valid payment status."}) }),
@@ -61,7 +60,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
       currentReading: undefined,
       month: "",
       specificArea: "",
-      location: "", 
+      location: branchName || "", 
       ward: "",
       sewerageConnection: undefined,
       status: "Active",
@@ -76,7 +75,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
     setIsLoadingBulkMeters(true);
     Promise.all([
         initializeBulkMeters(),
-        initializeCustomers() // Though not directly used in this form's state, good to ensure it's ready
+        initializeCustomers() 
     ]).then(() => {
         const fetchedBms = getBulkMeters().map(bm => ({ id: bm.id, name: bm.name }));
         setAvailableBulkMeters(fetchedBms);
@@ -86,7 +85,6 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
     const unsubscribe = subscribeToBulkMeters((updatedBulkMeters) => {
       const newBms = updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name }));
       setAvailableBulkMeters(newBms);
-      // If the currently selected bulk meter is no longer available, reset selection
       if (assignedBulkMeterIdValue && !newBms.find(bm => bm.id === assignedBulkMeterIdValue)) {
         form.setValue("assignedBulkMeterId", UNASSIGNED_BULK_METER_VALUE);
       }
@@ -94,6 +92,12 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
     });
     return () => unsubscribe();
   }, [assignedBulkMeterIdValue, form]);
+
+  React.useEffect(() => {
+    // Reset location if branchName changes and form is pristine for location
+    if (form.formState.isDirty && form.getFieldState('location').isDirty) return;
+    form.reset({ ...form.getValues(), location: branchName });
+  }, [branchName, form]);
 
   async function onSubmit(data: StaffEntryFormValues) { 
     const submissionData = {
@@ -107,7 +111,26 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
         title: "Data Entry Submitted",
         description: `Data for individual customer ${result.data.name} (Branch: ${branchName}) has been successfully recorded.`,
         });
-        form.reset(); // This will also reset assignedBulkMeterId to UNASSIGNED_BULK_METER_VALUE
+        form.reset({ 
+            assignedBulkMeterId: UNASSIGNED_BULK_METER_VALUE,
+            name: "",
+            customerKeyNumber: "",
+            contractNumber: "",
+            customerType: undefined,
+            bookNumber: "",
+            ordinal: undefined,
+            meterSize: undefined,
+            meterNumber: "",
+            previousReading: undefined,
+            currentReading: undefined,
+            month: "",
+            specificArea: "",
+            location: branchName || "",
+            ward: "",
+            sewerageConnection: undefined,
+            status: "Active",
+            paymentStatus: "Unpaid",
+        });
     } else {
         toast({
             variant: "destructive",
@@ -129,40 +152,48 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
     <ScrollArea className="h-[calc(100vh-380px)]"> 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-1">
-           <FormField
-              control={form.control}
-              name="assignedBulkMeterId"
-              render={({ field }) => (
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormItem>
-                  <FormLabel>Assign to Bulk Meter *</FormLabel>
-                  <Select
-                    onValueChange={handleBulkMeterChange} // Use explicit handler
-                    value={field.value || UNASSIGNED_BULK_METER_VALUE}
-                    disabled={isLoadingBulkMeters || form.formState.isSubmitting}
-                  >
+                    <FormLabel>Branch</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={isLoadingBulkMeters ? "Loading bulk meters..." : "Select a bulk meter"} />
-                      </SelectTrigger>
+                        <Input value={branchName} readOnly disabled className="bg-muted/50"/>
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value={UNASSIGNED_BULK_METER_VALUE}>None</SelectItem>
-                      {availableBulkMeters.length === 0 && !isLoadingBulkMeters && (
-                        <SelectItem value="no-bms-available-staff" disabled>
-                          No bulk meters available for your branch
-                        </SelectItem>
-                      )}
-                      {availableBulkMeters.map((bm) => (
-                        <SelectItem key={bm.id} value={bm.id}>
-                          {bm.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
                 </FormItem>
-              )}
-            />
+                <FormField
+                    control={form.control}
+                    name="assignedBulkMeterId"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Assign to Bulk Meter *</FormLabel>
+                        <Select
+                            onValueChange={handleBulkMeterChange} 
+                            value={field.value || UNASSIGNED_BULK_METER_VALUE}
+                            disabled={isLoadingBulkMeters || form.formState.isSubmitting}
+                        >
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder={isLoadingBulkMeters ? "Loading bulk meters..." : "Select a bulk meter"} />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            <SelectItem value={UNASSIGNED_BULK_METER_VALUE}>None</SelectItem>
+                            {availableBulkMeters.length === 0 && !isLoadingBulkMeters && (
+                                <SelectItem value="no-bms-available-staff" disabled>
+                                No bulk meters available
+                                </SelectItem>
+                            )}
+                            {availableBulkMeters.map((bm) => (
+                                <SelectItem key={bm.id} value={bm.id}>
+                                {bm.name}
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+            </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Name *</FormLabel><FormControl><Input {...field} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
@@ -198,6 +229,3 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
     </ScrollArea>
   );
 }
-
-
-    

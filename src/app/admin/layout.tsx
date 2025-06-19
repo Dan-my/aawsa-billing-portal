@@ -14,7 +14,7 @@ import {
   ClipboardList,
   UploadCloud,
   LibraryBig, 
-  Ticket, // Added Ticket icon
+  // Ticket icon removed as Voucher is being removed
 } from "lucide-react";
 
 const adminSidebarNavItems: NavItemGroup[] = [
@@ -43,7 +43,7 @@ const adminSidebarNavItems: NavItemGroup[] = [
     items: [
       { title: "Data Entry", href: "/admin/data-entry", iconName: "FileText" },
       { title: "Reports", href: "/admin/reports", iconName: "BarChart2" },
-      { title: "Voucher", href: "/admin/voucher", iconName: "Ticket" }, // Added Voucher link
+      // { title: "Voucher", href: "/admin/voucher", iconName: "Ticket" }, // Voucher link removed
     ],
   },
   {
@@ -57,3 +57,4 @@ const adminSidebarNavItems: NavItemGroup[] = [
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return <AppShell userRole="admin" sidebar={<SidebarNav items={adminSidebarNavItems} />} >{children}</AppShell>;
 }
+

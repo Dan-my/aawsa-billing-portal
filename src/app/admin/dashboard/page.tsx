@@ -88,19 +88,33 @@ export default function AdminDashboardPage() {
       const customer = bill.individualCustomerId ? currentCustomers.find(c => c.id === bill.individualCustomerId) : null;
       const bulkMeterForBill = bill.bulkMeterId ? currentBulkMeters.find(b => b.id === bill.bulkMeterId) : null;
       
-      let entityForBranchMatching: { location?: string; ward?: string; name?: string } | null = null;
+      let entityForBranchMatching: { location?: string; ward?: string; name?: string; branchId?: string } | null = null;
 
       if (customer) {
-        if (customer.assignedBulkMeterId) {
-          entityForBranchMatching = currentBulkMeters.find(b => b.id === customer.assignedBulkMeterId) || null;
+        if (customer.branchId) {
+          entityForBranchMatching = { branchId: customer.branchId };
+        } else if (customer.assignedBulkMeterId) {
+          const assignedBM = currentBulkMeters.find(b => b.id === customer.assignedBulkMeterId);
+          if (assignedBM && assignedBM.branchId) {
+            entityForBranchMatching = { branchId: assignedBM.branchId };
+          } else {
+             entityForBranchMatching = assignedBM || customer;
+          }
         } else {
           entityForBranchMatching = customer;
         }
       } else if (bulkMeterForBill) {
-        entityForBranchMatching = bulkMeterForBill;
+         if (bulkMeterForBill.branchId) {
+            entityForBranchMatching = { branchId: bulkMeterForBill.branchId };
+         } else {
+            entityForBranchMatching = bulkMeterForBill;
+         }
       }
-
-      if (entityForBranchMatching) {
+      
+      if (entityForBranchMatching?.branchId) {
+        billBranchId = entityForBranchMatching.branchId;
+      } else if (entityForBranchMatching) {
+        // Fallback to name/location matching if no direct branchId
         for (const branch of currentBranches) {
           const simpleBranchName = branch.name.replace(/ Branch$/i, "").toLowerCase().trim();
           const simpleBranchLocation = branch.location.toLowerCase().trim();
@@ -118,10 +132,11 @@ export default function AdminDashboardPage() {
         }
       }
 
+
       if (billBranchId && performanceMap.has(billBranchId)) {
         const entry = performanceMap.get(billBranchId)!;
         if (bill.paymentStatus === 'Paid') entry.paid++;
-        else if (bill.paymentStatus === 'Unpaid') entry.unpaid++;
+        else if (bill.paymentStatus === 'Unpaid') entry.unpaid++; // Assuming only 'Paid' or 'Unpaid' for simplicity
         performanceMap.set(billBranchId, entry);
       }
     });
@@ -452,4 +467,6 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+    
+
     

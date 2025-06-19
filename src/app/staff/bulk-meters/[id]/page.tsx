@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Image from "next/image"; // Added for logo
 import { Droplets, Edit, Trash2, MoreHorizontal, User, CheckCircle, XCircle, FileEdit, RefreshCcw, Gauge, Users as UsersIcon, DollarSign, TrendingUp, Clock, AlertTriangle, MinusCircle, PlusCircle as PlusCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -373,6 +374,42 @@ export default function StaffBulkMeterDetailsPage() {
             </Table>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Formatted Bill Information Card */}
+      <Card className="shadow-lg print-only-card">
+        <CardHeader className="flex flex-row items-center justify-between border-b pb-4">
+          <div className="flex items-center gap-2">
+            <Image
+              src="https://veiethiopia.com/photo/partner/par2.png"
+              alt="AAWSA Logo"
+              width={60}
+              height={37.5}
+              className="flex-shrink-0"
+            />
+            <h2 className="text-xl font-semibold">AAWSA Bill calculating Portal</h2>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-2 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+            <p><strong className="font-semibold">Bulk Meter Name:</strong> {bulkMeter.name}</p>
+            <p><strong className="font-semibold">Customer Key Number:</strong> {bulkMeter.customerKeyNumber}</p>
+            <p><strong className="font-semibold">Branch:</strong> {staffBranchName ?? bulkMeter.location ?? 'N/A'}</p>
+            <p><strong className="font-semibold">Bulk Meter Category:</strong> Non-domestic</p>
+            <p><strong className="font-semibold">Number of Assigned Individual Customers:</strong> {associatedCustomers.length}</p>
+            <p><strong className="font-semibold">Previous Reading:</strong> {bmPreviousReading.toFixed(2)} m³</p>
+            <p><strong className="font-semibold">Current Reading:</strong> {bmCurrentReading.toFixed(2)} m³</p>
+            <p><strong className="font-semibold">Difference Usage (Bulk Meter):</strong> {bulkUsage.toFixed(2)} m³</p>
+            <p><strong className="font-semibold">Total Difference Bill (Non-Reconciled):</strong> ETB {totalBulkBill.toFixed(2)}</p>
+            <p><strong className="font-semibold">Month:</strong> {bulkMeter.month}</p>
+          </div>
+          
+          <div className="pt-8 space-y-4 text-sm">
+            <p className="border-b border-dashed border-gray-400 pb-2">Requested by: .........................................................</p>
+            <p className="border-b border-dashed border-gray-400 pb-2">Check by: .............................................................</p>
+            <p>Approved by: ........................................................</p>
+          </div>
         </CardContent>
       </Card>
 

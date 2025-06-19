@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Image from "next/image"; // Added for logo
 import { Droplets, Edit, Trash2, MoreHorizontal, User, CheckCircle, XCircle, FileEdit, RefreshCcw, Gauge, Users as UsersIcon, DollarSign, TrendingUp, Clock, MinusCircle, PlusCircle as PlusCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -23,9 +24,13 @@ import {
   subscribeToCustomers,
   initializeBulkMeters,
   initializeCustomers,
+  getBranches, // Added
+  initializeBranches, // Added
+  subscribeToBranches // Added
 } from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meter-types";
 import type { IndividualCustomer, IndividualCustomerStatus } from "../../individual-customers/individual-customer-types";
+import type { Branch } from "../../branches/branch-types"; // Added
 import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus } from "@/lib/billing";
 import { BulkMeterFormDialog, type BulkMeterFormValues } from "../bulk-meter-form-dialog";
 import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "../../individual-customers/individual-customer-form-dialog";
@@ -39,6 +44,7 @@ export default function BulkMeterDetailsPage() {
 
   const [bulkMeter, setBulkMeter] = useState<BulkMeter | null>(null);
   const [associatedCustomers, setAssociatedCustomers] = useState<IndividualCustomer[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]); // Added state for branches
   const [isLoading, setIsLoading] = useState(true);
 
   const [isBulkMeterFormOpen, setIsBulkMeterFormOpen] = React.useState(false);
@@ -64,12 +70,16 @@ export default function BulkMeterDetailsPage() {
 
     Promise.all([
       initializeBulkMeters(),
-      initializeCustomers()
+      initializeCustomers(),
+      initializeBranches() // Initialize branches
     ]).then(() => {
       if (!isMounted) return;
 
       const currentGlobalMeters = getBulkMeters();
       const currentGlobalCustomers = getCustomers();
+      const currentGlobalBranches = getBranches(); // Get branches
+      setBranches(currentGlobalBranches); // Set branches to state
+
       const foundBM = currentGlobalMeters.find(bm => bm.id === bulkMeterId);
 
       if (foundBM) {
@@ -93,6 +103,9 @@ export default function BulkMeterDetailsPage() {
       if (!isMounted) return;
       const currentGlobalMeters = getBulkMeters();
       const currentGlobalCustomers = getCustomers();
+      const currentGlobalBranches = getBranches(); // Get branches on update
+      setBranches(currentGlobalBranches); // Update branches state on update
+
       const foundBM = currentGlobalMeters.find(bm => bm.id === bulkMeterId);
 
       if (foundBM) {
@@ -107,11 +120,13 @@ export default function BulkMeterDetailsPage() {
 
     const unsubscribeBM = subscribeToBulkMeters(handleStoresUpdate);
     const unsubscribeCust = subscribeToCustomers(handleStoresUpdate);
+    const unsubscribeBranches = subscribeToBranches(handleStoresUpdate); // Subscribe to branch updates
 
     return () => {
       isMounted = false;
       unsubscribeBM();
       unsubscribeCust();
+      unsubscribeBranches(); // Unsubscribe from branch updates
     };
   }, [bulkMeterId, router, toast, bulkMeter]);
 
@@ -210,6 +225,8 @@ export default function BulkMeterDetailsPage() {
 
   const differenceUsage = bulkUsage - totalIndividualUsage;
   const differenceBill = totalBulkBill - totalIndividualBill;
+  
+  const displayBranchName = bulkMeter.branchId ? branches.find(b => b.id === bulkMeter.branchId)?.name : bulkMeter.location;
 
   return (
     <div className="space-y-6 p-4">
@@ -360,6 +377,43 @@ export default function BulkMeterDetailsPage() {
         </CardContent>
       </Card>
 
+      {/* Formatted Bill Information Card */}
+      <Card className="shadow-lg print-only-card">
+        <CardHeader className="flex flex-row items-center justify-between border-b pb-4">
+          <div className="flex items-center gap-2">
+            <Image
+              src="https://veiethiopia.com/photo/partner/par2.png"
+              alt="AAWSA Logo"
+              width={60}
+              height={37.5} 
+              className="flex-shrink-0"
+            />
+            <h2 className="text-xl font-semibold">AAWSA Bill calculating Portal</h2>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-2 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+            <p><strong className="font-semibold">Bulk Meter Name:</strong> {bulkMeter.name}</p>
+            <p><strong className="font-semibold">Customer Key Number:</strong> {bulkMeter.customerKeyNumber}</p>
+            <p><strong className="font-semibold">Branch:</strong> {displayBranchName ?? 'N/A'}</p>
+            <p><strong className="font-semibold">Bulk Meter Category:</strong> Non-domestic</p>
+            <p><strong className="font-semibold">Number of Assigned Individual Customers:</strong> {associatedCustomers.length}</p>
+            <p><strong className="font-semibold">Previous Reading:</strong> {bmPreviousReading.toFixed(2)} m³</p>
+            <p><strong className="font-semibold">Current Reading:</strong> {bmCurrentReading.toFixed(2)} m³</p>
+            <p><strong className="font-semibold">Difference Usage (Bulk Meter):</strong> {bulkUsage.toFixed(2)} m³</p>
+            <p><strong className="font-semibold">Total Difference Bill (Non-Reconciled):</strong> ETB {totalBulkBill.toFixed(2)}</p>
+            <p><strong className="font-semibold">Month:</strong> {bulkMeter.month}</p>
+          </div>
+          
+          <div className="pt-8 space-y-4 text-sm">
+            <p className="border-b border-dashed border-gray-400 pb-2">Requested by: .........................................................</p>
+            <p className="border-b border-dashed border-gray-400 pb-2">Check by: .............................................................</p>
+            <p>Approved by: ........................................................</p>
+          </div>
+        </CardContent>
+      </Card>
+
+
       {bulkMeter && (
           <BulkMeterFormDialog
             open={isBulkMeterFormOpen}
@@ -390,7 +444,7 @@ export default function BulkMeterDetailsPage() {
             onOpenChange={setIsCustomerFormOpen}
             onSubmit={handleSubmitCustomerForm}
             defaultValues={selectedCustomer}
-            bulkMeters={[{id: bulkMeter.id, name: bulkMeter.name}]}
+            bulkMeters={[{id: bulkMeter.id, name: bulkMeter.name}]} 
           />
       )}
       <AlertDialog open={isCustomerDeleteDialogOpen} onOpenChange={setIsCustomerDeleteDialogOpen}>
@@ -411,5 +465,4 @@ export default function BulkMeterDetailsPage() {
     </div>
   );
 }
-
     

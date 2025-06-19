@@ -1,11 +1,11 @@
 
-
 "use client";
 
 import type { IndividualCustomer as DomainIndividualCustomer, IndividualCustomerStatus } from '@/app/admin/individual-customers/individual-customer-types';
 import type { BulkMeter as DomainBulkMeterTypeFromTypes } from '@/app/admin/bulk-meters/bulk-meter-types'; 
 import type { Branch as DomainBranch } from '@/app/admin/branches/branch-types';
 import type { StaffMember } from '@/app/admin/staff-management/staff-types';
+import type { Voucher as DomainVoucher, VoucherStatus, VoucherDiscountType } from '@/app/admin/voucher/voucher-types'; // Added Voucher
 import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus } from '@/lib/billing';
 
 
@@ -18,6 +18,7 @@ import type {
   MeterReading as SupabaseMeterReadingRow,
   Payment as SupabasePaymentRow,
   ReportLog as SupabaseReportLogRow,
+  VoucherRow as SupabaseVoucherRow, // Added Voucher
   BranchInsert, BranchUpdate,
   BulkMeterInsert, BulkMeterUpdate,
   IndividualCustomerInsert, IndividualCustomerUpdate,
@@ -25,7 +26,8 @@ import type {
   BillInsert, BillUpdate,
   MeterReadingInsert, MeterReadingUpdate,
   PaymentInsert, PaymentUpdate,
-  ReportLogInsert, ReportLogUpdate
+  ReportLogInsert, ReportLogUpdate,
+  VoucherInsert, VoucherUpdate // Added Voucher
 } from './supabase';
 
 import {
@@ -61,6 +63,10 @@ import {
   createReportLog as supabaseCreateReportLog,
   updateReportLog as supabaseUpdateReportLog,
   deleteReportLog as supabaseDeleteReportLog,
+  getAllVouchers as supabaseGetAllVouchers, // Added Voucher
+  createVoucher as supabaseCreateVoucher, // Added Voucher
+  updateVoucher as supabaseUpdateVoucher, // Added Voucher
+  deleteVoucher as supabaseDeleteVoucher, // Added Voucher
 } from './supabase';
 
 
@@ -141,7 +147,6 @@ interface StoreOperationResult<T = any> {
     error?: any;
 }
 
-// Use the imported type for BulkMeter
 type BulkMeter = DomainBulkMeterTypeFromTypes;
 
 
@@ -153,6 +158,7 @@ let bills: DomainBill[] = [];
 let meterReadings: DomainMeterReading[] = [];
 let payments: DomainPayment[] = [];
 let reportLogs: DomainReportLog[] = [];
+let vouchers: DomainVoucher[] = []; // Added Voucher
 
 let branchesFetched = false;
 let customersFetched = false;
@@ -162,6 +168,7 @@ let billsFetched = false;
 let meterReadingsFetched = false;
 let paymentsFetched = false;
 let reportLogsFetched = false;
+let vouchersFetched = false; // Added Voucher
 
 type Listener<T> = (data: T[]) => void;
 const branchListeners: Set<Listener<DomainBranch>> = new Set();
@@ -172,6 +179,7 @@ const billListeners: Set<Listener<DomainBill>> = new Set();
 const meterReadingListeners: Set<Listener<DomainMeterReading>> = new Set();
 const paymentListeners: Set<Listener<DomainPayment>> = new Set();
 const reportLogListeners: Set<Listener<DomainReportLog>> = new Set();
+const voucherListeners: Set<Listener<DomainVoucher>> = new Set(); // Added Voucher
 
 const notifyBranchListeners = () => branchListeners.forEach(listener => listener([...branches]));
 const notifyCustomerListeners = () => customerListeners.forEach(listener => listener([...customers]));
@@ -179,8 +187,9 @@ const notifyBulkMeterListeners = () => bulkMeterListeners.forEach(listener => li
 const notifyStaffMemberListeners = () => staffMemberListeners.forEach(listener => listener([...staffMembers]));
 const notifyBillListeners = () => billListeners.forEach(listener => listener([...bills]));
 const notifyMeterReadingListeners = () => meterReadingListeners.forEach(listener => listener([...meterReadings]));
-const notifyPaymentListeners = () => payments.forEach(listener => listener([...payments]));
+const notifyPaymentListeners = () => payments.forEach(listener => listener([...payments])); // Corrected: was payments.forEach
 const notifyReportLogListeners = () => reportLogListeners.forEach(listener => listener([...reportLogs]));
+const notifyVoucherListeners = () => voucherListeners.forEach(listener => listener([...vouchers])); // Added Voucher
 
 // --- Mappers ---
 const mapSupabaseBranchToDomain = (sb: SupabaseBranchRow): DomainBranch => ({
@@ -240,7 +249,7 @@ const mapSupabaseCustomerToDomain = (sc: SupabaseIndividualCustomerRow): DomainI
     ward: sc.ward,
     sewerageConnection: sc.sewerageConnection,
     assignedBulkMeterId: sc.assignedBulkMeterId || undefined,
-    branchId: sc.branch_id || undefined, // Map branch_id
+    branchId: sc.branch_id || undefined,
     status: sc.status as IndividualCustomerStatus,
     paymentStatus: sc.paymentStatus as PaymentStatus,
     calculatedBill: bill,
@@ -271,7 +280,7 @@ const mapDomainCustomerToInsert = (
     ward: customer.ward,
     sewerageConnection: customer.sewerageConnection,
     assignedBulkMeterId: customer.assignedBulkMeterId,
-    branch_id: customer.branchId, // Include branch_id
+    branch_id: customer.branchId, 
     status: 'Active', 
     paymentStatus: 'Unpaid', 
     calculatedBill: bill,
@@ -297,7 +306,7 @@ const mapDomainCustomerToUpdate = (customer: Partial<DomainIndividualCustomer>):
   if(customer.ward !== undefined) updatePayload.ward = customer.ward;
   if(customer.sewerageConnection !== undefined) updatePayload.sewerageConnection = customer.sewerageConnection;
   if(customer.assignedBulkMeterId !== undefined) updatePayload.assignedBulkMeterId = customer.assignedBulkMeterId;
-  if(customer.branchId !== undefined) updatePayload.branch_id = customer.branchId; // Include branch_id
+  if(customer.branchId !== undefined) updatePayload.branch_id = customer.branchId; 
   if(customer.status !== undefined) updatePayload.status = customer.status;
   if(customer.paymentStatus !== undefined) updatePayload.paymentStatus = customer.paymentStatus;
 
@@ -339,7 +348,7 @@ const mapSupabaseBulkMeterToDomain = (sbm: SupabaseBulkMeterRow): BulkMeter => {
     specificArea: sbm.specificArea,
     location: sbm.location,
     ward: sbm.ward,
-    branchId: sbm.branch_id || undefined, // Map branch_id
+    branchId: sbm.branch_id || undefined, 
     status: sbm.status,
     paymentStatus: sbm.paymentStatus,
     bulkUsage: bmUsage,
@@ -366,7 +375,7 @@ const mapDomainBulkMeterToInsert = (bm: Omit<BulkMeter, 'id'>): BulkMeterInsert 
     specificArea: bm.specificArea,
     location: bm.location,
     ward: bm.ward,
-    branch_id: bm.branchId, // Include branch_id
+    branch_id: bm.branchId, 
     status: bm.status || 'Active',
     paymentStatus: bm.paymentStatus || 'Unpaid',
     bulk_usage: calculatedBulkUsage,
@@ -390,7 +399,7 @@ const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { id?: string } ): 
     if (bm.specificArea !== undefined) updatePayload.specificArea = bm.specificArea;
     if (bm.location !== undefined) updatePayload.location = bm.location;
     if (bm.ward !== undefined) updatePayload.ward = bm.ward;
-    if (bm.branchId !== undefined) updatePayload.branch_id = bm.branchId; // Include branch_id
+    if (bm.branchId !== undefined) updatePayload.branch_id = bm.branchId; 
     if (bm.status !== undefined) updatePayload.status = bm.status;
     if (bm.paymentStatus !== undefined) updatePayload.paymentStatus = bm.paymentStatus;
 
@@ -592,6 +601,44 @@ const mapDomainReportLogToSupabase = (rl: Partial<DomainReportLog>): Partial<Rep
     return payload;
 };
 
+const mapSupabaseVoucherToDomain = (sv: SupabaseVoucherRow): DomainVoucher => ({
+  id: sv.id,
+  code: sv.code,
+  discountType: sv.discount_type as VoucherDiscountType,
+  discountValue: Number(sv.discount_value),
+  expiryDate: sv.expiry_date,
+  status: sv.status as VoucherStatus,
+  maxUses: sv.max_uses === null ? undefined : Number(sv.max_uses),
+  timesUsed: Number(sv.times_used) ?? 0,
+  notes: sv.notes || undefined,
+  createdAt: sv.created_at,
+  updatedAt: sv.updated_at,
+});
+
+const mapDomainVoucherToInsert = (voucher: Omit<DomainVoucher, 'id' | 'createdAt' | 'updatedAt'>): VoucherInsert => ({
+  code: voucher.code,
+  discount_type: voucher.discountType,
+  discount_value: Number(voucher.discountValue),
+  expiry_date: voucher.expiryDate || null,
+  status: voucher.status,
+  max_uses: voucher.maxUses === undefined ? null : Number(voucher.maxUses),
+  times_used: Number(voucher.timesUsed) || 0,
+  notes: voucher.notes || null,
+});
+
+const mapDomainVoucherToUpdate = (voucher: Partial<Omit<DomainVoucher, 'id' | 'createdAt' | 'updatedAt'>>): VoucherUpdate => {
+  const payload: VoucherUpdate = {};
+  if (voucher.code !== undefined) payload.code = voucher.code;
+  if (voucher.discountType !== undefined) payload.discount_type = voucher.discountType;
+  if (voucher.discountValue !== undefined) payload.discount_value = Number(voucher.discountValue);
+  if (voucher.expiryDate !== undefined) payload.expiry_date = voucher.expiryDate;
+  if (voucher.status !== undefined) payload.status = voucher.status;
+  if (voucher.maxUses !== undefined) payload.max_uses = voucher.maxUses === null ? null : Number(voucher.maxUses);
+  if (voucher.timesUsed !== undefined) payload.times_used = Number(voucher.timesUsed);
+  if (voucher.notes !== undefined) payload.notes = voucher.notes;
+  return payload;
+};
+
 
 async function fetchAllBranches() {
   const { data, error } = await supabaseGetAllBranches();
@@ -754,6 +801,19 @@ async function fetchAllReportLogs() {
     return reportLogs;
 }
 
+async function fetchAllVouchers() { // Added Voucher
+  const { data, error } = await supabaseGetAllVouchers();
+  if (data) {
+    vouchers = data.map(mapSupabaseVoucherToDomain);
+    notifyVoucherListeners();
+  } else {
+    console.error("DataStore: Failed to fetch vouchers. Supabase error:", JSON.stringify(error, null, 2));
+  }
+  vouchersFetched = true;
+  return vouchers;
+}
+
+
 export const initializeBranches = async () => {
   if (!branchesFetched || branches.length === 0) {
     await fetchAllBranches();
@@ -790,6 +850,9 @@ export const initializePayments = async () => {
 export const initializeReportLogs = async () => {
     if (!reportLogsFetched || reportLogs.length === 0) await fetchAllReportLogs();
 };
+export const initializeVouchers = async () => { // Added Voucher
+    if (!vouchersFetched || vouchers.length === 0) await fetchAllVouchers();
+};
 
 export const getBranches = (): DomainBranch[] => [...branches];
 export const getCustomers = (): DomainIndividualCustomer[] => [...customers];
@@ -799,6 +862,8 @@ export const getBills = (): DomainBill[] => [...bills];
 export const getMeterReadings = (): DomainMeterReading[] => [...meterReadings];
 export const getPayments = (): DomainPayment[] => [...payments];
 export const getReportLogs = (): DomainReportLog[] => [...reportLogs];
+export const getVouchers = (): DomainVoucher[] => [...vouchers]; // Added Voucher
+
 
 export const addBranch = async (branchData: Omit<DomainBranch, 'id'>): Promise<StoreOperationResult<DomainBranch>> => {
   const payload = mapDomainBranchToInsert(branchData);
@@ -1197,6 +1262,51 @@ export const removeReportLog = async (logId: string): Promise<StoreOperationResu
     return { success: false, message: (error as any)?.message || "Failed to delete report log.", error };
 };
 
+export const addVoucher = async (voucherData: Omit<DomainVoucher, 'id' | 'createdAt' | 'updatedAt'>): Promise<StoreOperationResult<DomainVoucher>> => {
+  const payload = mapDomainVoucherToInsert(voucherData);
+  const { data: newSupabaseVoucher, error } = await supabaseCreateVoucher(payload);
+  if (newSupabaseVoucher && !error) {
+    const newVoucher = mapSupabaseVoucherToDomain(newSupabaseVoucher);
+    vouchers = [newVoucher, ...vouchers];
+    notifyVoucherListeners();
+    return { success: true, data: newVoucher };
+  }
+  console.error("DataStore: Failed to add voucher. Supabase error:", JSON.stringify(error, null, 2));
+  return { success: false, message: (error as any)?.message || "Failed to add voucher.", error };
+};
+
+export const updateVoucher = async (id: string, voucherUpdateData: Partial<Omit<DomainVoucher, 'id' | 'createdAt' | 'updatedAt'>>): Promise<StoreOperationResult<void>> => {
+  const payload = mapDomainVoucherToUpdate(voucherUpdateData);
+  const { data: updatedSupabaseVoucher, error } = await supabaseUpdateVoucher(id, payload);
+  if (updatedSupabaseVoucher && !error) {
+    const updatedVoucher = mapSupabaseVoucherToDomain(updatedSupabaseVoucher);
+    vouchers = vouchers.map(v => v.id === id ? updatedVoucher : v);
+    notifyVoucherListeners();
+    return { success: true };
+  }
+  console.error("DataStore: Failed to update voucher. Supabase error:", JSON.stringify(error, null, 2));
+  let userMessage = "Failed to update voucher.";
+  let isNotFoundError = false;
+  if (error && typeof error === 'object' && 'code' in error && error.code === 'PGRST204') {
+    userMessage = "Failed to update voucher: Record not found.";
+    isNotFoundError = true;
+  } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+    userMessage = `Failed to update voucher: ${error.message}`;
+  }
+  return { success: false, message: userMessage, isNotFoundError, error };
+};
+
+export const deleteVoucher = async (voucherId: string): Promise<StoreOperationResult<void>> => {
+  const { error } = await supabaseDeleteVoucher(voucherId);
+  if (!error) {
+    vouchers = vouchers.filter(v => v.id !== voucherId);
+    notifyVoucherListeners();
+    return { success: true };
+  }
+  console.error("DataStore: Failed to delete voucher. Supabase error:", JSON.stringify(error, null, 2));
+  return { success: false, message: (error as any)?.message || "Failed to delete voucher.", error };
+};
+
 export const subscribeToBranches = (listener: Listener<DomainBranch>): (() => void) => {
   branchListeners.add(listener);
   if (branchesFetched) listener([...branches]); else initializeBranches().then(() => listener([...branches]));
@@ -1241,6 +1351,12 @@ export const subscribeToReportLogs = (listener: Listener<DomainReportLog>): (() 
     if (reportLogsFetched) listener([...reportLogs]); else initializeReportLogs().then(() => listener([...reportLogs]));
     return () => reportLogListeners.delete(listener);
 };
+export const subscribeToVouchers = (listener: Listener<DomainVoucher>): (() => void) => { // Added Voucher
+    voucherListeners.add(listener);
+    if (vouchersFetched) listener([...vouchers]); else initializeVouchers().then(() => listener([...vouchers]));
+    return () => voucherListeners.delete(listener);
+};
+
 
 export async function loadInitialData() {
   await initializeCustomers();
@@ -1252,6 +1368,6 @@ export async function loadInitialData() {
     initializeMeterReadings(),
     initializePayments(),
     initializeReportLogs(),
+    initializeVouchers(), // Added Voucher
   ]);
 }
-

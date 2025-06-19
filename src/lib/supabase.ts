@@ -57,11 +57,11 @@ export interface Database {
           currentReading: number;
           month: string;
           specificArea: string;
-          location: string; // This can store the branch name for easy filtering/display
+          location: string; 
           ward: string;
           status: 'Active' | 'Maintenance' | 'Decommissioned';
           paymentStatus: 'Paid' | 'Unpaid';
-          branch_id?: string | null; // New field for foreign key
+          branch_id?: string | null; 
           bulk_usage?: number | null;
           total_bulk_bill?: number | null;
           difference_usage?: number | null;
@@ -84,7 +84,7 @@ export interface Database {
           ward: string;
           status: 'Active' | 'Maintenance' | 'Decommissioned';
           paymentStatus: 'Paid' | 'Unpaid';
-          branch_id?: string | null; // New field
+          branch_id?: string | null; 
           bulk_usage?: number | null;
           total_bulk_bill?: number | null;
           difference_usage?: number | null;
@@ -107,7 +107,7 @@ export interface Database {
           ward?: string;
           status?: 'Active' | 'Maintenance' | 'Decommissioned';
           paymentStatus?: 'Paid' | 'Unpaid';
-          branch_id?: string | null; // New field
+          branch_id?: string | null; 
           bulk_usage?: number | null;
           total_bulk_bill?: number | null;
           difference_usage?: number | null;
@@ -131,14 +131,14 @@ export interface Database {
           currentReading: number;
           month: string; 
           specificArea: string;
-          location: string; // This can store the branch name
+          location: string; 
           ward: string;
           sewerageConnection: 'Yes' | 'No';
           assignedBulkMeterId?: string | null;
           status: 'Active' | 'Inactive' | 'Suspended';
           paymentStatus: 'Paid' | 'Unpaid' | 'Pending';
           calculatedBill: number;
-          branch_id?: string | null; // New field for foreign key
+          branch_id?: string | null; 
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -163,7 +163,7 @@ export interface Database {
           status?: 'Active' | 'Inactive' | 'Suspended';
           paymentStatus?: 'Paid' | 'Unpaid' | 'Pending';
           calculatedBill?: number;
-          branch_id?: string | null; // New field
+          branch_id?: string | null; 
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -188,7 +188,7 @@ export interface Database {
           status?: 'Active' | 'Inactive' | 'Suspended';
           paymentStatus?: 'Paid' | 'Unpaid' | 'Pending';
           calculatedBill?: number;
-          branch_id?: string | null; // New field
+          branch_id?: string | null; 
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -433,6 +433,47 @@ export interface Database {
           updated_at?: string | null;
         };
       };
+      vouchers: { // Added Voucher Table Definition
+        Row: {
+          id: string;
+          code: string;
+          discount_type: 'percentage' | 'fixed_amount';
+          discount_value: number;
+          expiry_date?: string | null;
+          status: 'Active' | 'Used' | 'Expired' | 'Cancelled';
+          max_uses?: number | null;
+          times_used?: number;
+          notes?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          discount_type: 'percentage' | 'fixed_amount';
+          discount_value: number;
+          expiry_date?: string | null;
+          status?: 'Active' | 'Used' | 'Expired' | 'Cancelled';
+          max_uses?: number | null;
+          times_used?: number;
+          notes?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          code?: string;
+          discount_type?: 'percentage' | 'fixed_amount';
+          discount_value?: number;
+          expiry_date?: string | null;
+          status?: 'Active' | 'Used' | 'Expired' | 'Cancelled';
+          max_uses?: number | null;
+          times_used?: number;
+          notes?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+      };
     };
     Views: {
       [key: string]: never;
@@ -452,6 +493,8 @@ export interface Database {
         payment_method_enum: 'Cash' | 'Bank Transfer' | 'Mobile Money' | 'Online Payment' | 'Other';
         report_type_enum: 'CustomerDataExport' | 'BulkMeterDataExport' | 'BillingSummary' | 'WaterUsageReport' | 'PaymentHistoryReport' | 'MeterReadingAccuracy';
         report_status_enum: 'Generated' | 'Pending' | 'Failed' | 'Archived';
+        voucher_discount_type_enum: 'percentage' | 'fixed_amount'; // Added
+        voucher_status_enum: 'Active' | 'Used' | 'Expired' | 'Cancelled'; // Added
     };
     CompositeTypes: {
       [key: string]: never;
@@ -492,6 +535,10 @@ export type PaymentUpdate = ResolvedDatabase['public']['Tables']['payments']['Up
 export type ReportLog = ResolvedDatabase['public']['Tables']['reports']['Row'];
 export type ReportLogInsert = ResolvedDatabase['public']['Tables']['reports']['Insert'];
 export type ReportLogUpdate = ResolvedDatabase['public']['Tables']['reports']['Update'];
+
+export type VoucherRow = ResolvedDatabase['public']['Tables']['vouchers']['Row'];
+export type VoucherInsert = ResolvedDatabase['public']['Tables']['vouchers']['Insert'];
+export type VoucherUpdate = ResolvedDatabase['public']['Tables']['vouchers']['Update'];
 
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -554,3 +601,8 @@ export const createReportLog = async (reportLog: ReportLogInsert) => supabase.fr
 export const updateReportLog = async (id: string, reportLog: ReportLogUpdate) => supabase.from('reports').update(reportLog).eq('id', id).select().single();
 export const deleteReportLog = async (id: string) => supabase.from('reports').delete().eq('id', id).select().single();
 
+// CRUD for Vouchers
+export const getAllVouchers = async () => supabase.from('vouchers').select('*');
+export const createVoucher = async (voucher: VoucherInsert) => supabase.from('vouchers').insert(voucher).select().single();
+export const updateVoucher = async (id: string, voucher: VoucherUpdate) => supabase.from('vouchers').update(voucher).eq('id', id).select().single();
+export const deleteVoucher = async (id: string) => supabase.from('vouchers').delete().eq('id', id).select().single();

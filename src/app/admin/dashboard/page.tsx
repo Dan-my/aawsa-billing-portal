@@ -46,8 +46,8 @@ const chartConfig = {
 
 
 export default function AdminDashboardPage() {
-  const [showBranchPerformanceTable, setShowBranchPerformanceTable] = React.useState(false);
-  const [showWaterUsageTable, setShowWaterUsageTable] = React.useState(false);
+  const [showBranchPerformanceTable, setShowBranchPerformanceTable] = React.useState(true);
+  const [showWaterUsageTable, setShowWaterUsageTable] = React.useState(true);
   
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -456,3 +456,4 @@ export default function AdminDashboardPage() {
     
 
     
+

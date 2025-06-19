@@ -211,7 +211,7 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
         </main>
         <footer className="py-4 px-6 text-center text-xs text-muted-foreground border-t">
           <p>&copy; {currentYear} {appName}. All rights reserved.</p>
-          <p>Developed by Firebase Studio Prototyper</p>
+          <p>Developed by Daniel Temesgen</p>
         </footer>
       </SidebarInset>
     </SidebarProvider>

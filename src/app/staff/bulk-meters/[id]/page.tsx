@@ -3,8 +3,8 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Image from "next/image"; // Added for logo
-import { Droplets, Edit, Trash2, MoreHorizontal, User, CheckCircle, XCircle, FileEdit, RefreshCcw, Gauge, Users as UsersIcon, DollarSign, TrendingUp, Clock, AlertTriangle, MinusCircle, PlusCircle as PlusCircleIcon } from "lucide-react";
+import Image from "next/image"; 
+import { Droplets, Edit, Trash2, MoreHorizontal, User, CheckCircle, XCircle, FileEdit, RefreshCcw, Gauge, Users as UsersIcon, DollarSign, TrendingUp, Clock, AlertTriangle, MinusCircle, PlusCircle as PlusCircleIcon, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -235,6 +235,10 @@ export default function StaffBulkMeterDetailsPage() {
     }
     setIsCustomerFormOpen(false); setSelectedCustomer(null);
   };
+  
+  const handlePrint = () => {
+    window.print();
+  };
 
 
   if (isLoading) return <div className="p-4 text-center">Loading bulk meter details...</div>;
@@ -264,6 +268,9 @@ export default function StaffBulkMeterDetailsPage() {
 
   const differenceUsage = bulkUsage - totalIndividualUsage;
   const differenceBill = totalBulkBill - totalIndividualBill;
+  
+  const displayCardLocation = bulkMeter.specificArea || bulkMeter.ward || "N/A";
+
 
   return (
     <div className="space-y-6 p-4">
@@ -274,6 +281,9 @@ export default function StaffBulkMeterDetailsPage() {
             <CardTitle className="text-2xl">Bulk Meter: {bulkMeter.name} ({staffBranchName})</CardTitle>
           </div>
           <div>
+            <Button variant="outline" size="sm" onClick={handlePrint} className="mr-2">
+                <Printer className="mr-2 h-4 w-4" /> Print / Export PDF
+            </Button>
             <Button variant="outline" size="sm" onClick={handleEditBulkMeter} className="mr-2">
               <FileEdit className="mr-2 h-4 w-4" /> Edit Bulk Meter
             </Button>
@@ -377,40 +387,46 @@ export default function StaffBulkMeterDetailsPage() {
         </CardContent>
       </Card>
 
-      {/* Formatted Bill Information Card */}
-      <Card className="shadow-lg print-only-card">
-        <CardHeader className="flex flex-row items-center justify-between border-b pb-4">
-          <div className="flex items-center gap-2">
+      <Card className="shadow-lg printable-bill-card">
+        <CardHeader className="border-b pb-4 text-center">
+            <h1 className="text-lg font-semibold tracking-wider uppercase">Addis Ababa Water and Sewerage Authority</h1>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-3 text-sm">
+          <div className="flex flex-row items-center justify-center border-b pb-3 mb-3">
             <Image
               src="https://veiethiopia.com/photo/partner/par2.png"
               alt="AAWSA Logo"
               width={60}
               height={37.5}
-              className="flex-shrink-0"
+              className="flex-shrink-0 mr-3"
             />
             <h2 className="text-xl font-semibold">AAWSA Bill calculating Portal</h2>
           </div>
-        </CardHeader>
-        <CardContent className="pt-6 space-y-2 text-sm">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
-            <p><strong className="font-semibold">Bulk Meter Name:</strong> {bulkMeter.name}</p>
-            <p><strong className="font-semibold">Customer Key Number:</strong> {bulkMeter.customerKeyNumber}</p>
-            <p><strong className="font-semibold">Branch:</strong> {staffBranchName ?? bulkMeter.location ?? 'N/A'}</p>
-            <p><strong className="font-semibold">Bulk Meter Category:</strong> Non-domestic</p>
-            <p><strong className="font-semibold">Number of Assigned Individual Customers:</strong> {associatedCustomers.length}</p>
-            <p><strong className="font-semibold">Previous Reading:</strong> {bmPreviousReading.toFixed(2)} m³</p>
-            <p><strong className="font-semibold">Current Reading:</strong> {bmCurrentReading.toFixed(2)} m³</p>
-            <p><strong className="font-semibold">Difference Usage (Bulk Meter):</strong> {bulkUsage.toFixed(2)} m³</p>
-            <p><strong className="font-semibold">Total Difference Bill (Non-Reconciled):</strong> ETB {totalBulkBill.toFixed(2)}</p>
-            <p><strong className="font-semibold">Month:</strong> {bulkMeter.month}</p>
+          
+          <div className="space-y-1.5">
+            <p><strong className="font-semibold w-60 inline-block">Bulk meter name:</strong> {bulkMeter.name}</p>
+            <p><strong className="font-semibold w-60 inline-block">Customer key number:</strong> {bulkMeter.customerKeyNumber}</p>
+            <p><strong className="font-semibold w-60 inline-block">Branch:</strong> {staffBranchName ?? bulkMeter.location ?? 'N/A'}</p>
+            <p><strong className="font-semibold w-60 inline-block">Location:</strong> {displayCardLocation}</p>
+            <p><strong className="font-semibold w-60 inline-block">Bulk Meter Category:</strong> Non-domestic</p>
+            <p><strong className="font-semibold w-60 inline-block">Number of Assigned Individual Customers:</strong> {associatedCustomers.length}</p>
+            <p><strong className="font-semibold w-60 inline-block">Previous and current reading:</strong> {bmPreviousReading.toFixed(2)} / {bmCurrentReading.toFixed(2)} m³</p>
+            <p><strong className="font-semibold w-60 inline-block">Bulk usage:</strong> {bulkUsage.toFixed(2)} m³</p>
+            <p><strong className="font-semibold w-60 inline-block">Difference usage:</strong> {differenceUsage.toFixed(2)} m³</p>
+            <p><strong className="font-semibold w-60 inline-block">Total Difference bill:</strong> ETB {differenceBill.toFixed(2)}</p>
+            <p><strong className="font-semibold w-60 inline-block">Paid/Unpaid:</strong> {bulkMeter.paymentStatus}</p>
+            <p><strong className="font-semibold w-60 inline-block">Month:</strong> {bulkMeter.month}</p>
           </div>
           
-          <div className="pt-8 space-y-4 text-sm">
+          <div className="pt-10 space-y-6 text-sm">
             <p className="border-b border-dashed border-gray-400 pb-2">Requested by: .........................................................</p>
             <p className="border-b border-dashed border-gray-400 pb-2">Check by: .............................................................</p>
             <p>Approved by: ........................................................</p>
           </div>
         </CardContent>
+         <CardHeader className="border-t pt-4 text-center mt-4">
+            <h1 className="text-sm font-semibold tracking-wider uppercase">Addis Ababa Water and Sewerage Authority</h1>
+        </CardHeader>
       </Card>
 
       {bulkMeter && (<BulkMeterFormDialog open={isBulkMeterFormOpen} onOpenChange={setIsBulkMeterFormOpen} onSubmit={handleSubmitBulkMeterForm} defaultValues={bulkMeter}/> )}

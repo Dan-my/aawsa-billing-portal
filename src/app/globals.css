@@ -141,3 +141,44 @@ body {
 .dark .quick-access-btn:active svg {
   color: hsl(var(--primary-foreground)) !important;
 }
+
+/* Print specific styles */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .printable-bill-card, .printable-bill-card * {
+    visibility: visible;
+  }
+  .printable-bill-card {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%; /* Or a specific width like 8.5in */
+    margin: 0;
+    padding: 20px;
+    border: 1px solid #ccc;
+    box-shadow: none;
+    font-size: 12pt; /* Adjust for print */
+    line-height: 1.5;
+  }
+  .printable-bill-card .no-print,
+  .printable-bill-card button, /* Hide all buttons within the card */
+  .printable-bill-card .lucide-refresh-ccw /* Hide specific icons if needed */
+   { 
+    display: none !important;
+  }
+  /* Ensure headers and other non-printable elements are hidden */
+  header, nav, aside, main > *:not(.printable-bill-card),
+  /* Hide the action buttons container if it's outside the card */
+  .flex.flex-row.items-center.justify-between > div:last-child button:not(.no-print) { 
+    display: none !important;
+  }
+  .printable-bill-card p {
+    margin-bottom: 0.5rem; /* Add some space between paragraphs for readability */
+  }
+  .printable-bill-card .font-semibold {
+    display: inline-block; /* Ensures the label and value are on the same conceptual line if needed */
+    min-width: 200px; /* Adjust for alignment of labels */
+  }
+}

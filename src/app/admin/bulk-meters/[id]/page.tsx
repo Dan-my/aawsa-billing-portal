@@ -3,8 +3,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Image from "next/image"; // Added for logo
-import { Droplets, Edit, Trash2, MoreHorizontal, User, CheckCircle, XCircle, FileEdit, RefreshCcw, Gauge, Users as UsersIcon, DollarSign, TrendingUp, Clock, MinusCircle, PlusCircle as PlusCircleIcon } from "lucide-react";
+import Image from "next/image"; 
+import { Droplets, Edit, Trash2, MoreHorizontal, User, CheckCircle, XCircle, FileEdit, RefreshCcw, Gauge, Users as UsersIcon, DollarSign, TrendingUp, Clock, MinusCircle, PlusCircle as PlusCircleIcon, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -24,13 +24,13 @@ import {
   subscribeToCustomers,
   initializeBulkMeters,
   initializeCustomers,
-  getBranches, // Added
-  initializeBranches, // Added
-  subscribeToBranches // Added
+  getBranches, 
+  initializeBranches, 
+  subscribeToBranches 
 } from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meter-types";
 import type { IndividualCustomer, IndividualCustomerStatus } from "../../individual-customers/individual-customer-types";
-import type { Branch } from "../../branches/branch-types"; // Added
+import type { Branch } from "../../branches/branch-types"; 
 import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus } from "@/lib/billing";
 import { BulkMeterFormDialog, type BulkMeterFormValues } from "../bulk-meter-form-dialog";
 import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "../../individual-customers/individual-customer-form-dialog";
@@ -44,7 +44,7 @@ export default function BulkMeterDetailsPage() {
 
   const [bulkMeter, setBulkMeter] = useState<BulkMeter | null>(null);
   const [associatedCustomers, setAssociatedCustomers] = useState<IndividualCustomer[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]); // Added state for branches
+  const [branches, setBranches] = useState<Branch[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
 
   const [isBulkMeterFormOpen, setIsBulkMeterFormOpen] = React.useState(false);
@@ -71,14 +71,14 @@ export default function BulkMeterDetailsPage() {
     Promise.all([
       initializeBulkMeters(),
       initializeCustomers(),
-      initializeBranches() // Initialize branches
+      initializeBranches() 
     ]).then(() => {
       if (!isMounted) return;
 
       const currentGlobalMeters = getBulkMeters();
       const currentGlobalCustomers = getCustomers();
-      const currentGlobalBranches = getBranches(); // Get branches
-      setBranches(currentGlobalBranches); // Set branches to state
+      const currentGlobalBranches = getBranches(); 
+      setBranches(currentGlobalBranches); 
 
       const foundBM = currentGlobalMeters.find(bm => bm.id === bulkMeterId);
 
@@ -103,8 +103,8 @@ export default function BulkMeterDetailsPage() {
       if (!isMounted) return;
       const currentGlobalMeters = getBulkMeters();
       const currentGlobalCustomers = getCustomers();
-      const currentGlobalBranches = getBranches(); // Get branches on update
-      setBranches(currentGlobalBranches); // Update branches state on update
+      const currentGlobalBranches = getBranches(); 
+      setBranches(currentGlobalBranches); 
 
       const foundBM = currentGlobalMeters.find(bm => bm.id === bulkMeterId);
 
@@ -120,13 +120,13 @@ export default function BulkMeterDetailsPage() {
 
     const unsubscribeBM = subscribeToBulkMeters(handleStoresUpdate);
     const unsubscribeCust = subscribeToCustomers(handleStoresUpdate);
-    const unsubscribeBranches = subscribeToBranches(handleStoresUpdate); // Subscribe to branch updates
+    const unsubscribeBranches = subscribeToBranches(handleStoresUpdate); 
 
     return () => {
       isMounted = false;
       unsubscribeBM();
       unsubscribeCust();
-      unsubscribeBranches(); // Unsubscribe from branch updates
+      unsubscribeBranches(); 
     };
   }, [bulkMeterId, router, toast, bulkMeter]);
 
@@ -201,6 +201,10 @@ export default function BulkMeterDetailsPage() {
     setSelectedCustomer(null);
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
 
   if (isLoading) {
     return <div className="p-4 text-center">Loading bulk meter details...</div>;
@@ -227,6 +231,8 @@ export default function BulkMeterDetailsPage() {
   const differenceBill = totalBulkBill - totalIndividualBill;
   
   const displayBranchName = bulkMeter.branchId ? branches.find(b => b.id === bulkMeter.branchId)?.name : bulkMeter.location;
+  const displayCardLocation = bulkMeter.specificArea || bulkMeter.ward || "N/A";
+
 
   return (
     <div className="space-y-6 p-4">
@@ -237,6 +243,9 @@ export default function BulkMeterDetailsPage() {
             <CardTitle className="text-2xl">Bulk Meter: {bulkMeter.name}</CardTitle>
           </div>
           <div>
+            <Button variant="outline" size="sm" onClick={handlePrint} className="mr-2">
+              <Printer className="mr-2 h-4 w-4" /> Print / Export PDF
+            </Button>
             <Button variant="outline" size="sm" onClick={handleEditBulkMeter} className="mr-2">
               <FileEdit className="mr-2 h-4 w-4" /> Edit Bulk Meter
             </Button>
@@ -377,40 +386,46 @@ export default function BulkMeterDetailsPage() {
         </CardContent>
       </Card>
 
-      {/* Formatted Bill Information Card */}
-      <Card className="shadow-lg print-only-card">
-        <CardHeader className="flex flex-row items-center justify-between border-b pb-4">
-          <div className="flex items-center gap-2">
+      <Card className="shadow-lg printable-bill-card">
+        <CardHeader className="border-b pb-4 text-center">
+            <h1 className="text-lg font-semibold tracking-wider uppercase">Addis Ababa Water and Sewerage Authority</h1>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-3 text-sm">
+          <div className="flex flex-row items-center justify-center border-b pb-3 mb-3">
             <Image
               src="https://veiethiopia.com/photo/partner/par2.png"
               alt="AAWSA Logo"
               width={60}
-              height={37.5} 
-              className="flex-shrink-0"
+              height={37.5}
+              className="flex-shrink-0 mr-3"
             />
             <h2 className="text-xl font-semibold">AAWSA Bill calculating Portal</h2>
           </div>
-        </CardHeader>
-        <CardContent className="pt-6 space-y-2 text-sm">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
-            <p><strong className="font-semibold">Bulk Meter Name:</strong> {bulkMeter.name}</p>
-            <p><strong className="font-semibold">Customer Key Number:</strong> {bulkMeter.customerKeyNumber}</p>
-            <p><strong className="font-semibold">Branch:</strong> {displayBranchName ?? 'N/A'}</p>
-            <p><strong className="font-semibold">Bulk Meter Category:</strong> Non-domestic</p>
-            <p><strong className="font-semibold">Number of Assigned Individual Customers:</strong> {associatedCustomers.length}</p>
-            <p><strong className="font-semibold">Previous Reading:</strong> {bmPreviousReading.toFixed(2)} m³</p>
-            <p><strong className="font-semibold">Current Reading:</strong> {bmCurrentReading.toFixed(2)} m³</p>
-            <p><strong className="font-semibold">Difference Usage (Bulk Meter):</strong> {bulkUsage.toFixed(2)} m³</p>
-            <p><strong className="font-semibold">Total Difference Bill (Non-Reconciled):</strong> ETB {totalBulkBill.toFixed(2)}</p>
-            <p><strong className="font-semibold">Month:</strong> {bulkMeter.month}</p>
+          
+          <div className="space-y-1.5">
+            <p><strong className="font-semibold w-60 inline-block">Bulk meter name:</strong> {bulkMeter.name}</p>
+            <p><strong className="font-semibold w-60 inline-block">Customer key number:</strong> {bulkMeter.customerKeyNumber}</p>
+            <p><strong className="font-semibold w-60 inline-block">Branch:</strong> {displayBranchName ?? 'N/A'}</p>
+            <p><strong className="font-semibold w-60 inline-block">Location:</strong> {displayCardLocation}</p>
+            <p><strong className="font-semibold w-60 inline-block">Bulk Meter Category:</strong> Non-domestic</p>
+            <p><strong className="font-semibold w-60 inline-block">Number of Assigned Individual Customers:</strong> {associatedCustomers.length}</p>
+            <p><strong className="font-semibold w-60 inline-block">Previous and current reading:</strong> {bmPreviousReading.toFixed(2)} / {bmCurrentReading.toFixed(2)} m³</p>
+            <p><strong className="font-semibold w-60 inline-block">Bulk usage:</strong> {bulkUsage.toFixed(2)} m³</p>
+            <p><strong className="font-semibold w-60 inline-block">Difference usage:</strong> {differenceUsage.toFixed(2)} m³</p>
+            <p><strong className="font-semibold w-60 inline-block">Total Difference bill:</strong> ETB {differenceBill.toFixed(2)}</p>
+            <p><strong className="font-semibold w-60 inline-block">Paid/Unpaid:</strong> {bulkMeter.paymentStatus}</p>
+            <p><strong className="font-semibold w-60 inline-block">Month:</strong> {bulkMeter.month}</p>
           </div>
           
-          <div className="pt-8 space-y-4 text-sm">
+          <div className="pt-10 space-y-6 text-sm">
             <p className="border-b border-dashed border-gray-400 pb-2">Requested by: .........................................................</p>
             <p className="border-b border-dashed border-gray-400 pb-2">Check by: .............................................................</p>
             <p>Approved by: ........................................................</p>
           </div>
         </CardContent>
+         <CardHeader className="border-t pt-4 text-center mt-4">
+            <h1 className="text-sm font-semibold tracking-wider uppercase">Addis Ababa Water and Sewerage Authority</h1>
+        </CardHeader>
       </Card>
 
 

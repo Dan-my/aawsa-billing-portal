@@ -67,11 +67,11 @@ export default function AdminDashboardPage() {
     const currentBulkMeters = getBulkMeters();
     const currentCustomers = getCustomers();
     // const currentBills = getBills(); // Still available if needed for other purposes
-    const currentMeterReadings = getMeterReadings();
+    // const currentMeterReadings = getMeterReadings(); // No longer used for water usage trend
 
     // Overall Bulk Meter Status (for the first card)
     const paidOverallBulkMeters = currentBulkMeters.filter(bm => bm.paymentStatus === 'Paid').length;
-    const unpaidOverallBulkMeters = currentBulkMeters.filter(bm => bm.paymentStatus === 'Unpaid').length; // Or add 'Pending' etc.
+    const unpaidOverallBulkMeters = currentBulkMeters.filter(bm => bm.paymentStatus === 'Unpaid').length; 
     setDynamicTotalBulkMeterCountForStatusCard(currentBulkMeters.length);
     setDynamicPaidBulkMeterCount(paidOverallBulkMeters);
     setDynamicUnpaidBulkMeterCount(unpaidOverallBulkMeters);
@@ -121,15 +121,22 @@ export default function AdminDashboardPage() {
     setDynamicBranchPerformanceData(Array.from(performanceMap.values()).map(p => ({ branch: p.branchName, paid: p.paid, unpaid: p.unpaid })));
 
 
-    // Process Water Usage Trend Data
+    // Process Water Usage Trend Data from Bulk Meters
     const usageMap = new Map<string, number>();
-    currentMeterReadings.forEach(reading => {
-      const currentUsage = usageMap.get(reading.monthYear) || 0;
-      usageMap.set(reading.monthYear, currentUsage + reading.readingValue); 
+    currentBulkMeters.forEach(bm => {
+      if (bm.month && typeof bm.bulkUsage === 'number') { // Ensure month and bulkUsage are valid
+        const currentMonthUsage = usageMap.get(bm.month) || 0;
+        usageMap.set(bm.month, currentMonthUsage + bm.bulkUsage);
+      }
     });
     const trendData = Array.from(usageMap.entries())
       .map(([month, usage]) => ({ month, usage }))
-      .sort((a, b) => new Date(a.month + "-01").getTime() - new Date(b.month + "-01").getTime()); 
+      .sort((a, b) => {
+        // Sort by date, ensuring 'YYYY-MM' strings are compared correctly
+        const dateA = new Date(a.month + "-01");
+        const dateB = new Date(b.month + "-01");
+        return dateA.getTime() - dateB.getTime();
+      }); 
     setDynamicWaterUsageTrendData(trendData);
 
   }, []);
@@ -449,4 +456,3 @@ export default function AdminDashboardPage() {
     
 
     
-

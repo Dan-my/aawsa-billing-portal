@@ -243,7 +243,12 @@ export default function BulkMeterDetailsPage() {
             <CardTitle className="text-2xl">Bulk Meter: {bulkMeter.name}</CardTitle>
           </div>
           <div>
-            <Button variant="outline" size="sm" onClick={handlePrint} className="mr-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handlePrint} 
+              className="mr-2 border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive-foreground focus-visible:ring-destructive"
+            >
               <Printer className="mr-2 h-4 w-4" /> Print / Export PDF
             </Button>
             <Button variant="outline" size="sm" onClick={handleEditBulkMeter} className="mr-2">

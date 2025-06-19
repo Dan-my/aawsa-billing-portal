@@ -3,13 +3,13 @@
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form"; // Ensure this is imported
+import { useForm } from "react-hook-form"; 
 import * as z from "zod";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
-  Form, // Ensure this is imported from "@/components/ui/form"
+  Form, 
   FormControl,
   FormField,
   FormItem,
@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { StaffMember } from "@/app/admin/staff-management/staff-types";
 import { getStaffMembers, initializeStaffMembers, subscribeToStaffMembers } from "@/lib/data-store";
+import { format } from "date-fns";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -40,8 +41,8 @@ export function AuthForm() {
   const { toast } = useToast();
   const [allStaffMembers, setAllStaffMembers] = React.useState<StaffMember[]>([]);
   const [isLoadingStaff, setIsLoadingStaff] = React.useState(true);
+  const [currentDateTime, setCurrentDateTime] = React.useState<Date | null>(null);
 
-  // Initialize the form here
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -60,7 +61,17 @@ export function AuthForm() {
     const unsubscribe = subscribeToStaffMembers((updatedStaff) => {
       setAllStaffMembers(updatedStaff);
     });
-    return () => unsubscribe();
+    
+    // Set initial date and time, and update time every second
+    setCurrentDateTime(new Date());
+    const timerId = setInterval(() => {
+      setCurrentDateTime(new Date());
+    }, 1000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(timerId); // Clear interval on component unmount
+    };
   }, []);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
@@ -115,6 +126,9 @@ export function AuthForm() {
     }
   };
 
+  const formattedDate = currentDateTime ? format(currentDateTime, "PPP") : "Loading date..."; // e.g., September 21st, 2023
+  const formattedTime = currentDateTime ? format(currentDateTime, "pp") : "Loading time..."; // e.g., 12:00:00 PM
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-2xl">
@@ -165,9 +179,12 @@ export function AuthForm() {
               </Button>
             </form>
           </Form>
+          <div className="mt-6 text-center text-sm text-muted-foreground">
+            <p>{formattedDate}</p>
+            <p>{formattedTime}</p>
+          </div>
         </CardContent>
       </Card>
     </div>
   );
 }
-

@@ -44,18 +44,18 @@ body {
     --sidebar-ring: 211 100% 50%; /* Blue */
   }
   .dark {
-    --background: 210 20% 5%; 
+    --background: 210 20% 5%;
     --foreground: 210 20% 98%;
-    --card: 210 20% 5%; 
+    --card: 210 20% 5%;
     --card-foreground: 210 20% 98%;
-    --popover: 210 20% 5%; 
+    --popover: 210 20% 5%;
     --popover-foreground: 210 20% 98%;
     --primary: 211 100% 60%; /* Lighter Blue for dark mode */
     --primary-foreground: 210 50% 10%;
     --primary-hover-bg: 211 100% 55%; /* Slightly darker blue for dark mode hover */
-    --secondary: 210 20% 14.9%; 
+    --secondary: 210 20% 14.9%;
     --secondary-foreground: 210 20% 98%;
-    --muted: 210 20% 14.9%; 
+    --muted: 210 20% 14.9%;
     --muted-foreground: 210 20% 63.9%;
     --accent: 145 53% 52%; /* Lighter Green for dark mode */
     --accent-foreground: 210 50% 10%;
@@ -69,7 +69,7 @@ body {
     --chart-3: 30 80% 60%; /* Orange - slightly lighter for dark mode */
     --chart-4: 280 65% 65%; /* Purple - slightly lighter for dark mode */
     --chart-5: 340 75% 60%; /* Pink - slightly lighter for dark mode */
-    --sidebar-background: 210 20% 10%; 
+    --sidebar-background: 210 20% 10%;
     --sidebar-foreground: 210 20% 95.9%;
     --sidebar-primary: 211 100% 60%; /* Lighter Blue */
     --sidebar-primary-foreground: 210 50% 10%;
@@ -144,44 +144,53 @@ body {
 
 /* Print specific styles */
 @media print {
+  /* Strategy: Hide everything, then show only the printable card */
   body * {
     visibility: hidden !important;
   }
   .printable-bill-card, .printable-bill-card * {
     visibility: visible !important;
   }
+
+  /* Style the printable card to take over the page */
   .printable-bill-card {
     position: absolute !important;
     left: 0 !important;
     top: 0 !important;
     width: 100% !important;
     margin: 0 !important;
-    padding: 25px !important; /* Slightly increased padding */
-    border: 1px solid #aaa !important; /* Slightly darker border for print */
+    padding: 25px !important;
+    border: 1px solid #aaa !important;
     box-shadow: none !important;
-    font-size: 11pt !important; /* Adjusted font size */
+    font-size: 11pt !important;
     line-height: 1.6 !important;
-    color: #000 !important; /* Ensure text is black */
+    color: #000 !important;
   }
+
+  /* Hide elements that should not be part of the printed bill itself */
   .printable-bill-card .no-print,
-  .printable-bill-card button,
-  .printable-bill-card .lucide-refresh-ccw
-   { 
-    display: none !important;
-  }
-  header, nav, aside, main > *:not(.printable-bill-card),
-  .flex.flex-row.items-center.justify-between > div:last-child button:not(.no-print) { 
+  .printable-bill-card button, /* Hides any buttons accidentally inside the card */
+  .printable-bill-card .lucide-refresh-ccw /* Example of hiding specific icons if needed */
+   {
     display: none !important;
   }
 
-  .printable-bill-card .CardHeader-title, /* Generic title class if used */
-  .printable-bill-card .text-lg.font-semibold, /* For main AAWSA titles */
-  .printable-bill-card .text-xl.font-semibold  /* For "AAWSA Bill calculating Portal" */ {
+  /* Explicitly hide common app layout elements that are outside the card */
+  header, nav, aside, footer, main > *:not(.printable-bill-card),
+  /* This rule hides main page action buttons (like the Print button itself) */
+  .flex.flex-row.items-center.justify-between > div:last-child button:not(.no-print) {
+    display: none !important;
+  }
+
+  /* Specific formatting for the content within the printable card */
+  .printable-bill-card .CardHeader-title,
+  .printable-bill-card .text-lg.font-semibold,
+  .printable-bill-card .text-xl.font-semibold {
     text-align: center !important;
     color: #000 !important;
   }
-  
-  .printable-bill-card .flex.flex-row.items-center.justify-center { /* For Logo and Portal title container */
+
+  .printable-bill-card .flex.flex-row.items-center.justify-center {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -191,37 +200,37 @@ body {
   }
   .printable-bill-card .flex.flex-row.items-center.justify-center img {
     margin-right: 1rem !important;
-    width: 60px !important; /* Fixed width for logo */
-    height: auto !important; /* Maintain aspect ratio */
+    width: 60px !important;
+    height: auto !important;
   }
 
   .printable-bill-card .space-y-1\.5 > p {
-    margin-bottom: 0.4rem !important; /* Adjusted spacing */
-    display: flex !important; /* Use flex for alignment */
+    margin-bottom: 0.4rem !important;
+    display: flex !important;
     justify-content: flex-start !important;
   }
 
   .printable-bill-card .space-y-1\.5 > p > strong.font-semibold {
     display: inline-block !important;
-    width: 220px !important; /* Fixed width for labels */
-    min-width: 220px !important; /* Ensure it doesn't shrink */
-    margin-right: 1em !important; /* Space between label and value */
-    font-weight: 600 !important; /* Ensure bold */
+    width: 220px !important; /* Fixed width for labels to align values */
+    min-width: 220px !important;
+    margin-right: 1em !important;
+    font-weight: 600 !important;
     color: #000 !important;
     vertical-align: top;
   }
-  
+
   .printable-bill-card .pt-10.space-y-6.text-sm {
-    padding-top: 2rem !important; /* More space before signature lines */
+    padding-top: 2rem !important;
   }
   .printable-bill-card .pt-10.space-y-6.text-sm p {
-    margin-bottom: 1.2rem !important; 
-    border-bottom: 1px dashed #555 !important; /* Darker dashed line */
+    margin-bottom: 1.2rem !important;
+    border-bottom: 1px dashed #555 !important; /* Darker dash for signatures */
     padding-bottom: 0.4rem !important;
     color: #000 !important;
   }
   .printable-bill-card .pt-10.space-y-6.text-sm p:last-child {
-    border-bottom-style: none !important;
+    border-bottom-style: none !important; /* Last signature line doesn't need a dash below it */
   }
   .printable-bill-card .border-t.pt-4.text-center.mt-4 { /* Bottom AAWSA title container */
     border-top: 1px solid #aaa !important;
@@ -231,6 +240,6 @@ body {
 
   /* Ensure specific font styles are applied for print */
   .printable-bill-card, .printable-bill-card p, .printable-bill-card strong, .printable-bill-card h1, .printable-bill-card h2 {
-    font-family: Arial, Helvetica, sans-serif !important; /* Consistent font */
+    font-family: Arial, Helvetica, sans-serif !important;
   }
 }

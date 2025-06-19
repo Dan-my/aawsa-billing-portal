@@ -65,88 +65,69 @@ export default function AdminDashboardPage() {
     const currentBranches = getBranches();
     const currentBulkMeters = getBulkMeters();
     const currentCustomers = getCustomers();
-    const currentBills = getBills();
+    const currentBills = getBills(); // Still used for overall bill counts
     const currentMeterReadings = getMeterReadings();
 
     setDynamicTotalBulkMeterCount(currentBulkMeters.length);
     setDynamicTotalIndividualCustomerCount(currentCustomers.length);
     
-    const paid = currentBills.filter(b => b.paymentStatus === 'Paid').length;
-    const unpaid = currentBills.filter(b => b.paymentStatus === 'Unpaid').length;
+    // Overall bill stats (from bills table)
+    const paidOverallBills = currentBills.filter(b => b.paymentStatus === 'Paid').length;
+    const unpaidOverallBills = currentBills.filter(b => b.paymentStatus === 'Unpaid').length;
     setDynamicTotalBillCount(currentBills.length);
-    setDynamicPaidBillCount(paid);
-    setDynamicUnpaidBillCount(unpaid);
+    setDynamicPaidBillCount(paidOverallBills);
+    setDynamicUnpaidBillCount(unpaidOverallBills);
 
-    // Process Branch Performance Data
+    // Process Branch Performance Data (from bulk_meters table)
     const performanceMap = new Map<string, { branchName: string, paid: number, unpaid: number }>();
     currentBranches.forEach(branch => {
       performanceMap.set(branch.id, { branchName: branch.name, paid: 0, unpaid: 0 });
     });
 
-    currentBills.forEach(bill => {
-      let billBranchId: string | null = null;
-      const customer = bill.individualCustomerId ? currentCustomers.find(c => c.id === bill.individualCustomerId) : null;
-      const bulkMeterForBill = bill.bulkMeterId ? currentBulkMeters.find(b => b.id === bill.bulkMeterId) : null;
-      
-      let entityForBranchMatching: { location?: string; ward?: string; name?: string; branchId?: string } | null = null;
+    currentBulkMeters.forEach(bm => {
+      let meterBranchId: string | undefined = bm.branchId;
 
-      if (customer) {
-        if (customer.branchId) {
-          entityForBranchMatching = { branchId: customer.branchId };
-        } else if (customer.assignedBulkMeterId) {
-          const assignedBM = currentBulkMeters.find(b => b.id === customer.assignedBulkMeterId);
-          if (assignedBM && assignedBM.branchId) {
-            entityForBranchMatching = { branchId: assignedBM.branchId };
-          } else {
-             entityForBranchMatching = assignedBM || customer;
-          }
-        } else {
-          entityForBranchMatching = customer;
-        }
-      } else if (bulkMeterForBill) {
-         if (bulkMeterForBill.branchId) {
-            entityForBranchMatching = { branchId: bulkMeterForBill.branchId };
-         } else {
-            entityForBranchMatching = bulkMeterForBill;
-         }
-      }
-      
-      if (entityForBranchMatching?.branchId) {
-        billBranchId = entityForBranchMatching.branchId;
-      } else if (entityForBranchMatching) {
-        // Fallback to name/location matching if no direct branchId
+      if (!meterBranchId) {
+        // Fallback: Try to match bulk meter to a branch by location/name/ward
         for (const branch of currentBranches) {
           const simpleBranchName = branch.name.replace(/ Branch$/i, "").toLowerCase().trim();
           const simpleBranchLocation = branch.location.toLowerCase().trim();
 
-          const entityLocation = (entityForBranchMatching.location?.toLowerCase() || "");
-          const entityWard = (entityForBranchMatching.ward?.toLowerCase() || "");
-          const entityName = (entityForBranchMatching.name?.toLowerCase() || "");
+          const bmLocation = (bm.location?.toLowerCase() || "");
+          const bmWard = (bm.ward?.toLowerCase() || "");
+          const bmName = (bm.name?.toLowerCase() || "");
 
-          if (entityLocation.includes(simpleBranchName) || entityLocation.includes(simpleBranchLocation) ||
-              entityWard.includes(simpleBranchName) || entityWard.includes(simpleBranchLocation) ||
-              entityName.includes(simpleBranchName) || entityName.includes(simpleBranchLocation)) {
-            billBranchId = branch.id;
+          if (bmLocation.includes(simpleBranchName) || bmLocation.includes(simpleBranchLocation) ||
+              bmWard.includes(simpleBranchName) || bmWard.includes(simpleBranchLocation) ||
+              bmName.includes(simpleBranchName) || bmName.includes(simpleBranchLocation)) {
+            meterBranchId = branch.id;
             break; 
           }
         }
       }
 
-
-      if (billBranchId && performanceMap.has(billBranchId)) {
-        const entry = performanceMap.get(billBranchId)!;
-        if (bill.paymentStatus === 'Paid') entry.paid++;
-        else if (bill.paymentStatus === 'Unpaid') entry.unpaid++; // Assuming only 'Paid' or 'Unpaid' for simplicity
-        performanceMap.set(billBranchId, entry);
+      if (meterBranchId && performanceMap.has(meterBranchId)) {
+        const entry = performanceMap.get(meterBranchId)!;
+        if (bm.paymentStatus === 'Paid') {
+          entry.paid++;
+        } else if (bm.paymentStatus === 'Unpaid') { // Consider other statuses if needed
+          entry.unpaid++;
+        }
+        performanceMap.set(meterBranchId, entry);
       }
     });
     setDynamicBranchPerformanceData(Array.from(performanceMap.values()).map(p => ({ branch: p.branchName, paid: p.paid, unpaid: p.unpaid })));
+
 
     // Process Water Usage Trend Data
     const usageMap = new Map<string, number>();
     currentMeterReadings.forEach(reading => {
       const currentUsage = usageMap.get(reading.monthYear) || 0;
-      usageMap.set(reading.monthYear, currentUsage + reading.readingValue);
+      // Assuming readingValue is total consumption for that month/reading, not a diff.
+      // If it's a meter reading like an odometer, this sum might not be "usage" but total volume.
+      // For "usage trend", this might need to calculate diffs between readings if `readingValue` is cumulative.
+      // For now, we'll sum the readingValue as is.
+      usageMap.set(reading.monthYear, currentUsage + reading.readingValue); 
     });
     const trendData = Array.from(usageMap.entries())
       .map(([month, usage]) => ({ month, usage }))
@@ -353,7 +334,7 @@ export default function AdminDashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div>
               <CardTitle>Branch Performance (Paid vs Unpaid)</CardTitle>
-               <CardDescription>Comparison of bills status across branches.</CardDescription>
+               <CardDescription>Comparison of bulk meter payment status across branches.</CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={() => setShowBranchPerformanceTable(!showBranchPerformanceTable)}>
               {showBranchPerformanceTable ? <BarChartBig className="mr-2 h-4 w-4" /> : <TableIcon className="mr-2 h-4 w-4" />}

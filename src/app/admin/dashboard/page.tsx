@@ -52,11 +52,12 @@ export default function AdminDashboardPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  const [dynamicTotalBillCount, setDynamicTotalBillCount] = React.useState<number>(0);
-  const [dynamicPaidBillCount, setDynamicPaidBillCount] = React.useState<number>(0);
-  const [dynamicUnpaidBillCount, setDynamicUnpaidBillCount] = React.useState<number>(0);
+  const [dynamicTotalBulkMeterCountForStatusCard, setDynamicTotalBulkMeterCountForStatusCard] = React.useState<number>(0);
+  const [dynamicPaidBulkMeterCount, setDynamicPaidBulkMeterCount] = React.useState<number>(0);
+  const [dynamicUnpaidBulkMeterCount, setDynamicUnpaidBulkMeterCount] = React.useState<number>(0);
+  
   const [dynamicTotalIndividualCustomerCount, setDynamicTotalIndividualCustomerCount] = React.useState<number>(0);
-  const [dynamicTotalBulkMeterCount, setDynamicTotalBulkMeterCount] = React.useState<number>(0);
+  const [dynamicTotalBulkMeterCountOverall, setDynamicTotalBulkMeterCountOverall] = React.useState<number>(0);
   
   const [dynamicBranchPerformanceData, setDynamicBranchPerformanceData] = React.useState<{ branch: string; paid: number; unpaid: number }[]>([]);
   const [dynamicWaterUsageTrendData, setDynamicWaterUsageTrendData] = React.useState<{ month: string; usage: number }[]>([]);
@@ -65,18 +66,20 @@ export default function AdminDashboardPage() {
     const currentBranches = getBranches();
     const currentBulkMeters = getBulkMeters();
     const currentCustomers = getCustomers();
-    const currentBills = getBills(); // Still used for overall bill counts
+    // const currentBills = getBills(); // Still available if needed for other purposes
     const currentMeterReadings = getMeterReadings();
 
-    setDynamicTotalBulkMeterCount(currentBulkMeters.length);
+    // Overall Bulk Meter Status (for the first card)
+    const paidOverallBulkMeters = currentBulkMeters.filter(bm => bm.paymentStatus === 'Paid').length;
+    const unpaidOverallBulkMeters = currentBulkMeters.filter(bm => bm.paymentStatus === 'Unpaid').length; // Or add 'Pending' etc.
+    setDynamicTotalBulkMeterCountForStatusCard(currentBulkMeters.length);
+    setDynamicPaidBulkMeterCount(paidOverallBulkMeters);
+    setDynamicUnpaidBulkMeterCount(unpaidOverallBulkMeters);
+
+    // Overall counts for other cards
+    setDynamicTotalBulkMeterCountOverall(currentBulkMeters.length);
     setDynamicTotalIndividualCustomerCount(currentCustomers.length);
     
-    // Overall bill stats (from bills table)
-    const paidOverallBills = currentBills.filter(b => b.paymentStatus === 'Paid').length;
-    const unpaidOverallBills = currentBills.filter(b => b.paymentStatus === 'Unpaid').length;
-    setDynamicTotalBillCount(currentBills.length);
-    setDynamicPaidBillCount(paidOverallBills);
-    setDynamicUnpaidBillCount(unpaidOverallBills);
 
     // Process Branch Performance Data (from bulk_meters table)
     const performanceMap = new Map<string, { branchName: string, paid: number, unpaid: number }>();
@@ -88,7 +91,6 @@ export default function AdminDashboardPage() {
       let meterBranchId: string | undefined = bm.branchId;
 
       if (!meterBranchId) {
-        // Fallback: Try to match bulk meter to a branch by location/name/ward
         for (const branch of currentBranches) {
           const simpleBranchName = branch.name.replace(/ Branch$/i, "").toLowerCase().trim();
           const simpleBranchLocation = branch.location.toLowerCase().trim();
@@ -110,7 +112,7 @@ export default function AdminDashboardPage() {
         const entry = performanceMap.get(meterBranchId)!;
         if (bm.paymentStatus === 'Paid') {
           entry.paid++;
-        } else if (bm.paymentStatus === 'Unpaid') { // Consider other statuses if needed
+        } else if (bm.paymentStatus === 'Unpaid') { 
           entry.unpaid++;
         }
         performanceMap.set(meterBranchId, entry);
@@ -123,10 +125,6 @@ export default function AdminDashboardPage() {
     const usageMap = new Map<string, number>();
     currentMeterReadings.forEach(reading => {
       const currentUsage = usageMap.get(reading.monthYear) || 0;
-      // Assuming readingValue is total consumption for that month/reading, not a diff.
-      // If it's a meter reading like an odometer, this sum might not be "usage" but total volume.
-      // For "usage trend", this might need to calculate diffs between readings if `readingValue` is cumulative.
-      // For now, we'll sum the readingValue as is.
       usageMap.set(reading.monthYear, currentUsage + reading.readingValue); 
     });
     const trendData = Array.from(usageMap.entries())
@@ -185,19 +183,19 @@ export default function AdminDashboardPage() {
     };
   }, [processDashboardData]);
 
-  const totalBillsChartData = React.useMemo(() => {
+  const bulkMeterStatusChartData = React.useMemo(() => {
     return [
-      { status: 'Paid', count: dynamicPaidBillCount, fill: chartConfig.paid.color },
-      { status: 'Unpaid', count: dynamicUnpaidBillCount, fill: chartConfig.unpaid.color },
+      { status: 'Paid', count: dynamicPaidBulkMeterCount, fill: chartConfig.paid.color },
+      { status: 'Unpaid', count: dynamicUnpaidBulkMeterCount, fill: chartConfig.unpaid.color },
     ];
-  }, [dynamicPaidBillCount, dynamicUnpaidBillCount]);
+  }, [dynamicPaidBulkMeterCount, dynamicUnpaidBulkMeterCount]);
 
   const customerCountChartData = React.useMemo(() => {
     return [
       { name: 'Customers', value: dynamicTotalIndividualCustomerCount, fill: chartConfig.individualCustomers.color },
-      { name: 'Bulk Meters', value: dynamicTotalBulkMeterCount, fill: chartConfig.bulkMeters.color },
+      { name: 'Bulk Meters', value: dynamicTotalBulkMeterCountOverall, fill: chartConfig.bulkMeters.color },
     ];
-  }, [dynamicTotalIndividualCustomerCount, dynamicTotalBulkMeterCount]);
+  }, [dynamicTotalIndividualCustomerCount, dynamicTotalBulkMeterCountOverall]);
 
 
   if (isLoading) {
@@ -216,7 +214,7 @@ export default function AdminDashboardPage() {
     );
   }
 
-  const totalCustomersAndMeters = dynamicTotalIndividualCustomerCount + dynamicTotalBulkMeterCount;
+  const totalCustomersAndMeters = dynamicTotalIndividualCustomerCount + dynamicTotalBulkMeterCountOverall;
 
   return (
     <div className="space-y-6">
@@ -225,20 +223,20 @@ export default function AdminDashboardPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Bills</CardTitle>
+            <CardTitle className="text-sm font-medium">Bulk Meter Payment Status</CardTitle>
             <BarChartIcon className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dynamicTotalBillCount.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{dynamicTotalBulkMeterCountForStatusCard.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
-              {dynamicPaidBillCount.toLocaleString()} Paid / {dynamicUnpaidBillCount.toLocaleString()} Unpaid
+              {dynamicPaidBulkMeterCount.toLocaleString()} Paid / {dynamicUnpaidBulkMeterCount.toLocaleString()} Unpaid
             </p>
             <div className="h-[120px] mt-4">
-              {(totalBillsChartData.length > 0 && (totalBillsChartData.some(d => d.count > 0))) ? (
+              {(bulkMeterStatusChartData.length > 0 && (bulkMeterStatusChartData.some(d => d.count > 0))) ? (
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChartRecharts>
-                      <Pie data={totalBillsChartData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={50} label>
-                        {totalBillsChartData.map((entry, index) => (
+                      <Pie data={bulkMeterStatusChartData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={50} label>
+                        {bulkMeterStatusChartData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.fill} />
                         ))}
                       </Pie>
@@ -248,7 +246,7 @@ export default function AdminDashboardPage() {
                 </ResponsiveContainer>
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                  No bill data available for chart.
+                  No bulk meter data available for chart.
                 </div>
               )}
             </div>
@@ -287,11 +285,11 @@ export default function AdminDashboardPage() {
 
          <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Bulk Meters</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Bulk Meters (Overall)</CardTitle>
             <Gauge className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dynamicTotalBulkMeterCount.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{dynamicTotalBulkMeterCountOverall.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Total registered bulk meters</p>
             <div className="h-[120px] mt-4 flex items-center justify-center">
                 <Gauge className="h-16 w-16 text-primary opacity-50" />
@@ -333,7 +331,7 @@ export default function AdminDashboardPage() {
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div>
-              <CardTitle>Branch Performance (Paid vs Unpaid)</CardTitle>
+              <CardTitle>Branch Performance (Paid vs Unpaid Bulk Meters)</CardTitle>
                <CardDescription>Comparison of bulk meter payment status across branches.</CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={() => setShowBranchPerformanceTable(!showBranchPerformanceTable)}>
@@ -451,3 +449,4 @@ export default function AdminDashboardPage() {
     
 
     
+

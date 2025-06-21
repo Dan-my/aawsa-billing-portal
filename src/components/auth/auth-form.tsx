@@ -130,61 +130,82 @@ export function AuthForm() {
   const formattedTime = currentDateTime ? format(currentDateTime, "pp") : "Loading time..."; // e.g., 12:00:00 PM
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md shadow-2xl">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex items-center justify-center w-24 h-[60px] overflow-hidden">
-            <Image
-              src="https://veiethiopia.com/photo/partner/par2.png"
-              alt="AAWSA Logo"
-              width={96}
-              height={60}
-              className="flex-shrink-0"
-            />
-          </div>
-          <CardTitle className="text-3xl font-bold">AAWSA Billing Portal</CardTitle>
-          <CardDescription>Sign in to access your account</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., admin@aawsa.com or kality@aawsa.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+    <div className="relative min-h-screen w-full">
+      <Image
+        src="https://placehold.co/1920x1080.png"
+        alt="A descriptive background image of a modern city skyline reflected in water."
+        fill
+        style={{ objectFit: 'cover' }}
+        className="-z-20"
+        data-ai-hint="water city"
+        priority
+      />
+      <div className="absolute inset-0 bg-black/60 -z-10" />
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-2xl bg-card/80 backdrop-blur-sm border-white/20">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 flex items-center justify-center w-24 h-[60px] overflow-hidden bg-white rounded-md p-1">
+              <Image
+                src="https://veiethiopia.com/photo/partner/par2.png"
+                alt="AAWSA Logo"
+                width={96}
+                height={60}
+                className="flex-shrink-0"
               />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || isLoadingStaff}>
-                {form.formState.isSubmitting || isLoadingStaff ? "Signing In..." : "Sign In"}
-              </Button>
-            </form>
-          </Form>
-          <div className="mt-6 text-center text-sm text-muted-foreground">
-            <p>{formattedDate}</p>
-            <p>{formattedTime}</p>
-          </div>
-        </CardContent>
-      </Card>
+            </div>
+            <CardTitle className="text-3xl font-bold text-white">AAWSA Billing Portal</CardTitle>
+            <CardDescription className="text-gray-200">Sign in to access your account</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Email</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="e.g., admin@aawsa.com or kality@aawsa.com" 
+                          {...field} 
+                          className="bg-background/70 text-foreground border-white/30 focus:border-primary"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Password</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="password" 
+                          placeholder="••••••••" 
+                          {...field} 
+                          className="bg-background/70 text-foreground border-white/30 focus:border-primary"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || isLoadingStaff}>
+                  {form.formState.isSubmitting || isLoadingStaff ? "Signing In..." : "Sign In"}
+                </Button>
+              </form>
+            </Form>
+            <div className="mt-6 text-center text-sm text-gray-300">
+              <p>{formattedDate}</p>
+              <p>{formattedTime}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

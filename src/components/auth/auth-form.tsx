@@ -2,13 +2,13 @@
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form"; 
+import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
-  Form, 
+  Form,
   FormControl,
   FormField,
   FormItem,
@@ -61,7 +61,6 @@ export function AuthForm() {
       setAllStaffMembers(updatedStaff);
     });
     
-    // Set initial date and time, and update time every second
     setCurrentDateTime(new Date());
     const timerId = setInterval(() => {
       setCurrentDateTime(new Date());
@@ -69,7 +68,7 @@ export function AuthForm() {
 
     return () => {
       unsubscribe();
-      clearInterval(timerId); // Clear interval on component unmount
+      clearInterval(timerId);
     };
   }, []);
 
@@ -125,18 +124,18 @@ export function AuthForm() {
     }
   };
 
-  const formattedDate = currentDateTime ? format(currentDateTime, "PPP") : "Loading date..."; // e.g., September 21st, 2023
-  const formattedTime = currentDateTime ? format(currentDateTime, "pp") : "Loading time..."; // e.g., 12:00:00 PM
+  const formattedDate = currentDateTime ? format(currentDateTime, "PPP") : "Loading date...";
+  const formattedTime = currentDateTime ? format(currentDateTime, "pp") : "Loading time...";
 
   return (
     <div className="relative min-h-screen w-full">
       <Image
-        src="https://user-images.githubusercontent.com/2629177/310332294-82352e07-353c-42eb-86a3-a71c9d4b0675.png"
-        alt="A diagram of a blue water bulk meter system."
+        src="http://www.stronsmart.com/wp-content/uploads/2015/06/2021071002405363.jpg"
+        alt="Water meters in a row"
         fill
         style={{ objectFit: 'cover' }}
         className="-z-20"
-        data-ai-hint="bulk meter"
+        data-ai-hint="water meters"
         priority
       />
       <div className="absolute inset-0 bg-black/60 -z-10" />

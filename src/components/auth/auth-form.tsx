@@ -132,12 +132,12 @@ export function AuthForm() {
   return (
     <div className="relative min-h-screen w-full">
       <Image
-        src="https://placehold.co/1920x1080.png"
-        alt="A descriptive background image of a modern city skyline reflected in water."
+        src="http://www.stronsmart.com/wp-content/uploads/2015/06/2021071002405363.jpg"
+        alt="A background image showing rows of water meters."
         fill
         style={{ objectFit: 'cover' }}
         className="-z-20"
-        data-ai-hint="water city"
+        data-ai-hint="water meter"
         priority
       />
       <div className="absolute inset-0 bg-black/60 -z-10" />

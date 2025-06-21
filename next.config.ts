@@ -40,6 +40,12 @@ const nextConfig: NextConfig = {
         hostname: 'www.undp.org',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'www.stronsmart.com',
+        port: '',
+        pathname: '/**',
       }
     ],
   },

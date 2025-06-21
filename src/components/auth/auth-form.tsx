@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -132,12 +131,12 @@ export function AuthForm() {
   return (
     <div className="relative min-h-screen w-full">
       <Image
-        src="http://www.stronsmart.com/wp-content/uploads/2015/06/2021071002405363.jpg"
-        alt="A background image showing rows of water meters."
+        src="https://user-images.githubusercontent.com/2629177/310332294-82352e07-353c-42eb-86a3-a71c9d4b0675.png"
+        alt="A diagram of a blue water bulk meter system."
         fill
         style={{ objectFit: 'cover' }}
         className="-z-20"
-        data-ai-hint="water meter"
+        data-ai-hint="bulk meter"
         priority
       />
       <div className="absolute inset-0 bg-black/60 -z-10" />

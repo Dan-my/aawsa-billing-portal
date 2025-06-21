@@ -46,8 +46,8 @@ const chartConfig = {
 
 
 export default function AdminDashboardPage() {
-  const [showBranchPerformanceTable, setShowBranchPerformanceTable] = React.useState(false);
-  const [showWaterUsageTable, setShowWaterUsageTable] = React.useState(false);
+  const [showBranchPerformanceTable, setShowBranchPerformanceTable] = React.useState(true);
+  const [showWaterUsageTable, setShowWaterUsageTable] = React.useState(true);
   
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -190,21 +190,6 @@ export default function AdminDashboardPage() {
     };
   }, [processDashboardData]);
 
-  const bulkMeterStatusChartData = React.useMemo(() => {
-    return [
-      { status: 'Paid', count: dynamicPaidBulkMeterCount, fill: chartConfig.paid.color },
-      { status: 'Unpaid', count: dynamicUnpaidBulkMeterCount, fill: chartConfig.unpaid.color },
-    ];
-  }, [dynamicPaidBulkMeterCount, dynamicUnpaidBulkMeterCount]);
-
-  const customerCountChartData = React.useMemo(() => {
-    return [
-      { name: 'Customers', value: dynamicTotalIndividualCustomerCount, fill: chartConfig.individualCustomers.color },
-      { name: 'Bulk Meters', value: dynamicTotalBulkMeterCountOverall, fill: chartConfig.bulkMeters.color },
-    ];
-  }, [dynamicTotalIndividualCustomerCount, dynamicTotalBulkMeterCountOverall]);
-
-
   if (isLoading) {
     return <div className="p-4 text-center">Loading dashboard data...</div>;
   }
@@ -238,25 +223,6 @@ export default function AdminDashboardPage() {
             <p className="text-xs text-muted-foreground">
               {dynamicPaidBulkMeterCount.toLocaleString()} Paid / {dynamicUnpaidBulkMeterCount.toLocaleString()} Unpaid
             </p>
-            <div className="h-[120px] mt-4">
-              {(bulkMeterStatusChartData.length > 0 && (bulkMeterStatusChartData.some(d => d.count > 0))) ? (
-                <ResponsiveContainer width="100%" height="100%">
-                    <PieChartRecharts>
-                      <Pie data={bulkMeterStatusChartData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={50} label>
-                        {bulkMeterStatusChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<ChartTooltipContent />} />
-                      <Legend verticalAlign="bottom" height={36} content={<ChartLegendContent nameKey="status" />} />
-                    </PieChartRecharts>
-                </ResponsiveContainer>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                  No bulk meter data available for chart.
-                </div>
-              )}
-            </div>
           </CardContent>
         </Card>
 
@@ -268,25 +234,6 @@ export default function AdminDashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{totalCustomersAndMeters.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Total registered entities</p>
-            <div className="h-[120px] mt-4">
-              {(customerCountChartData.length > 0 && (customerCountChartData.some(d => d.value > 0))) ? (
-                <ResponsiveContainer width="100%" height="100%">
-                    <PieChartRecharts>
-                      <Pie data={customerCountChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={30} outerRadius={50} paddingAngle={2} label>
-                        {customerCountChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<ChartTooltipContent />} />
-                      <Legend verticalAlign="bottom" height={36} content={<ChartLegendContent nameKey="name" />} />
-                    </PieChartRecharts>
-                </ResponsiveContainer>
-              ) : (
-                 <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                  No customer/meter data for chart.
-                </div>
-              )}
-            </div>
           </CardContent>
         </Card>
 
@@ -456,5 +403,6 @@ export default function AdminDashboardPage() {
     
 
     
+
 
 

@@ -8,9 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Save, AlertTriangle, Info, DollarSign } from "lucide-react";
+import { Save, AlertTriangle, Info, DollarSign, Bell, FileDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { DomesticTariffInfo, NonDomesticTariffInfo } from "@/lib/billing"; 
 
 const APP_NAME_KEY = "aawsa-app-name";
 const CURRENCY_KEY = "aawsa-default-currency";
@@ -18,19 +17,36 @@ const DARK_MODE_KEY = "aawsa-dark-mode-default";
 const BILLING_CYCLE_DAY_KEY = "aawsa-billing-cycle-day";
 const ENABLE_OVERDUE_REMINDERS_KEY = "aawsa-enable-overdue-reminders";
 
+// Keys for new settings
+const NOTIFY_NEW_BILL_KEY = "aawsa-notify-new-bill";
+const NOTIFY_OVERDUE_KEY = "aawsa-notify-overdue";
+const EXPORT_FORMAT_KEY = "aawsa-export-format";
+const EXPORT_PREFIX_KEY = "aawsa-export-prefix";
+
+
 const billingCycleDays = Array.from({ length: 28 }, (_, i) => (i + 1).toString());
 
 export default function AdminSettingsPage() {
   const { toast } = useToast();
+  
+  // State for existing settings
   const [appName, setAppName] = React.useState("AAWSA Billing Portal");
   const [defaultCurrency, setDefaultCurrency] = React.useState("ETB");
   const [enableDarkMode, setEnableDarkMode] = React.useState(false);
   const [billingCycleDay, setBillingCycleDay] = React.useState("1");
   const [enableOverdueReminders, setEnableOverdueReminders] = React.useState(false);
+  
+  // State for new settings
+  const [notifyOnNewBill, setNotifyOnNewBill] = React.useState(true);
+  const [notifyOnOverdue, setNotifyOnOverdue] = React.useState(true);
+  const [exportFormat, setExportFormat] = React.useState("xlsx");
+  const [exportPrefix, setExportPrefix] = React.useState("aawsa_export");
+
   const [isMounted, setIsMounted] = React.useState(false);
 
   React.useEffect(() => {
     setIsMounted(true);
+    // Load existing settings
     const storedAppName = localStorage.getItem(APP_NAME_KEY);
     const storedCurrency = localStorage.getItem(CURRENCY_KEY);
     const storedDarkMode = localStorage.getItem(DARK_MODE_KEY);
@@ -43,6 +59,17 @@ export default function AdminSettingsPage() {
     if (storedBillingCycleDay) setBillingCycleDay(storedBillingCycleDay);
     if (storedEnableOverdueReminders) setEnableOverdueReminders(storedEnableOverdueReminders === "true");
     
+    // Load new settings
+    const storedNotifyNewBill = localStorage.getItem(NOTIFY_NEW_BILL_KEY);
+    const storedNotifyOverdue = localStorage.getItem(NOTIFY_OVERDUE_KEY);
+    const storedExportFormat = localStorage.getItem(EXPORT_FORMAT_KEY);
+    const storedExportPrefix = localStorage.getItem(EXPORT_PREFIX_KEY);
+
+    if (storedNotifyNewBill !== null) setNotifyOnNewBill(storedNotifyNewBill === 'true');
+    if (storedNotifyOverdue !== null) setNotifyOnOverdue(storedNotifyOverdue === 'true');
+    if (storedExportFormat) setExportFormat(storedExportFormat);
+    if (storedExportPrefix) setExportPrefix(storedExportPrefix);
+    
     if (typeof document !== 'undefined') {
       if (storedDarkMode === "true") {
         document.documentElement.classList.add('dark');
@@ -53,22 +80,30 @@ export default function AdminSettingsPage() {
   }, []);
 
   const handleSaveSettings = () => {
+    // Save existing settings
     localStorage.setItem(APP_NAME_KEY, appName);
     localStorage.setItem(CURRENCY_KEY, defaultCurrency);
     localStorage.setItem(DARK_MODE_KEY, String(enableDarkMode));
     localStorage.setItem(BILLING_CYCLE_DAY_KEY, billingCycleDay);
     localStorage.setItem(ENABLE_OVERDUE_REMINDERS_KEY, String(enableOverdueReminders));
+    
+    // Save new settings
+    localStorage.setItem(NOTIFY_NEW_BILL_KEY, String(notifyOnNewBill));
+    localStorage.setItem(NOTIFY_OVERDUE_KEY, String(notifyOnOverdue));
+    localStorage.setItem(EXPORT_FORMAT_KEY, exportFormat);
+    localStorage.setItem(EXPORT_PREFIX_KEY, exportPrefix);
 
     toast({
       title: "Settings Saved",
       description: "Your application settings have been updated.",
     });
+
     if (typeof document !== 'undefined') {
         document.title = appName;
         if (enableDarkMode) {
-        document.documentElement.classList.add('dark');
+          document.documentElement.classList.add('dark');
         } else {
-        document.documentElement.classList.remove('dark');
+          document.documentElement.classList.remove('dark');
         }
     }
   };
@@ -155,50 +190,72 @@ export default function AdminSettingsPage() {
               <DollarSign className="h-5 w-5 text-primary" />
               <h3 className="font-semibold">Current Tariff Information</h3>
             </div>
-            <div className="mt-2 space-y-4">
-              <div>
-                <p className="text-sm font-medium">Domestic Customers:</p>
-                <ul className="list-disc list-inside text-sm text-accent pl-2 space-y-1">
-                  <li>1 - 5 m³: {defaultCurrency} 10.21 / m³</li>
-                  <li>6 - 14 m³: {defaultCurrency} 17.87 / m³</li>
-                  <li>15 - 23 m³: {defaultCurrency} 33.19 / m³</li>
-                  <li>24 - 32 m³: {defaultCurrency} 51.07 / m³</li>
-                  <li>33 - 41 m³: {defaultCurrency} 61.28 / m³</li>
-                  <li>42 - 50 m³: {defaultCurrency} 71.49 / m³</li>
-                  <li>51 - 56 m³: {defaultCurrency} 81.71 / m³</li>
-                  <li>Above 56 m³: {defaultCurrency} 81.71 / m³</li>
-                  <li>Maintenance Fee: 1% of Base Water Charge</li>
-                  <li>Sanitation Fee: 7% of Base Water Charge</li>
-                  <li>Meter Rent: {defaultCurrency} 15.00</li>
-                  <li>Sewerage Charge: {defaultCurrency} 6.25 / m³ (if applicable)</li>
-                </ul>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Non-domestic Customers:</p>
-                <ul className="list-disc list-inside text-sm text-accent pl-2 space-y-1">
-                  <li>1 - 5 m³: {defaultCurrency} 10.21 / m³</li>
-                  <li>6 - 14 m³: {defaultCurrency} 17.87 / m³</li>
-                  <li>15 - 23 m³: {defaultCurrency} 33.19 / m³</li>
-                  <li>24 - 32 m³: {defaultCurrency} 51.07 / m³</li>
-                  <li>33 - 41 m³: {defaultCurrency} 61.28 / m³</li>
-                  <li>42 - 50 m³: {defaultCurrency} 71.49 / m³</li>
-                  <li>51 - 56 m³: {defaultCurrency} 81.71 / m³</li>
-                  <li>Above 56 m³: {defaultCurrency} 81.71 / m³</li>
-                  <li>Sanitation Fee: 10% of Base Water Charge</li>
-                  <li>Meter Rent: {defaultCurrency} 15.00</li>
-                  <li>Sewerage Charge: {defaultCurrency} 8.75 / m³ (if applicable)</li>
-                </ul>
-              </div>
-            </div>
             <p className="text-xs text-muted-foreground mt-3">
-              Tariff details are managed centrally. Contact system administrators for changes to the underlying rates or structure.
+              Tariff rates and structure are managed in the <span className="font-semibold">Tariff Management</span> section. This is a read-only view.
             </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Detailed notification preferences and data export configurations will be available here in future updates.
-          </p>
         </CardContent>
       </Card>
+      
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Bell className="h-5 w-5"/> Notification Preferences</CardTitle>
+          <CardDescription>Configure when and how to send notifications.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="notify-new-bill" 
+                checked={notifyOnNewBill}
+                onCheckedChange={(checked) => setNotifyOnNewBill(checked as boolean)}
+              />
+              <Label htmlFor="notify-new-bill" className="font-normal">
+                Send email notification when a new bill is generated.
+              </Label>
+            </div>
+             <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="notify-overdue" 
+                checked={notifyOnOverdue}
+                onCheckedChange={(checked) => setNotifyOnOverdue(checked as boolean)}
+              />
+              <Label htmlFor="notify-overdue" className="font-normal">
+                Send email notification for overdue payments.
+              </Label>
+            </div>
+        </CardContent>
+      </Card>
+      
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><FileDown className="h-5 w-5"/> Data Export Configurations</CardTitle>
+          <CardDescription>Set default options for data exports.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="export-format">Default Export Format</Label>
+              <Select value={exportFormat} onValueChange={setExportFormat}>
+                <SelectTrigger id="export-format" className="w-full md:w-[200px]">
+                  <SelectValue placeholder="Select format" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="xlsx">Excel (.xlsx)</SelectItem>
+                  <SelectItem value="csv">CSV (.csv)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+             <div className="space-y-2">
+              <Label htmlFor="export-prefix">Default Export Filename Prefix</Label>
+              <Input 
+                id="export-prefix" 
+                value={exportPrefix}
+                onChange={(e) => setExportPrefix(e.target.value)} 
+                className="w-full md:w-[300px]"
+              />
+            </div>
+        </CardContent>
+      </Card>
+
 
       <Card className="shadow-lg">
         <CardHeader>
@@ -222,6 +279,4 @@ export default function AdminSettingsPage() {
     </div>
   );
 }
-    
-
     

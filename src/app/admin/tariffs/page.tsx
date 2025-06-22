@@ -14,14 +14,26 @@ import { TariffFormDialog, type TariffFormValues } from "./tariff-form-dialog";
 
 // Helper to map TariffTier from billing logic to a display-friendly format
 const mapTariffTierToDisplay = (tier: TariffTier, index: number, prevTier?: TariffTier): DisplayTariffRate => {
-  const minConsumption = prevTier ? parseFloat((prevTier.limit).toFixed(2)) + 0.01 : 0;
-  const maxConsumptionDisplay = tier.limit === Infinity ? "Above" : tier.limit.toFixed(2);
-  const description = `Tier ${index + 1}: ${minConsumption.toFixed(2)} - ${maxConsumptionDisplay} m³`;
+  let minConsumption: number;
+  if (index === 0) {
+    minConsumption = 1;
+  } else if (prevTier) {
+    minConsumption = prevTier.limit === Infinity ? Infinity : Math.floor(prevTier.limit) + 1;
+  } else {
+    minConsumption = 1; // Fallback for safety
+  }
+
+  const maxConsumptionDisplay = tier.limit === Infinity ? "Above" : String(Math.floor(tier.limit));
+  const minConsumptionDisplay = minConsumption === Infinity ? "N/A" : String(minConsumption);
+
+  const description = tier.limit === Infinity
+    ? `Tier ${index + 1}: Above ${prevTier ? Math.floor(prevTier.limit) : 0} m³`
+    : `Tier ${index + 1}: ${minConsumptionDisplay} - ${maxConsumptionDisplay} m³`;
 
   return {
     id: `tier-${index}-${tier.rate}-${tier.limit}`,
     description,
-    minConsumption: minConsumption.toFixed(2),
+    minConsumption: minConsumptionDisplay,
     maxConsumption: maxConsumptionDisplay,
     rate: tier.rate,
     originalLimit: tier.limit,
@@ -58,13 +70,20 @@ export default function TariffManagementPage() {
       
       return sorted.map((tier, index) => {
           const prevTier = index > 0 ? sorted[index - 1] : null;
-          // Handle case where previous tier limit is Infinity, though it shouldn't happen if sorted correctly.
-          const minConsumption = prevTier ? (prevTier.originalLimit === Infinity ? prevTier.originalLimit : prevTier.originalLimit + 0.01) : 0;
+          
+          let minConsumption: number;
+          if (index === 0) {
+              minConsumption = 1; 
+          } else if (prevTier) {
+              minConsumption = prevTier.originalLimit === Infinity ? Infinity : Math.floor(prevTier.originalLimit) + 1;
+          } else {
+              minConsumption = 1; // Fallback for safety
+          }
           
           return {
               ...tier,
-              minConsumption: minConsumption === Infinity ? "N/A" : minConsumption.toFixed(2),
-              maxConsumption: tier.originalLimit === Infinity ? "Above" : tier.originalLimit.toFixed(2),
+              minConsumption: minConsumption === Infinity ? "N/A" : String(minConsumption),
+              maxConsumption: tier.originalLimit === Infinity ? "Above" : String(Math.floor(tier.originalLimit)),
           };
       });
   };

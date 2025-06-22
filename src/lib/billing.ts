@@ -1,4 +1,3 @@
-
 // src/lib/billing.ts
 
 export const customerTypes = ["Domestic", "Non-domestic"] as const;
@@ -24,7 +23,8 @@ export const DomesticTariffTiersData: TariffTier[] = [
   { limit: 32, rate: 51.07, cumulativeUsage: 23 },
   { limit: 41, rate: 61.28, cumulativeUsage: 32 },
   { limit: 50, rate: 71.49, cumulativeUsage: 41 },
-  { limit: Infinity, rate: 81.71, cumulativeUsage: 50 },
+  { limit: 56, rate: 81.71, cumulativeUsage: 50 },
+  { limit: Infinity, rate: 81.71, cumulativeUsage: 56 },
 ];
 
 export const NonDomesticTariffTiersData: TariffTier[] = [

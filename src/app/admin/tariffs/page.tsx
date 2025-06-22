@@ -7,28 +7,29 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { LibraryBig, ListChecks, PlusCircle, RotateCcw, Edit, Trash2 } from "lucide-react";
-import type { TariffTier } from "@/lib/billing"; // Corrected import
-import { DomesticTariffInfo, NonDomesticTariffInfo } from "@/lib/billing"; // Corrected import
+import type { TariffTier } from "@/lib/billing";
+import { DomesticTariffInfo } from "@/lib/billing";
 import { TariffRateTable, type DisplayTariffRate } from "./tariff-rate-table";
 import { TariffFormDialog, type TariffFormValues } from "./tariff-form-dialog";
 
-// Helper to map TariffTier from individual-customer-types to DisplayTariffRate
+// Helper to map TariffTier from billing logic to a display-friendly format
 const mapTariffTierToDisplay = (tier: TariffTier, index: number, prevTier?: TariffTier): DisplayTariffRate => {
   const minConsumption = prevTier ? parseFloat((prevTier.limit).toFixed(2)) + 0.01 : 0;
   const maxConsumptionDisplay = tier.limit === Infinity ? "Above" : tier.limit.toFixed(2);
   const description = `Tier ${index + 1}: ${minConsumption.toFixed(2)} - ${maxConsumptionDisplay} m³`;
 
   return {
-    id: `tier-${index}-${tier.rate}-${tier.limit}`, // Simple ID generation for local state
+    id: `tier-${index}-${tier.rate}-${tier.limit}`,
     description,
     minConsumption: minConsumption.toFixed(2),
     maxConsumption: maxConsumptionDisplay,
     rate: tier.rate,
-    originalLimit: tier.limit, // Store original limit for editing
-    originalRate: tier.rate,   // Store original rate
+    originalLimit: tier.limit,
+    originalRate: tier.rate,
   };
 };
 
+// Gets the initial set of domestic tiers for display
 const getDefaultDomesticDisplayTiers = (): DisplayTariffRate[] => {
   let previousTier: TariffTier | undefined;
   return DomesticTariffInfo.tiers.map((tier, index) => {
@@ -50,11 +51,23 @@ export default function TariffManagementPage() {
   const [isResetDialogOpen, setIsResetDialogOpen] = React.useState(false);
   const [rateToDelete, setRateToDelete] = React.useState<DisplayTariffRate | null>(null);
 
-  React.useEffect(() => {
-    // This effect could be used if we switch between Domestic/Non-Domestic managed tariffs
-    // For now, it's hardcoded to Domestic initialization
-    setTariffRates(getDefaultDomesticDisplayTiers());
-  }, [currentTariffType]);
+  // Helper function to re-calculate display values (min/max consumption) from the source-of-truth `originalLimit`
+  // This preserves user-edited descriptions and other fields.
+  const reprocessTiersForDisplay = (tiers: DisplayTariffRate[]): DisplayTariffRate[] => {
+      const sorted = [...tiers].sort((a, b) => a.originalLimit - b.originalLimit);
+      
+      return sorted.map((tier, index) => {
+          const prevTier = index > 0 ? sorted[index - 1] : null;
+          // Handle case where previous tier limit is Infinity, though it shouldn't happen if sorted correctly.
+          const minConsumption = prevTier ? (prevTier.originalLimit === Infinity ? prevTier.originalLimit : prevTier.originalLimit + 0.01) : 0;
+          
+          return {
+              ...tier,
+              minConsumption: minConsumption === Infinity ? "N/A" : minConsumption.toFixed(2),
+              maxConsumption: tier.originalLimit === Infinity ? "Above" : tier.originalLimit.toFixed(2),
+          };
+      });
+  };
 
   const handleAddTier = () => {
     setEditingRate(null);
@@ -72,17 +85,10 @@ export default function TariffManagementPage() {
 
   const confirmDelete = () => {
     if (rateToDelete) {
-      setTariffRates(prev => prev.filter(r => r.id !== rateToDelete.id).map((tier, index, arr) => {
-        // Recalculate minConsumption and description after deletion
-        const prevDisplayTier = index > 0 ? arr[index-1] : undefined;
-        const minC = prevDisplayTier ? parseFloat(prevDisplayTier.maxConsumption === "Above" ? prevDisplayTier.minConsumption : prevDisplayTier.maxConsumption) + 0.01 : 0;
-         const maxCDisplay = tier.maxConsumption;
-        return {
-          ...tier,
-          minConsumption: minC.toFixed(2),
-          description: `Tier ${index + 1}: ${minC.toFixed(2)} - ${maxCDisplay} m³`
-        };
-      }));
+      setTariffRates(prev => {
+        const newRatesList = prev.filter(r => r.id !== rateToDelete.id);
+        return reprocessTiersForDisplay(newRatesList);
+      });
       toast({ title: "Tariff Tier Deleted", description: `Tier "${rateToDelete.description}" has been removed.` });
       setRateToDelete(null);
     }
@@ -94,54 +100,33 @@ export default function TariffManagementPage() {
 
     if (editingRate) { // Editing existing tier
       setTariffRates(prevRates => {
-        const updatedRates = prevRates.map(r => 
+        const updatedRatesList = prevRates.map(r => 
           r.id === editingRate.id 
-            ? { ...r, originalRate: newRateValue, rate: newRateValue, originalLimit: newMaxConsumptionValue, description: data.description || r.description } // Keep existing maxConsumption display for now
+            ? { 
+                ...r, 
+                description: data.description,
+                rate: newRateValue, 
+                originalRate: newRateValue, 
+                originalLimit: newMaxConsumptionValue,
+              }
             : r
         );
-        // Re-map to update min/max and descriptions based on new order/values
-        let previousDisplayTier: DisplayTariffRate | undefined;
-        return updatedRates.sort((a,b) => a.originalLimit - b.originalLimit).map((tier, index) => {
-            const minC = previousDisplayTier ? parseFloat(previousDisplayTier.maxConsumption === "Above" ? previousDisplayTier.minConsumption : previousDisplayTier.maxConsumption ) + 0.01 : 0;
-            const maxC = tier.originalLimit === Infinity ? "Above" : tier.originalLimit.toFixed(2);
-            return {
-                ...tier,
-                minConsumption: minC.toFixed(2),
-                maxConsumption: maxC,
-                description: data.description || `Tier ${index + 1}: ${minC.toFixed(2)} - ${maxC} m³`
-            };
-        });
+        return reprocessTiersForDisplay(updatedRatesList);
       });
-      toast({ title: "Tariff Tier Updated", description: `Tier "${data.description || editingRate.description}" updated.` });
+      toast({ title: "Tariff Tier Updated", description: `Tier "${data.description}" updated.` });
+
     } else { // Adding new tier
       setTariffRates(prevRates => {
-        const newTierRaw = { 
+        const newTier: Omit<DisplayTariffRate, 'minConsumption' | 'maxConsumption'> = { 
             id: `new-tier-${Date.now()}`, 
-            description: data.description || "", // User provides description
-            originalRate: newRateValue,
+            description: data.description,
             rate: newRateValue, 
-            originalLimit: newMaxConsumptionValue
+            originalRate: newRateValue, 
+            originalLimit: newMaxConsumptionValue,
         };
-        
-        const combinedRates = [...prevRates.map(r => ({...r, originalLimit: r.maxConsumption === "Above" ? Infinity : parseFloat(r.maxConsumption)})), newTierRaw];
-        
-        // Sort by max consumption (originalLimit) before mapping
-        combinedRates.sort((a, b) => a.originalLimit - b.originalLimit);
-
-        let previousDisplayTier: DisplayTariffRate | undefined;
-        return combinedRates.map((tier, index) => {
-            const minC = previousDisplayTier ? parseFloat(previousDisplayTier.maxConsumption === "Above" ? previousDisplayTier.minConsumption : previousDisplayTier.maxConsumption) + 0.01 : 0;
-            const maxC = tier.originalLimit === Infinity ? "Above" : tier.originalLimit.toFixed(2);
-             return {
-                id: tier.id || `new-tier-${Date.now()}-${index}`, // Ensure ID
-                description: tier.description || `Tier ${index + 1}: ${minC.toFixed(2)} - ${maxC} m³`,
-                minConsumption: minC.toFixed(2),
-                maxConsumption: maxC,
-                rate: tier.rate,
-                originalLimit: tier.originalLimit,
-                originalRate: tier.originalRate || tier.rate,
-            };
-        });
+        // Add the new tier and then reprocess the whole list to calculate min/max correctly
+        const newRatesList = [...prevRates, newTier as DisplayTariffRate];
+        return reprocessTiersForDisplay(newRatesList);
       });
       toast({ title: "Tariff Tier Added", description: `New tier "${data.description}" added.` });
     }
@@ -240,4 +225,3 @@ export default function TariffManagementPage() {
     </div>
   );
 }
-

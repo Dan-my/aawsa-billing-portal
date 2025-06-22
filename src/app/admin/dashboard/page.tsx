@@ -4,7 +4,7 @@
 import * as React from "react";
 import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart as BarChartIcon, Clock, Gauge, Users, ArrowRight, Table as TableIcon, TrendingUp, AlertCircle } from 'lucide-react';
+import { BarChart as BarChartIcon, Clock, Gauge, Users, ArrowRight, Table as TableIcon, TrendingUp, AlertCircle, PieChart as PieChartIcon } from 'lucide-react';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -29,18 +29,21 @@ const Legend = dynamic(() => import('recharts').then(mod => mod.Legend), { ssr: 
 const Line = dynamic(() => import('recharts').then(mod => mod.Line), { ssr: false });
 const PieChartRecharts = dynamic(() => import('recharts').then(mod => mod.PieChart), { ssr: false });
 const Pie = dynamic(() => import('recharts').then(mod => mod.Pie), { ssr: false });
+const Cell = dynamic(() => import('recharts').then(mod => mod.Cell), { ssr: false });
 const RechartsBar = dynamic(() => import('recharts').then(mod => mod.Bar), { ssr: false });
 
 const chartConfig = {
   paid: { label: "Paid", color: "hsl(var(--chart-1))" },
   unpaid: { label: "Unpaid", color: "hsl(var(--chart-2))" },
+  customers: { label: "Customers", color: "hsl(var(--chart-1))" },
+  bulkMeters: { label: "Bulk Meters", color: "hsl(var(--chart-3))" },
   waterUsage: { label: "Water Usage (m³)", color: "hsl(var(--chart-1))" },
 } satisfies import("@/components/ui/chart").ChartConfig;
 
 
 export default function AdminDashboardPage() {
-  const [showBranchPerformanceTable, setShowBranchPerformanceTable] = React.useState(true);
-  const [showWaterUsageTable, setShowWaterUsageTable] = React.useState(true);
+  const [showBranchPerformanceTable, setShowBranchPerformanceTable] = React.useState(false);
+  const [showWaterUsageTable, setShowWaterUsageTable] = React.useState(false);
   
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -48,9 +51,10 @@ export default function AdminDashboardPage() {
   const [dynamicTotalBulkMeterCount, setDynamicTotalBulkMeterCount] = React.useState(0);
   const [dynamicPaidBulkMeterCount, setDynamicPaidBulkMeterCount] = React.useState(0);
   const [dynamicUnpaidBulkMeterCount, setDynamicUnpaidBulkMeterCount] = React.useState(0);
-  const [bulkMeterPaymentStatusData, setBulkMeterPaymentStatusData] = React.useState<{ name: string; value: number }[]>([]);
+  const [bulkMeterPaymentStatusData, setBulkMeterPaymentStatusData] = React.useState<{ name: string; value: number; fill: string; }[]>([]);
   
   const [dynamicTotalEntityCount, setDynamicTotalEntityCount] = React.useState(0);
+  const [customerBreakdownData, setCustomerBreakdownData] = React.useState<{ name: string; value: number; fill: string }[]>([]);
   
   const [dynamicBranchPerformanceData, setDynamicBranchPerformanceData] = React.useState<{ branch: string; paid: number; unpaid: number }[]>([]);
   const [dynamicWaterUsageTrendData, setDynamicWaterUsageTrendData] = React.useState<{ month: string; usage: number }[]>([]);
@@ -62,11 +66,20 @@ export default function AdminDashboardPage() {
 
     // Bulk Meter Payment Status
     const { totalBMs, paidBMs, unpaidBMs } = getBulkMeterPaymentStatusCounts();
-    setDynamicTotalBulkMeterCount(totalBMs);    setDynamicPaidBulkMeterCount(paidBMs);
-    setDynamicUnpaidBulkMeterCount(totalBMs - paidBMs);
+    setDynamicTotalBulkMeterCount(totalBMs);
+    setDynamicPaidBulkMeterCount(paidBMs);
+    setDynamicUnpaidBulkMeterCount(unpaidBMs);
+    setBulkMeterPaymentStatusData([
+      { name: 'Paid', value: paidBMs, fill: 'hsl(var(--chart-1))' },
+      { name: 'Unpaid', value: unpaidBMs, fill: 'hsl(var(--chart-2))' },
+    ]);
 
     // Customer and Meter Counts
     setDynamicTotalEntityCount(currentCustomers.length + totalBMs);
+    setCustomerBreakdownData([
+        { name: 'Customers', value: currentCustomers.length, fill: 'hsl(var(--chart-1))' },
+        { name: 'Bulk Meters', value: totalBMs, fill: 'hsl(var(--chart-3))' },
+    ]);
 
     // Branch Performance Data
     const performanceMap = new Map<string, { branchName: string, paid: number, unpaid: number }>();
@@ -85,11 +98,6 @@ export default function AdminDashboardPage() {
     setDynamicBranchPerformanceData(Array.from(performanceMap.values()).map(p => ({ branch: p.branchName.replace(/ Branch$/i, ""), paid: p.paid, unpaid: p.unpaid })));
 
 
-    // Bulk Meter Payment Status for Chart
-    setBulkMeterPaymentStatusData([
-      { name: 'Paid', value: paidBMs },
-      { name: 'Unpaid', value: unpaidBMs },
-    ]);
     // Water Usage Trend Data from Bulk Meters
     const usageMap = new Map<string, number>();
     currentBulkMeters.forEach(bm => {
@@ -165,33 +173,52 @@ export default function AdminDashboardPage() {
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Bulk Meter Payment Status</CardTitle>
-            <BarChartIcon className="h-5 w-5 text-muted-foreground" />
+            <PieChartIcon className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{dynamicTotalBulkMeterCount.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">{dynamicPaidBulkMeterCount} Paid / {dynamicUnpaidBulkMeterCount} Unpaid</p>
-          </CardContent>
-          {bulkMeterPaymentStatusData.length > 0 && (
-             <div className="h-[150px] mt-2">
-                 <ChartContainer config={chartConfig}>
+             <div className="h-[120px] mt-4">
+                 <ChartContainer config={chartConfig} className="w-full h-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChartRecharts>
-                            <Pie data={bulkMeterPaymentStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} fill="#8884d8" />
+                            <Pie data={bulkMeterPaymentStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={50}>
+                                {bulkMeterPaymentStatusData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                                ))}
+                            </Pie>
                             <Tooltip content={<ChartTooltipContent hideLabel />} />
+                            <Legend verticalAlign="bottom" height={36} />
                          </PieChartRecharts>
                      </ResponsiveContainer>
                  </ChartContainer>
             </div>
-          )}</Card>
+          </CardContent>
+        </Card>
 
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Customer & Meter Counts</CardTitle>
-            <Clock className="h-5 w-5 text-muted-foreground" />
+            <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{dynamicTotalEntityCount.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Total registered entities</p>
+             <div className="h-[120px] mt-4">
+                 <ChartContainer config={chartConfig} className="w-full h-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChartRecharts>
+                            <Pie data={customerBreakdownData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={30} outerRadius={50}>
+                                {customerBreakdownData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                                ))}
+                            </Pie>
+                            <Tooltip content={<ChartTooltipContent hideLabel />} />
+                            <Legend verticalAlign="bottom" height={36} />
+                         </PieChartRecharts>
+                     </ResponsiveContainer>
+                 </ChartContainer>
+            </div>
           </CardContent>
         </Card>
 

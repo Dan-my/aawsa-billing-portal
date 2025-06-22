@@ -11,7 +11,9 @@ import type { TariffTier } from "@/lib/billing";
 import { DomesticTariffInfo, NonDomesticTariffInfo } from "@/lib/billing";
 import { TariffRateTable, type DisplayTariffRate } from "./tariff-rate-table";
 import { TariffFormDialog, type TariffFormValues } from "./tariff-form-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 // Helper to map TariffTier from billing logic to a display-friendly format
 const mapTariffTierToDisplay = (tier: TariffTier, index: number, prevTier?: TariffTier): DisplayTariffRate => {
@@ -96,13 +98,18 @@ export default function TariffManagementPage() {
               minConsumption = 1;
           }
           
+          const maxConsumptionDisplay = tier.originalLimit === Infinity ? "Above" : String(Math.floor(tier.originalLimit));
+          const minConsumptionDisplay = minConsumption === Infinity ? "N/A" : String(minConsumption);
+
+          // Only update calculated fields, preserve existing description
           return {
               ...tier,
-              minConsumption: minConsumption === Infinity ? "N/A" : String(minConsumption),
-              maxConsumption: tier.originalLimit === Infinity ? "Above" : String(Math.floor(tier.originalLimit)),
+              minConsumption: minConsumptionDisplay,
+              maxConsumption: maxConsumptionDisplay,
           };
       });
   };
+
 
   const handleAddTier = () => {
     setEditingRate(null);
@@ -201,50 +208,44 @@ export default function TariffManagementPage() {
         </CardHeader>
       </Card>
 
-      <Tabs value={currentTariffType} onValueChange={(value) => setCurrentTariffType(value as 'Domestic' | 'Non-domestic')} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="Domestic">Domestic Tariffs</TabsTrigger>
-            <TabsTrigger value="Non-domestic">Non-domestic Tariffs</TabsTrigger>
-        </TabsList>
-        <TabsContent value="Domestic">
-            <Card className="shadow-lg mt-4">
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <ListChecks className="h-6 w-6 text-primary" />
-                    <CardTitle>Current Tariff Rates (Domestic)</CardTitle>
-                  </div>
-                  <CardDescription>These rates are used for calculating domestic water bills. Rates are applied progressively.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <TariffRateTable 
-                    rates={domesticTiers} 
-                    onEdit={handleEditTier} 
-                    onDelete={handleDeleteTier} 
-                    currency="ETB"
-                  />
-                </CardContent>
-            </Card>
-        </TabsContent>
-        <TabsContent value="Non-domestic">
-             <Card className="shadow-lg mt-4">
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <ListChecks className="h-6 w-6 text-primary" />
-                    <CardTitle>Current Tariff Rates (Non-domestic)</CardTitle>
-                  </div>
-                  <CardDescription>These rates are used for calculating non-domestic water bills. Rates are applied progressively.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <TariffRateTable 
-                    rates={nonDomesticTiers} 
-                    onEdit={handleEditTier} 
-                    onDelete={handleDeleteTier} 
-                    currency="ETB"
-                  />
-                </CardContent>
-            </Card>
-        </TabsContent>
-      </Tabs>
+      <div className="space-y-2">
+        <Label htmlFor="customer-category">Select Customer Category</Label>
+        <Select 
+            value={currentTariffType} 
+            onValueChange={(value) => setCurrentTariffType(value as 'Domestic' | 'Non-domestic')}
+        >
+          <SelectTrigger id="customer-category" className="w-full md:w-[300px]">
+            <SelectValue placeholder="Select a category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Domestic">Domestic</SelectItem>
+            <SelectItem value="Non-domestic">Non-domestic</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Card className="shadow-lg mt-4">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <ListChecks className="h-6 w-6 text-primary" />
+              <CardTitle>Current Tariff Rates ({currentTariffType})</CardTitle>
+            </div>
+            <CardDescription>
+                {currentTariffType === 'Domestic' 
+                    ? "These rates are used for calculating domestic water bills. Rates are applied progressively."
+                    : "These rates are used for calculating non-domestic water bills. Rates are applied progressively."
+                }
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TariffRateTable 
+              rates={activeTiers} 
+              onEdit={handleEditTier} 
+              onDelete={handleDeleteTier} 
+              currency="ETB"
+            />
+          </CardContent>
+      </Card>
 
       <TariffFormDialog
         open={isFormOpen}

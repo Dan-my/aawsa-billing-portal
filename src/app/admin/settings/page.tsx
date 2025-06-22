@@ -159,13 +159,21 @@ export default function AdminSettingsPage() {
               <div>
                 <p className="text-sm font-medium">Domestic Customers:</p>
                 <ul className="list-disc list-inside text-sm text-accent pl-2 space-y-1">
-                  {DomesticTariffInfo.tiers.map((tier, index) => (
-                     <li key={`domestic-tier-${index}`}>
-                      {tier.cumulativeUsage !== undefined && tier.cumulativeUsage > 0
-                        ? `${(tier.cumulativeUsage + 0.000001).toFixed(0)}` 
-                        : '0'} - {tier.limit === Infinity ? 'Above' : tier.limit} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
-                    </li>
-                  ))}
+                  {DomesticTariffInfo.tiers.map((tier, index) => {
+                    if (tier.limit === Infinity) {
+                      return (
+                        <li key={`domestic-tier-${index}`}>
+                          Above {tier.cumulativeUsage} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
+                        </li>
+                      );
+                    }
+                    const startRange = index === 0 ? '1' : `${(tier.cumulativeUsage || 0) + 1}`;
+                    return (
+                      <li key={`domestic-tier-${index}`}>
+                        {startRange} - {tier.limit} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
+                      </li>
+                    );
+                  })}
                    <li>Maintenance Fee: {(DomesticTariffInfo.maintenancePercentage * 100).toFixed(0)}% of Base Water Charge</li>
                    <li>Sanitation Fee: {(DomesticTariffInfo.sanitationPercentage * 100).toFixed(0)}% of Base Water Charge</li>
                    <li>Meter Rent: {defaultCurrency} {DomesticTariffInfo.meterRent.toFixed(2)}</li>
@@ -175,13 +183,21 @@ export default function AdminSettingsPage() {
               <div>
                 <p className="text-sm font-medium">Non-domestic Customers:</p>
                 <ul className="list-disc list-inside text-sm text-accent pl-2 space-y-1">
-                  {NonDomesticTariffInfo.tiers.map((tier, index) => (
-                     <li key={`nondomestic-tier-${index}`}>
-                      {tier.cumulativeUsage !== undefined && tier.cumulativeUsage > 0
-                        ? `${(tier.cumulativeUsage + 0.000001).toFixed(0)}` 
-                        : '0'} - {tier.limit === Infinity ? 'Above' : tier.limit} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
-                    </li>
-                  ))}
+                  {NonDomesticTariffInfo.tiers.map((tier, index) => {
+                     if (tier.limit === Infinity) {
+                      return (
+                        <li key={`nondomestic-tier-${index}`}>
+                          Above {tier.cumulativeUsage} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
+                        </li>
+                      );
+                    }
+                    const startRange = index === 0 ? '1' : `${(tier.cumulativeUsage || 0) + 1}`;
+                    return (
+                      <li key={`nondomestic-tier-${index}`}>
+                        {startRange} - {tier.limit} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
+                      </li>
+                    );
+                  })}
                    <li>Sanitation Fee: {(NonDomesticTariffInfo.sanitationPercentage * 100).toFixed(0)}% of Base Water Charge</li>
                    <li>Meter Rent: {defaultCurrency} {NonDomesticTariffInfo.meterRent.toFixed(2)}</li>
                    <li>Sewerage Charge: {defaultCurrency} {NonDomesticTariffInfo.sewerageRatePerM3.toFixed(2)} / m³ (if applicable)</li>

@@ -828,6 +828,12 @@ export const getPayments = (): DomainPayment[] => [...payments];
 export const getReportLogs = (): DomainReportLog[] => [...reportLogs];
 // export const getVouchers = (): DomainVoucher[] => [...vouchers]; // Removed Voucher
 
+export const getBulkMeterPaymentStatusCounts = (): { totalBMs: number; paidBMs: number; unpaidBMs: number } => {
+  const totalBMs = bulkMeters.length;
+  const paidBMs = bulkMeters.filter(bm => bm.paymentStatus === 'Paid').length;
+  const unpaidBMs = totalBMs - paidBMs;
+  return { totalBMs, paidBMs, unpaidBMs };
+};
 
 export const addBranch = async (branchData: Omit<DomainBranch, 'id'>): Promise<StoreOperationResult<DomainBranch>> => {
   const payload = mapDomainBranchToInsert(branchData);
@@ -1292,4 +1298,3 @@ export async function loadInitialData() {
     // initializeVouchers(), // Removed Voucher
   ]);
 }
-

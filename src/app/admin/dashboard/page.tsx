@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
 import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart'; 
 import { 
-  getBulkMeters, subscribeToBulkMeters, initializeBulkMeters,
+  getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, getBulkMeterPaymentStatusCounts,
   getCustomers, subscribeToCustomers, initializeCustomers,
   getBranches, subscribeToBranches, initializeBranches
 } from "@/lib/data-store";
@@ -27,6 +27,8 @@ const YAxis = dynamic(() => import('recharts').then(mod => mod.YAxis), { ssr: fa
 const Tooltip = dynamic(() => import('recharts').then(mod => mod.Tooltip), { ssr: false });
 const Legend = dynamic(() => import('recharts').then(mod => mod.Legend), { ssr: false });
 const Line = dynamic(() => import('recharts').then(mod => mod.Line), { ssr: false });
+const PieChartRecharts = dynamic(() => import('recharts').then(mod => mod.PieChart), { ssr: false });
+const Pie = dynamic(() => import('recharts').then(mod => mod.Pie), { ssr: false });
 const RechartsBar = dynamic(() => import('recharts').then(mod => mod.Bar), { ssr: false });
 
 const chartConfig = {
@@ -46,6 +48,7 @@ export default function AdminDashboardPage() {
   const [dynamicTotalBulkMeterCount, setDynamicTotalBulkMeterCount] = React.useState(0);
   const [dynamicPaidBulkMeterCount, setDynamicPaidBulkMeterCount] = React.useState(0);
   const [dynamicUnpaidBulkMeterCount, setDynamicUnpaidBulkMeterCount] = React.useState(0);
+  const [bulkMeterPaymentStatusData, setBulkMeterPaymentStatusData] = React.useState<{ name: string; value: number }[]>([]);
   
   const [dynamicTotalEntityCount, setDynamicTotalEntityCount] = React.useState(0);
   
@@ -58,10 +61,8 @@ export default function AdminDashboardPage() {
     const currentCustomers = getCustomers();
 
     // Bulk Meter Payment Status
-    const totalBMs = currentBulkMeters.length;
-    const paidBMs = currentBulkMeters.filter(b => b.paymentStatus === 'Paid').length;
-    setDynamicTotalBulkMeterCount(totalBMs);
-    setDynamicPaidBulkMeterCount(paidBMs);
+    const { totalBMs, paidBMs, unpaidBMs } = getBulkMeterPaymentStatusCounts();
+    setDynamicTotalBulkMeterCount(totalBMs);    setDynamicPaidBulkMeterCount(paidBMs);
     setDynamicUnpaidBulkMeterCount(totalBMs - paidBMs);
 
     // Customer and Meter Counts
@@ -84,6 +85,11 @@ export default function AdminDashboardPage() {
     setDynamicBranchPerformanceData(Array.from(performanceMap.values()).map(p => ({ branch: p.branchName.replace(/ Branch$/i, ""), paid: p.paid, unpaid: p.unpaid })));
 
 
+    // Bulk Meter Payment Status for Chart
+    setBulkMeterPaymentStatusData([
+      { name: 'Paid', value: paidBMs },
+      { name: 'Unpaid', value: unpaidBMs },
+    ]);
     // Water Usage Trend Data from Bulk Meters
     const usageMap = new Map<string, number>();
     currentBulkMeters.forEach(bm => {
@@ -165,7 +171,18 @@ export default function AdminDashboardPage() {
             <div className="text-2xl font-bold">{dynamicTotalBulkMeterCount.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">{dynamicPaidBulkMeterCount} Paid / {dynamicUnpaidBulkMeterCount} Unpaid</p>
           </CardContent>
-        </Card>
+          {bulkMeterPaymentStatusData.length > 0 && (
+             <div className="h-[150px] mt-2">
+                 <ChartContainer config={chartConfig}>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChartRecharts>
+                            <Pie data={bulkMeterPaymentStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} fill="#8884d8" />
+                            <Tooltip content={<ChartTooltipContent hideLabel />} />
+                         </PieChartRecharts>
+                     </ResponsiveContainer>
+                 </ChartContainer>
+            </div>
+          )}</Card>
 
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

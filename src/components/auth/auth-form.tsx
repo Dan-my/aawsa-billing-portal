@@ -137,7 +137,7 @@ export function AuthForm() {
               alt="AAWSA Logo"
               width={96}
               height={60}
-              className="flex-shrink-0"
+              className="flex-shrink-0 border-none"
             />
           </div>
           <CardTitle className="text-3xl font-bold">AAWSA Billing Portal</CardTitle>

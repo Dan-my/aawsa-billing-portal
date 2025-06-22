@@ -159,48 +159,34 @@ export default function AdminSettingsPage() {
               <div>
                 <p className="text-sm font-medium">Domestic Customers:</p>
                 <ul className="list-disc list-inside text-sm text-accent pl-2 space-y-1">
-                  {DomesticTariffInfo.tiers.map((tier, index) => {
-                    if (tier.limit === Infinity) {
-                      return (
-                        <li key={`domestic-tier-${index}`}>
-                          Above {tier.cumulativeUsage} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
-                        </li>
-                      );
-                    }
-                    const startRange = index === 0 ? '1' : `${(tier.cumulativeUsage || 0) + 1}`;
-                    return (
-                      <li key={`domestic-tier-${index}`}>
-                        {startRange} - {tier.limit} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
-                      </li>
-                    );
-                  })}
-                   <li>Maintenance Fee: {(DomesticTariffInfo.maintenancePercentage * 100).toFixed(0)}% of Base Water Charge</li>
-                   <li>Sanitation Fee: {(DomesticTariffInfo.sanitationPercentage * 100).toFixed(0)}% of Base Water Charge</li>
-                   <li>Meter Rent: {defaultCurrency} {DomesticTariffInfo.meterRent.toFixed(2)}</li>
-                   <li>Sewerage Charge: {defaultCurrency} {DomesticTariffInfo.sewerageRatePerM3.toFixed(2)} / m³ (if applicable)</li>
+                  <li>1 - 5 m³: {defaultCurrency} 10.21 / m³</li>
+                  <li>6 - 14 m³: {defaultCurrency} 17.87 / m³</li>
+                  <li>15 - 23 m³: {defaultCurrency} 33.19 / m³</li>
+                  <li>24 - 32 m³: {defaultCurrency} 51.07 / m³</li>
+                  <li>33 - 41 m³: {defaultCurrency} 61.28 / m³</li>
+                  <li>42 - 50 m³: {defaultCurrency} 71.49 / m³</li>
+                  <li>51 - 56 m³: {defaultCurrency} 81.71 / m³</li>
+                  <li>Above 56 m³: {defaultCurrency} 81.71 / m³</li>
+                  <li>Maintenance Fee: 1% of Base Water Charge</li>
+                  <li>Sanitation Fee: 7% of Base Water Charge</li>
+                  <li>Meter Rent: {defaultCurrency} 15.00</li>
+                  <li>Sewerage Charge: {defaultCurrency} 6.25 / m³ (if applicable)</li>
                 </ul>
               </div>
               <div>
                 <p className="text-sm font-medium">Non-domestic Customers:</p>
                 <ul className="list-disc list-inside text-sm text-accent pl-2 space-y-1">
-                  {NonDomesticTariffInfo.tiers.map((tier, index) => {
-                     if (tier.limit === Infinity) {
-                      return (
-                        <li key={`nondomestic-tier-${index}`}>
-                          Above {tier.cumulativeUsage} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
-                        </li>
-                      );
-                    }
-                    const startRange = index === 0 ? '1' : `${(tier.cumulativeUsage || 0) + 1}`;
-                    return (
-                      <li key={`nondomestic-tier-${index}`}>
-                        {startRange} - {tier.limit} m³: {defaultCurrency} {tier.rate.toFixed(2)} / m³
-                      </li>
-                    );
-                  })}
-                   <li>Sanitation Fee: {(NonDomesticTariffInfo.sanitationPercentage * 100).toFixed(0)}% of Base Water Charge</li>
-                   <li>Meter Rent: {defaultCurrency} {NonDomesticTariffInfo.meterRent.toFixed(2)}</li>
-                   <li>Sewerage Charge: {defaultCurrency} {NonDomesticTariffInfo.sewerageRatePerM3.toFixed(2)} / m³ (if applicable)</li>
+                  <li>1 - 5 m³: {defaultCurrency} 10.21 / m³</li>
+                  <li>6 - 14 m³: {defaultCurrency} 17.87 / m³</li>
+                  <li>15 - 23 m³: {defaultCurrency} 33.19 / m³</li>
+                  <li>24 - 32 m³: {defaultCurrency} 51.07 / m³</li>
+                  <li>33 - 41 m³: {defaultCurrency} 61.28 / m³</li>
+                  <li>42 - 50 m³: {defaultCurrency} 71.49 / m³</li>
+                  <li>51 - 56 m³: {defaultCurrency} 81.71 / m³</li>
+                  <li>Above 56 m³: {defaultCurrency} 81.71 / m³</li>
+                  <li>Sanitation Fee: 10% of Base Water Charge</li>
+                  <li>Meter Rent: {defaultCurrency} 15.00</li>
+                  <li>Sewerage Charge: {defaultCurrency} 8.75 / m³ (if applicable)</li>
                 </ul>
               </div>
             </div>

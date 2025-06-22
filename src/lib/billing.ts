@@ -16,19 +16,19 @@ export interface TariffTier {
   cumulativeUsage?: number; // For display purposes in settings
 }
 
-// Sample Tariff Tiers - these should ideally come from a configuration or database
+// Tariff Tiers based on the provided image
 export const DomesticTariffTiersData: TariffTier[] = [
-  { limit: 5, rate: 6.25, cumulativeUsage: 0 },
-  { limit: 10, rate: 7.50, cumulativeUsage: 5 },
-  { limit: 20, rate: 9.00, cumulativeUsage: 10 },
-  { limit: 30, rate: 10.50, cumulativeUsage: 20 },
-  { limit: Infinity, rate: 12.00, cumulativeUsage: 30 },
+  { limit: 5, rate: 10.21, cumulativeUsage: 0 },
+  { limit: 14, rate: 17.87, cumulativeUsage: 5 },
+  { limit: 23, rate: 33.19, cumulativeUsage: 14 },
+  { limit: 32, rate: 51.07, cumulativeUsage: 23 },
+  { limit: 41, rate: 61.28, cumulativeUsage: 32 },
+  { limit: 50, rate: 71.49, cumulativeUsage: 41 },
+  { limit: Infinity, rate: 81.71, cumulativeUsage: 50 },
 ];
 
 export const NonDomesticTariffTiersData: TariffTier[] = [
-  { limit: 50, rate: 10.00, cumulativeUsage: 0 },
-  { limit: 100, rate: 12.50, cumulativeUsage: 50 },
-  { limit: Infinity, rate: 15.00, cumulativeUsage: 100 },
+  { limit: Infinity, rate: 81.71, cumulativeUsage: 0 },
 ];
 
 export const DomesticTariffInfo = {
@@ -41,9 +41,9 @@ export const DomesticTariffInfo = {
 
 export const NonDomesticTariffInfo = {
   tiers: NonDomesticTariffTiersData,
-  // Non-domestic might not have maintenance fee specified like domestic, or it's bundled.
+  // Non-domestic has no maintenance fee specified in the image
   sanitationPercentage: 0.10, // 10%
-  meterRent: 15.00, // Example, might differ
+  meterRent: 15.00,
   sewerageRatePerM3: 8.75, // If sewerage connection is "Yes"
 };
 

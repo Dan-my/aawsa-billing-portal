@@ -28,7 +28,14 @@ export const DomesticTariffTiersData: TariffTier[] = [
 ];
 
 export const NonDomesticTariffTiersData: TariffTier[] = [
-  { limit: Infinity, rate: 81.71, cumulativeUsage: 0 },
+  { limit: 5, rate: 10.21, cumulativeUsage: 0 },
+  { limit: 14, rate: 17.87, cumulativeUsage: 5 },
+  { limit: 23, rate: 33.19, cumulativeUsage: 14 },
+  { limit: 32, rate: 51.07, cumulativeUsage: 23 },
+  { limit: 41, rate: 61.28, cumulativeUsage: 32 },
+  { limit: 50, rate: 71.49, cumulativeUsage: 41 },
+  { limit: 56, rate: 81.71, cumulativeUsage: 50 },
+  { limit: Infinity, rate: 81.71, cumulativeUsage: 56 },
 ];
 
 export const DomesticTariffInfo = {

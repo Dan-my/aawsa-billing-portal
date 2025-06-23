@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -6,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { LibraryBig, ListChecks, PlusCircle, RotateCcw } from "lucide-react";
+import { LibraryBig, ListChecks, PlusCircle, RotateCcw, DollarSign } from "lucide-react";
 import type { TariffTier } from "@/lib/billing";
-import { DomesticTariffInfo, NonDomesticTariffInfo } from "@/lib/billing";
+import { DomesticTariffInfo, NonDomesticTariffInfo, getMeterRentPrices, DEFAULT_METER_RENT_PRICES, METER_RENT_STORAGE_KEY } from "@/lib/billing";
 import { TariffRateTable, type DisplayTariffRate } from "./tariff-rate-table";
 import { TariffFormDialog, type TariffFormValues } from "./tariff-form-dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MeterRentDialog } from "./meter-rent-dialog";
 
 
 // Helper to map TariffTier from billing logic to a display-friendly format
@@ -82,6 +82,11 @@ export default function TariffManagementPage() {
   
   const [isResetDialogOpen, setIsResetDialogOpen] = React.useState(false);
   const [rateToDelete, setRateToDelete] = React.useState<DisplayTariffRate | null>(null);
+
+  // State for meter rent management
+  const [meterRentPrices, setMeterRentPrices] = React.useState(() => getMeterRentPrices());
+  const [isMeterRentDialogOpen, setIsMeterRentDialogOpen] = React.useState(false);
+
 
   const reprocessTiersForDisplay = (tiers: DisplayTariffRate[]): DisplayTariffRate[] => {
       const sorted = [...tiers].sort((a, b) => a.originalLimit - b.originalLimit);
@@ -175,6 +180,13 @@ export default function TariffManagementPage() {
     setIsFormOpen(false);
     setEditingRate(null);
   };
+  
+  const handleSaveMeterRents = (newPrices: { [key: string]: number }) => {
+    localStorage.setItem(METER_RENT_STORAGE_KEY, JSON.stringify(newPrices));
+    setMeterRentPrices(newPrices);
+    toast({ title: "Meter Rent Prices Updated", description: "The new prices will be used for all future calculations." });
+    setIsMeterRentDialogOpen(false);
+  };
 
   const handleResetToDefaults = () => {
     if (currentTariffType === 'Domestic') {
@@ -182,7 +194,9 @@ export default function TariffManagementPage() {
     } else {
         setNonDomesticTiers(getDefaultNonDomesticDisplayTiers());
     }
-    toast({ title: "Tariffs Reset", description: `${currentTariffType} tariff rates have been reset to system defaults.` });
+    setMeterRentPrices(DEFAULT_METER_RENT_PRICES);
+    localStorage.removeItem(METER_RENT_STORAGE_KEY);
+    toast({ title: "Settings Reset", description: `${currentTariffType} tariff rates and meter rent prices have been reset to system defaults.` });
     setIsResetDialogOpen(false);
   };
 
@@ -200,6 +214,9 @@ export default function TariffManagementPage() {
             <div className="mt-4 md:mt-0 flex gap-2 flex-wrap">
                 <Button onClick={handleAddTier}>
                     <PlusCircle className="mr-2 h-4 w-4" /> Add New Tariff Tier
+                </Button>
+                <Button variant="outline" onClick={() => setIsMeterRentDialogOpen(true)}>
+                    <DollarSign className="mr-2 h-4 w-4" /> Manage Meter Rent
                 </Button>
                 <Button variant="outline" className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setIsResetDialogOpen(true)}>
                     <RotateCcw className="mr-2 h-4 w-4" /> Reset to Defaults
@@ -259,17 +276,25 @@ export default function TariffManagementPage() {
         currency="ETB"
       />
 
+       <MeterRentDialog
+        open={isMeterRentDialogOpen}
+        onOpenChange={setIsMeterRentDialogOpen}
+        onSubmit={handleSaveMeterRents}
+        defaultPrices={meterRentPrices}
+        currency="ETB"
+      />
+
       <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to reset tariffs?</AlertDialogTitle>
+            <AlertDialogTitle>Are you sure you want to reset settings?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will reset the current tariff configuration for <span className="font-semibold">{currentTariffType}</span> to the system default. Any unsaved changes will be lost.
+              This will reset the tariff configuration for <span className="font-semibold">{currentTariffType}</span> AND all meter rent prices to the system defaults. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleResetToDefaults} className="bg-destructive hover:bg-destructive/90">Reset Tariffs</AlertDialogAction>
+            <AlertDialogAction onClick={handleResetToDefaults} className="bg-destructive hover:bg-destructive/90">Reset Settings</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

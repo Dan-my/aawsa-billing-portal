@@ -15,8 +15,8 @@ export interface TariffTier {
   cumulativeUsage?: number; // For display purposes in settings
 }
 
-// New map for meter rent prices based on your image
-export const METER_RENT_PRICES: { [key: number]: number } = {
+// Renamed to indicate these are the default, fallback values.
+export const DEFAULT_METER_RENT_PRICES: { [key: number]: number } = {
   0.5: 15,    // 1/2"
   0.75: 20,   // 3/4"
   1: 33,      // 1"
@@ -29,6 +29,28 @@ export const METER_RENT_PRICES: { [key: number]: number } = {
   5: 228,     // 5"
   6: 259,     // 6"
 };
+
+export const METER_RENT_STORAGE_KEY = 'aawsa-meter-rent-prices';
+
+// New function to get current meter rent prices, checking localStorage first.
+export function getMeterRentPrices(): { [key: string]: number } {
+  if (typeof window === 'undefined') {
+    return DEFAULT_METER_RENT_PRICES;
+  }
+  const storedPrices = localStorage.getItem(METER_RENT_STORAGE_KEY);
+  if (storedPrices) {
+    try {
+      const parsed = JSON.parse(storedPrices);
+      if (Object.values(parsed).every(v => typeof v === 'number')) {
+         return parsed;
+      }
+    } catch (e) {
+      console.error("Failed to parse custom meter rent prices, using default.", e);
+    }
+  }
+  return DEFAULT_METER_RENT_PRICES;
+}
+
 
 // Tariff Tiers based on the provided image
 export const DomesticTariffTiersData: TariffTier[] = [
@@ -57,15 +79,12 @@ export const DomesticTariffInfo = {
   tiers: DomesticTariffTiersData,
   maintenancePercentage: 0.01, // 1%
   sanitationPercentage: 0.07,  // 7%
-  // meterRent is now dynamic
   sewerageRatePerM3: 6.25, // If sewerage connection is "Yes"
 };
 
 export const NonDomesticTariffInfo = {
   tiers: NonDomesticTariffTiersData,
-  // Non-domestic has no maintenance fee specified in the image
   sanitationPercentage: 0.10, // 10%
-  // meterRent is now dynamic
   sewerageRatePerM3: 8.75, // If sewerage connection is "Yes"
 };
 
@@ -73,7 +92,7 @@ export function calculateBill(
   usageM3: number,
   customerType: CustomerType,
   sewerageConnection: SewerageConnection,
-  meterSize: number // New parameter
+  meterSize: number
 ): number {
   let baseWaterCharge = 0;
   let remainingUsage = usageM3;
@@ -107,8 +126,8 @@ export function calculateBill(
     totalBill += baseWaterCharge * tariffConfig.sanitationPercentage;
   }
 
-  // Use the meter rent from the new map
-  const meterRent = METER_RENT_PRICES[meterSize] || 0; // Default to 0 if size not found
+  const METER_RENT_PRICES = getMeterRentPrices(); // Use the getter to get live prices
+  const meterRent = METER_RENT_PRICES[meterSize] || 0;
   totalBill += meterRent;
 
 

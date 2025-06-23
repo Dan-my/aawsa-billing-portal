@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
 import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart'; 
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, getBulkMeterPaymentStatusCounts,
   getCustomers, subscribeToCustomers, initializeCustomers,
@@ -276,37 +277,37 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent className="p-4">
             {isBranchTableView ? (
-              <div className="overflow-auto h-[300px]">
-                {dynamicBranchPerformanceData.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Branch</TableHead>
-                        <TableHead className="text-right">Paid</TableHead>
-                        <TableHead className="text-right">Unpaid</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {dynamicBranchPerformanceData.map((item) => (
-                        <TableRow key={item.branch}>
-                          <TableCell className="font-medium">{item.branch}</TableCell>
-                          <TableCell className="text-right" style={{color: 'hsl(var(--chart-1))' }}>{item.paid}</TableCell>
-                          <TableCell className="text-right" style={{color: 'hsl(var(--chart-2))' }}>{item.unpaid}</TableCell>
+                <ScrollArea className="h-[300px]">
+                    {dynamicBranchPerformanceData.length > 0 ? (
+                    <Table>
+                        <TableHeader>
+                        <TableRow>
+                            <TableHead>Branch</TableHead>
+                            <TableHead className="text-right">Paid</TableHead>
+                            <TableHead className="text-right">Unpaid</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                      No branch performance data available for table.
-                  </div>
-                )}
-              </div>
+                        </TableHeader>
+                        <TableBody>
+                        {dynamicBranchPerformanceData.map((item) => (
+                            <TableRow key={item.branch}>
+                            <TableCell className="font-medium">{item.branch}</TableCell>
+                            <TableCell className="text-right" style={{color: 'hsl(var(--chart-1))' }}>{item.paid}</TableCell>
+                            <TableCell className="text-right" style={{color: 'hsl(var(--chart-2))' }}>{item.unpaid}</TableCell>
+                            </TableRow>
+                        ))}
+                        </TableBody>
+                    </Table>
+                    ) : (
+                    <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                        No branch performance data available for table.
+                    </div>
+                    )}
+                </ScrollArea>
             ) : (
-              <div className="w-full h-[300px]">
+              <div className="w-full">
                 {dynamicBranchPerformanceData.length > 0 ? (
                   <ChartContainer config={chartConfig} className="w-full h-full">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height={300}>
                         <BarChart data={dynamicBranchPerformanceData} barCategoryGap="20%">
                             <XAxis dataKey="branch" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                             <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
@@ -318,7 +319,7 @@ export default function AdminDashboardPage() {
                     </ResponsiveContainer>
                   </ChartContainer>
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                  <div className="flex h-[300px] items-center justify-center text-xs text-muted-foreground">
                       No branch performance data available for chart.
                   </div>
                 )}
@@ -340,35 +341,35 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent className="p-4">
             {isUsageTableView ? (
-              <div className="overflow-auto h-[300px]">
-                {dynamicWaterUsageTrendData.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Month</TableHead>
-                        <TableHead className="text-right">Water Usage (m³)</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {dynamicWaterUsageTrendData.map((item) => (
-                        <TableRow key={item.month}>
-                          <TableCell className="font-medium">{item.month}</TableCell>
-                          <TableCell className="text-right" style={{color: 'hsl(var(--chart-1))'}}>{item.usage.toLocaleString()}</TableCell>
+                <ScrollArea className="h-[300px]">
+                    {dynamicWaterUsageTrendData.length > 0 ? (
+                    <Table>
+                        <TableHeader>
+                        <TableRow>
+                            <TableHead>Month</TableHead>
+                            <TableHead className="text-right">Water Usage (m³)</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                      No water usage data available for table.
-                  </div>
-                )}
-              </div>
+                        </TableHeader>
+                        <TableBody>
+                        {dynamicWaterUsageTrendData.map((item) => (
+                            <TableRow key={item.month}>
+                            <TableCell className="font-medium">{item.month}</TableCell>
+                            <TableCell className="text-right" style={{color: 'hsl(var(--chart-1))'}}>{item.usage.toLocaleString()}</TableCell>
+                            </TableRow>
+                        ))}
+                        </TableBody>
+                    </Table>
+                    ) : (
+                    <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                        No water usage data available for table.
+                    </div>
+                    )}
+                </ScrollArea>
             ) : (
-              <div className="w-full h-[300px]">
+              <div className="w-full">
                 {dynamicWaterUsageTrendData.length > 0 ? (
                   <ChartContainer config={chartConfig} className="w-full h-full">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height={300}>
                         <LineChartRecharts data={dynamicWaterUsageTrendData}>
                             <XAxis dataKey="month" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                             <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
@@ -379,7 +380,7 @@ export default function AdminDashboardPage() {
                     </ResponsiveContainer>
                   </ChartContainer>
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                   <div className="flex h-[300px] items-center justify-center text-xs text-muted-foreground">
                       No water usage data available for chart.
                   </div>
                 )}

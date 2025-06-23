@@ -42,8 +42,8 @@ const chartConfig = {
 
 
 export default function AdminDashboardPage() {
-  const [showBranchPerformanceTable, setShowBranchPerformanceTable] = React.useState(false);
-  const [showWaterUsageTable, setShowWaterUsageTable] = React.useState(false);
+  const [isBranchTableView, setIsBranchTableView] = React.useState(false);
+  const [isUsageTableView, setIsUsageTableView] = React.useState(false);
   
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -269,58 +269,61 @@ export default function AdminDashboardPage() {
               <CardTitle>Branch Performance (Paid vs Unpaid)</CardTitle>
                <CardDescription>Comparison of bills status across branches.</CardDescription>
             </div>
-            <Button variant="outline" size="sm" onClick={() => setShowBranchPerformanceTable(!showBranchPerformanceTable)}>
-              {showBranchPerformanceTable ? <TrendingUp className="mr-2 h-4 w-4" /> : <TableIcon className="mr-2 h-4 w-4" />}
-              {showBranchPerformanceTable ? "View Chart" : "View Table"}
+            <Button variant="outline" size="sm" onClick={() => setIsBranchTableView(!isBranchTableView)}>
+              {isBranchTableView ? <TrendingUp className="mr-2 h-4 w-4" /> : <TableIcon className="mr-2 h-4 w-4" />}
+              {isBranchTableView ? "View Chart" : "View Table"}
             </Button>
           </CardHeader>
           <CardContent className="h-[300px]">
-            <div className={cn("overflow-auto h-full", { "hidden": !showBranchPerformanceTable })}>
-              {dynamicBranchPerformanceData.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Branch</TableHead>
-                      <TableHead className="text-right">Paid</TableHead>
-                      <TableHead className="text-right">Unpaid</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {dynamicBranchPerformanceData.map((item) => (
-                      <TableRow key={item.branch}>
-                        <TableCell className="font-medium">{item.branch}</TableCell>
-                        <TableCell className="text-right" style={{color: 'hsl(var(--chart-1))' }}>{item.paid}</TableCell>
-                        <TableCell className="text-right" style={{color: 'hsl(var(--chart-2))' }}>{item.unpaid}</TableCell>
+            {isBranchTableView ? (
+              <div className="overflow-auto h-full">
+                {dynamicBranchPerformanceData.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Branch</TableHead>
+                        <TableHead className="text-right">Paid</TableHead>
+                        <TableHead className="text-right">Unpaid</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {dynamicBranchPerformanceData.map((item) => (
+                        <TableRow key={item.branch}>
+                          <TableCell className="font-medium">{item.branch}</TableCell>
+                          <TableCell className="text-right" style={{color: 'hsl(var(--chart-1))' }}>{item.paid}</TableCell>
+                          <TableCell className="text-right" style={{color: 'hsl(var(--chart-2))' }}>{item.unpaid}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
                       No branch performance data available for table.
                   </div>
                 )}
-            </div>
-             <div className={cn("w-full h-full", { "hidden": showBranchPerformanceTable })}>
-             {dynamicBranchPerformanceData.length > 0 ? (
-              <ChartContainer config={chartConfig} className="w-full h-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dynamicBranchPerformanceData} barCategoryGap="20%">
-                        <XAxis dataKey="branch" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                        <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                        <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
-                        <Legend />
-                        <RechartsBar dataKey="paid" stackId="a" fill="hsl(var(--chart-1))" name="Paid" />
-                        <RechartsBar dataKey="unpaid" stackId="a" fill="hsl(var(--chart-2))" name="Unpaid" radius={[4,4,0,0]} />
-                    </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-              ) : (
-                 <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                    No branch performance data available for chart.
-                </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="w-full h-full">
+                {dynamicBranchPerformanceData.length > 0 ? (
+                  <ChartContainer config={chartConfig} className="w-full h-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={dynamicBranchPerformanceData} barCategoryGap="20%">
+                            <XAxis dataKey="branch" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                            <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                            <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
+                            <Legend />
+                            <RechartsBar dataKey="paid" stackId="a" fill="hsl(var(--chart-1))" name="Paid" />
+                            <RechartsBar dataKey="unpaid" stackId="a" fill="hsl(var(--chart-2))" name="Unpaid" radius={[4,4,0,0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                      No branch performance data available for chart.
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -330,55 +333,58 @@ export default function AdminDashboardPage() {
               <CardTitle>Overall Water Usage Trend</CardTitle>
               <CardDescription>Monthly water consumption across all meters.</CardDescription>
             </div>
-             <Button variant="outline" size="sm" onClick={() => setShowWaterUsageTable(!showWaterUsageTable)}>
-              {showWaterUsageTable ? <TrendingUp className="mr-2 h-4 w-4" /> : <TableIcon className="mr-2 h-4 w-4" />}
-              {showWaterUsageTable ? "View Chart" : "View Table"}
+             <Button variant="outline" size="sm" onClick={() => setIsUsageTableView(!isUsageTableView)}>
+              {isUsageTableView ? <TrendingUp className="mr-2 h-4 w-4" /> : <TableIcon className="mr-2 h-4 w-4" />}
+              {isUsageTableView ? "View Chart" : "View Table"}
             </Button>
           </CardHeader>
           <CardContent className="h-[300px]">
-            <div className={cn("overflow-auto h-full", { "hidden": !showWaterUsageTable })}>
-            {dynamicWaterUsageTrendData.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Month</TableHead>
-                    <TableHead className="text-right">Water Usage (m³)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {dynamicWaterUsageTrendData.map((item) => (
-                    <TableRow key={item.month}>
-                      <TableCell className="font-medium">{item.month}</TableCell>
-                      <TableCell className="text-right" style={{color: 'hsl(var(--chart-1))'}}>{item.usage.toLocaleString()}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              ) : (
-                 <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                    No water usage data available for table.
-                </div>
-              )}
-            </div>
-            <div className={cn("w-full h-full", { "hidden": showWaterUsageTable })}>
-            {dynamicWaterUsageTrendData.length > 0 ? (
-              <ChartContainer config={chartConfig} className="w-full h-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <LineChartRecharts data={dynamicWaterUsageTrendData}>
-                        <XAxis dataKey="month" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                        <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                        <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
-                        <Legend />
-                        <Line type="monotone" dataKey="usage" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--chart-1))", stroke: "hsl(var(--background))" }} activeDot={{ r:6, fill: "hsl(var(--chart-1))", stroke: "hsl(var(--background))"}} name="Water Usage (m³)" />
-                    </LineChartRecharts>
-                </ResponsiveContainer>
-              </ChartContainer>
-              ) : (
-                 <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                    No water usage data available for chart.
-                </div>
-              )}
-            </div>
+            {isUsageTableView ? (
+              <div className="overflow-auto h-full">
+                {dynamicWaterUsageTrendData.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Month</TableHead>
+                        <TableHead className="text-right">Water Usage (m³)</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dynamicWaterUsageTrendData.map((item) => (
+                        <TableRow key={item.month}>
+                          <TableCell className="font-medium">{item.month}</TableCell>
+                          <TableCell className="text-right" style={{color: 'hsl(var(--chart-1))'}}>{item.usage.toLocaleString()}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                      No water usage data available for table.
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="w-full h-full">
+                {dynamicWaterUsageTrendData.length > 0 ? (
+                  <ChartContainer config={chartConfig} className="w-full h-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChartRecharts data={dynamicWaterUsageTrendData}>
+                            <XAxis dataKey="month" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                            <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                            <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
+                            <Legend />
+                            <Line type="monotone" dataKey="usage" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--chart-1))", stroke: "hsl(var(--background))" }} activeDot={{ r:6, fill: "hsl(var(--chart-1))", stroke: "hsl(var(--background))"}} name="Water Usage (m³)" />
+                        </LineChartRecharts>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                      No water usage data available for chart.
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -42,8 +42,8 @@ const chartConfig = {
 
 
 export default function AdminDashboardPage() {
-  const [showBranchPerformanceTable, setShowBranchPerformanceTable] = React.useState(true);
-  const [showWaterUsageTable, setShowWaterUsageTable] = React.useState(true);
+  const [showBranchPerformanceTable, setShowBranchPerformanceTable] = React.useState(false);
+  const [showWaterUsageTable, setShowWaterUsageTable] = React.useState(false);
   
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -172,35 +172,55 @@ export default function AdminDashboardPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bulk Meter Payment Status</CardTitle>
-            <PieChartIcon className="h-5 w-5 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total Bills</CardTitle>
+            <BarChartIcon className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{dynamicTotalBulkMeterCount.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">{dynamicPaidBulkMeterCount} Paid / {dynamicUnpaidBulkMeterCount} Unpaid</p>
-             <div className="h-[120px] mt-4 flex items-center justify-center">
-                <PieChartIcon className="h-16 w-16 text-primary opacity-50" />
+            <div className="h-[120px] mt-4">
+              <ChartContainer config={chartConfig} className="w-full h-full">
+                <ResponsiveContainer>
+                  <PieChartRecharts>
+                    <Pie data={bulkMeterPaymentStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={50} label>
+                      {bulkMeterPaymentStatusData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
+                    </Pie>
+                    <Tooltip content={<ChartTooltipContent hideLabel />} />
+                    <Legend content={<ChartLegendContent />} />
+                  </PieChartRecharts>
+                </ResponsiveContainer>
+              </ChartContainer>
             </div>
           </CardContent>
         </Card>
 
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Customer & Meter Counts</CardTitle>
-            <Users className="h-5 w-5 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Customer Counts</CardTitle>
+            <Clock className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{dynamicTotalEntityCount.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Total registered entities</p>
-             <div className="h-[120px] mt-4 flex items-center justify-center">
-                <Users className="h-16 w-16 text-primary opacity-50" />
+            <p className="text-xs text-muted-foreground">Total active customers</p>
+            <div className="h-[120px] mt-4">
+              <ChartContainer config={chartConfig} className="w-full h-full">
+                <ResponsiveContainer>
+                  <PieChartRecharts>
+                    <Pie data={customerBreakdownData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={35} outerRadius={50} label>
+                      {customerBreakdownData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
+                    </Pie>
+                    <Tooltip content={<ChartTooltipContent hideLabel />} />
+                    <Legend content={<ChartLegendContent />} />
+                  </PieChartRecharts>
+                </ResponsiveContainer>
+              </ChartContainer>
             </div>
           </CardContent>
         </Card>
 
          <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Bulk Meters (Overall)</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Bulk Meters</CardTitle>
             <Gauge className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -246,8 +266,8 @@ export default function AdminDashboardPage() {
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div>
-              <CardTitle>Branch Performance (Paid vs Unpaid Bulk Meters)</CardTitle>
-               <CardDescription>Comparison of bulk meter payment status across branches.</CardDescription>
+              <CardTitle>Branch Performance (Paid vs Unpaid)</CardTitle>
+               <CardDescription>Comparison of bills status across branches.</CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={() => setShowBranchPerformanceTable(!showBranchPerformanceTable)}>
               {showBranchPerformanceTable ? <TrendingUp className="mr-2 h-4 w-4" /> : <TableIcon className="mr-2 h-4 w-4" />}

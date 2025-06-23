@@ -42,6 +42,7 @@ const adminSidebarNavItems: NavItemGroup[] = [
     title: "Data & Reports",
     items: [
       { title: "Data Entry", href: "/admin/data-entry", iconName: "FileText" },
+      { title: "Meter Readings", href: "/admin/meter-readings", iconName: "ClipboardList" },
       { title: "Reports", href: "/admin/reports", iconName: "BarChart2" },
       // { title: "Voucher", href: "/admin/voucher", iconName: "Ticket" }, // Voucher link removed
     ],

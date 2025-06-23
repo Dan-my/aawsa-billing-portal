@@ -269,10 +269,10 @@ export default function TariffManagementPage() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Percent className="h-6 w-6 text-primary" />
-            <CardTitle>Service Fees ({currentTariffType})</CardTitle>
+            <CardTitle>Fees &amp; Charges ({currentTariffType})</CardTitle>
           </div>
           <CardDescription>
-            Additional fees calculated as a percentage of the base water charge.
+            Additional fees and taxes applied during bill calculation.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm pt-4">
@@ -280,25 +280,41 @@ export default function TariffManagementPage() {
             <>
               <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
                 <span className="text-muted-foreground">Maintenance Fee</span>
-                <span className="font-semibold">{DomesticTariffInfo.maintenancePercentage * 100}%</span>
+                <span className="font-semibold">{DomesticTariffInfo.maintenancePercentage * 100}% of Base Water Charge</span>
               </div>
               <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
                 <span className="text-muted-foreground">Sanitation Fee</span>
-                <span className="font-semibold">{DomesticTariffInfo.sanitationPercentage * 100}%</span>
+                <span className="font-semibold">{DomesticTariffInfo.sanitationPercentage * 100}% of Base Water Charge</span>
+              </div>
+              <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                <span className="text-muted-foreground">Sewerage Fee <span className="text-xs">(if applicable)</span></span>
+                <span className="font-semibold">{DomesticTariffInfo.sewerageRatePerM3.toFixed(2)} ETB / m³</span>
               </div>
             </>
           ) : (
             <>
               <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                 <span className="text-muted-foreground">Maintenance Fee</span>
+                <span className="font-semibold text-muted-foreground">N/A</span>
+              </div>
+              <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
                 <span className="text-muted-foreground">Sanitation Fee</span>
-                <span className="font-semibold">{NonDomesticTariffInfo.sanitationPercentage * 100}%</span>
+                <span className="font-semibold">{NonDomesticTariffInfo.sanitationPercentage * 100}% of Base Water Charge</span>
               </div>
                <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
-                <span className="text-muted-foreground">Maintenance Fee</span>
-                <span className="font-semibold">N/A</span>
+                <span className="text-muted-foreground">Sewerage Fee <span className="text-xs">(if applicable)</span></span>
+                <span className="font-semibold">{NonDomesticTariffInfo.sewerageRatePerM3.toFixed(2)} ETB / m³</span>
               </div>
             </>
           )}
+           <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+            <span className="text-muted-foreground">Meter Rent Fee</span>
+            <span className="font-semibold text-muted-foreground italic">Varies by meter size</span>
+          </div>
+           <div className="flex justify-between items-center p-2 rounded-md bg-muted/50 border border-primary/20">
+            <span className="text-muted-foreground">VAT</span>
+            <span className="font-semibold text-primary">15% on Total Bill (before VAT)</span>
+          </div>
         </CardContent>
       </Card>
 

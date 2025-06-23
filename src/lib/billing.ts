@@ -1,3 +1,4 @@
+
 // src/lib/billing.ts
 
 export const customerTypes = ["Domestic", "Non-domestic"] as const;
@@ -88,6 +89,8 @@ export const NonDomesticTariffInfo = {
   sewerageRatePerM3: 8.75, // If sewerage connection is "Yes"
 };
 
+const VAT_RATE = 0.15; // 15% VAT
+
 export function calculateBill(
   usageM3: number,
   customerType: CustomerType,
@@ -116,24 +119,27 @@ export function calculateBill(
      if (tier.limit === Infinity) break;
   }
 
-  let totalBill = baseWaterCharge;
+  let subTotal = baseWaterCharge;
 
   if (customerType === "Domestic" && tariffConfig.maintenancePercentage) {
-    totalBill += baseWaterCharge * tariffConfig.maintenancePercentage;
+    subTotal += baseWaterCharge * tariffConfig.maintenancePercentage;
   }
 
   if (tariffConfig.sanitationPercentage) {
-    totalBill += baseWaterCharge * tariffConfig.sanitationPercentage;
+    subTotal += baseWaterCharge * tariffConfig.sanitationPercentage;
   }
 
-  const METER_RENT_PRICES = getMeterRentPrices(); // Use the getter to get live prices
+  const METER_RENT_PRICES = getMeterRentPrices();
   const meterRent = METER_RENT_PRICES[meterSize] || 0;
-  totalBill += meterRent;
-
+  subTotal += meterRent;
 
   if (sewerageConnection === "Yes" && tariffConfig.sewerageRatePerM3) {
-    totalBill += usageM3 * tariffConfig.sewerageRatePerM3;
+    subTotal += usageM3 * tariffConfig.sewerageRatePerM3;
   }
+  
+  // Apply VAT on the subtotal
+  const vatAmount = subTotal * VAT_RATE;
+  const totalBill = subTotal + vatAmount;
 
   return parseFloat(totalBill.toFixed(2));
 }

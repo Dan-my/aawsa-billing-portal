@@ -42,8 +42,8 @@ const chartConfig = {
 
 
 export default function AdminDashboardPage() {
-  const [showBranchPerformanceTable, setShowBranchPerformanceTable] = React.useState(false);
-  const [showWaterUsageTable, setShowWaterUsageTable] = React.useState(false);
+  const [showBranchPerformanceTable, setShowBranchPerformanceTable] = React.useState(true);
+  const [showWaterUsageTable, setShowWaterUsageTable] = React.useState(true);
   
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -178,20 +178,8 @@ export default function AdminDashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{dynamicTotalBulkMeterCount.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">{dynamicPaidBulkMeterCount} Paid / {dynamicUnpaidBulkMeterCount} Unpaid</p>
-             <div className="h-[120px] mt-4">
-                 <ChartContainer config={chartConfig} className="w-full h-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChartRecharts>
-                            <Pie data={bulkMeterPaymentStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={50}>
-                                {bulkMeterPaymentStatusData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                                ))}
-                            </Pie>
-                            <Tooltip content={<ChartTooltipContent hideLabel />} />
-                            <Legend verticalAlign="bottom" height={36} />
-                         </PieChartRecharts>
-                     </ResponsiveContainer>
-                 </ChartContainer>
+             <div className="h-[120px] mt-4 flex items-center justify-center">
+                <PieChartIcon className="h-16 w-16 text-primary opacity-50" />
             </div>
           </CardContent>
         </Card>
@@ -204,20 +192,8 @@ export default function AdminDashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{dynamicTotalEntityCount.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Total registered entities</p>
-             <div className="h-[120px] mt-4">
-                 <ChartContainer config={chartConfig} className="w-full h-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChartRecharts>
-                            <Pie data={customerBreakdownData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={30} outerRadius={50}>
-                                {customerBreakdownData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                                ))}
-                            </Pie>
-                            <Tooltip content={<ChartTooltipContent hideLabel />} />
-                            <Legend verticalAlign="bottom" height={36} />
-                         </PieChartRecharts>
-                     </ResponsiveContainer>
-                 </ChartContainer>
+             <div className="h-[120px] mt-4 flex items-center justify-center">
+                <Users className="h-16 w-16 text-primary opacity-50" />
             </div>
           </CardContent>
         </Card>
@@ -389,4 +365,3 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
-

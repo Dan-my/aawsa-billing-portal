@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -5,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { LibraryBig, ListChecks, PlusCircle, RotateCcw, DollarSign } from "lucide-react";
+import { LibraryBig, ListChecks, PlusCircle, RotateCcw, DollarSign, Percent } from "lucide-react";
 import type { TariffTier } from "@/lib/billing";
 import { DomesticTariffInfo, NonDomesticTariffInfo, getMeterRentPrices, DEFAULT_METER_RENT_PRICES, METER_RENT_STORAGE_KEY } from "@/lib/billing";
 import { TariffRateTable, type DisplayTariffRate } from "./tariff-rate-table";
@@ -262,6 +263,43 @@ export default function TariffManagementPage() {
               currency="ETB"
             />
           </CardContent>
+      </Card>
+
+      <Card className="shadow-lg">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Percent className="h-6 w-6 text-primary" />
+            <CardTitle>Service Fees ({currentTariffType})</CardTitle>
+          </div>
+          <CardDescription>
+            Additional fees calculated as a percentage of the base water charge.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm pt-4">
+          {currentTariffType === 'Domestic' ? (
+            <>
+              <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                <span className="text-muted-foreground">Maintenance Fee</span>
+                <span className="font-semibold">{DomesticTariffInfo.maintenancePercentage * 100}%</span>
+              </div>
+              <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                <span className="text-muted-foreground">Sanitation Fee</span>
+                <span className="font-semibold">{DomesticTariffInfo.sanitationPercentage * 100}%</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                <span className="text-muted-foreground">Sanitation Fee</span>
+                <span className="font-semibold">{NonDomesticTariffInfo.sanitationPercentage * 100}%</span>
+              </div>
+               <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                <span className="text-muted-foreground">Maintenance Fee</span>
+                <span className="font-semibold">N/A</span>
+              </div>
+            </>
+          )}
+        </CardContent>
       </Card>
 
       <TariffFormDialog

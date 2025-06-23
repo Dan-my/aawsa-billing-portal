@@ -274,9 +274,9 @@ export default function AdminDashboardPage() {
               {isBranchTableView ? "View Chart" : "View Table"}
             </Button>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="p-4">
             {isBranchTableView ? (
-              <div className="overflow-auto h-full">
+              <div className="overflow-auto h-[300px]">
                 {dynamicBranchPerformanceData.length > 0 ? (
                   <Table>
                     <TableHeader>
@@ -303,7 +303,7 @@ export default function AdminDashboardPage() {
                 )}
               </div>
             ) : (
-              <div className="w-full h-full">
+              <div className="w-full h-[300px]">
                 {dynamicBranchPerformanceData.length > 0 ? (
                   <ChartContainer config={chartConfig} className="w-full h-full">
                     <ResponsiveContainer width="100%" height="100%">
@@ -338,9 +338,9 @@ export default function AdminDashboardPage() {
               {isUsageTableView ? "View Chart" : "View Table"}
             </Button>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="p-4">
             {isUsageTableView ? (
-              <div className="overflow-auto h-full">
+              <div className="overflow-auto h-[300px]">
                 {dynamicWaterUsageTrendData.length > 0 ? (
                   <Table>
                     <TableHeader>
@@ -365,7 +365,7 @@ export default function AdminDashboardPage() {
                 )}
               </div>
             ) : (
-              <div className="w-full h-full">
+              <div className="w-full h-[300px]">
                 {dynamicWaterUsageTrendData.length > 0 ? (
                   <ChartContainer config={chartConfig} className="w-full h-full">
                     <ResponsiveContainer width="100%" height="100%">

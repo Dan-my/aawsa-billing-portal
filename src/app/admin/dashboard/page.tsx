@@ -2,13 +2,13 @@
 "use client";
 
 import * as React from "react";
-import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart as BarChartIcon, Clock, Gauge, Users, ArrowRight, Table as TableIcon, TrendingUp, AlertCircle, PieChart as PieChartIcon } from 'lucide-react';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
 import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart'; 
+import { ResponsiveContainer, Tooltip, Legend, PieChart as PieChartRecharts, Pie, Cell } from 'recharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
@@ -19,13 +19,6 @@ import {
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
 import { cn } from "@/lib/utils";
-
-const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
-const Tooltip = dynamic(() => import('recharts').then(mod => mod.Tooltip), { ssr: false });
-const Legend = dynamic(() => import('recharts').then(mod => mod.Legend), { ssr: false });
-const PieChartRecharts = dynamic(() => import('recharts').then(mod => mod.PieChart), { ssr: false });
-const Pie = dynamic(() => import('recharts').then(mod => mod.Pie), { ssr: false });
-const Cell = dynamic(() => import('recharts').then(mod => mod.Cell), { ssr: false });
 
 const chartConfig = {
   paid: { label: "Paid", color: "hsl(var(--chart-1))" },
@@ -39,6 +32,7 @@ const chartConfig = {
 export default function AdminDashboardPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [isClient, setIsClient] = React.useState(false);
 
   const [dynamicTotalBulkMeterCount, setDynamicTotalBulkMeterCount] = React.useState(0);
   const [dynamicPaidBulkMeterCount, setDynamicPaidBulkMeterCount] = React.useState(0);
@@ -50,6 +44,10 @@ export default function AdminDashboardPage() {
   
   const [dynamicBranchPerformanceData, setDynamicBranchPerformanceData] = React.useState<{ branch: string; paid: number; unpaid: number }[]>([]);
   const [dynamicWaterUsageTrendData, setDynamicWaterUsageTrendData] = React.useState<{ month: string; usage: number }[]>([]);
+
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const processDashboardData = React.useCallback(() => {
     const currentBranches = getBranches();
@@ -165,23 +163,25 @@ export default function AdminDashboardPage() {
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Bills</CardTitle>
-            <BarChartIcon className="h-5 w-5 text-muted-foreground" />
+            <PieChartIcon className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{dynamicTotalBulkMeterCount.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">{dynamicPaidBulkMeterCount} Paid / {dynamicUnpaidBulkMeterCount} Unpaid</p>
             <div className="h-[120px] mt-4">
-              <ChartContainer config={chartConfig} className="w-full h-full">
-                <ResponsiveContainer>
-                  <PieChartRecharts>
-                    <Pie data={bulkMeterPaymentStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={50} label>
-                      {bulkMeterPaymentStatusData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
-                    </Pie>
-                    <Tooltip content={<ChartTooltipContent hideLabel />} />
-                    <Legend content={<ChartLegendContent />} />
-                  </PieChartRecharts>
-                </ResponsiveContainer>
-              </ChartContainer>
+              {isClient && (
+                <ChartContainer config={chartConfig} className="w-full h-full">
+                  <ResponsiveContainer>
+                    <PieChartRecharts>
+                      <Pie data={bulkMeterPaymentStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={50} label>
+                        {bulkMeterPaymentStatusData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
+                      </Pie>
+                      <Tooltip content={<ChartTooltipContent hideLabel />} />
+                      <Legend content={<ChartLegendContent />} />
+                    </PieChartRecharts>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -189,23 +189,25 @@ export default function AdminDashboardPage() {
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Customer Counts</CardTitle>
-            <Clock className="h-5 w-5 text-muted-foreground" />
+            <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{dynamicTotalEntityCount.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Total active customers</p>
             <div className="h-[120px] mt-4">
-              <ChartContainer config={chartConfig} className="w-full h-full">
-                <ResponsiveContainer>
-                  <PieChartRecharts>
-                    <Pie data={customerBreakdownData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={35} outerRadius={50} label>
-                      {customerBreakdownData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
-                    </Pie>
-                    <Tooltip content={<ChartTooltipContent hideLabel />} />
-                    <Legend content={<ChartLegendContent />} />
-                  </PieChartRecharts>
-                </ResponsiveContainer>
-              </ChartContainer>
+              {isClient && (
+                <ChartContainer config={chartConfig} className="w-full h-full">
+                  <ResponsiveContainer>
+                    <PieChartRecharts>
+                      <Pie data={customerBreakdownData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={35} outerRadius={50} label>
+                        {customerBreakdownData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
+                      </Pie>
+                      <Tooltip content={<ChartTooltipContent hideLabel />} />
+                      <Legend content={<ChartLegendContent />} />
+                    </PieChartRecharts>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              )}
             </div>
           </CardContent>
         </Card>

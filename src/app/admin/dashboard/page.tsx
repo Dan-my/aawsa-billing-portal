@@ -9,6 +9,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
 import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart'; 
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, getBulkMeterPaymentStatusCounts,
   getCustomers, subscribeToCustomers, initializeCustomers,
@@ -19,17 +21,11 @@ import type { IndividualCustomer } from "../individual-customers/individual-cust
 import { cn } from "@/lib/utils";
 
 const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
-const BarChart = dynamic(() => import('recharts').then(mod => mod.BarChart), { ssr: false });
-const LineChartRecharts = dynamic(() => import('recharts').then(mod => mod.LineChart), { ssr: false });
-const XAxis = dynamic(() => import('recharts').then(mod => mod.XAxis), { ssr: false });
-const YAxis = dynamic(() => import('recharts').then(mod => mod.YAxis), { ssr: false });
 const Tooltip = dynamic(() => import('recharts').then(mod => mod.Tooltip), { ssr: false });
 const Legend = dynamic(() => import('recharts').then(mod => mod.Legend), { ssr: false });
-const Line = dynamic(() => import('recharts').then(mod => mod.Line), { ssr: false });
 const PieChartRecharts = dynamic(() => import('recharts').then(mod => mod.PieChart), { ssr: false });
 const Pie = dynamic(() => import('recharts').then(mod => mod.Pie), { ssr: false });
 const Cell = dynamic(() => import('recharts').then(mod => mod.Cell), { ssr: false });
-const RechartsBar = dynamic(() => import('recharts').then(mod => mod.Bar), { ssr: false });
 
 const chartConfig = {
   paid: { label: "Paid", color: "hsl(var(--chart-1))" },
@@ -265,26 +261,32 @@ export default function AdminDashboardPage() {
             <CardDescription>Comparison of bills status across branches.</CardDescription>
           </CardHeader>
           <CardContent className="p-4">
-            <div className="h-[300px]">
+            <ScrollArea className="h-[300px]">
               {dynamicBranchPerformanceData.length > 0 ? (
-                <ChartContainer config={chartConfig} className="w-full h-full">
-                  <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={dynamicBranchPerformanceData} barCategoryGap="20%">
-                          <XAxis dataKey="branch" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                          <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                          <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
-                          <Legend />
-                          <RechartsBar dataKey="paid" stackId="a" fill="hsl(var(--chart-1))" name="Paid" />
-                          <RechartsBar dataKey="unpaid" stackId="a" fill="hsl(var(--chart-2))" name="Unpaid" radius={[4,4,0,0]} />
-                      </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Branch</TableHead>
+                      <TableHead className="text-right">Paid</TableHead>
+                      <TableHead className="text-right">Unpaid</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dynamicBranchPerformanceData.map((item) => (
+                      <TableRow key={item.branch}>
+                        <TableCell className="font-medium">{item.branch}</TableCell>
+                        <TableCell className="text-right text-green-600 dark:text-green-400">{item.paid}</TableCell>
+                        <TableCell className="text-right text-red-600 dark:text-red-400">{item.unpaid}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               ) : (
                 <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                    No branch performance data available for chart.
+                    No branch performance data available.
                 </div>
               )}
-            </div>
+            </ScrollArea>
           </CardContent>
         </Card>
 
@@ -294,25 +296,30 @@ export default function AdminDashboardPage() {
             <CardDescription>Monthly water consumption across all meters.</CardDescription>
           </CardHeader>
           <CardContent className="p-4">
-            <div className="h-[300px]">
+            <ScrollArea className="h-[300px]">
               {dynamicWaterUsageTrendData.length > 0 ? (
-                <ChartContainer config={chartConfig} className="w-full h-full">
-                  <ResponsiveContainer width="100%" height={300}>
-                      <LineChartRecharts data={dynamicWaterUsageTrendData}>
-                          <XAxis dataKey="month" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                          <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                          <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
-                          <Legend />
-                          <Line type="monotone" dataKey="usage" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--chart-1))", stroke: "hsl(var(--background))" }} activeDot={{ r:6, fill: "hsl(var(--chart-1))", stroke: "hsl(var(--background))"}} name="Water Usage (m³)" />
-                      </LineChartRecharts>
-                  </ResponsiveContainer>
-                </ChartContainer>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Month</TableHead>
+                      <TableHead className="text-right">Water Usage (m³)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dynamicWaterUsageTrendData.map((item) => (
+                      <TableRow key={item.month}>
+                        <TableCell className="font-medium">{item.month}</TableCell>
+                        <TableCell className="text-right">{item.usage.toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               ) : (
                  <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                    No water usage data available for chart.
+                    No water usage data available.
                 </div>
               )}
-            </div>
+            </ScrollArea>
           </CardContent>
         </Card>
       </div>

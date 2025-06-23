@@ -26,15 +26,20 @@ import {
   initializeCustomers,
   getBranches, 
   initializeBranches, 
-  subscribeToBranches 
+  subscribeToBranches,
+  getMeterReadings,
+  initializeMeterReadings,
+  subscribeToMeterReadings,
 } from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meter-types";
 import type { IndividualCustomer, IndividualCustomerStatus } from "../../individual-customers/individual-customer-types";
 import type { Branch } from "../../branches/branch-types"; 
+import type { DomainMeterReading } from "@/lib/data-store";
 import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus } from "@/lib/billing";
 import { BulkMeterFormDialog, type BulkMeterFormValues } from "../bulk-meter-form-dialog";
 import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "../../individual-customers/individual-customer-form-dialog";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 export default function BulkMeterDetailsPage() {
   const params = useParams();
@@ -46,6 +51,7 @@ export default function BulkMeterDetailsPage() {
   const [associatedCustomers, setAssociatedCustomers] = useState<IndividualCustomer[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
+  const [latestReading, setLatestReading] = useState<DomainMeterReading | null>(null);
 
   const [isBulkMeterFormOpen, setIsBulkMeterFormOpen] = React.useState(false);
   const [isBulkMeterDeleteDialogOpen, setIsBulkMeterDeleteDialogOpen] = React.useState(false);
@@ -71,7 +77,8 @@ export default function BulkMeterDetailsPage() {
     Promise.all([
       initializeBulkMeters(),
       initializeCustomers(),
-      initializeBranches() 
+      initializeBranches(),
+      initializeMeterReadings()
     ]).then(() => {
       if (!isMounted) return;
 
@@ -86,6 +93,11 @@ export default function BulkMeterDetailsPage() {
         setBulkMeter(foundBM);
         const associated = currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId);
         setAssociatedCustomers(associated);
+        const allReadings = getMeterReadings();
+        const meterReadings = allReadings
+          .filter(r => r.bulkMeterId === bulkMeterId)
+          .sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
+        if (meterReadings.length > 0) setLatestReading(meterReadings[0]);
       } else {
         setBulkMeter(null);
         toast({ title: "Bulk Meter Not Found", description: "This bulk meter may not exist or has been deleted.", variant: "destructive" });
@@ -104,6 +116,8 @@ export default function BulkMeterDetailsPage() {
       const currentGlobalMeters = getBulkMeters();
       const currentGlobalCustomers = getCustomers();
       const currentGlobalBranches = getBranches(); 
+      const allReadings = getMeterReadings();
+
       setBranches(currentGlobalBranches); 
 
       const foundBM = currentGlobalMeters.find(bm => bm.id === bulkMeterId);
@@ -112,6 +126,11 @@ export default function BulkMeterDetailsPage() {
         setBulkMeter(foundBM);
         const associated = currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId);
         setAssociatedCustomers(associated);
+         const meterReadings = allReadings
+          .filter(r => r.bulkMeterId === bulkMeterId)
+          .sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
+        if (meterReadings.length > 0) setLatestReading(meterReadings[0]); else setLatestReading(null);
+
       } else if (bulkMeter) {
          toast({ title: "Bulk Meter Update", description: "The bulk meter being viewed may have been deleted or is no longer accessible.", variant: "destructive" });
          setBulkMeter(null);
@@ -120,13 +139,15 @@ export default function BulkMeterDetailsPage() {
 
     const unsubscribeBM = subscribeToBulkMeters(handleStoresUpdate);
     const unsubscribeCust = subscribeToCustomers(handleStoresUpdate);
-    const unsubscribeBranches = subscribeToBranches(handleStoresUpdate); 
+    const unsubscribeBranches = subscribeToBranches(handleStoresUpdate);
+    const unsubscribeMeterReadings = subscribeToMeterReadings(handleStoresUpdate);
 
     return () => {
       isMounted = false;
       unsubscribeBM();
       unsubscribeCust();
       unsubscribeBranches(); 
+      unsubscribeMeterReadings();
     };
   }, [bulkMeterId, router, toast, bulkMeter]);
 
@@ -270,7 +291,12 @@ export default function BulkMeterDetailsPage() {
             <p><strong className="font-semibold">Customer Key:</strong> {bulkMeter.customerKeyNumber ?? 'N/A'}</p>
             <p><strong className="font-semibold">Contract No:</strong> {bulkMeter.contractNumber ?? 'N/A'}</p>
             <p><strong className="font-semibold">Month:</strong> {bulkMeter.month ?? 'N/A'}</p>
-            <p><strong className="font-semibold">Readings (Prev/Curr):</strong> {(bmPreviousReading).toFixed(2)} / {(bmCurrentReading).toFixed(2)}</p>
+            <p><strong className="font-semibold">Billed Readings (Prev/Curr):</strong> {(bmPreviousReading).toFixed(2)} / {(bmCurrentReading).toFixed(2)}</p>
+            {latestReading ? (
+                <p className="text-blue-600 dark:text-blue-400 mt-1"><strong className="font-semibold">Latest Logged Reading:</strong> {latestReading.readingValue.toFixed(2)} <span className="text-xs">({format(new Date(latestReading.readingDate), "PP")})</span></p>
+            ) : (
+                <p className="text-sm text-muted-foreground mt-1">No new readings logged yet.</p>
+            )}
           </div>
           <div className="space-y-1">
              <p className="text-lg"><strong className="font-semibold">Bulk Usage:</strong> {bulkUsage.toFixed(2)} m³</p>

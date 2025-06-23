@@ -24,13 +24,18 @@ import {
   subscribeToCustomers,
   initializeBulkMeters,
   initializeCustomers,
+  getMeterReadings,
+  initializeMeterReadings,
+  subscribeToMeterReadings,
 } from "@/lib/data-store";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { IndividualCustomer, IndividualCustomerStatus } from "@/app/admin/individual-customers/individual-customer-types";
+import type { DomainMeterReading } from "@/lib/data-store";
 import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus } from "@/lib/billing";
 import { BulkMeterFormDialog, type BulkMeterFormValues } from "@/app/admin/bulk-meters/bulk-meter-form-dialog";
 import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "@/app/admin/individual-customers/individual-customer-form-dialog";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface UserAuth {
   email: string;
@@ -49,6 +54,7 @@ export default function StaffBulkMeterDetailsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [staffBranchName, setStaffBranchName] = React.useState<string | undefined>(undefined);
   const [isAuthorized, setIsAuthorized] = useState(false); 
+  const [latestReading, setLatestReading] = useState<DomainMeterReading | null>(null);
 
   const [isBulkMeterFormOpen, setIsBulkMeterFormOpen] = React.useState(false);
   const [isBulkMeterDeleteDialogOpen, setIsBulkMeterDeleteDialogOpen] = React.useState(false);
@@ -96,7 +102,7 @@ export default function StaffBulkMeterDetailsPage() {
     }
 
     setIsLoading(true);
-    Promise.all([initializeBulkMeters(), initializeCustomers()]).then(() => {
+    Promise.all([initializeBulkMeters(), initializeCustomers(), initializeMeterReadings()]).then(() => {
       if (!isMounted) return;
       const currentGlobalMeters = getBulkMeters();
       const currentGlobalCustomers = getCustomers();
@@ -118,6 +124,12 @@ export default function StaffBulkMeterDetailsPage() {
           ).map(bm => ({id: bm.id, name: bm.name}));
           setBranchBulkMetersForCustomerForm(branchMeters);
 
+          const allReadings = getMeterReadings();
+          const meterReadings = allReadings
+            .filter(r => r.bulkMeterId === bulkMeterId)
+            .sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
+          if (meterReadings.length > 0) setLatestReading(meterReadings[0]);
+
         } else {
           setBulkMeter(null);
           setIsAuthorized(false);
@@ -134,6 +146,7 @@ export default function StaffBulkMeterDetailsPage() {
       if (!isMounted) return;
       const currentGlobalMeters = getBulkMeters();
       const currentGlobalCustomers = getCustomers();
+      const allReadings = getMeterReadings();
       const foundBM = currentGlobalMeters.find(bm => bm.id === bulkMeterId);
 
       if (foundBM) {
@@ -153,6 +166,11 @@ export default function StaffBulkMeterDetailsPage() {
             ).map(bm => ({id: bm.id, name: bm.name}));
             setBranchBulkMetersForCustomerForm(branchMeters);
 
+            const meterReadings = allReadings
+              .filter(r => r.bulkMeterId === bulkMeterId)
+              .sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
+            if (meterReadings.length > 0) setLatestReading(meterReadings[0]); else setLatestReading(null);
+
         } else {
             setBulkMeter(null);
             setIsAuthorized(false);
@@ -166,11 +184,13 @@ export default function StaffBulkMeterDetailsPage() {
 
     const unsubscribeBM = subscribeToBulkMeters(handleStoresUpdate);
     const unsubscribeCust = subscribeToCustomers(handleStoresUpdate);
+    const unsubscribeMeterReadings = subscribeToMeterReadings(handleStoresUpdate);
 
     return () => {
       isMounted = false;
       unsubscribeBM();
       unsubscribeCust();
+      unsubscribeMeterReadings();
     };
   }, [bulkMeterId, router, toast, checkAuthorization, bulkMeter]); 
 
@@ -308,7 +328,12 @@ export default function StaffBulkMeterDetailsPage() {
             <p><strong className="font-semibold">Customer Key:</strong> {bulkMeter.customerKeyNumber ?? 'N/A'}</p>
             <p><strong className="font-semibold">Contract No:</strong> {bulkMeter.contractNumber ?? 'N/A'}</p>
             <p><strong className="font-semibold">Month:</strong> {bulkMeter.month ?? 'N/A'}</p>
-            <p><strong className="font-semibold">Readings (Prev/Curr):</strong> {(bmPreviousReading).toFixed(2)} / {(bmCurrentReading).toFixed(2)}</p>
+            <p><strong className="font-semibold">Billed Readings (Prev/Curr):</strong> {(bmPreviousReading).toFixed(2)} / {(bmCurrentReading).toFixed(2)}</p>
+            {latestReading ? (
+                <p className="text-blue-600 dark:text-blue-400 mt-1"><strong className="font-semibold">Latest Logged Reading:</strong> {latestReading.readingValue.toFixed(2)} <span className="text-xs">({format(new Date(latestReading.readingDate), "PP")})</span></p>
+            ) : (
+                <p className="text-sm text-muted-foreground mt-1">No new readings logged yet.</p>
+            )}
           </div>
           <div className="space-y-1">
              <p className="text-lg"><strong className="font-semibold">Bulk Usage:</strong> {bulkUsage.toFixed(2)} m³</p>
@@ -454,5 +479,3 @@ export default function StaffBulkMeterDetailsPage() {
     </div>
   );
 }
-
-    

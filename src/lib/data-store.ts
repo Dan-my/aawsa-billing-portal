@@ -230,7 +230,7 @@ const mapDomainBranchToUpdate = (branch: Partial<Omit<DomainBranch, 'id'>>): Bra
 
 const mapSupabaseCustomerToDomain = (sc: SupabaseIndividualCustomerRow): DomainIndividualCustomer => {
   const usage = sc.currentReading - sc.previousReading;
-  const bill = calculateBill(usage, sc.customerType, sc.sewerageConnection);
+  const bill = calculateBill(usage, sc.customerType, sc.sewerageConnection, Number(sc.meterSize));
   return {
     id: sc.id,
     name: sc.name,
@@ -262,7 +262,7 @@ const mapDomainCustomerToInsert = (
   customer: Omit<DomainIndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill'>
 ): IndividualCustomerInsert => {
   const usage = customer.currentReading - customer.previousReading;
-  const bill = calculateBill(usage, customer.customerType, customer.sewerageConnection);
+  const bill = calculateBill(usage, customer.customerType, customer.sewerageConnection, Number(customer.meterSize));
   return {
     name: customer.name,
     customerKeyNumber: customer.customerKeyNumber,
@@ -310,14 +310,15 @@ const mapDomainCustomerToUpdate = (customer: Partial<DomainIndividualCustomer>):
   if(customer.status !== undefined) updatePayload.status = customer.status;
   if(customer.paymentStatus !== undefined) updatePayload.paymentStatus = customer.paymentStatus;
 
-  if (customer.currentReading !== undefined || customer.previousReading !== undefined || customer.customerType !== undefined || customer.sewerageConnection !== undefined) {
+  if (customer.currentReading !== undefined || customer.previousReading !== undefined || customer.customerType !== undefined || customer.sewerageConnection !== undefined || customer.meterSize !== undefined) {
     const existingCustomer = customers.find(c => c.id === customer.id);
     if (existingCustomer) {
         const usage = (customer.currentReading ?? existingCustomer.currentReading) - (customer.previousReading ?? existingCustomer.previousReading);
         updatePayload.calculatedBill = calculateBill(
             usage,
             customer.customerType ?? existingCustomer.customerType,
-            customer.sewerageConnection ?? existingCustomer.sewerageConnection
+            customer.sewerageConnection ?? existingCustomer.sewerageConnection,
+            Number(customer.meterSize ?? existingCustomer.meterSize)
         );
     }
   }
@@ -331,7 +332,7 @@ const mapSupabaseBulkMeterToDomain = (sbm: SupabaseBulkMeterRow): BulkMeter => {
                   ? calculatedBmUsage
                   : Number(sbm.bulk_usage);
 
-  const calculatedBmTotalBill = calculateBill(bmUsage, "Non-domestic", "No");
+  const calculatedBmTotalBill = calculateBill(bmUsage, "Non-domestic", "No", Number(sbm.meterSize));
   const bmTotalBill = sbm.total_bulk_bill === null || sbm.total_bulk_bill === undefined
                       ? calculatedBmTotalBill
                       : Number(sbm.total_bulk_bill);
@@ -361,7 +362,7 @@ const mapSupabaseBulkMeterToDomain = (sbm: SupabaseBulkMeterRow): BulkMeter => {
 
 const mapDomainBulkMeterToInsert = (bm: Omit<BulkMeter, 'id'>): BulkMeterInsert => {
   const calculatedBulkUsage = (bm.currentReading ?? 0) - (bm.previousReading ?? 0);
-  const calculatedTotalBulkBill = calculateBill(calculatedBulkUsage, "Non-domestic", "No");
+  const calculatedTotalBulkBill = calculateBill(calculatedBulkUsage, "Non-domestic", "No", Number(bm.meterSize));
 
   return {
     name: bm.name,
@@ -403,13 +404,14 @@ const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { id?: string } ): 
     if (bm.status !== undefined) updatePayload.status = bm.status;
     if (bm.paymentStatus !== undefined) updatePayload.paymentStatus = bm.paymentStatus;
 
-    if (bm.id && (bm.currentReading !== undefined || bm.previousReading !== undefined)) {
+    if (bm.id && (bm.currentReading !== undefined || bm.previousReading !== undefined || bm.meterSize !== undefined)) {
         const existingBM = bulkMeters.find(b => b.id === bm.id);
         const currentReading = bm.currentReading ?? existingBM?.currentReading ?? 0;
         const previousReading = bm.previousReading ?? existingBM?.previousReading ?? 0;
+        const meterSize = bm.meterSize ?? existingBM?.meterSize ?? 0;
         
         const newBulkUsage = currentReading - previousReading;
-        const newTotalBulkBill = calculateBill(newBulkUsage, "Non-domestic", "No");
+        const newTotalBulkBill = calculateBill(newBulkUsage, "Non-domestic", "No", Number(meterSize));
 
         updatePayload.bulk_usage = newBulkUsage;
         updatePayload.total_bulk_bill = newTotalBulkBill;
@@ -665,7 +667,7 @@ async function fetchAllBulkMeters() {
       const previousReading = Number(sbm.previousReading) || 0;
 
       const calculatedBulkUsage = currentReading - previousReading;
-      const calculatedTotalBulkBill = calculateBill(calculatedBulkUsage, "Non-domestic", "No");
+      const calculatedTotalBulkBill = calculateBill(calculatedBulkUsage, "Non-domestic", "No", Number(sbm.meterSize));
 
       const associatedCustomersData = getCustomers().filter(c => c.assignedBulkMeterId === sbm.id);
       const sumIndividualUsage = associatedCustomersData.reduce((acc, cust) => acc + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);

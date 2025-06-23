@@ -14,8 +14,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { bulkMeterDataEntrySchema, type BulkMeterDataEntryFormValues } from "@/app/admin/data-entry/customer-data-entry-types"; 
+import { bulkMeterDataEntrySchema, type BulkMeterDataEntryFormValues, meterSizeOptions } from "@/app/admin/data-entry/customer-data-entry-types"; 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { addBulkMeter as addBulkMeterToStore, initializeBulkMeters, getBulkMeters } from "@/lib/data-store";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
@@ -141,18 +142,20 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Meter Size (inch) *</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      step="0.1" 
-                      {...field} 
-                      value={field.value ?? ""}
-                      onChange={e => {
-                        const val = e.target.value;
-                        field.onChange(val === "" ? undefined : parseFloat(val));
-                      }}
-                    />
-                  </FormControl>
+                   <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a meter size" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {meterSizeOptions.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   <FormMessage />
                 </FormItem>
               )}

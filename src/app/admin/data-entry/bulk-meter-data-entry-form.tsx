@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { bulkMeterDataEntrySchema, type BulkMeterDataEntryFormValues } from "./customer-data-entry-types";
+import { bulkMeterDataEntrySchema, type BulkMeterDataEntryFormValues, meterSizeOptions } from "./customer-data-entry-types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 import { addBulkMeter as addBulkMeterToStore, initializeBulkMeters, initializeCustomers, getBranches, subscribeToBranches, initializeBranches as initializeAdminBranches } from "@/lib/data-store";
@@ -182,19 +182,23 @@ export function BulkMeterDataEntryForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Meter Size (inch) *</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          step="0.1" 
-                          placeholder="Enter meter size"
-                          {...field} 
-                          value={field.value ?? ""}
-                          onChange={e => {
-                            const val = e.target.value;
-                            field.onChange(val === "" ? undefined : parseFloat(val));
-                          }}
-                        />
-                      </FormControl>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value ? String(field.value) : undefined}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a meter size" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {meterSizeOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

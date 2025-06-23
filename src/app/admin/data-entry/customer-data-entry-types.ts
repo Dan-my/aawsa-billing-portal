@@ -2,6 +2,20 @@
 import * as z from "zod";
 import { customerTypes, sewerageConnections } from "@/lib/billing";
 
+export const meterSizeOptions = [
+  { value: '0.5', label: '1/2"' },
+  { value: '0.75', label: '3/4"' },
+  { value: '1', label: '1"' },
+  { value: '1.25', label: '1 1/4"' },
+  { value: '1.5', label: '1 1/2"' },
+  { value: '2', label: '2"' },
+  { value: '2.5', label: '2 1/2"' },
+  { value: '3', label: '3"' },
+  { value: '4', label: '4"' },
+  { value: '5', label: '5"' },
+  { value: '6', label: '6"' },
+];
+
 export const baseIndividualCustomerDataSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   customerKeyNumber: z.string().min(1, { message: "Customer Key Number is required." }),

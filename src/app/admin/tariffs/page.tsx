@@ -280,11 +280,11 @@ export default function TariffManagementPage() {
             <>
               <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
                 <span className="text-muted-foreground">Maintenance Fee</span>
-                <span className="font-semibold">{DomesticTariffInfo.maintenancePercentage * 100}% of Base Water Charge</span>
+                <span className="font-semibold">{(DomesticTariffInfo.maintenancePercentage * 100).toFixed(0)}% of Base Water Charge</span>
               </div>
               <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
                 <span className="text-muted-foreground">Sanitation Fee</span>
-                <span className="font-semibold">{DomesticTariffInfo.sanitationPercentage * 100}% of Base Water Charge</span>
+                <span className="font-semibold">{(DomesticTariffInfo.sanitationPercentage * 100).toFixed(0)}% of Base Water Charge</span>
               </div>
               <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
                 <span className="text-muted-foreground">Sewerage Fee <span className="text-xs">(if applicable)</span></span>
@@ -299,7 +299,7 @@ export default function TariffManagementPage() {
               </div>
               <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
                 <span className="text-muted-foreground">Sanitation Fee</span>
-                <span className="font-semibold">{NonDomesticTariffInfo.sanitationPercentage * 100}% of Base Water Charge</span>
+                <span className="font-semibold">{(NonDomesticTariffInfo.sanitationPercentage * 100).toFixed(0)}% of Base Water Charge</span>
               </div>
                <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
                 <span className="text-muted-foreground">Sewerage Fee <span className="text-xs">(if applicable)</span></span>
@@ -313,7 +313,11 @@ export default function TariffManagementPage() {
           </div>
            <div className="flex justify-between items-center p-2 rounded-md bg-muted/50 border border-primary/20">
             <span className="text-muted-foreground">VAT</span>
-            <span className="font-semibold text-primary">15% on Total Bill (before VAT)</span>
+             {currentTariffType === 'Domestic' ? (
+                <span className="font-semibold text-primary">15% on Total Bill (for consumption &gt;= 16m³)</span>
+            ) : (
+                <span className="font-semibold text-primary">15% on Total Bill (before VAT)</span>
+            )}
           </div>
         </CardContent>
       </Card>

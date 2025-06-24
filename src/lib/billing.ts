@@ -137,9 +137,13 @@ export function calculateBill(
     subTotal += usageM3 * tariffConfig.sewerageRatePerM3;
   }
   
-  // Apply VAT on the subtotal
-  const vatAmount = subTotal * VAT_RATE;
-  const totalBill = subTotal + vatAmount;
+  let totalBill = subTotal;
+
+  // Apply VAT based on customer type and consumption
+  if (customerType === 'Non-domestic' || (customerType === 'Domestic' && usageM3 >= 16)) {
+    const vatAmount = subTotal * VAT_RATE;
+    totalBill += vatAmount;
+  }
 
   return parseFloat(totalBill.toFixed(2));
 }

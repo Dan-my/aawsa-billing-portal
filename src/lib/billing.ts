@@ -1,3 +1,4 @@
+
 // src/lib/billing.ts
 
 export const customerTypes = ["Domestic", "Non-domestic"] as const;
@@ -118,7 +119,7 @@ export function calculateBill(
      if (tier.limit === Infinity) break;
   }
 
-  // Calculate fees based on baseWaterCharge
+  // Calculate service fees based on baseWaterCharge
   const maintenanceFee = (customerType === "Domestic" && tariffConfig.maintenancePercentage) 
                          ? baseWaterCharge * tariffConfig.maintenancePercentage 
                          : 0;
@@ -127,16 +128,16 @@ export function calculateBill(
                         ? baseWaterCharge * tariffConfig.sanitationPercentage 
                         : 0;
 
-  // Define the base for VAT calculation
+  // Define the base for VAT calculation (Base + Service Fees)
   const vatBase = baseWaterCharge + maintenanceFee + sanitationFee;
   let vatAmount = 0;
 
-  // Apply VAT based on customer type and consumption
+  // Apply VAT conditionally
   if (customerType === 'Non-domestic' || (customerType === 'Domestic' && usageM3 >= 16)) {
     vatAmount = vatBase * VAT_RATE;
   }
 
-  // Calculate other charges not included in VAT base
+  // Calculate other charges that are not part of the VAT base
   const METER_RENT_PRICES = getMeterRentPrices();
   const meterRent = METER_RENT_PRICES[meterSize] || 0;
 
@@ -144,7 +145,7 @@ export function calculateBill(
                          ? usageM3 * tariffConfig.sewerageRatePerM3 
                          : 0;
 
-  // Calculate the final total bill by summing the VAT base, the calculated VAT, and other charges
+  // Calculate the final total bill by summing the VAT base, the calculated VAT, and other non-VAT charges
   const totalBill = vatBase + vatAmount + meterRent + sewerageCharge;
 
   return parseFloat(totalBill.toFixed(2));

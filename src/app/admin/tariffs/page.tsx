@@ -216,7 +216,7 @@ export default function TariffManagementPage() {
                 <Button onClick={handleAddTier}>
                     <PlusCircle className="mr-2 h-4 w-4" /> Add New Tariff Tier
                 </Button>
-                <Button onClick={() => setIsMeterRentDialogOpen(true)}>
+                <Button onClick={() => setIsMeterRentDialogOpen(true)} variant="default">
                     <DollarSign className="mr-2 h-4 w-4" /> Manage Meter Rent
                 </Button>
                 <Button variant="destructive" onClick={() => setIsResetDialogOpen(true)}>
@@ -286,10 +286,6 @@ export default function TariffManagementPage() {
                 <span className="text-muted-foreground">Sanitation Fee</span>
                 <span className="font-semibold">{(DomesticTariffInfo.sanitationPercentage * 100).toFixed(0)}% of Base Water Charge</span>
               </div>
-              <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
-                <span className="text-muted-foreground">Sewerage Fee <span className="text-xs">(if applicable)</span></span>
-                <span className="font-semibold">{DomesticTariffInfo.sewerageRatePerM3.toFixed(2)} ETB / m³</span>
-              </div>
             </>
           ) : (
             <>
@@ -301,12 +297,12 @@ export default function TariffManagementPage() {
                 <span className="text-muted-foreground">Sanitation Fee</span>
                 <span className="font-semibold">{(NonDomesticTariffInfo.sanitationPercentage * 100).toFixed(0)}% of Base Water Charge</span>
               </div>
-               <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
-                <span className="text-muted-foreground">Sewerage Fee <span className="text-xs">(if applicable)</span></span>
-                <span className="font-semibold">{NonDomesticTariffInfo.sewerageRatePerM3.toFixed(2)} ETB / m³</span>
-              </div>
             </>
           )}
+           <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+            <span className="text-muted-foreground">Sewerage Fee <span className="text-xs">(if applicable)</span></span>
+            <span className="font-semibold">{currentTariffType === 'Domestic' ? DomesticTariffInfo.sewerageRatePerM3.toFixed(2) : NonDomesticTariffInfo.sewerageRatePerM3.toFixed(2)} ETB / m³</span>
+          </div>
            <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
             <span className="text-muted-foreground">Meter Rent Fee</span>
             <span className="font-semibold text-muted-foreground italic">Varies by meter size</span>

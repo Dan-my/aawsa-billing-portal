@@ -291,7 +291,7 @@ export default function TariffManagementPage() {
             <>
               <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
                  <span className="text-muted-foreground">Maintenance Fee</span>
-                <span className="font-semibold text-muted-foreground">N/A</span>
+                <span className="font-semibold">{(NonDomesticTariffInfo.maintenancePercentage * 100).toFixed(0)}% of Base Water Charge</span>
               </div>
               <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
                 <span className="text-muted-foreground">Sanitation Fee</span>

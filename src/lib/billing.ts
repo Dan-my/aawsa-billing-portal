@@ -85,6 +85,7 @@ export const DomesticTariffInfo = {
 
 export const NonDomesticTariffInfo = {
   tiers: NonDomesticTariffTiersData,
+  maintenancePercentage: 0.01, // 1%
   sanitationPercentage: 0.10, // 10%
   sewerageRatePerM3: 8.75, // If sewerage connection is "Yes"
 };
@@ -120,9 +121,7 @@ export function calculateBill(
   }
 
   // Calculate service fees based on baseWaterCharge
-  const maintenanceFee = (customerType === "Domestic" && tariffConfig.maintenancePercentage) 
-                         ? baseWaterCharge * tariffConfig.maintenancePercentage 
-                         : 0;
+  const maintenanceFee = (tariffConfig.maintenancePercentage ?? 0) * baseWaterCharge;
   
   const sanitationFee = tariffConfig.sanitationPercentage 
                         ? baseWaterCharge * tariffConfig.sanitationPercentage 

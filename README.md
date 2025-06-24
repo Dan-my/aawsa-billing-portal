@@ -72,3 +72,22 @@ The CSV file for individual customer data entry must have the following columns 
 `Jane Smith,CUST002,CONTR002,Domestic,B002,1,0.75,MTR002,120,150,2023-11,Kebele 02,Arada,Woreda 1,No,bm002,2`
 
 Processing feedback, including any errors per row, will be displayed after attempting to upload the CSV file.
+
+## Deployment
+
+This Next.js application can be deployed to various platforms that support Node.js environments. Here are some popular options:
+
+### Vercel
+Vercel is the creator of Next.js and provides a seamless, zero-configuration deployment experience. Simply connect your Git repository (e.g., GitHub, GitLab) to Vercel, and it will automatically build and deploy your application. Vercel also handles serverless functions, image optimization, and global CDN out of the box.
+
+### Netlify
+Netlify is another popular platform for deploying modern web applications. It offers continuous deployment from your Git repository, serverless functions, and a robust set of features for managing your site.
+
+### Firebase Hosting
+Since you are using Firebase Studio, deploying to Firebase Hosting is a natural fit. Firebase Hosting provides fast and secure hosting for your web app. For a Next.js application with server-side features (like the App Router), you would typically deploy it to Cloud Functions for Firebase, which integrates with Firebase Hosting to serve both static and dynamic content.
+
+### Other Cloud Providers
+You can also deploy this application to major cloud providers using different services:
+-   **AWS (Amazon Web Services):** Using services like AWS Amplify, Amazon S3 (for static parts) + Lambda (for server-side parts), or container services like ECS/Fargate.
+-   **Google Cloud:** Using Cloud Run for a containerized deployment or App Engine.
+-   **Microsoft Azure:** Using Azure App Service or Azure Static Web Apps with Functions.

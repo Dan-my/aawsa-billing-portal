@@ -308,8 +308,13 @@ export default function TariffManagementPage() {
             <span className="font-semibold text-muted-foreground italic">Varies by meter size</span>
           </div>
            <div className="flex justify-between items-center p-2 rounded-md bg-muted/50 border border-primary/20">
-            <span className="text-muted-foreground">VAT</span>
-            <span className="font-semibold text-primary">15% on (Base + Service Fees)</span>
+            <div className="flex-1 pr-4">
+                <span className="text-muted-foreground">VAT</span>
+                {currentTariffType === 'Domestic' && (
+                <p className="text-xs text-muted-foreground italic">For Domestic customers, VAT only applies if consumption is 16 m³ or more.</p>
+                )}
+            </div>
+            <span className="font-semibold text-primary text-right">15% on (Base + Service Fees)</span>
           </div>
         </CardContent>
       </Card>

@@ -131,8 +131,10 @@ export function calculateBill(
   // Define the base for VAT calculation (Base + Service Fees)
   const vatBase = baseWaterCharge + maintenanceFee + sanitationFee;
 
-  // Apply VAT
-  const vatAmount = vatBase * VAT_RATE;
+  // Apply VAT, conditionally for Domestic customers
+  const vatAmount = (customerType === 'Domestic' && usageM3 < 16) 
+                  ? 0 
+                  : vatBase * VAT_RATE;
 
   // Calculate other charges that are not part of the VAT base
   const METER_RENT_PRICES = getMeterRentPrices();

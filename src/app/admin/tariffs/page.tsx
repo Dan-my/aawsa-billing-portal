@@ -216,10 +216,10 @@ export default function TariffManagementPage() {
                 <Button onClick={handleAddTier}>
                     <PlusCircle className="mr-2 h-4 w-4" /> Add New Tariff Tier
                 </Button>
-                <Button variant="outline" onClick={() => setIsMeterRentDialogOpen(true)}>
+                <Button onClick={() => setIsMeterRentDialogOpen(true)}>
                     <DollarSign className="mr-2 h-4 w-4" /> Manage Meter Rent
                 </Button>
-                <Button variant="outline" className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setIsResetDialogOpen(true)}>
+                <Button variant="destructive" onClick={() => setIsResetDialogOpen(true)}>
                     <RotateCcw className="mr-2 h-4 w-4" /> Reset to Defaults
                 </Button>
             </div>

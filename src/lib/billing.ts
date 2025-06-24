@@ -1,4 +1,3 @@
-
 // src/lib/billing.ts
 
 export const customerTypes = ["Domestic", "Non-domestic"] as const;
@@ -99,43 +98,59 @@ export function calculateBill(
   meterSize: number
 ): number {
   let baseWaterCharge = 0;
-  let remainingUsage = usageM3;
-  let lastTierLimit = 0;
-
   const tariffConfig = customerType === "Domestic" ? DomesticTariffInfo : NonDomesticTariffInfo;
   const tiers = tariffConfig.tiers;
 
-  for (const tier of tiers) {
-    if (remainingUsage <= 0) break;
+  if (customerType === "Domestic") {
+    // Progressive calculation for Domestic customers
+    let remainingUsage = usageM3;
+    let lastTierLimit = 0;
 
-    const usageInThisTier = Math.min(remainingUsage, tier.limit - lastTierLimit);
-    baseWaterCharge += usageInThisTier * tier.rate;
-    remainingUsage -= usageInThisTier;
-    lastTierLimit = tier.limit;
+    for (const tier of tiers) {
+      if (remainingUsage <= 0) break;
 
-    if (tier.limit === Infinity && remainingUsage > 0) {
-      baseWaterCharge += remainingUsage * tier.rate;
-      remainingUsage = 0;
+      const usageInThisTier = Math.min(remainingUsage, tier.limit - lastTierLimit);
+      baseWaterCharge += usageInThisTier * tier.rate;
+      remainingUsage -= usageInThisTier;
+      lastTierLimit = tier.limit;
+
+      if (tier.limit === Infinity) {
+        if (remainingUsage > 0) { // This condition is important
+          baseWaterCharge += remainingUsage * tier.rate;
+          remainingUsage = 0;
+        }
+        break; // Stop after infinity tier
+      }
     }
-     if (tier.limit === Infinity) break;
+  } else {
+    // Non-progressive (flat rate based on consumption tier) for Non-domestic customers
+    let applicableRate = 0;
+    // Find the correct tier for the total consumption
+    for (const tier of tiers) {
+        if (usageM3 <= tier.limit) {
+            applicableRate = tier.rate;
+            break;
+        }
+    }
+    // The loop handles the Infinity case correctly because the last tier's limit is Infinity.
+    
+    baseWaterCharge = usageM3 * applicableRate;
   }
 
-  // Calculate service fees based on baseWaterCharge
+  // --- The rest of the calculation is the same for both customer types ---
+
   const maintenanceFee = (tariffConfig.maintenancePercentage ?? 0) * baseWaterCharge;
   
   const sanitationFee = tariffConfig.sanitationPercentage 
                         ? baseWaterCharge * tariffConfig.sanitationPercentage 
                         : 0;
 
-  // Define the base for VAT calculation (Base + Service Fees)
   const vatBase = baseWaterCharge + maintenanceFee + sanitationFee;
 
-  // Apply VAT, conditionally for Domestic customers
   const vatAmount = (customerType === 'Domestic' && usageM3 < 16) 
                   ? 0 
                   : vatBase * VAT_RATE;
 
-  // Calculate other charges that are not part of the VAT base
   const METER_RENT_PRICES = getMeterRentPrices();
   const meterRent = METER_RENT_PRICES[String(meterSize)] || 0;
 
@@ -143,7 +158,6 @@ export function calculateBill(
                          ? usageM3 * tariffConfig.sewerageRatePerM3 
                          : 0;
 
-  // Calculate the final total bill by summing the VAT base, the calculated VAT, and other non-VAT charges
   const totalBill = vatBase + vatAmount + meterRent + sewerageCharge;
 
   return parseFloat(totalBill.toFixed(2));

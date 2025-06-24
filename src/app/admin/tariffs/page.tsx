@@ -213,10 +213,10 @@ export default function TariffManagementPage() {
                 </div>
             </div>
             <div className="mt-4 md:mt-0 flex gap-2 flex-wrap">
-                <Button onClick={handleAddTier}>
+                <Button onClick={handleAddTier} className="bg-primary hover:bg-primary-hover-bg">
                     <PlusCircle className="mr-2 h-4 w-4" /> Add New Tariff Tier
                 </Button>
-                <Button onClick={() => setIsMeterRentDialogOpen(true)} variant="default">
+                <Button onClick={() => setIsMeterRentDialogOpen(true)} variant="default" className="bg-primary hover:bg-primary-hover-bg">
                     <DollarSign className="mr-2 h-4 w-4" /> Manage Meter Rent
                 </Button>
                 <Button variant="destructive" onClick={() => setIsResetDialogOpen(true)}>
@@ -251,7 +251,7 @@ export default function TariffManagementPage() {
             <CardDescription>
                 {currentTariffType === 'Domestic' 
                     ? "These rates are used for calculating domestic water bills. Rates are applied progressively."
-                    : "These rates are used for calculating non-domestic water bills. Rates are applied progressively."
+                    : "These rates are used for calculating non-domestic water bills. The single applicable rate is determined by the total consumption."
                 }
             </CardDescription>
           </CardHeader>

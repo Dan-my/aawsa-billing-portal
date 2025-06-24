@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -43,8 +42,8 @@ import type { IndividualCustomer } from "../individual-customers/individual-cust
 import { cn } from "@/lib/utils";
 
 const chartConfig = {
-  paid: { label: "Paid", color: "hsl(var(--accent))" },
-  unpaid: { label: "Unpaid", color: "hsl(var(--destructive))" },
+  paid: { label: "Paid", color: "hsl(var(--chart-1))" },
+  unpaid: { label: "Unpaid", color: "hsl(var(--chart-3))" },
   customers: { label: "Customers", color: "hsl(var(--chart-1))" },
   bulkMeters: { label: "Bulk Meters", color: "hsl(var(--chart-3))" },
   waterUsage: { label: "Water Usage (m³)", color: "hsl(var(--chart-1))" },
@@ -86,8 +85,8 @@ export default function AdminDashboardPage() {
     setDynamicPaidBulkMeterCount(paidBMs);
     setDynamicUnpaidBulkMeterCount(unpaidBMs);
     setBulkMeterPaymentStatusData([
-      { name: 'Paid', value: paidBMs, fill: 'hsl(var(--accent))' },
-      { name: 'Unpaid', value: unpaidBMs, fill: 'hsl(var(--destructive))' },
+      { name: 'Paid', value: paidBMs, fill: 'hsl(var(--chart-1))' },
+      { name: 'Unpaid', value: unpaidBMs, fill: 'hsl(var(--chart-3))' },
     ]);
 
     // Customer and Meter Counts

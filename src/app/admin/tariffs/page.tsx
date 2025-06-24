@@ -314,9 +314,9 @@ export default function TariffManagementPage() {
            <div className="flex justify-between items-center p-2 rounded-md bg-muted/50 border border-primary/20">
             <span className="text-muted-foreground">VAT</span>
              {currentTariffType === 'Domestic' ? (
-                <span className="font-semibold text-primary">15% on Total Bill (for consumption &gt;= 16m³)</span>
+                <span className="font-semibold text-primary">15% on (Base + Service Fees) if consumption &gt;= 16m³</span>
             ) : (
-                <span className="font-semibold text-primary">15% on Total Bill (before VAT)</span>
+                <span className="font-semibold text-primary">15% on (Base + Service Fees)</span>
             )}
           </div>
         </CardContent>

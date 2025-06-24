@@ -1,4 +1,3 @@
-
 // src/lib/billing.ts
 
 export const customerTypes = ["Domestic", "Non-domestic"] as const;
@@ -119,31 +118,34 @@ export function calculateBill(
      if (tier.limit === Infinity) break;
   }
 
-  let subTotal = baseWaterCharge;
-
-  if (customerType === "Domestic" && tariffConfig.maintenancePercentage) {
-    subTotal += baseWaterCharge * tariffConfig.maintenancePercentage;
-  }
-
-  if (tariffConfig.sanitationPercentage) {
-    subTotal += baseWaterCharge * tariffConfig.sanitationPercentage;
-  }
-
-  const METER_RENT_PRICES = getMeterRentPrices();
-  const meterRent = METER_RENT_PRICES[meterSize] || 0;
-  subTotal += meterRent;
-
-  if (sewerageConnection === "Yes" && tariffConfig.sewerageRatePerM3) {
-    subTotal += usageM3 * tariffConfig.sewerageRatePerM3;
-  }
+  // Calculate fees based on baseWaterCharge
+  const maintenanceFee = (customerType === "Domestic" && tariffConfig.maintenancePercentage) 
+                         ? baseWaterCharge * tariffConfig.maintenancePercentage 
+                         : 0;
   
-  let totalBill = subTotal;
+  const sanitationFee = tariffConfig.sanitationPercentage 
+                        ? baseWaterCharge * tariffConfig.sanitationPercentage 
+                        : 0;
+
+  // Define the base for VAT calculation
+  const vatBase = baseWaterCharge + maintenanceFee + sanitationFee;
+  let vatAmount = 0;
 
   // Apply VAT based on customer type and consumption
   if (customerType === 'Non-domestic' || (customerType === 'Domestic' && usageM3 >= 16)) {
-    const vatAmount = subTotal * VAT_RATE;
-    totalBill += vatAmount;
+    vatAmount = vatBase * VAT_RATE;
   }
+
+  // Calculate other charges not included in VAT base
+  const METER_RENT_PRICES = getMeterRentPrices();
+  const meterRent = METER_RENT_PRICES[meterSize] || 0;
+
+  const sewerageCharge = (sewerageConnection === "Yes" && tariffConfig.sewerageRatePerM3) 
+                         ? usageM3 * tariffConfig.sewerageRatePerM3 
+                         : 0;
+
+  // Calculate the final total bill by summing the VAT base, the calculated VAT, and other charges
+  const totalBill = vatBase + vatAmount + meterRent + sewerageCharge;
 
   return parseFloat(totalBill.toFixed(2));
 }

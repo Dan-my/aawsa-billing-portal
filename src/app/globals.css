@@ -11,9 +11,9 @@ body {
     --background: 210 20% 98%; /* Light Gray */
     --background: 0 0% 100%; /* White */
     --foreground: 0 0% 10%; /* Black */    
-    --card: 192 75% 93%; /* Light Blue from user image */
+    --card: 0 0% 100%; /* White */
     --card-foreground: 210 50% 10%;
-    --popover: 192 75% 93%; /* Light Blue from user image */
+    --popover: 0 0% 100%; /* White */
     --popover-foreground: 210 50% 10%;
     --primary: 211 100% 50%; /* Blue */
     --primary-foreground: 0 0% 100%;

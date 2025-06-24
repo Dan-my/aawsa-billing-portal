@@ -43,8 +43,8 @@ import type { IndividualCustomer } from "../individual-customers/individual-cust
 import { cn } from "@/lib/utils";
 
 const chartConfig = {
-  paid: { label: "Paid", color: "hsl(var(--chart-1))" },
-  unpaid: { label: "Unpaid", color: "hsl(var(--chart-2))" },
+  paid: { label: "Paid", color: "hsl(var(--accent))" },
+  unpaid: { label: "Unpaid", color: "hsl(var(--destructive))" },
   customers: { label: "Customers", color: "hsl(var(--chart-1))" },
   bulkMeters: { label: "Bulk Meters", color: "hsl(var(--chart-3))" },
   waterUsage: { label: "Water Usage (m³)", color: "hsl(var(--chart-1))" },
@@ -68,8 +68,8 @@ export default function AdminDashboardPage() {
   const [dynamicWaterUsageTrendData, setDynamicWaterUsageTrendData] = React.useState<{ month: string; usage: number }[]>([]);
 
   // State for toggling views
-  const [branchPerformanceView, setBranchPerformanceView] = React.useState<'table' | 'chart'>('chart');
-  const [waterUsageView, setWaterUsageView] = React.useState<'table' | 'chart'>('chart');
+  const [branchPerformanceView, setBranchPerformanceView] = React.useState<'chart' | 'table'>('chart');
+  const [waterUsageView, setWaterUsageView] = React.useState<'chart' | 'table'>('chart');
 
   React.useEffect(() => {
     setIsClient(true);
@@ -86,8 +86,8 @@ export default function AdminDashboardPage() {
     setDynamicPaidBulkMeterCount(paidBMs);
     setDynamicUnpaidBulkMeterCount(unpaidBMs);
     setBulkMeterPaymentStatusData([
-      { name: 'Paid', value: paidBMs, fill: 'hsl(var(--chart-1))' },
-      { name: 'Unpaid', value: unpaidBMs, fill: 'hsl(var(--chart-2))' },
+      { name: 'Paid', value: paidBMs, fill: 'hsl(var(--accent))' },
+      { name: 'Unpaid', value: unpaidBMs, fill: 'hsl(var(--destructive))' },
     ]);
 
     // Customer and Meter Counts

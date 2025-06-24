@@ -3,12 +3,34 @@
 
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart as BarChartIcon, Clock, Gauge, Users, ArrowRight, Table as TableIcon, TrendingUp, AlertCircle, PieChart as PieChartIcon } from 'lucide-react';
+import { 
+  ArrowRight, 
+  AlertCircle, 
+  PieChart as PieChartIcon, 
+  Users, 
+  Gauge,
+  BarChart as BarChartIcon,
+  Table as TableIcon 
+} from 'lucide-react';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
 import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart'; 
-import { ResponsiveContainer, Tooltip, Legend, PieChart as PieChartRecharts, Pie, Cell } from 'recharts';
+import { 
+  ResponsiveContainer, 
+  Tooltip, 
+  Legend, 
+  PieChart as PieChartRecharts, 
+  Pie, 
+  Cell,
+  BarChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Bar,
+  LineChart,
+  Line,
+} from 'recharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
@@ -44,6 +66,10 @@ export default function AdminDashboardPage() {
   
   const [dynamicBranchPerformanceData, setDynamicBranchPerformanceData] = React.useState<{ branch: string; paid: number; unpaid: number }[]>([]);
   const [dynamicWaterUsageTrendData, setDynamicWaterUsageTrendData] = React.useState<{ month: string; usage: number }[]>([]);
+
+  // State for toggling views
+  const [branchPerformanceView, setBranchPerformanceView] = React.useState<'table' | 'chart'>('chart');
+  const [waterUsageView, setWaterUsageView] = React.useState<'table' | 'chart'>('chart');
 
   React.useEffect(() => {
     setIsClient(true);
@@ -258,70 +284,129 @@ export default function AdminDashboardPage() {
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Branch Performance (Paid vs Unpaid)</CardTitle>
-            <CardDescription>Comparison of bills status across branches.</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Branch Performance (Paid vs Unpaid)</CardTitle>
+              <CardDescription>Comparison of bills status across branches.</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setBranchPerformanceView(prev => prev === 'chart' ? 'table' : 'chart')}>
+              {branchPerformanceView === 'chart' ? <TableIcon className="mr-2 h-4 w-4" /> : <BarChartIcon className="mr-2 h-4 w-4" />}
+              View {branchPerformanceView === 'chart' ? 'Table' : 'Chart'}
+            </Button>
           </CardHeader>
-          <CardContent className="p-4">
-            <ScrollArea className="h-[300px]">
-              {dynamicBranchPerformanceData.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Branch</TableHead>
-                      <TableHead className="text-right">Paid</TableHead>
-                      <TableHead className="text-right">Unpaid</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {dynamicBranchPerformanceData.map((item) => (
-                      <TableRow key={item.branch}>
-                        <TableCell className="font-medium">{item.branch}</TableCell>
-                        <TableCell className="text-right text-green-600 dark:text-green-400">{item.paid}</TableCell>
-                        <TableCell className="text-right text-red-600 dark:text-red-400">{item.unpaid}</TableCell>
+          <CardContent>
+            {branchPerformanceView === 'chart' ? (
+              <div className="h-[300px]">
+                {isClient && dynamicBranchPerformanceData.length > 0 ? (
+                  <ChartContainer config={chartConfig} className="w-full h-full">
+                    <ResponsiveContainer>
+                      <BarChart data={dynamicBranchPerformanceData} layout="vertical" margin={{ left: 10, right: 30 }}>
+                        <CartesianGrid horizontal={false} />
+                        <XAxis type="number" hide />
+                        <YAxis dataKey="branch" type="category" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} width={80} />
+                        <Tooltip content={<ChartTooltipContent />} />
+                        <Legend content={<ChartLegendContent />} />
+                        <Bar dataKey="paid" stackId="a" fill="var(--color-paid)" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="unpaid" stackId="a" fill="var(--color-unpaid)" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                ) : (
+                  <div className="flex h-[300px] items-center justify-center text-xs text-muted-foreground">
+                    No branch performance data available for chart.
+                  </div>
+                )}
+              </div>
+            ) : (
+              <ScrollArea className="h-[300px]">
+                {dynamicBranchPerformanceData.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Branch</TableHead>
+                        <TableHead className="text-right">Paid</TableHead>
+                        <TableHead className="text-right">Unpaid</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                    No branch performance data available.
-                </div>
-              )}
-            </ScrollArea>
+                    </TableHeader>
+                    <TableBody>
+                      {dynamicBranchPerformanceData.map((item) => (
+                        <TableRow key={item.branch}>
+                          <TableCell className="font-medium">{item.branch}</TableCell>
+                          <TableCell className="text-right text-green-600 dark:text-green-400">{item.paid}</TableCell>
+                          <TableCell className="text-right text-red-600 dark:text-red-400">{item.unpaid}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="flex h-[300px] items-center justify-center text-xs text-muted-foreground">
+                      No branch performance data available.
+                  </div>
+                )}
+              </ScrollArea>
+            )}
           </CardContent>
         </Card>
 
         <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Overall Water Usage Trend</CardTitle>
-            <CardDescription>Monthly water consumption across all meters.</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Overall Water Usage Trend</CardTitle>
+              <CardDescription>Monthly water consumption across all meters.</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setWaterUsageView(prev => prev === 'chart' ? 'table' : 'chart')}>
+              {waterUsageView === 'chart' ? <TableIcon className="mr-2 h-4 w-4" /> : <BarChartIcon className="mr-2 h-4 w-4" />}
+              View {waterUsageView === 'chart' ? 'Table' : 'Chart'}
+            </Button>
           </CardHeader>
-          <CardContent className="p-4">
-            <ScrollArea className="h-[300px]">
-              {dynamicWaterUsageTrendData.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Month</TableHead>
-                      <TableHead className="text-right">Water Usage (m³)</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {dynamicWaterUsageTrendData.map((item) => (
-                      <TableRow key={item.month}>
-                        <TableCell className="font-medium">{item.month}</TableCell>
-                        <TableCell className="text-right">{item.usage.toFixed(2)}</TableCell>
+          <CardContent>
+            {waterUsageView === 'chart' ? (
+               <div className="h-[300px]">
+                 {isClient && dynamicWaterUsageTrendData.length > 0 ? (
+                  <ChartContainer config={chartConfig} className="w-full h-full">
+                    <ResponsiveContainer>
+                      <LineChart data={dynamicWaterUsageTrendData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                        <YAxis tickFormatter={(value) => `${value.toLocaleString()}`} tick={{ fontSize: 12 }} />
+                        <Tooltip content={<ChartTooltipContent />} />
+                        <Legend />
+                        <Line type="monotone" dataKey="usage" nameKey="waterUsage" stroke="var(--color-waterUsage)" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                 ) : (
+                   <div className="flex h-[300px] items-center justify-center text-xs text-muted-foreground">
+                      No water usage data available for chart.
+                   </div>
+                 )}
+               </div>
+            ) : (
+              <ScrollArea className="h-[300px]">
+                {dynamicWaterUsageTrendData.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Month</TableHead>
+                        <TableHead className="text-right">Water Usage (m³)</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                 <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                    No water usage data available.
-                </div>
-              )}
-            </ScrollArea>
+                    </TableHeader>
+                    <TableBody>
+                      {dynamicWaterUsageTrendData.map((item) => (
+                        <TableRow key={item.month}>
+                          <TableCell className="font-medium">{item.month}</TableCell>
+                          <TableCell className="text-right">{item.usage.toFixed(2)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                   <div className="flex h-[300px] items-center justify-center text-xs text-muted-foreground">
+                      No water usage data available.
+                  </div>
+                )}
+              </ScrollArea>
+            )}
           </CardContent>
         </Card>
       </div>

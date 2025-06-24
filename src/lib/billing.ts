@@ -17,18 +17,18 @@ export interface TariffTier {
 }
 
 // Renamed to indicate these are the default, fallback values.
-export const DEFAULT_METER_RENT_PRICES: { [key: number]: number } = {
-  0.5: 15,    // 1/2"
-  0.75: 20,   // 3/4"
-  1: 33,      // 1"
-  1.25: 36,   // 1 1/4"
-  1.5: 57,    // 1 1/2"
-  2: 98,      // 2"
-  2.5: 112,   // 2 1/2"
-  3: 148,     // 3"
-  4: 177,     // 4"
-  5: 228,     // 5"
-  6: 259,     // 6"
+export const DEFAULT_METER_RENT_PRICES: { [key: string]: number } = {
+  "0.5": 15,    // 1/2"
+  "0.75": 20,   // 3/4"
+  "1": 33,      // 1"
+  "1.25": 36,   // 1 1/4"
+  "1.5": 57,    // 1 1/2"
+  "2": 98,      // 2"
+  "2.5": 112,   // 2 1/2"
+  "3": 148,     // 3"
+  "4": 177,     // 4"
+  "5": 228,     // 5"
+  "6": 259,     // 6"
 };
 
 export const METER_RENT_STORAGE_KEY = 'aawsa-meter-rent-prices';
@@ -130,16 +130,13 @@ export function calculateBill(
 
   // Define the base for VAT calculation (Base + Service Fees)
   const vatBase = baseWaterCharge + maintenanceFee + sanitationFee;
-  let vatAmount = 0;
 
-  // Apply VAT conditionally
-  if (customerType === 'Non-domestic' || (customerType === 'Domestic' && usageM3 >= 16)) {
-    vatAmount = vatBase * VAT_RATE;
-  }
+  // Apply VAT
+  const vatAmount = vatBase * VAT_RATE;
 
   // Calculate other charges that are not part of the VAT base
   const METER_RENT_PRICES = getMeterRentPrices();
-  const meterRent = METER_RENT_PRICES[meterSize] || 0;
+  const meterRent = METER_RENT_PRICES[String(meterSize)] || 0;
 
   const sewerageCharge = (sewerageConnection === "Yes" && tariffConfig.sewerageRatePerM3) 
                          ? usageM3 * tariffConfig.sewerageRatePerM3 

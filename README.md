@@ -75,19 +75,69 @@ Processing feedback, including any errors per row, will be displayed after attem
 
 ## Deployment
 
-This Next.js application can be deployed to various platforms that support Node.js environments. Here are some popular options:
+This Next.js application is ready for deployment to various platforms that support Node.js and the Next.js framework.
 
-### Vercel
-Vercel is the creator of Next.js and provides a seamless, zero-configuration deployment experience. Simply connect your Git repository (e.g., GitHub, GitLab) to Vercel, and it will automatically build and deploy your application. Vercel also handles serverless functions, image optimization, and global CDN out of the box.
+### **Prerequisites for all platforms:**
+*   **GitHub Repository:** Your code must be pushed to a GitHub repository.
+*   **Supabase Keys:** You will need your Supabase **Project URL** and **Anon Key**.
 
-### Netlify
-Netlify is another popular platform for deploying modern web applications. It offers continuous deployment from your Git repository, serverless functions, and a robust set of features for managing your site.
+---
 
-### Firebase Hosting
-Since you are using Firebase Studio, deploying to Firebase Hosting is a natural fit. Firebase Hosting provides fast and secure hosting for your web app. For a Next.js application with server-side features (like the App Router), you would typically deploy it to Cloud Functions for Firebase, which integrates with Firebase Hosting to serve both static and dynamic content.
+### **Option 1: Vercel (Recommended)**
+Vercel is the creator of Next.js and provides a seamless, zero-configuration deployment experience.
 
-### Other Cloud Providers
-You can also deploy this application to major cloud providers using different services:
--   **AWS (Amazon Web Services):** Using services like AWS Amplify, Amazon S3 (for static parts) + Lambda (for server-side parts), or container services like ECS/Fargate.
--   **Google Cloud:** Using Cloud Run for a containerized deployment or App Engine.
--   **Microsoft Azure:** Using Azure App Service or Azure Static Web Apps with Functions.
+1.  **Sign Up:** Go to [vercel.com](https://vercel.com) and sign up with your GitHub account.
+2.  **Import Project:** On your Vercel dashboard, click "Add New..." -> "Project". Find your GitHub repository and click "Import".
+3.  **Configure Environment Variables:**
+    *   Expand the "Environment Variables" section.
+    *   Add the following two variables:
+        *   **Name:** `NEXT_PUBLIC_SUPABASE_URL`, **Value:** Your Supabase project URL.
+        *   **Name:** `NEXT_PUBLIC_SUPABASE_ANON_KEY`, **Value:** Your Supabase `anon` (public) key.
+4.  **Deploy:** Click the "Deploy" button. Vercel will handle the rest. Your site will be live in a few minutes.
+
+---
+
+### **Option 2: Netlify**
+Netlify is another popular platform with excellent support for Next.js.
+
+1.  **Sign Up:** Go to [netlify.com](https://app.netlify.com/signup) and sign up with your GitHub account.
+2.  **Import Project:** From your dashboard, click "Add new site" -> "Import an existing project". Choose GitHub, authorize access, and select your repository.
+3.  **Configure Build Settings & Environment Variables:**
+    *   Netlify will detect that it's a Next.js project and pre-fill the build command (`next build`) and publish directory (`.next`). You can leave these as defaults.
+    *   Before deploying, go to "Site settings" -> "Build & deploy" -> "Environment".
+    *   Add the same two environment variables as for Vercel:
+        *   `NEXT_PUBLIC_SUPABASE_URL`
+        *   `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+4.  **Deploy:** Go to the "Deploys" tab for your new site and trigger a deploy. Netlify will build and deploy your application.
+
+---
+
+### **Option 3: Firebase Hosting**
+Since you are using Firebase Studio, deploying to Firebase Hosting is a natural fit, though it requires using the command line.
+
+1.  **Firebase Project:** Go to the [Firebase Console](https://console.firebase.google.com/) and create a new project (or select an existing one).
+2.  **Install Firebase CLI:** If you don't have it, install the Firebase Command Line Interface by running this command in your terminal:
+    ```bash
+    npm install -g firebase-tools
+    ```
+3.  **Login & Initialize:**
+    *   In your terminal, log in to Firebase: `firebase login`
+    *   Navigate to your project's root folder and run: `firebase init hosting`
+    *   Follow the prompts:
+        *   Choose to **use an existing project** and select the one you created in the console.
+        *   When asked about public directory, type `.next`. **This is important.**
+        *   When asked if you want to configure as a single-page app, say **No**.
+        *   When asked to set up automatic builds with GitHub, you can say **Yes** and follow the steps to connect your repository.
+4.  **Deploy:** Run the following command from your project's root folder:
+    ```bash
+    firebase deploy --only hosting
+    ```
+    *Note: For a Next.js app with server-side features, Firebase now has experimental support for deploying directly. When initializing, you might be prompted to use a web framework. If so, select Next.js, and Firebase will handle setting up Cloud Functions for you.*
+
+---
+
+### **Other Cloud Providers**
+You can also deploy this application to major cloud providers, although these methods are typically more advanced:
+*   **AWS (Amazon Web Services):** Using services like AWS Amplify or containerizing your app for ECS/Fargate.
+*   **Google Cloud:** Using Cloud Run for a containerized deployment or App Engine.
+*   **Microsoft Azure:** Using Azure App Service or Azure Static Web Apps.

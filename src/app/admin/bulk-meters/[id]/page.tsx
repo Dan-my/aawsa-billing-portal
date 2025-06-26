@@ -314,7 +314,7 @@ export default function BulkMeterDetailsPage() {
              <p className="text-sm text-amber-600"><strong className="font-semibold">Difference Usage:</strong> {differenceUsage.toFixed(2)} m³</p>
              <p className="text-sm text-amber-600"><strong className="font-semibold">Difference Bill:</strong> ETB {differenceBill.toFixed(2)}</p>
              <p className={cn("text-sm font-semibold", (bulkMeter.outStandingbill || 0) > 0 ? "text-destructive" : "text-muted-foreground")}>Outstanding Bill: ETB {(bulkMeter.outStandingbill || 0).toFixed(2)}</p>
-             <p className="text-2xl font-bold text-primary">Total Payable: ETB {totalPayable.toFixed(2)}</p>
+             <p className="text-2xl font-bold text-primary">Total Amount Payable: ETB {totalPayable.toFixed(2)}</p>
              <div className="flex items-center gap-2 mt-1">
                <strong className="font-semibold">Payment Status:</strong>
                 <Badge variant={bulkMeter.paymentStatus === 'Paid' ? 'default' : 'destructive'} className="cursor-pointer hover:opacity-80">

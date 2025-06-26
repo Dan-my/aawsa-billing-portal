@@ -311,8 +311,8 @@ export default function BulkMeterDetailsPage() {
           <div className="space-y-1">
              <p className="text-lg"><strong className="font-semibold">Current Usage:</strong> {bulkUsage.toFixed(2)} m³</p>
              <p className="text-xl text-primary"><strong className="font-semibold">Current Bill:</strong> ETB {totalBulkBillForPeriod.toFixed(2)}</p>
-             <p className="text-sm text-amber-600"><strong className="font-semibold">Difference Usage:</strong> {differenceUsage.toFixed(2)} m³</p>
-             <p className="text-sm text-amber-600"><strong className="font-semibold">Difference Bill:</strong> ETB {differenceBill.toFixed(2)}</p>
+             <p className={cn("text-sm", differenceUsage >= 0 ? "text-green-600" : "text-amber-600")}><strong className="font-semibold">Difference Usage:</strong> {differenceUsage.toFixed(2)} m³</p>
+             <p className={cn("text-sm", differenceBill >= 0 ? "text-green-600" : "text-amber-600")}><strong className="font-semibold">Difference Bill:</strong> ETB {differenceBill.toFixed(2)}</p>
              <p className={cn("text-sm font-semibold", (bulkMeter.outStandingbill || 0) > 0 ? "text-destructive" : "text-muted-foreground")}>Outstanding Bill: ETB {(bulkMeter.outStandingbill || 0).toFixed(2)}</p>
              <p className="text-2xl font-bold text-primary">Total Amount Payable: ETB {totalPayable.toFixed(2)}</p>
              <div className="flex items-center gap-2 mt-1">

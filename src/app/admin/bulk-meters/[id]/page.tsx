@@ -26,14 +26,14 @@ import {
   getBranches, 
   initializeBranches, 
   subscribeToBranches,
-  getMeterReadings,
-  initializeMeterReadings,
-  subscribeToMeterReadings,
+  getBulkMeterReadings,
+  initializeBulkMeterReadings,
+  subscribeToBulkMeterReadings,
 } from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meter-types";
 import type { IndividualCustomer, IndividualCustomerStatus } from "../../individual-customers/individual-customer-types";
 import type { Branch } from "../../branches/branch-types"; 
-import type { DomainMeterReading } from "@/lib/data-store";
+import type { DomainBulkMeterReading } from "@/lib/data-store";
 import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult } from "@/lib/billing";
 import { BulkMeterFormDialog, type BulkMeterFormValues } from "../bulk-meter-form-dialog";
 import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "../../individual-customers/individual-customer-form-dialog";
@@ -50,8 +50,7 @@ export default function BulkMeterDetailsPage() {
   const [associatedCustomers, setAssociatedCustomers] = useState<IndividualCustomer[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
-  const [allReadings, setAllReadings] = useState<DomainMeterReading[]>([]);
-  const [meterReadingHistory, setMeterReadingHistory] = useState<DomainMeterReading[]>([]);
+  const [meterReadingHistory, setMeterReadingHistory] = useState<DomainBulkMeterReading[]>([]);
 
   const [isBulkMeterFormOpen, setIsBulkMeterFormOpen] = React.useState(false);
   const [isBulkMeterDeleteDialogOpen, setIsBulkMeterDeleteDialogOpen] = React.useState(false);
@@ -78,7 +77,7 @@ export default function BulkMeterDetailsPage() {
       initializeBulkMeters(),
       initializeCustomers(),
       initializeBranches(),
-      initializeMeterReadings()
+      initializeBulkMeterReadings()
     ]).then(() => {
       if (!isMounted) return;
 
@@ -93,9 +92,8 @@ export default function BulkMeterDetailsPage() {
         setBulkMeter(foundBM);
         const associated = currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId);
         setAssociatedCustomers(associated);
-        const allMeterReadings = getMeterReadings();
-        setAllReadings(allMeterReadings);
-        const history = allMeterReadings
+        const allBulkReadings = getBulkMeterReadings();
+        const history = allBulkReadings
           .filter(r => r.bulkMeterId === bulkMeterId)
           .sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
         setMeterReadingHistory(history);
@@ -117,10 +115,9 @@ export default function BulkMeterDetailsPage() {
       const currentGlobalMeters = getBulkMeters();
       const currentGlobalCustomers = getCustomers();
       const currentGlobalBranches = getBranches(); 
-      const allMeterReadings = getMeterReadings();
+      const allBulkReadings = getBulkMeterReadings();
 
       setBranches(currentGlobalBranches); 
-      setAllReadings(allMeterReadings);
 
       const foundBM = currentGlobalMeters.find(bm => bm.id === bulkMeterId);
 
@@ -128,7 +125,7 @@ export default function BulkMeterDetailsPage() {
         setBulkMeter(foundBM);
         const associated = currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId);
         setAssociatedCustomers(associated);
-        const history = allMeterReadings
+        const history = allBulkReadings
           .filter(r => r.bulkMeterId === bulkMeterId)
           .sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
         setMeterReadingHistory(history);
@@ -141,7 +138,7 @@ export default function BulkMeterDetailsPage() {
     const unsubscribeBM = subscribeToBulkMeters(handleStoresUpdate);
     const unsubscribeCust = subscribeToCustomers(handleStoresUpdate);
     const unsubscribeBranches = subscribeToBranches(handleStoresUpdate);
-    const unsubscribeMeterReadings = subscribeToMeterReadings(handleStoresUpdate);
+    const unsubscribeMeterReadings = subscribeToBulkMeterReadings(handleStoresUpdate);
 
     return () => {
       isMounted = false;

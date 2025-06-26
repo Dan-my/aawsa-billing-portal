@@ -6,7 +6,6 @@ import type { IndividualCustomer as DomainIndividualCustomer, IndividualCustomer
 import type { BulkMeter as DomainBulkMeterTypeFromTypes } from '@/app/admin/bulk-meters/bulk-meter-types'; 
 import type { Branch as DomainBranch } from '@/app/admin/branches/branch-types';
 import type { StaffMember } from '@/app/admin/staff-management/staff-types';
-// import type { Voucher as DomainVoucher, VoucherStatus, VoucherDiscountType } from '@/app/admin/voucher/voucher-types'; // Removed Voucher
 import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult } from '@/lib/billing';
 
 
@@ -16,19 +15,19 @@ import type {
   IndividualCustomer as SupabaseIndividualCustomerRow,
   StaffMember as SupabaseStaffMemberRow,
   Bill as SupabaseBillRow,
-  MeterReading as SupabaseMeterReadingRow,
+  IndividualCustomerReading as SupabaseIndividualCustomerReadingRow,
+  BulkMeterReading as SupabaseBulkMeterReadingRow,
   Payment as SupabasePaymentRow,
   ReportLog as SupabaseReportLogRow,
-  // VoucherRow as SupabaseVoucherRow, // Removed Voucher
   BranchInsert, BranchUpdate,
   BulkMeterInsert, BulkMeterUpdate,
   IndividualCustomerInsert, IndividualCustomerUpdate,
   StaffMemberInsert, StaffMemberUpdate,
   BillInsert, BillUpdate,
-  MeterReadingInsert, MeterReadingUpdate,
+  IndividualCustomerReadingInsert, IndividualCustomerReadingUpdate,
+  BulkMeterReadingInsert, BulkMeterReadingUpdate,
   PaymentInsert, PaymentUpdate,
   ReportLogInsert, ReportLogUpdate,
-  // VoucherInsert, VoucherUpdate // Removed Voucher
 } from './supabase';
 
 import {
@@ -52,10 +51,14 @@ import {
   createBill as supabaseCreateBill,
   updateBill as supabaseUpdateBill,
   deleteBill as supabaseDeleteBill,
-  getAllMeterReadings as supabaseGetAllMeterReadings,
-  createMeterReading as supabaseCreateMeterReading,
-  updateMeterReading as supabaseUpdateMeterReading,
-  deleteMeterReading as supabaseDeleteMeterReading,
+  getAllIndividualCustomerReadings as supabaseGetAllIndividualCustomerReadings,
+  createIndividualCustomerReading as supabaseCreateIndividualCustomerReading,
+  updateIndividualCustomerReading as supabaseUpdateIndividualCustomerReading,
+  deleteIndividualCustomerReading as supabaseDeleteIndividualCustomerReading,
+  getAllBulkMeterReadings as supabaseGetAllBulkMeterReadings,
+  createBulkMeterReading as supabaseCreateBulkMeterReading,
+  updateBulkMeterReading as supabaseUpdateBulkMeterReading,
+  deleteBulkMeterReading as supabaseDeleteBulkMeterReading,
   getAllPayments as supabaseGetAllPayments,
   createPayment as supabaseCreatePayment,
   updatePayment as supabaseUpdatePayment,
@@ -64,10 +67,6 @@ import {
   createReportLog as supabaseCreateReportLog,
   updateReportLog as supabaseUpdateReportLog,
   deleteReportLog as supabaseDeleteReportLog,
-  // getAllVouchers as supabaseGetAllVouchers, // Removed Voucher
-  // createVoucher as supabaseCreateVoucher, // Removed Voucher
-  // updateVoucher as supabaseUpdateVoucher, // Removed Voucher
-  // deleteVoucher as supabaseDeleteVoucher, // Removed Voucher
 } from './supabase';
 
 
@@ -97,11 +96,9 @@ export interface DomainBill {
   updatedAt?: string | null;
 }
 
-export interface DomainMeterReading {
+export interface DomainIndividualCustomerReading {
   id: string;
-  meterType: 'individual_customer_meter' | 'bulk_meter';
-  individualCustomerId?: string | null;
-  bulkMeterId?: string | null;
+  individualCustomerId: string;
   readerStaffId?: string | null;
   readingDate: string;
   monthYear: string;
@@ -110,6 +107,30 @@ export interface DomainMeterReading {
   notes?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
+}
+
+export interface DomainBulkMeterReading {
+  id: string;
+  bulkMeterId: string;
+  readerStaffId?: string | null;
+  readingDate: string;
+  monthYear: string;
+  readingValue: number;
+  isEstimate?: boolean | null;
+  notes?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface DisplayReading {
+    id: string;
+    meterId: string | null;
+    meterType: 'individual' | 'bulk';
+    meterIdentifier: string;
+    readingValue: number;
+    readingDate: string;
+    monthYear: string;
+    notes?: string | null;
 }
 
 export interface DomainPayment {
@@ -156,20 +177,20 @@ let customers: DomainIndividualCustomer[] = [];
 let bulkMeters: BulkMeter[] = [];
 let staffMembers: StaffMember[] = [];
 let bills: DomainBill[] = [];
-let meterReadings: DomainMeterReading[] = [];
+let individualCustomerReadings: DomainIndividualCustomerReading[] = [];
+let bulkMeterReadings: DomainBulkMeterReading[] = [];
 let payments: DomainPayment[] = [];
 let reportLogs: DomainReportLog[] = [];
-// let vouchers: DomainVoucher[] = []; // Removed Voucher
 
 let branchesFetched = false;
 let customersFetched = false;
 let bulkMetersFetched = false;
 let staffMembersFetched = false;
 let billsFetched = false;
-let meterReadingsFetched = false;
+let individualCustomerReadingsFetched = false;
+let bulkMeterReadingsFetched = false;
 let paymentsFetched = false;
 let reportLogsFetched = false;
-// let vouchersFetched = false; // Removed Voucher
 
 type Listener<T> = (data: T[]) => void;
 const branchListeners: Set<Listener<DomainBranch>> = new Set();
@@ -177,20 +198,20 @@ const customerListeners: Set<Listener<DomainIndividualCustomer>> = new Set();
 const bulkMeterListeners: Set<Listener<BulkMeter>> = new Set();
 const staffMemberListeners: Set<Listener<StaffMember>> = new Set();
 const billListeners: Set<Listener<DomainBill>> = new Set();
-const meterReadingListeners: Set<Listener<DomainMeterReading>> = new Set();
+const individualCustomerReadingListeners: Set<Listener<DomainIndividualCustomerReading>> = new Set();
+const bulkMeterReadingListeners: Set<Listener<DomainBulkMeterReading>> = new Set();
 const paymentListeners: Set<Listener<DomainPayment>> = new Set();
 const reportLogListeners: Set<Listener<DomainReportLog>> = new Set();
-// const voucherListeners: Set<Listener<DomainVoucher>> = new Set(); // Removed Voucher
 
 const notifyBranchListeners = () => branchListeners.forEach(listener => listener([...branches]));
 const notifyCustomerListeners = () => customerListeners.forEach(listener => listener([...customers]));
 const notifyBulkMeterListeners = () => bulkMeterListeners.forEach(listener => listener([...bulkMeters]));
 const notifyStaffMemberListeners = () => staffMemberListeners.forEach(listener => listener([...staffMembers]));
 const notifyBillListeners = () => billListeners.forEach(listener => listener([...bills]));
-const notifyMeterReadingListeners = () => meterReadingListeners.forEach(listener => listener([...meterReadings]));
+const notifyIndividualCustomerReadingListeners = () => individualCustomerReadingListeners.forEach(listener => listener([...individualCustomerReadings]));
+const notifyBulkMeterReadingListeners = () => bulkMeterReadingListeners.forEach(listener => listener([...bulkMeterReadings]));
 const notifyPaymentListeners = () => paymentListeners.forEach(listener => listener([...payments])); 
 const notifyReportLogListeners = () => reportLogListeners.forEach(listener => listener([...reportLogs]));
-// const notifyVoucherListeners = () => voucherListeners.forEach(listener => listener([...vouchers])); // Removed Voucher
 
 // --- Mappers ---
 const mapSupabaseBranchToDomain = (sb: SupabaseBranchRow): DomainBranch => ({
@@ -254,7 +275,7 @@ const mapSupabaseCustomerToDomain = (sc: SupabaseIndividualCustomerRow): DomainI
     status: sc.status as IndividualCustomerStatus,
     paymentStatus: sc.paymentStatus as PaymentStatus,
     calculatedBill: bill,
-    arrears: sc.arrears ? Number(sc.arrears) : 0, // Added arrears
+    arrears: sc.arrears ? Number(sc.arrears) : 0,
     created_at: sc.created_at,
     updated_at: sc.updated_at,
   };
@@ -286,7 +307,7 @@ const mapDomainCustomerToInsert = (
     status: 'Active', 
     paymentStatus: 'Unpaid', 
     calculatedBill: bill,
-    arrears: customer.arrears ? Number(customer.arrears) : 0, // Added arrears
+    arrears: customer.arrears ? Number(customer.arrears) : 0,
   };
 };
 
@@ -312,7 +333,7 @@ const mapDomainCustomerToUpdate = (customer: Partial<DomainIndividualCustomer>):
   if(customer.branchId !== undefined) updatePayload.branch_id = customer.branchId; 
   if(customer.status !== undefined) updatePayload.status = customer.status;
   if(customer.paymentStatus !== undefined) updatePayload.paymentStatus = customer.paymentStatus;
-  if(customer.arrears !== undefined) updatePayload.arrears = Number(customer.arrears); // Added arrears
+  if(customer.arrears !== undefined) updatePayload.arrears = Number(customer.arrears);
 
   if (customer.currentReading !== undefined || customer.previousReading !== undefined || customer.customerType !== undefined || customer.sewerageConnection !== undefined || customer.meterSize !== undefined) {
     const existingCustomer = customers.find(c => c.id === customer.id);
@@ -529,10 +550,33 @@ const mapDomainBillToSupabase = (bill: Partial<DomainBill>): Partial<BillInsert 
     return payload;
 };
 
-const mapSupabaseMeterReadingToDomain = (smr: SupabaseMeterReadingRow): DomainMeterReading => ({
+const mapSupabaseIndividualReadingToDomain = (smr: SupabaseIndividualCustomerReadingRow): DomainIndividualCustomerReading => ({
   id: smr.id,
-  meterType: smr.meter_type,
   individualCustomerId: smr.individual_customer_id,
+  readerStaffId: smr.reader_staff_id,
+  readingDate: smr.reading_date,
+  monthYear: smr.month_year,
+  readingValue: Number(smr.reading_value),
+  isEstimate: smr.is_estimate,
+  notes: smr.notes,
+  createdAt: smr.created_at,
+  updatedAt: smr.updated_at,
+});
+
+const mapDomainIndividualReadingToSupabase = (mr: Partial<DomainIndividualCustomerReading>): Partial<IndividualCustomerReadingInsert | IndividualCustomerReadingUpdate> => {
+    const payload: Partial<IndividualCustomerReadingInsert | IndividualCustomerReadingUpdate> = {};
+    if (mr.individualCustomerId !== undefined) payload.individual_customer_id = mr.individualCustomerId;
+    if (mr.readerStaffId !== undefined) payload.reader_staff_id = mr.readerStaffId;
+    if (mr.readingDate !== undefined) payload.reading_date = mr.readingDate;
+    if (mr.monthYear !== undefined) payload.month_year = mr.monthYear;
+    if (mr.readingValue !== undefined) payload.reading_value = mr.readingValue;
+    if (mr.isEstimate !== undefined) payload.is_estimate = mr.isEstimate;
+    if (mr.notes !== undefined) payload.notes = mr.notes;
+    return payload;
+};
+
+const mapSupabaseBulkReadingToDomain = (smr: SupabaseBulkMeterReadingRow): DomainBulkMeterReading => ({
+  id: smr.id,
   bulkMeterId: smr.bulk_meter_id,
   readerStaffId: smr.reader_staff_id,
   readingDate: smr.reading_date,
@@ -544,10 +588,8 @@ const mapSupabaseMeterReadingToDomain = (smr: SupabaseMeterReadingRow): DomainMe
   updatedAt: smr.updated_at,
 });
 
-const mapDomainMeterReadingToSupabase = (mr: Partial<DomainMeterReading>): Partial<MeterReadingInsert | MeterReadingUpdate> => {
-    const payload: Partial<MeterReadingInsert | MeterReadingUpdate> = {};
-    if (mr.meterType !== undefined) payload.meter_type = mr.meterType;
-    if (mr.individualCustomerId !== undefined) payload.individual_customer_id = mr.individualCustomerId;
+const mapDomainBulkReadingToSupabase = (mr: Partial<DomainBulkMeterReading>): Partial<BulkMeterReadingInsert | BulkMeterReadingUpdate> => {
+    const payload: Partial<BulkMeterReadingInsert | BulkMeterReadingUpdate> = {};
     if (mr.bulkMeterId !== undefined) payload.bulk_meter_id = mr.bulkMeterId;
     if (mr.readerStaffId !== undefined) payload.reader_staff_id = mr.readerStaffId;
     if (mr.readingDate !== undefined) payload.reading_date = mr.readingDate;
@@ -610,8 +652,6 @@ const mapDomainReportLogToSupabase = (rl: Partial<DomainReportLog>): Partial<Rep
     if (rl.status !== undefined) payload.status = rl.status;
     return payload;
 };
-
-// Removed Voucher mappers: mapSupabaseVoucherToDomain, mapDomainVoucherToInsert, mapDomainVoucherToUpdate
 
 
 async function fetchAllBranches() {
@@ -739,16 +779,28 @@ async function fetchAllBills() {
     return bills;
 }
 
-async function fetchAllMeterReadings() {
-    const { data, error } = await supabaseGetAllMeterReadings();
+async function fetchAllIndividualCustomerReadings() {
+    const { data, error } = await supabaseGetAllIndividualCustomerReadings();
     if (data) {
-        meterReadings = data.map(mapSupabaseMeterReadingToDomain);
-        notifyMeterReadingListeners();
+        individualCustomerReadings = data.map(mapSupabaseIndividualReadingToDomain);
+        notifyIndividualCustomerReadingListeners();
     } else {
-        console.error("DataStore: Failed to fetch meter readings. Supabase error:", JSON.stringify(error, null, 2));
+        console.error("DataStore: Failed to fetch individual customer readings. Supabase error:", JSON.stringify(error, null, 2));
     }
-    meterReadingsFetched = true;
-    return meterReadings;
+    individualCustomerReadingsFetched = true;
+    return individualCustomerReadings;
+}
+
+async function fetchAllBulkMeterReadings() {
+    const { data, error } = await supabaseGetAllBulkMeterReadings();
+    if (data) {
+        bulkMeterReadings = data.map(mapSupabaseBulkReadingToDomain);
+        notifyBulkMeterReadingListeners();
+    } else {
+        console.error("DataStore: Failed to fetch bulk meter readings. Supabase error:", JSON.stringify(error, null, 2));
+    }
+    bulkMeterReadingsFetched = true;
+    return bulkMeterReadings;
 }
 
 async function fetchAllPayments() {
@@ -774,19 +826,6 @@ async function fetchAllReportLogs() {
     reportLogsFetched = true;
     return reportLogs;
 }
-
-// async function fetchAllVouchers() { // Removed Voucher
-//   const { data, error } = await supabaseGetAllVouchers();
-//   if (data) {
-//     vouchers = data.map(mapSupabaseVoucherToDomain);
-//     notifyVoucherListeners();
-//   } else {
-//     console.error("DataStore: Failed to fetch vouchers. Supabase error:", JSON.stringify(error, null, 2));
-//   }
-//   vouchersFetched = true;
-//   return vouchers;
-// }
-
 
 export const initializeBranches = async () => {
   if (!branchesFetched || branches.length === 0) {
@@ -815,8 +854,11 @@ export const initializeStaffMembers = async () => {
 export const initializeBills = async () => {
     if (!billsFetched || bills.length === 0) await fetchAllBills();
 };
-export const initializeMeterReadings = async () => {
-    if (!meterReadingsFetched || meterReadings.length === 0) await fetchAllMeterReadings();
+export const initializeIndividualCustomerReadings = async () => {
+    if (!individualCustomerReadingsFetched || individualCustomerReadings.length === 0) await fetchAllIndividualCustomerReadings();
+};
+export const initializeBulkMeterReadings = async () => {
+    if (!bulkMeterReadingsFetched || bulkMeterReadings.length === 0) await fetchAllBulkMeterReadings();
 };
 export const initializePayments = async () => {
     if (!paymentsFetched || payments.length === 0) await fetchAllPayments();
@@ -824,19 +866,16 @@ export const initializePayments = async () => {
 export const initializeReportLogs = async () => {
     if (!reportLogsFetched || reportLogs.length === 0) await fetchAllReportLogs();
 };
-// export const initializeVouchers = async () => { // Removed Voucher
-//     if (!vouchersFetched || vouchers.length === 0) await fetchAllVouchers();
-// };
 
 export const getBranches = (): DomainBranch[] => [...branches];
 export const getCustomers = (): DomainIndividualCustomer[] => [...customers];
 export const getBulkMeters = (): BulkMeter[] => [...bulkMeters];
 export const getStaffMembers = (): StaffMember[] => [...staffMembers];
 export const getBills = (): DomainBill[] => [...bills];
-export const getMeterReadings = (): DomainMeterReading[] => [...meterReadings];
+export const getIndividualCustomerReadings = (): DomainIndividualCustomerReading[] => [...individualCustomerReadings];
+export const getBulkMeterReadings = (): DomainBulkMeterReading[] => [...bulkMeterReadings];
 export const getPayments = (): DomainPayment[] => [...payments];
 export const getReportLogs = (): DomainReportLog[] => [...reportLogs];
-// export const getVouchers = (): DomainVoucher[] => [...vouchers]; // Removed Voucher
 
 export const getBulkMeterPaymentStatusCounts = (): { totalBMs: number; paidBMs: number; unpaidBMs: number } => {
   const totalBMs = bulkMeters.length;
@@ -923,12 +962,6 @@ export const updateCustomer = async (updatedCustomerData: DomainIndividualCustom
     let isNotFoundError = false;
     if (error && typeof error === 'object') {
       const supabaseError = error as any;
-      console.error("Error details (JSON):", JSON.stringify(supabaseError, null, 2));
-      if (supabaseError.message) console.error("Supabase message:", supabaseError.message);
-      if (supabaseError.details) console.error("Supabase details:", supabaseError.details);
-      if (supabaseError.hint) console.error("Supabase hint:", supabaseError.hint);
-      if (supabaseError.code) console.error("Supabase code:", supabaseError.code);
-
       if (supabaseError.code === 'PGRST204') {
         userMessage = "Failed to update customer: Record not found. It may have been deleted.";
         isNotFoundError = true;
@@ -985,32 +1018,6 @@ export const updateBulkMeter = async (updatedBulkMeterData: BulkMeter): Promise<
   }
   return { success: false, message: userMessage, isNotFoundError, error };
 };
-
-export const updateBulkMeterPaymentStatus = async (id: string, newPaymentStatus: PaymentStatus): Promise<StoreOperationResult<void>> => {
-  const updatePayload: BulkMeterUpdate = { paymentStatus: newPaymentStatus };
-  const { data: updatedSupabaseBulkMeter, error } = await supabaseUpdateBulkMeter(id, updatePayload);
-  if (updatedSupabaseBulkMeter && !error) {
-    const updatedBulkMeter = mapSupabaseBulkMeterToDomain(updatedSupabaseBulkMeter);
-    bulkMeters = bulkMeters.map(bm =>
-      bm.id === updatedBulkMeter.id
-        ? { ...bm, paymentStatus: updatedBulkMeter.paymentStatus }
-        : bm
-    );
-    notifyBulkMeterListeners();
-    return { success: true };
-  }
-  console.error("DataStore: Failed to update bulk meter payment status. Error:", JSON.stringify(error, null, 2));
-  let userMessage = "Failed to update payment status.";
-   let isNotFoundError = false;
-  if (error && typeof error === 'object' && 'code' in error && error.code === 'PGRST204') {
-    userMessage = "Failed to update payment status: Record not found.";
-    isNotFoundError = true;
-  } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-    userMessage = `Failed to update payment status: ${error.message}`;
-  }
-  return { success: false, message: userMessage, isNotFoundError, error };
-};
-
 
 export const deleteBulkMeter = async (bulkMeterId: string): Promise<StoreOperationResult<void>> => {
   const { error } = await supabaseDeleteBulkMeter(bulkMeterId);
@@ -1112,68 +1119,48 @@ export const removeBill = async (billId: string): Promise<StoreOperationResult<v
     return { success: false, message: (error as any)?.message || "Failed to delete bill.", error };
 };
 
-export const addMeterReading = async (readingData: Omit<DomainMeterReading, 'id'>): Promise<StoreOperationResult<DomainMeterReading>> => {
-    const payload = mapDomainMeterReadingToSupabase(readingData) as MeterReadingInsert;
-    const { data: newSupabaseReading, error } = await supabaseCreateMeterReading(payload);
+export const addIndividualCustomerReading = async (readingData: Omit<DomainIndividualCustomerReading, 'id' | 'createdAt' | 'updatedAt'>): Promise<StoreOperationResult<DomainIndividualCustomerReading>> => {
+    const payload = mapDomainIndividualReadingToSupabase(readingData) as IndividualCustomerReadingInsert;
+    const { data: newSupabaseReading, error } = await supabaseCreateIndividualCustomerReading(payload);
 
     if (newSupabaseReading && !error) {
-        const newReading = mapSupabaseMeterReadingToDomain(newSupabaseReading);
-        meterReadings = [newReading, ...meterReadings];
-        notifyMeterReadingListeners();
+        const newReading = mapSupabaseIndividualReadingToDomain(newSupabaseReading);
+        individualCustomerReadings = [newReading, ...individualCustomerReadings];
+        notifyIndividualCustomerReadingListeners();
 
-        // Update the currentReading on the corresponding customer or bulk meter
-        if (newReading.meterType === 'individual_customer_meter' && newReading.individualCustomerId) {
-            const customer = customers.find(c => c.id === newReading.individualCustomerId);
-            if (customer) {
-                // We only want to update the current reading here, preserving other fields
-                const customerUpdatePayload = { ...customer, currentReading: newReading.readingValue };
-                await updateCustomer(customerUpdatePayload); // This will trigger its own notifications
-            }
-        } else if (newReading.meterType === 'bulk_meter' && newReading.bulkMeterId) {
-            const bulkMeter = bulkMeters.find(bm => bm.id === newReading.bulkMeterId);
-            if (bulkMeter) {
-                // Similarly, only update the current reading
-                const bulkMeterUpdatePayload = { ...bulkMeter, currentReading: newReading.readingValue };
-                await updateBulkMeter(bulkMeterUpdatePayload); // This will trigger its own notifications
-            }
+        const customer = customers.find(c => c.id === newReading.individualCustomerId);
+        if (customer) {
+            const customerUpdatePayload = { ...customer, currentReading: newReading.readingValue };
+            await updateCustomer(customerUpdatePayload);
         }
 
         return { success: true, data: newReading };
     }
-    console.error("DataStore: Failed to add meter reading. Supabase error:", JSON.stringify(error, null, 2));
-    return { success: false, message: (error as any)?.message || "Failed to add meter reading.", error };
+    console.error("DataStore: Failed to add individual reading. Supabase error:", JSON.stringify(error, null, 2));
+    return { success: false, message: (error as any)?.message || "Failed to add reading.", error };
 };
 
-export const updateExistingMeterReading = async (id: string, readingUpdateData: Partial<Omit<DomainMeterReading, 'id'>>): Promise<StoreOperationResult<void>> => {
-    const payload = mapDomainMeterReadingToSupabase(readingUpdateData) as MeterReadingUpdate;
-    const { data: updatedSupabaseReading, error } = await supabaseUpdateMeterReading(id, payload);
-    if (updatedSupabaseReading && !error) {
-        const updatedReading = mapSupabaseMeterReadingToDomain(updatedSupabaseReading);
-        meterReadings = meterReadings.map(r => r.id === id ? updatedReading : r);
-        notifyMeterReadingListeners();
-        return { success: true };
+export const addBulkMeterReading = async (readingData: Omit<DomainBulkMeterReading, 'id' | 'createdAt' | 'updatedAt'>): Promise<StoreOperationResult<DomainBulkMeterReading>> => {
+    const payload = mapDomainBulkReadingToSupabase(readingData) as BulkMeterReadingInsert;
+    const { data: newSupabaseReading, error } = await supabaseCreateBulkMeterReading(payload);
+
+    if (newSupabaseReading && !error) {
+        const newReading = mapSupabaseBulkReadingToDomain(newSupabaseReading);
+        bulkMeterReadings = [newReading, ...bulkMeterReadings];
+        notifyBulkMeterReadingListeners();
+
+        const bulkMeter = bulkMeters.find(bm => bm.id === newReading.bulkMeterId);
+        if (bulkMeter) {
+            const bulkMeterUpdatePayload = { ...bulkMeter, currentReading: newReading.readingValue };
+            await updateBulkMeter(bulkMeterUpdatePayload);
+        }
+
+        return { success: true, data: newReading };
     }
-    console.error("DataStore: Failed to update meter reading. Supabase error:", JSON.stringify(error, null, 2));
-    let userMessage = "Failed to update meter reading.";
-    let isNotFoundError = false;
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'PGRST204') {
-      userMessage = "Failed to update meter reading: Record not found.";
-      isNotFoundError = true;
-    } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-      userMessage = `Failed to update meter reading: ${error.message}`;
-    }
-    return { success: false, message: userMessage, isNotFoundError, error };
+    console.error("DataStore: Failed to add bulk meter reading. Supabase error:", JSON.stringify(error, null, 2));
+    return { success: false, message: (error as any)?.message || "Failed to add reading.", error };
 };
-export const removeMeterReading = async (readingId: string): Promise<StoreOperationResult<void>> => {
-    const { error } = await supabaseDeleteMeterReading(readingId);
-    if (!error) {
-        meterReadings = meterReadings.filter(r => r.id !== readingId);
-        notifyMeterReadingListeners();
-        return { success: true };
-    }
-    console.error("DataStore: Failed to delete meter reading. Supabase error:", JSON.stringify(error, null, 2));
-    return { success: false, message: (error as any)?.message || "Failed to delete meter reading.", error };
-};
+
 
 export const addPayment = async (paymentData: Omit<DomainPayment, 'id'>): Promise<StoreOperationResult<DomainPayment>> => {
     const payload = mapDomainPaymentToSupabase(paymentData) as PaymentInsert;
@@ -1262,8 +1249,6 @@ export const removeReportLog = async (logId: string): Promise<StoreOperationResu
     return { success: false, message: (error as any)?.message || "Failed to delete report log.", error };
 };
 
-// Removed Voucher CRUD: addVoucher, updateVoucher, deleteVoucher
-
 export const subscribeToBranches = (listener: Listener<DomainBranch>): (() => void) => {
   branchListeners.add(listener);
   if (branchesFetched) listener([...branches]); else initializeBranches().then(() => listener([...branches]));
@@ -1293,10 +1278,15 @@ export const subscribeToBills = (listener: Listener<DomainBill>): (() => void) =
     if (billsFetched) listener([...bills]); else initializeBills().then(() => listener([...bills]));
     return () => billListeners.delete(listener);
 };
-export const subscribeToMeterReadings = (listener: Listener<DomainMeterReading>): (() => void) => {
-    meterReadingListeners.add(listener);
-    if (meterReadingsFetched) listener([...meterReadings]); else initializeMeterReadings().then(() => listener([...meterReadings]));
-    return () => meterReadingListeners.delete(listener);
+export const subscribeToIndividualCustomerReadings = (listener: Listener<DomainIndividualCustomerReading>): (() => void) => {
+    individualCustomerReadingListeners.add(listener);
+    if (individualCustomerReadingsFetched) listener([...individualCustomerReadings]); else initializeIndividualCustomerReadings().then(() => listener([...individualCustomerReadings]));
+    return () => individualCustomerReadingListeners.delete(listener);
+};
+export const subscribeToBulkMeterReadings = (listener: Listener<DomainBulkMeterReading>): (() => void) => {
+    bulkMeterReadingListeners.add(listener);
+    if (bulkMeterReadingsFetched) listener([...bulkMeterReadings]); else initializeBulkMeterReadings().then(() => listener([...bulkMeterReadings]));
+    return () => bulkMeterReadingListeners.delete(listener);
 };
 export const subscribeToPayments = (listener: Listener<DomainPayment>): (() => void) => {
     paymentListeners.add(listener);
@@ -1308,12 +1298,6 @@ export const subscribeToReportLogs = (listener: Listener<DomainReportLog>): (() 
     if (reportLogsFetched) listener([...reportLogs]); else initializeReportLogs().then(() => listener([...reportLogs]));
     return () => reportLogListeners.delete(listener);
 };
-// export const subscribeToVouchers = (listener: Listener<DomainVoucher>): (() => void) => { // Removed Voucher
-//     voucherListeners.add(listener);
-//     if (vouchersFetched) listener([...vouchers]); else initializeVouchers().then(() => listener([...vouchers]));
-//     return () => voucherListeners.delete(listener);
-// };
-
 
 export async function loadInitialData() {
   await initializeCustomers();
@@ -1322,9 +1306,9 @@ export async function loadInitialData() {
     initializeBulkMeters(), 
     initializeStaffMembers(),
     initializeBills(),
-    initializeMeterReadings(),
+    initializeIndividualCustomerReadings(),
+    initializeBulkMeterReadings(),
     initializePayments(),
     initializeReportLogs(),
-    // initializeVouchers(), // Removed Voucher
   ]);
 }

@@ -313,12 +313,10 @@ export interface Database {
           updated_at?: string | null;
         };
       };
-      meter_readings: {
+      individual_customer_readings: {
         Row: {
           id: string;
-          meter_type: 'individual_customer_meter' | 'bulk_meter';
-          individual_customer_id?: string | null;
-          bulk_meter_id?: string | null;
+          individual_customer_id: string;
           reader_staff_id?: string | null;
           reading_date: string;
           month_year: string;
@@ -330,9 +328,7 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          meter_type: 'individual_customer_meter' | 'bulk_meter';
-          individual_customer_id?: string | null;
-          bulk_meter_id?: string | null;
+          individual_customer_id: string;
           reader_staff_id?: string | null;
           reading_date?: string;
           month_year: string;
@@ -344,9 +340,45 @@ export interface Database {
         };
         Update: {
           id?: string;
-          meter_type?: 'individual_customer_meter' | 'bulk_meter';
-          individual_customer_id?: string | null;
-          bulk_meter_id?: string | null;
+          individual_customer_id?: string;
+          reader_staff_id?: string | null;
+          reading_date?: string;
+          month_year?: string;
+          reading_value?: number;
+          is_estimate?: boolean | null;
+          notes?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+      };
+      bulk_meter_readings: {
+        Row: {
+          id: string;
+          bulk_meter_id: string;
+          reader_staff_id?: string | null;
+          reading_date: string;
+          month_year: string;
+          reading_value: number;
+          is_estimate?: boolean | null;
+          notes?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Insert: {
+          id?: string;
+          bulk_meter_id: string;
+          reader_staff_id?: string | null;
+          reading_date?: string;
+          month_year: string;
+          reading_value: number;
+          is_estimate?: boolean | null;
+          notes?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          bulk_meter_id?: string;
           reader_staff_id?: string | null;
           reading_date?: string;
           month_year?: string;
@@ -439,7 +471,6 @@ export interface Database {
           updated_at?: string | null;
         };
       };
-      // vouchers table definition removed
     };
     Views: {
       [key: string]: never;
@@ -455,12 +486,9 @@ export interface Database {
         sewerage_connection_enum: 'Yes' | 'No';
         individual_customer_status_enum: 'Active' | 'Inactive' | 'Suspended';
         staff_status_enum: 'Active' | 'Inactive' | 'On Leave';
-        meter_reading_meter_type_enum: 'individual_customer_meter' | 'bulk_meter';
         payment_method_enum: 'Cash' | 'Bank Transfer' | 'Mobile Money' | 'Online Payment' | 'Other';
         report_type_enum: 'CustomerDataExport' | 'BulkMeterDataExport' | 'BillingSummary' | 'WaterUsageReport' | 'PaymentHistoryReport' | 'MeterReadingAccuracy';
         report_status_enum: 'Generated' | 'Pending' | 'Failed' | 'Archived';
-        // voucher_discount_type_enum: 'percentage' | 'fixed_amount'; // Removed
-        // voucher_status_enum: 'Active' | 'Used' | 'Expired' | 'Cancelled'; // Removed
     };
     CompositeTypes: {
       [key: string]: never;
@@ -490,9 +518,13 @@ export type Bill = ResolvedDatabase['public']['Tables']['bills']['Row'];
 export type BillInsert = ResolvedDatabase['public']['Tables']['bills']['Insert'];
 export type BillUpdate = ResolvedDatabase['public']['Tables']['bills']['Update'];
 
-export type MeterReading = ResolvedDatabase['public']['Tables']['meter_readings']['Row'];
-export type MeterReadingInsert = ResolvedDatabase['public']['Tables']['meter_readings']['Insert'];
-export type MeterReadingUpdate = ResolvedDatabase['public']['Tables']['meter_readings']['Update'];
+export type IndividualCustomerReading = ResolvedDatabase['public']['Tables']['individual_customer_readings']['Row'];
+export type IndividualCustomerReadingInsert = ResolvedDatabase['public']['Tables']['individual_customer_readings']['Insert'];
+export type IndividualCustomerReadingUpdate = ResolvedDatabase['public']['Tables']['individual_customer_readings']['Update'];
+
+export type BulkMeterReading = ResolvedDatabase['public']['Tables']['bulk_meter_readings']['Row'];
+export type BulkMeterReadingInsert = ResolvedDatabase['public']['Tables']['bulk_meter_readings']['Insert'];
+export type BulkMeterReadingUpdate = ResolvedDatabase['public']['Tables']['bulk_meter_readings']['Update'];
 
 export type Payment = ResolvedDatabase['public']['Tables']['payments']['Row'];
 export type PaymentInsert = ResolvedDatabase['public']['Tables']['payments']['Insert'];
@@ -501,8 +533,6 @@ export type PaymentUpdate = ResolvedDatabase['public']['Tables']['payments']['Up
 export type ReportLog = ResolvedDatabase['public']['Tables']['reports']['Row'];
 export type ReportLogInsert = ResolvedDatabase['public']['Tables']['reports']['Insert'];
 export type ReportLogUpdate = ResolvedDatabase['public']['Tables']['reports']['Update'];
-
-// Removed Voucher types: VoucherRow, VoucherInsert, VoucherUpdate
 
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -547,11 +577,17 @@ export const createBill = async (bill: BillInsert) => supabase.from('bills').ins
 export const updateBill = async (id: string, bill: BillUpdate) => supabase.from('bills').update(bill).eq('id', id).select().single();
 export const deleteBill = async (id: string) => supabase.from('bills').delete().eq('id', id).select().single();
 
-// CRUD for Meter Readings
-export const getAllMeterReadings = async () => supabase.from('meter_readings').select('*');
-export const createMeterReading = async (reading: MeterReadingInsert) => supabase.from('meter_readings').insert(reading).select().single();
-export const updateMeterReading = async (id: string, reading: MeterReadingUpdate) => supabase.from('meter_readings').update(reading).eq('id', id).select().single();
-export const deleteMeterReading = async (id: string) => supabase.from('meter_readings').delete().eq('id', id).select().single();
+// CRUD for Individual Customer Readings
+export const getAllIndividualCustomerReadings = async () => supabase.from('individual_customer_readings').select('*');
+export const createIndividualCustomerReading = async (reading: IndividualCustomerReadingInsert) => supabase.from('individual_customer_readings').insert(reading).select().single();
+export const updateIndividualCustomerReading = async (id: string, reading: IndividualCustomerReadingUpdate) => supabase.from('individual_customer_readings').update(reading).eq('id', id).select().single();
+export const deleteIndividualCustomerReading = async (id: string) => supabase.from('individual_customer_readings').delete().eq('id', id).select().single();
+
+// CRUD for Bulk Meter Readings
+export const getAllBulkMeterReadings = async () => supabase.from('bulk_meter_readings').select('*');
+export const createBulkMeterReading = async (reading: BulkMeterReadingInsert) => supabase.from('bulk_meter_readings').insert(reading).select().single();
+export const updateBulkMeterReading = async (id: string, reading: BulkMeterReadingUpdate) => supabase.from('bulk_meter_readings').update(reading).eq('id', id).select().single();
+export const deleteBulkMeterReading = async (id: string) => supabase.from('bulk_meter_readings').delete().eq('id', id).select().single();
 
 // CRUD for Payments
 export const getAllPayments = async () => supabase.from('payments').select('*');
@@ -564,9 +600,3 @@ export const getAllReportLogs = async () => supabase.from('reports').select('*')
 export const createReportLog = async (reportLog: ReportLogInsert) => supabase.from('reports').insert(reportLog).select().single();
 export const updateReportLog = async (id: string, reportLog: ReportLogUpdate) => supabase.from('reports').update(reportLog).eq('id', id).select().single();
 export const deleteReportLog = async (id: string) => supabase.from('reports').delete().eq('id', id).select().single();
-
-// Removed Voucher CRUD functions
-// export const getAllVouchers = async () => supabase.from('vouchers').select('*');
-// export const createVoucher = async (voucher: VoucherInsert) => supabase.from('vouchers').insert(voucher).select().single();
-// export const updateVoucher = async (id: string, voucher: VoucherUpdate) => supabase.from('vouchers').update(voucher).eq('id', id).select().single();
-// export const deleteVoucher = async (id: string) => supabase.from('vouchers').delete().eq('id', id).select().single();

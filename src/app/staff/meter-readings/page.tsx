@@ -8,23 +8,27 @@ import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle as UIDi
 import { PlusCircle, Search, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AddMeterReadingForm, type AddMeterReadingFormValues } from "@/components/add-meter-reading-form";
-import MeterReadingsTable from "@/components/meter-readings-table"; // Import the table component
+import MeterReadingsTable from "@/components/meter-readings-table";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  addMeterReading, 
+  addIndividualCustomerReading,
+  addBulkMeterReading,
   getCustomers, 
   initializeCustomers, 
   getBulkMeters, 
   initializeBulkMeters,
-  getMeterReadings,
-  initializeMeterReadings,
-  subscribeToMeterReadings,
+  getIndividualCustomerReadings,
+  initializeIndividualCustomerReadings,
+  subscribeToIndividualCustomerReadings,
+  getBulkMeterReadings,
+  initializeBulkMeterReadings,
+  subscribeToBulkMeterReadings,
   subscribeToCustomers,
   subscribeToBulkMeters
 } from "@/lib/data-store";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
-import type { DomainMeterReading } from "@/lib/data-store";
+import type { DisplayReading } from "@/lib/data-store";
 import { format } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -42,10 +46,7 @@ export default function StaffMeterReadingsPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [currentUser, setCurrentUser] = React.useState<User | null>(null);
   
-  const [allCustomers, setAllCustomers] = React.useState<IndividualCustomer[]>([]);
-  const [allBulkMeters, setAllBulkMeters] = React.useState<BulkMeter[]>([]);
-  const [allMeterReadings, setAllMeterReadings] = React.useState<DomainMeterReading[]>([]);
-  const [branchMeterReadings, setBranchMeterReadings] = React.useState<DomainMeterReading[]>([]);
+  const [allCombinedReadings, setAllCombinedReadings] = React.useState<DisplayReading[]>([]);
   
   const [customersForForm, setCustomersForForm] = React.useState<Pick<IndividualCustomer, 'id' | 'name' | 'meterNumber'>[]>([]);
   const [bulkMetersForForm, setBulkMetersForForm] = React.useState<Pick<BulkMeter, 'id' | 'name' | 'meterNumber'>[]>([]);
@@ -53,53 +54,45 @@ export default function StaffMeterReadingsPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState(""); 
 
-  const filterAndSetData = React.useCallback((
-    currentBranchNameInput: string | undefined,
-    customersList: IndividualCustomer[],
-    bulkMetersList: BulkMeter[],
-    meterReadingsList: DomainMeterReading[]
-  ) => {
-    const simpleBranchName = currentBranchNameInput
-      ? currentBranchNameInput.replace(/ Branch$/i, "").toLowerCase().trim()
-      : undefined;
+  const combineAndSortReadings = React.useCallback((currentBranchName?: string) => {
+    const allCustomers = getCustomers();
+    const allBulkMeters = getBulkMeters();
+    const allIndividualReadings = getIndividualCustomerReadings();
+    const allBulkReadings = getBulkMeterReadings();
 
-    const relevantBulkMeters = simpleBranchName
-      ? bulkMetersList.filter(bm =>
-          (bm.location?.toLowerCase() || "").includes(simpleBranchName) ||
-          (bm.name?.toLowerCase() || "").includes(simpleBranchName) ||
-          (bm.ward?.toLowerCase() || "").includes(simpleBranchName)
-        )
-      : bulkMetersList;
-    
-    setBulkMetersForForm(relevantBulkMeters.map(bm => ({ id: bm.id, name: bm.name, meterNumber: bm.meterNumber })));
+    const simpleBranchName = currentBranchName ? currentBranchName.replace(/ Branch$/i, "").toLowerCase().trim() : undefined;
 
-    const relevantCustomers = simpleBranchName
-      ? customersList.filter(c =>
-          (c.location?.toLowerCase() || "").includes(simpleBranchName) ||
-          (c.ward?.toLowerCase() || "").includes(simpleBranchName) ||
-          (c.assignedBulkMeterId &&
-            relevantBulkMeters.some(bm => bm.id === c.assignedBulkMeterId) // Check if assigned BM is in the relevant list
-          )
-        )
-      : customersList;
+    const branchBulkMeters = simpleBranchName ? allBulkMeters.filter(bm => (bm.location?.toLowerCase() || "").includes(simpleBranchName) || (bm.name?.toLowerCase() || "").includes(simpleBranchName)) : [];
+    const branchCustomers = simpleBranchName ? allCustomers.filter(c => (c.location?.toLowerCase() || "").includes(simpleBranchName) || (c.assignedBulkMeterId && branchBulkMeters.some(bm => bm.id === c.assignedBulkMeterId))) : [];
 
-    setCustomersForForm(relevantCustomers.map(c => ({ id: c.id, name: c.name, meterNumber: c.meterNumber })));
+    setBulkMetersForForm(branchBulkMeters.map(bm => ({ id: bm.id, name: bm.name, meterNumber: bm.meterNumber })));
+    setCustomersForForm(branchCustomers.map(c => ({ id: c.id, name: c.name, meterNumber: c.meterNumber })));
 
-    const branchFilteredReadings = simpleBranchName
-      ? meterReadingsList.filter(reading => {
-          if (reading.meterType === 'individual_customer_meter' && reading.individualCustomerId) {
-            return relevantCustomers.some(c => c.id === reading.individualCustomerId);
-          } else if (reading.meterType === 'bulk_meter' && reading.bulkMeterId) {
-            return relevantBulkMeters.some(bm => bm.id === reading.bulkMeterId);
-          }
-          return false;
-        })
-      : meterReadingsList;
-      
-    const sortedReadings = branchFilteredReadings.sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
-    setBranchMeterReadings(sortedReadings);
+    const displayedIndividualReadings: DisplayReading[] = allIndividualReadings
+      .filter(r => branchCustomers.some(c => c.id === r.individualCustomerId))
+      .map(r => ({
+        id: r.id,
+        meterId: r.individualCustomerId,
+        meterType: 'individual',
+        meterIdentifier: allCustomers.find(c => c.id === r.individualCustomerId)?.name || `Cust ID ${r.individualCustomerId}`,
+        readingValue: r.readingValue, readingDate: r.readingDate, monthYear: r.monthYear, notes: r.notes
+      }));
+
+    const displayedBulkReadings: DisplayReading[] = allBulkReadings
+      .filter(r => branchBulkMeters.some(bm => bm.id === r.bulkMeterId))
+      .map(r => ({
+        id: r.id,
+        meterId: r.bulkMeterId,
+        meterType: 'bulk',
+        meterIdentifier: allBulkMeters.find(bm => bm.id === r.bulkMeterId)?.name || `BM ID ${r.bulkMeterId}`,
+        readingValue: r.readingValue, readingDate: r.readingDate, monthYear: r.monthYear, notes: r.notes
+      }));
+
+    const combined = [...displayedIndividualReadings, ...displayedBulkReadings];
+    combined.sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
+    setAllCombinedReadings(combined);
+
   }, []);
-
 
   React.useEffect(() => {
     let isMounted = true;
@@ -112,138 +105,88 @@ export default function StaffMeterReadingsPage() {
         if (isMounted) {
             setCurrentUser(parsedUser);
             if (parsedUser.role === "staff" && parsedUser.branchName) {
-            setBranchName(parsedUser.branchName);
-            localBranchName = parsedUser.branchName;
+              setBranchName(parsedUser.branchName);
+              localBranchName = parsedUser.branchName;
             }
         }
-      } catch (e) {
-        console.error("Failed to parse user from localStorage", e);
-      }
+      } catch (e) { console.error("Failed to parse user from localStorage", e); }
     }
 
     setIsLoading(true);
     Promise.all([
       initializeCustomers(),
       initializeBulkMeters(),
-      initializeMeterReadings()
+      initializeIndividualCustomerReadings(),
+      initializeBulkMeterReadings(),
     ]).then(() => {
       if (!isMounted) return;
-
-      const fetchedCustomers = getCustomers();
-      const fetchedBulkMeters = getBulkMeters();
-      const fetchedMeterReadings = getMeterReadings();
-      
-      setAllCustomers(fetchedCustomers);
-      setAllBulkMeters(fetchedBulkMeters);
-      setAllMeterReadings(fetchedMeterReadings);
-      
-      filterAndSetData(localBranchName, fetchedCustomers, fetchedBulkMeters, fetchedMeterReadings);
-      
+      combineAndSortReadings(localBranchName);
       setIsLoading(false);
     }).catch(error => {
       if (!isMounted) return;
-      console.error("Error initializing data for meter readings page:", error);
-      toast({ title: "Error Loading Data", description: "Could not load necessary data.", variant: "destructive" });
+      console.error("Error initializing data:", error);
+      toast({ title: "Error Loading Data", variant: "destructive" });
       setIsLoading(false);
     });
     
-    const unsubscribeCustomers = subscribeToCustomers((updatedCustomers) => {
-        if (isMounted) {
-            setAllCustomers(updatedCustomers);
-            filterAndSetData(localBranchName, updatedCustomers, allBulkMeters, allMeterReadings);
-        }
-    });
-    const unsubscribeBulkMeters = subscribeToBulkMeters((updatedBulkMeters) => {
-        if (isMounted) {
-            setAllBulkMeters(updatedBulkMeters);
-            filterAndSetData(localBranchName, allCustomers, updatedBulkMeters, allMeterReadings);
-        }
-    });
-    const unsubscribeMeterReadings = subscribeToMeterReadings((updatedReadings) => {
-        if (isMounted) {
-            setAllMeterReadings(updatedReadings);
-            filterAndSetData(localBranchName, allCustomers, allBulkMeters, updatedReadings);
-        }
-    });
+    const unsubIndiReadings = subscribeToIndividualCustomerReadings(() => { if(isMounted) combineAndSortReadings(localBranchName); });
+    const unsubBulkReadings = subscribeToBulkMeterReadings(() => { if(isMounted) combineAndSortReadings(localBranchName); });
     
-    return () => { 
-        isMounted = false; 
-        unsubscribeCustomers();
-        unsubscribeBulkMeters();
-        unsubscribeMeterReadings();
-    };
-  }, [filterAndSetData, toast, allBulkMeters, allCustomers, allMeterReadings]);
+    return () => { isMounted = false; unsubIndiReadings(); unsubBulkReadings(); };
+  }, [toast, combineAndSortReadings]);
 
 
   const handleAddReadingSubmit = async (formData: AddMeterReadingFormValues) => {
     if (!currentUser?.id) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "User information not found. Cannot save reading.",
-      });
+      toast({ variant: "destructive", title: "Error", description: "User information not found." });
       return;
     }
     
     const { entityId, meterType, reading, date } = formData;
-
-    const readingPayload: Omit<DomainMeterReading, 'id' | 'createdAt' | 'updatedAt'> = {
-      meterType: meterType,
-      individualCustomerId: meterType === 'individual_customer_meter' ? entityId : null,
-      bulkMeterId: meterType === 'bulk_meter' ? entityId : null,
-      readerStaffId: currentUser.id,
-      readingDate: format(date, "yyyy-MM-dd"),
-      monthYear: format(date, "yyyy-MM"),
-      readingValue: reading,
-      isEstimate: false,
-      notes: `Reading entered by ${currentUser.email}`,
-    };
+    
+    setIsLoading(true);
+    let result;
 
     try {
-      setIsLoading(true); 
-      const result = await addMeterReading(readingPayload);
-      if (result.success && result.data) {
-        toast({
-          title: "Meter Reading Added",
-          description: `Reading for selected meter has been successfully recorded.`,
+      if (meterType === 'individual_customer_meter') {
+        result = await addIndividualCustomerReading({
+          individualCustomerId: entityId,
+          readerStaffId: currentUser.id,
+          readingDate: format(date, "yyyy-MM-dd"),
+          monthYear: format(date, "yyyy-MM"),
+          readingValue: reading,
+          notes: `Reading by ${currentUser.email}`,
         });
-        setIsModalOpen(false);
       } else {
-        toast({
-          variant: "destructive",
-          title: "Submission Failed",
-          description: result.message || "Could not record meter reading.",
+        result = await addBulkMeterReading({
+          bulkMeterId: entityId,
+          readerStaffId: currentUser.id,
+          readingDate: format(date, "yyyy-MM-dd"),
+          monthYear: format(date, "yyyy-MM"),
+          readingValue: reading,
+          notes: `Reading by ${currentUser.email}`,
         });
       }
-    } catch (error) {
-      console.error("Error submitting meter reading:", error);
-      toast({
-        variant: "destructive",
-        title: "Submission Error",
-        description: "An unexpected error occurred while saving the reading.",
-      });
+
+      if (result.success) {
+        toast({ title: "Meter Reading Added", description: `Reading has been recorded.` });
+        setIsModalOpen(false);
+      } else {
+        toast({ variant: "destructive", title: "Submission Failed", description: result.message });
+      }
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Submission Error", description: error.message });
     } finally {
         setIsLoading(false);
     }
   };
   
-  const displayedReadings = branchMeterReadings.filter(reading => {
+  const displayedReadings = allCombinedReadings.filter(reading => {
     if (!searchTerm) return true;
     const lowerSearchTerm = searchTerm.toLowerCase();
     
-    let meterIdentifier = "";
-    if (reading.meterType === 'individual_customer_meter' && reading.individualCustomerId) {
-      const customer = allCustomers.find(c => c.id === reading.individualCustomerId);
-      if (customer) meterIdentifier = `${customer.name} ${customer.meterNumber}`.toLowerCase();
-    } else if (reading.meterType === 'bulk_meter' && reading.bulkMeterId) {
-      const bulkMeter = allBulkMeters.find(bm => bm.id === reading.bulkMeterId);
-      if (bulkMeter) meterIdentifier = `${bulkMeter.name} ${bulkMeter.meterNumber}`.toLowerCase();
-    }
-    
-    return meterIdentifier.includes(lowerSearchTerm) ||
-           String(reading.readingValue).includes(lowerSearchTerm) ||
-           reading.readingDate.includes(lowerSearchTerm) ||
-           reading.monthYear.includes(lowerSearchTerm);
+    return reading.meterIdentifier.toLowerCase().includes(lowerSearchTerm) ||
+           String(reading.readingValue).includes(lowerSearchTerm);
   });
 
   return (
@@ -302,16 +245,12 @@ export default function StaffMeterReadingsPage() {
           <CardDescription>View and manage meter readings for {branchName}.</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading && branchMeterReadings.length === 0 ? ( // Changed condition to show loading when also no readings yet
+          {isLoading && displayedReadings.length === 0 ? (
              <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
                 Loading meter readings...
              </div>
           ) : (
-            <MeterReadingsTable 
-              data={displayedReadings} 
-              customers={allCustomers} 
-              bulkMeters={allBulkMeters}
-            />
+            <MeterReadingsTable data={displayedReadings} />
           )}
         </CardContent>
       </Card>

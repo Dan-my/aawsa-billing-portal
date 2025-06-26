@@ -11,20 +11,24 @@ import { AddMeterReadingForm, type AddMeterReadingFormValues } from "@/component
 import MeterReadingsTable from "@/components/meter-readings-table";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  addMeterReading, 
+  addIndividualCustomerReading,
+  addBulkMeterReading,
   getCustomers, 
   initializeCustomers, 
   getBulkMeters, 
   initializeBulkMeters,
-  getMeterReadings,
-  initializeMeterReadings,
-  subscribeToMeterReadings,
+  getIndividualCustomerReadings,
+  initializeIndividualCustomerReadings,
+  subscribeToIndividualCustomerReadings,
+  getBulkMeterReadings,
+  initializeBulkMeterReadings,
+  subscribeToBulkMeterReadings,
   subscribeToCustomers,
   subscribeToBulkMeters
 } from "@/lib/data-store";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
-import type { DomainMeterReading } from "@/lib/data-store";
+import type { DisplayReading } from "@/lib/data-store";
 import { format } from "date-fns";
 
 interface User {
@@ -41,13 +45,53 @@ export default function AdminMeterReadingsPage() {
   
   const [allCustomers, setAllCustomers] = React.useState<IndividualCustomer[]>([]);
   const [allBulkMeters, setAllBulkMeters] = React.useState<BulkMeter[]>([]);
-  const [allMeterReadings, setAllMeterReadings] = React.useState<DomainMeterReading[]>([]);
+  const [allCombinedReadings, setAllCombinedReadings] = React.useState<DisplayReading[]>([]);
   
   const [customersForForm, setCustomersForForm] = React.useState<Pick<IndividualCustomer, 'id' | 'name' | 'meterNumber'>[]>([]);
   const [bulkMetersForForm, setBulkMetersForForm] = React.useState<Pick<BulkMeter, 'id' | 'name' | 'meterNumber'>[]>([]);
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState(""); 
+
+  const combineAndSortReadings = React.useCallback(() => {
+    const individualReadings = getIndividualCustomerReadings();
+    const bulkReadings = getBulkMeterReadings();
+    const customers = getCustomers();
+    const bulkMeters = getBulkMeters();
+
+    const displayedIndividualReadings: DisplayReading[] = individualReadings.map(r => {
+        const customer = customers.find(c => c.id === r.individualCustomerId);
+        return {
+            id: r.id,
+            meterId: r.individualCustomerId,
+            meterType: 'individual',
+            meterIdentifier: customer ? `${customer.name} (M: ${customer.meterNumber})` : `Cust. ID: ${r.individualCustomerId}`,
+            readingValue: r.readingValue,
+            readingDate: r.readingDate,
+            monthYear: r.monthYear,
+            notes: r.notes
+        };
+    });
+
+    const displayedBulkReadings: DisplayReading[] = bulkReadings.map(r => {
+        const bulkMeter = bulkMeters.find(bm => bm.id === r.bulkMeterId);
+        return {
+            id: r.id,
+            meterId: r.bulkMeterId,
+            meterType: 'bulk',
+            meterIdentifier: bulkMeter ? `${bulkMeter.name} (M: ${bulkMeter.meterNumber})` : `BM ID: ${r.bulkMeterId}`,
+            readingValue: r.readingValue,
+            readingDate: r.readingDate,
+            monthYear: r.monthYear,
+            notes: r.notes
+        };
+    });
+    
+    const combined = [...displayedIndividualReadings, ...displayedBulkReadings];
+    combined.sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
+    setAllCombinedReadings(combined);
+
+  }, []);
 
   React.useEffect(() => {
     let isMounted = true;
@@ -64,20 +108,20 @@ export default function AdminMeterReadingsPage() {
     Promise.all([
       initializeCustomers(),
       initializeBulkMeters(),
-      initializeMeterReadings()
+      initializeIndividualCustomerReadings(),
+      initializeBulkMeterReadings(),
     ]).then(() => {
       if (!isMounted) return;
       const fetchedCustomers = getCustomers();
       const fetchedBulkMeters = getBulkMeters();
-      const fetchedMeterReadings = getMeterReadings();
       
       setAllCustomers(fetchedCustomers);
       setAllBulkMeters(fetchedBulkMeters);
-      setAllMeterReadings(fetchedMeterReadings.sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime()));
       
       setCustomersForForm(fetchedCustomers.map(c => ({ id: c.id, name: c.name, meterNumber: c.meterNumber })));
       setBulkMetersForForm(fetchedBulkMeters.map(bm => ({ id: bm.id, name: bm.name, meterNumber: bm.meterNumber })));
       
+      combineAndSortReadings();
       setIsLoading(false);
     }).catch(error => {
       if (!isMounted) return;
@@ -86,52 +130,50 @@ export default function AdminMeterReadingsPage() {
       setIsLoading(false);
     });
     
-    const unsubscribeCustomers = subscribeToCustomers((updatedCustomers) => {
-        if (isMounted) {
-            setAllCustomers(updatedCustomers);
-            setCustomersForForm(updatedCustomers.map(c => ({ id: c.id, name: c.name, meterNumber: c.meterNumber })));
-        }
-    });
-    const unsubscribeBulkMeters = subscribeToBulkMeters((updatedBulkMeters) => {
-        if (isMounted) {
-            setAllBulkMeters(updatedBulkMeters);
-            setBulkMetersForForm(updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name, meterNumber: bm.meterNumber })));
-        }
-    });
-    const unsubscribeMeterReadings = subscribeToMeterReadings((updatedReadings) => {
-        if (isMounted) {
-            setAllMeterReadings(updatedReadings.sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime()));
-        }
-    });
+    const unsubCust = subscribeToCustomers((updated) => { if(isMounted) { setAllCustomers(updated); setCustomersForForm(updated.map(c=>({id:c.id, name:c.name, meterNumber: c.meterNumber}))); combineAndSortReadings(); }});
+    const unsubBM = subscribeToBulkMeters((updated) => { if(isMounted) { setAllBulkMeters(updated); setBulkMetersForForm(updated.map(c=>({id:c.id, name:c.name, meterNumber: c.meterNumber}))); combineAndSortReadings(); }});
+    const unsubIndiReadings = subscribeToIndividualCustomerReadings(() => { if(isMounted) combineAndSortReadings(); });
+    const unsubBulkReadings = subscribeToBulkMeterReadings(() => { if(isMounted) combineAndSortReadings(); });
     
     return () => { 
         isMounted = false; 
-        unsubscribeCustomers();
-        unsubscribeBulkMeters();
-        unsubscribeMeterReadings();
+        unsubCust();
+        unsubBM();
+        unsubIndiReadings();
+        unsubBulkReadings();
     };
-  }, [toast]);
+  }, [toast, combineAndSortReadings]);
 
   const handleAddReadingSubmit = async (formData: AddMeterReadingFormValues) => {
     const readerId = currentUser?.id; 
-
     const { entityId, meterType, reading, date } = formData;
-
-    const readingPayload: Omit<DomainMeterReading, 'id' | 'createdAt' | 'updatedAt'> = {
-      meterType: meterType,
-      individualCustomerId: meterType === 'individual_customer_meter' ? entityId : null,
-      bulkMeterId: meterType === 'bulk_meter' ? entityId : null,
-      readerStaffId: readerId || null,
-      readingDate: format(date, "yyyy-MM-dd"),
-      monthYear: format(date, "yyyy-MM"),
-      readingValue: reading,
-      isEstimate: false,
-      notes: `Reading entered by ${currentUser?.email || 'Admin'}`,
-    };
+    
+    setIsLoading(true);
+    let result;
 
     try {
-      setIsLoading(true); 
-      const result = await addMeterReading(readingPayload);
+      if (meterType === 'individual_customer_meter') {
+        result = await addIndividualCustomerReading({
+          individualCustomerId: entityId,
+          readerStaffId: readerId,
+          readingDate: format(date, "yyyy-MM-dd"),
+          monthYear: format(date, "yyyy-MM"),
+          readingValue: reading,
+          isEstimate: false,
+          notes: `Reading entered by ${currentUser?.email || 'Admin'}`,
+        });
+      } else {
+        result = await addBulkMeterReading({
+          bulkMeterId: entityId,
+          readerStaffId: readerId,
+          readingDate: format(date, "yyyy-MM-dd"),
+          monthYear: format(date, "yyyy-MM"),
+          readingValue: reading,
+          isEstimate: false,
+          notes: `Reading entered by ${currentUser?.email || 'Admin'}`,
+        });
+      }
+
       if (result.success && result.data) {
         toast({
           title: "Meter Reading Added",
@@ -157,20 +199,11 @@ export default function AdminMeterReadingsPage() {
     }
   };
   
-  const displayedReadings = allMeterReadings.filter(reading => {
+  const displayedReadings = allCombinedReadings.filter(reading => {
     if (!searchTerm) return true;
     const lowerSearchTerm = searchTerm.toLowerCase();
     
-    let meterIdentifier = "";
-    if (reading.meterType === 'individual_customer_meter' && reading.individualCustomerId) {
-      const customer = allCustomers.find(c => c.id === reading.individualCustomerId);
-      if (customer) meterIdentifier = `${customer.name} ${customer.meterNumber}`.toLowerCase();
-    } else if (reading.meterType === 'bulk_meter' && reading.bulkMeterId) {
-      const bulkMeter = allBulkMeters.find(bm => bm.id === reading.bulkMeterId);
-      if (bulkMeter) meterIdentifier = `${bulkMeter.name} ${bulkMeter.meterNumber}`.toLowerCase();
-    }
-    
-    return meterIdentifier.includes(lowerSearchTerm) ||
+    return reading.meterIdentifier.toLowerCase().includes(lowerSearchTerm) ||
            String(reading.readingValue).includes(lowerSearchTerm) ||
            reading.readingDate.includes(lowerSearchTerm) ||
            reading.monthYear.includes(lowerSearchTerm);
@@ -225,11 +258,7 @@ export default function AdminMeterReadingsPage() {
                 Loading meter readings...
              </div>
           ) : (
-            <MeterReadingsTable 
-              data={displayedReadings} 
-              customers={allCustomers} 
-              bulkMeters={allBulkMeters}
-            />
+            <MeterReadingsTable data={displayedReadings} />
           )}
         </CardContent>
       </Card>

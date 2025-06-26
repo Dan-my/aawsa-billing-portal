@@ -227,7 +227,7 @@ export default function BulkMeterDetailsPage() {
     const updatePayload: BulkMeter = {
         ...bulkMeter,
         previousReading: bulkMeter.currentReading,
-        arrears: carryBalance ? (bulkMeter.arrears + currentBill.totalBill) : 0,
+        arrears: carryBalance ? ((bulkMeter.arrears || 0) + currentBill.totalBill) : 0,
         paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
     };
 

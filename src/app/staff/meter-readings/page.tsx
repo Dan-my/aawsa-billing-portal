@@ -172,7 +172,7 @@ export default function StaffMeterReadingsPage() {
         unsubscribeBulkMeters();
         unsubscribeMeterReadings();
     };
-  }, [filterAndSetData, toast]);
+  }, [filterAndSetData, toast, allBulkMeters, allCustomers, allMeterReadings]);
 
 
   const handleAddReadingSubmit = async (formData: AddMeterReadingFormValues) => {
@@ -318,4 +318,3 @@ export default function StaffMeterReadingsPage() {
     </div>
   );
 }
-

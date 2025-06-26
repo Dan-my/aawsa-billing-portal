@@ -76,7 +76,7 @@ const MeterReadingsTable: React.FC<MeterReadingsTableProps> = ({ data, customers
           ) : (
             <TableRow>
               <TableCell colSpan={6} className="h-24 text-center">
-                No meter readings found for this branch.
+                No meter readings found.
               </TableCell>
             </TableRow>
           )}

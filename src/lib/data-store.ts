@@ -874,6 +874,15 @@ export const getStaffMembers = (): StaffMember[] => [...staffMembers];
 export const getBills = (): DomainBill[] => [...bills];
 export const getIndividualCustomerReadings = (): DomainIndividualCustomerReading[] => [...individualCustomerReadings];
 export const getBulkMeterReadings = (): DomainBulkMeterReading[] => [...bulkMeterReadings];
+
+export function getMeterReadings(): (DomainIndividualCustomerReading | DomainBulkMeterReading)[] {
+    const allReadings = [
+        ...individualCustomerReadings.map(r => ({ ...r, meterType: 'individual_customer_meter' })),
+        ...bulkMeterReadings.map(r => ({ ...r, meterType: 'bulk_meter' }))
+    ];
+    return allReadings.sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
+}
+
 export const getPayments = (): DomainPayment[] => [...payments];
 export const getReportLogs = (): DomainReportLog[] => [...reportLogs];
 

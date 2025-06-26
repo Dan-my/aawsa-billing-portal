@@ -22,8 +22,8 @@ import {
   initializePayments,
   getStaffMembers, 
   initializeStaffMembers,
-  getBranches, // Added
-  initializeBranches // Added
+  getBranches,
+  initializeBranches
 } from "@/lib/data-store";
 import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
@@ -31,7 +31,7 @@ import { initialCustomers } from "../individual-customers/page";
 import { initialBulkMeters } from "../bulk-meters/page";
 import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
 import type { StaffMember } from "../staff-management/staff-types";
-import type { Branch } from "../branches/branch-types"; // Added
+import type { Branch } from "../branches/branch-types";
 
 interface ReportType {
   id: string;
@@ -353,4 +353,3 @@ export default function AdminReportsPage() {
     </div>
   );
 }
-

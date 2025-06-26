@@ -141,7 +141,7 @@ export interface Database {
           status: 'Active' | 'Inactive' | 'Suspended';
           paymentStatus: 'Paid' | 'Unpaid' | 'Pending';
           calculatedBill: number;
-          arrears?: number | null; // Added arrears
+          arrears: number;
           branch_id?: string | null; 
           created_at?: string | null;
           updated_at?: string | null;
@@ -167,7 +167,7 @@ export interface Database {
           status?: 'Active' | 'Inactive' | 'Suspended';
           paymentStatus?: 'Paid' | 'Unpaid' | 'Pending';
           calculatedBill?: number;
-          arrears?: number | null; // Added arrears
+          arrears?: number;
           branch_id?: string | null; 
           created_at?: string | null;
           updated_at?: string | null;
@@ -193,7 +193,7 @@ export interface Database {
           status?: 'Active' | 'Inactive' | 'Suspended';
           paymentStatus?: 'Paid' | 'Unpaid' | 'Pending';
           calculatedBill?: number;
-          arrears?: number | null; // Added arrears
+          arrears?: number;
           branch_id?: string | null; 
           created_at?: string | null;
           updated_at?: string | null;

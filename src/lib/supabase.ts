@@ -66,7 +66,7 @@ export interface Database {
           total_bulk_bill?: number | null;
           difference_usage?: number | null;
           difference_bill?: number | null;
-          arrears?: number | null;
+          outStandingbill?: number | null;
           createdAt?: string | null;
           updatedAt?: string | null;
         };
@@ -90,7 +90,7 @@ export interface Database {
           total_bulk_bill?: number | null;
           difference_usage?: number | null;
           difference_bill?: number | null;
-          arrears?: number | null;
+          outStandingbill?: number | null;
           createdAt?: string | null;
           updatedAt?: string | null;
         };
@@ -114,7 +114,7 @@ export interface Database {
           total_bulk_bill?: number | null;
           difference_usage?: number | null;
           difference_bill?: number | null;
-          arrears?: number | null;
+          outStandingbill?: number | null;
           createdAt?: string | null;
           updatedAt?: string | null;
         };

@@ -23,13 +23,13 @@ import {
   subscribeToCustomers,
   initializeBulkMeters,
   initializeCustomers,
-  getMeterReadings,
-  initializeMeterReadings,
-  subscribeToMeterReadings,
+  getBulkMeterReadings,
+  initializeBulkMeterReadings,
+  subscribeToBulkMeterReadings,
 } from "@/lib/data-store";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { IndividualCustomer, IndividualCustomerStatus } from "@/app/admin/individual-customers/individual-customer-types";
-import type { DomainMeterReading } from "@/lib/data-store";
+import type { DomainBulkMeterReading } from "@/lib/data-store";
 import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult } from "@/lib/billing";
 import { BulkMeterFormDialog, type BulkMeterFormValues } from "@/app/admin/bulk-meters/bulk-meter-form-dialog";
 import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "@/app/admin/individual-customers/individual-customer-form-dialog";
@@ -53,8 +53,7 @@ export default function StaffBulkMeterDetailsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [staffBranchName, setStaffBranchName] = React.useState<string | undefined>(undefined);
   const [isAuthorized, setIsAuthorized] = useState(false); 
-  const [allReadings, setAllReadings] = useState<DomainMeterReading[]>([]);
-  const [meterReadingHistory, setMeterReadingHistory] = useState<DomainMeterReading[]>([]);
+  const [meterReadingHistory, setMeterReadingHistory] = useState<DomainBulkMeterReading[]>([]);
 
   const [isBulkMeterFormOpen, setIsBulkMeterFormOpen] = React.useState(false);
   const [isBulkMeterDeleteDialogOpen, setIsBulkMeterDeleteDialogOpen] = React.useState(false);
@@ -102,11 +101,11 @@ export default function StaffBulkMeterDetailsPage() {
     }
 
     setIsLoading(true);
-    Promise.all([initializeBulkMeters(), initializeCustomers(), initializeMeterReadings()]).then(() => {
+    Promise.all([initializeBulkMeters(), initializeCustomers(), initializeBulkMeterReadings()]).then(() => {
       if (!isMounted) return;
       const currentGlobalMeters = getBulkMeters();
       const currentGlobalCustomers = getCustomers();
-      const allMeterReadings = getMeterReadings();
+      const allBulkReadings = getBulkMeterReadings();
       const foundBM = currentGlobalMeters.find(bm => bm.id === bulkMeterId);
 
       if (foundBM) {
@@ -124,9 +123,8 @@ export default function StaffBulkMeterDetailsPage() {
               )
           ).map(bm => ({id: bm.id, name: bm.name}));
           setBranchBulkMetersForCustomerForm(branchMeters);
-
-          setAllReadings(allMeterReadings);
-          const history = allMeterReadings
+          
+          const history = allBulkReadings
             .filter(r => r.bulkMeterId === bulkMeterId)
             .sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
           setMeterReadingHistory(history);
@@ -147,7 +145,7 @@ export default function StaffBulkMeterDetailsPage() {
       if (!isMounted) return;
       const currentGlobalMeters = getBulkMeters();
       const currentGlobalCustomers = getCustomers();
-      const allMeterReadings = getMeterReadings();
+      const allBulkReadings = getBulkMeterReadings();
       const foundBM = currentGlobalMeters.find(bm => bm.id === bulkMeterId);
 
       if (foundBM) {
@@ -167,7 +165,7 @@ export default function StaffBulkMeterDetailsPage() {
             ).map(bm => ({id: bm.id, name: bm.name}));
             setBranchBulkMetersForCustomerForm(branchMeters);
 
-            const history = allMeterReadings
+            const history = allBulkReadings
               .filter(r => r.bulkMeterId === bulkMeterId)
               .sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
             setMeterReadingHistory(history);
@@ -185,7 +183,7 @@ export default function StaffBulkMeterDetailsPage() {
 
     const unsubscribeBM = subscribeToBulkMeters(handleStoresUpdate);
     const unsubscribeCust = subscribeToCustomers(handleStoresUpdate);
-    const unsubscribeMeterReadings = subscribeToMeterReadings(handleStoresUpdate);
+    const unsubscribeMeterReadings = subscribeToBulkMeterReadings(handleStoresUpdate);
 
     return () => {
       isMounted = false;
@@ -346,8 +344,8 @@ export default function StaffBulkMeterDetailsPage() {
             <p><strong className="font-semibold">Billed Readings (Prev/Curr):</strong> {(bmPreviousReading).toFixed(2)} / {(bmCurrentReading).toFixed(2)}</p>
           </div>
           <div className="space-y-1">
-             <p className="text-lg"><strong className="font-semibold">Current Usage:</strong> {bulkUsage.toFixed(2)} m³</p>
-             <p className="text-xl text-primary"><strong className="font-semibold">Current Bill:</strong> ETB {totalBulkBillForPeriod.toFixed(2)}</p>
+             <p className="text-lg"><strong className="font-semibold">Bulk Usage:</strong> {bulkUsage.toFixed(2)} m³</p>
+             <p className="text-xl text-primary"><strong className="font-semibold">Total Bulk Bill:</strong> ETB {totalBulkBillForPeriod.toFixed(2)}</p>
              <p className={cn("text-sm", differenceUsage >= 0 ? "text-green-600" : "text-amber-600")}><strong className="font-semibold">Difference Usage:</strong> {differenceUsage.toFixed(2)} m³</p>
              <p className={cn("text-sm", differenceBill >= 0 ? "text-green-600" : "text-amber-600")}><strong className="font-semibold">Difference Bill:</strong> ETB {differenceBill.toFixed(2)}</p>
              <p className={cn("text-sm font-semibold", (bulkMeter.outStandingbill || 0) > 0 ? "text-destructive" : "text-muted-foreground")}>Outstanding Bill: ETB {(bulkMeter.outStandingbill || 0).toFixed(2)}</p>

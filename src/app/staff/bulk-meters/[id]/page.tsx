@@ -458,8 +458,8 @@ export default function StaffBulkMeterDetailsPage() {
           </div>
           
           <div className="pt-10 space-y-6 text-sm">
-            <p className="border-b border-dashed border-gray-400 pb-2">Requested by: .........................................................</p>
-            <p className="border-b border-dashed border-gray-400 pb-2">Check by: .............................................................</p>
+            <p className="pb-2">Requested by: .........................................................</p>
+            <p className="pb-2">Check by: .............................................................</p>
             <p>Approved by: ........................................................</p>
           </div>
         </CardContent>

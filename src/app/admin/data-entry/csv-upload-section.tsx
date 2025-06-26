@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { UploadCloud, FileWarning, CheckCircle, Info } from "lucide-react"; // Changed AlertCircle to Info
+import { UploadCloud, FileWarning, CheckCircle, Info } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface CsvUploadSectionProps<TFormValues> {

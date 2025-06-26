@@ -253,6 +253,7 @@ const mapSupabaseCustomerToDomain = (sc: SupabaseIndividualCustomerRow): DomainI
     status: sc.status as IndividualCustomerStatus,
     paymentStatus: sc.paymentStatus as PaymentStatus,
     calculatedBill: bill,
+    arrears: sc.arrears ? Number(sc.arrears) : 0, // Added arrears
     created_at: sc.created_at,
     updated_at: sc.updated_at,
   };
@@ -284,6 +285,7 @@ const mapDomainCustomerToInsert = (
     status: 'Active', 
     paymentStatus: 'Unpaid', 
     calculatedBill: bill,
+    arrears: customer.arrears ? Number(customer.arrears) : 0, // Added arrears
   };
 };
 
@@ -309,6 +311,7 @@ const mapDomainCustomerToUpdate = (customer: Partial<DomainIndividualCustomer>):
   if(customer.branchId !== undefined) updatePayload.branch_id = customer.branchId; 
   if(customer.status !== undefined) updatePayload.status = customer.status;
   if(customer.paymentStatus !== undefined) updatePayload.paymentStatus = customer.paymentStatus;
+  if(customer.arrears !== undefined) updatePayload.arrears = Number(customer.arrears); // Added arrears
 
   if (customer.currentReading !== undefined || customer.previousReading !== undefined || customer.customerType !== undefined || customer.sewerageConnection !== undefined || customer.meterSize !== undefined) {
     const existingCustomer = customers.find(c => c.id === customer.id);
@@ -357,6 +360,7 @@ const mapSupabaseBulkMeterToDomain = (sbm: SupabaseBulkMeterRow): BulkMeter => {
     totalBulkBill: bmTotalBill,
     differenceUsage: sbm.difference_usage === null || sbm.difference_usage === undefined ? undefined : Number(sbm.difference_usage),
     differenceBill: sbm.difference_bill === null || sbm.difference_bill === undefined ? undefined : Number(sbm.difference_bill),
+    arrears: sbm.arrears ? Number(sbm.arrears) : 0, // Added arrears
   };
 };
 
@@ -384,6 +388,7 @@ const mapDomainBulkMeterToInsert = (bm: Omit<BulkMeter, 'id'>): BulkMeterInsert 
     total_bulk_bill: calculatedTotalBulkBill,
     difference_usage: calculatedBulkUsage,
     difference_bill: calculatedTotalBulkBill,
+    arrears: bm.arrears ? Number(bm.arrears) : 0, // Added arrears
   };
 };
 
@@ -404,6 +409,7 @@ const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { id?: string } ): 
     if (bm.branchId !== undefined) updatePayload.branch_id = bm.branchId; 
     if (bm.status !== undefined) updatePayload.status = bm.status;
     if (bm.paymentStatus !== undefined) updatePayload.paymentStatus = bm.paymentStatus;
+    if (bm.arrears !== undefined) updatePayload.arrears = Number(bm.arrears); // Added arrears
 
     if (bm.id && (bm.currentReading !== undefined || bm.previousReading !== undefined || bm.meterSize !== undefined)) {
         const existingBM = bulkMeters.find(b => b.id === bm.id);

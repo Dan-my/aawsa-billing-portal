@@ -37,6 +37,7 @@ const individualCustomerFormObjectSchema = baseIndividualCustomerDataSchema.exte
   status: z.enum(individualCustomerStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
   paymentStatus: z.enum(paymentStatuses, { errorMap: () => ({ message: "Please select a valid payment status."}) }),
   branchId: z.string().optional(), // Add branchId to schema
+  arrears: z.coerce.number().min(0, { message: "Arrears cannot be negative." }),
 });
 
 export type IndividualCustomerFormValues = z.infer<typeof individualCustomerFormObjectSchema>;
@@ -79,6 +80,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
       branchId: undefined,
       status: "Active",
       paymentStatus: "Unpaid",
+      arrears: 0,
     },
   });
 
@@ -136,6 +138,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         branchId: defaultValues.branchId || undefined,
         status: defaultValues.status || "Active",
         paymentStatus: defaultValues.paymentStatus || "Unpaid",
+        arrears: defaultValues.arrears ?? 0,
       });
     } else {
       form.reset({
@@ -158,6 +161,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         branchId: undefined,
         status: "Active",
         paymentStatus: "Unpaid",
+        arrears: 0,
       });
     }
   }, [defaultValues, form, open]);
@@ -308,9 +312,10 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
               <FormField control={form.control} name="sewerageConnection" render={({ field }) => (<FormItem><FormLabel>Sewerage Conn. *</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select connection" /></SelectTrigger></FormControl><SelectContent>{sewerageConnections.map(conn => <SelectItem key={conn} value={conn}>{conn}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField control={form.control} name="status" render={({ field }) => (<FormItem><FormLabel>Customer Status *</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select status"/></SelectTrigger></FormControl><SelectContent>{individualCustomerStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
               <FormField control={form.control} name="paymentStatus" render={({ field }) => (<FormItem><FormLabel>Payment Status *</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select payment status"/></SelectTrigger></FormControl><SelectContent>{paymentStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="arrears" render={({ field }) => (<FormItem><FormLabel>Arrears (ETB)</FormLabel><FormControl><Input type="number" step="0.01" {...field} value={field.value ?? 0} onChange={e => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))} /></FormControl><FormMessage /></FormItem>)} />
             </div>
 
             <DialogFooter>

@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image"; 
-import { Droplets, Edit, Trash2, MoreHorizontal, User, CheckCircle, XCircle, FileEdit, RefreshCcw, Gauge, Users as UsersIcon, DollarSign, TrendingUp, Clock, MinusCircle, PlusCircle as PlusCircleIcon, Printer } from "lucide-react";
+import { Droplets, Edit, Trash2, MoreHorizontal, User, CheckCircle, XCircle, FileEdit, RefreshCcw, Gauge, Users as UsersIcon, DollarSign, TrendingUp, Clock, MinusCircle, PlusCircle as PlusCircleIcon, Printer, History, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,7 +16,6 @@ import {
   getBulkMeters,
   getCustomers,
   updateBulkMeter as updateBulkMeterInStore,
-  updateBulkMeterPaymentStatus,
   deleteBulkMeter as deleteBulkMeterFromStore,
   updateCustomer as updateCustomerInStore,
   deleteCustomer as deleteCustomerFromStore,
@@ -39,7 +38,7 @@ import { calculateBill, type CustomerType, type SewerageConnection, type Payment
 import { BulkMeterFormDialog, type BulkMeterFormValues } from "../bulk-meter-form-dialog";
 import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "../../individual-customers/individual-customer-form-dialog";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 
 export default function BulkMeterDetailsPage() {
   const params = useParams();
@@ -51,7 +50,8 @@ export default function BulkMeterDetailsPage() {
   const [associatedCustomers, setAssociatedCustomers] = useState<IndividualCustomer[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
-  const [latestReading, setLatestReading] = useState<DomainMeterReading | null>(null);
+  const [allReadings, setAllReadings] = useState<DomainMeterReading[]>([]);
+  const [meterReadingHistory, setMeterReadingHistory] = useState<DomainMeterReading[]>([]);
 
   const [isBulkMeterFormOpen, setIsBulkMeterFormOpen] = React.useState(false);
   const [isBulkMeterDeleteDialogOpen, setIsBulkMeterDeleteDialogOpen] = React.useState(false);
@@ -93,11 +93,12 @@ export default function BulkMeterDetailsPage() {
         setBulkMeter(foundBM);
         const associated = currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId);
         setAssociatedCustomers(associated);
-        const allReadings = getMeterReadings();
-        const meterReadings = allReadings
+        const allMeterReadings = getMeterReadings();
+        setAllReadings(allMeterReadings);
+        const history = allMeterReadings
           .filter(r => r.bulkMeterId === bulkMeterId)
           .sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
-        if (meterReadings.length > 0) setLatestReading(meterReadings[0]);
+        setMeterReadingHistory(history);
       } else {
         setBulkMeter(null);
         toast({ title: "Bulk Meter Not Found", description: "This bulk meter may not exist or has been deleted.", variant: "destructive" });
@@ -116,9 +117,10 @@ export default function BulkMeterDetailsPage() {
       const currentGlobalMeters = getBulkMeters();
       const currentGlobalCustomers = getCustomers();
       const currentGlobalBranches = getBranches(); 
-      const allReadings = getMeterReadings();
+      const allMeterReadings = getMeterReadings();
 
       setBranches(currentGlobalBranches); 
+      setAllReadings(allMeterReadings);
 
       const foundBM = currentGlobalMeters.find(bm => bm.id === bulkMeterId);
 
@@ -126,11 +128,10 @@ export default function BulkMeterDetailsPage() {
         setBulkMeter(foundBM);
         const associated = currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId);
         setAssociatedCustomers(associated);
-         const meterReadings = allReadings
+        const history = allMeterReadings
           .filter(r => r.bulkMeterId === bulkMeterId)
           .sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
-        if (meterReadings.length > 0) setLatestReading(meterReadings[0]); else setLatestReading(null);
-
+        setMeterReadingHistory(history);
       } else if (bulkMeter) {
          toast({ title: "Bulk Meter Update", description: "The bulk meter being viewed may have been deleted or is no longer accessible.", variant: "destructive" });
          setBulkMeter(null);
@@ -166,21 +167,13 @@ export default function BulkMeterDetailsPage() {
   const handleSubmitBulkMeterForm = async (data: BulkMeterFormValues) => {
     if (bulkMeter) {
         const updatedBulkMeterData: BulkMeter = {
-          id: bulkMeter.id,
+          ...bulkMeter,
           ...data,
         };
         await updateBulkMeterInStore(updatedBulkMeterData);
         toast({ title: "Bulk Meter Updated", description: `${updatedBulkMeterData.name} has been updated.` });
     }
     setIsBulkMeterFormOpen(false);
-  };
-
-  const handleToggleBulkMeterPaymentStatus = async () => {
-    if (bulkMeter) {
-      const newStatus: PaymentStatus = bulkMeter.paymentStatus === 'Paid' ? 'Unpaid' : 'Paid';
-      await updateBulkMeterPaymentStatus(bulkMeter.id, newStatus);
-      toast({ title: "Payment Status Updated", description: `${bulkMeter.name} payment status set to ${newStatus}.` });
-    }
   };
 
   const handleEditCustomer = (customer: IndividualCustomer) => {
@@ -209,6 +202,7 @@ export default function BulkMeterDetailsPage() {
           meterSize: Number(data.meterSize),
           previousReading: Number(data.previousReading),
           currentReading: Number(data.currentReading),
+          arrears: Number(data.arrears),
           status: data.status as IndividualCustomerStatus,
           paymentStatus: data.paymentStatus as PaymentStatus,
           customerType: data.customerType as CustomerType,
@@ -224,6 +218,24 @@ export default function BulkMeterDetailsPage() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleEndOfCycle = async (carryBalance: boolean) => {
+    if (!bulkMeter) return;
+    const currentBill = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
+    
+    const updatePayload: BulkMeter = {
+        ...bulkMeter,
+        previousReading: bulkMeter.currentReading,
+        arrears: carryBalance ? (bulkMeter.arrears + currentBill.totalBill) : 0,
+        paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
+    };
+
+    await updateBulkMeterInStore(updatePayload);
+    toast({
+        title: "Billing Cycle Closed",
+        description: carryBalance ? `Balance of ETB ${currentBill.totalBill.toFixed(2)} carried forward.` : "Bill marked as paid and new cycle started."
+    });
   };
 
 
@@ -245,13 +257,14 @@ export default function BulkMeterDetailsPage() {
   const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
   
   const billDetails: BillCalculationResult = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
-  const totalBulkBill = billDetails.totalBill;
+  const totalBulkBillForPeriod = billDetails.totalBill;
+  const totalPayable = totalBulkBillForPeriod + (bulkMeter.arrears || 0);
 
   const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + (cust.currentReading - cust.previousReading), 0);
   const totalIndividualBill = associatedCustomers.reduce((sum, cust) => sum + cust.calculatedBill, 0);
 
   const differenceUsage = bulkUsage - totalIndividualUsage;
-  const differenceBill = totalBulkBill - totalIndividualBill;
+  const differenceBill = totalBulkBillForPeriod - totalIndividualBill;
   
   const displayBranchName = bulkMeter.branchId ? branches.find(b => b.id === bulkMeter.branchId)?.name : bulkMeter.location;
   const displayCardLocation = bulkMeter.specificArea || bulkMeter.ward || "N/A";
@@ -294,44 +307,71 @@ export default function BulkMeterDetailsPage() {
             <p><strong className="font-semibold">Contract No:</strong> {bulkMeter.contractNumber ?? 'N/A'}</p>
             <p><strong className="font-semibold">Month:</strong> {bulkMeter.month ?? 'N/A'}</p>
             <p><strong className="font-semibold">Billed Readings (Prev/Curr):</strong> {(bmPreviousReading).toFixed(2)} / {(bmCurrentReading).toFixed(2)}</p>
-            {latestReading ? (
-                <p className="text-blue-600 dark:text-blue-400 mt-1"><strong className="font-semibold">Latest Logged Reading:</strong> {latestReading.readingValue.toFixed(2)} <span className="text-xs">({format(new Date(latestReading.readingDate), "PP")})</span></p>
-            ) : (
-                <p className="text-sm text-muted-foreground mt-1">No new readings logged yet.</p>
-            )}
           </div>
           <div className="space-y-1">
-             <p className="text-lg"><strong className="font-semibold">Bulk Usage:</strong> {bulkUsage.toFixed(2)} m³</p>
-             <p className="text-xl text-primary"><strong className="font-semibold">Total Bulk Bill:</strong> ETB {totalBulkBill.toFixed(2)}</p>
+             <p className="text-lg"><strong className="font-semibold">Current Usage:</strong> {bulkUsage.toFixed(2)} m³</p>
+             <p className="text-xl text-primary"><strong className="font-semibold">Current Bill:</strong> ETB {totalBulkBillForPeriod.toFixed(2)}</p>
+             <p className={cn("text-sm font-semibold", (bulkMeter.arrears || 0) > 0 ? "text-destructive" : "text-muted-foreground")}>Arrears: ETB {(bulkMeter.arrears || 0).toFixed(2)}</p>
+             <p className="text-2xl font-bold text-primary">Total Payable: ETB {totalPayable.toFixed(2)}</p>
              <div className="flex items-center gap-2 mt-1">
                <strong className="font-semibold">Payment Status:</strong>
-               <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleToggleBulkMeterPaymentStatus}
-                  className="p-0 h-auto group"
-                  aria-label={`Toggle payment status for ${bulkMeter.name}`}
-                >
-                  <Badge variant={bulkMeter.paymentStatus === 'Paid' ? 'default' : 'destructive'} className="cursor-pointer hover:opacity-80">
-                    {bulkMeter.paymentStatus === 'Paid' ? <CheckCircle className="mr-1 h-3.5 w-3.5"/> : <XCircle className="mr-1 h-3.5 w-3.5"/>}
-                    {bulkMeter.paymentStatus}
-                    <RefreshCcw className="ml-1.5 h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </Badge>
-                </Button>
+                <Badge variant={bulkMeter.paymentStatus === 'Paid' ? 'default' : 'destructive'} className="cursor-pointer hover:opacity-80">
+                  {bulkMeter.paymentStatus === 'Paid' ? <CheckCircle className="mr-1 h-3.5 w-3.5"/> : <XCircle className="mr-1 h-3.5 w-3.5"/>}
+                  {bulkMeter.paymentStatus}
+                </Badge>
              </div>
-            <p className={cn("text-sm", differenceUsage < 0 ? "text-amber-600" : "text-green-600")}>
-                <strong className="font-semibold">Difference Usage:</strong>
-                {differenceUsage >= 0 ? <PlusCircleIcon className="inline h-3.5 w-3.5 mr-1" /> : <MinusCircle className="inline h-3.5 w-3.5 mr-1" />}
-                {differenceUsage.toFixed(2)} m³
-            </p>
-            <p className={cn("text-sm", differenceBill < 0 ? "text-amber-600" : "text-green-600")}>
-                <strong className="font-semibold">Difference Bill:</strong>
-                {differenceBill >= 0 ? <PlusCircleIcon className="inline h-3.5 w-3.5 mr-1" /> : <MinusCircle className="inline h-3.5 w-3.5 mr-1" />}
-                ETB {differenceBill.toFixed(2)}
-            </p>
           </div>
         </CardContent>
       </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><History className="h-5 w-5 text-primary" />Reading History</CardTitle>
+            <CardDescription>Historical readings logged for this meter.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto max-h-96">
+                {meterReadingHistory.length > 0 ? (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Date</TableHead>
+                                <TableHead className="text-right">Reading Value</TableHead>
+                                <TableHead>Notes</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {meterReadingHistory.map(reading => (
+                                <TableRow key={reading.id}>
+                                    <TableCell>{format(parseISO(reading.readingDate), "PP")}</TableCell>
+                                    <TableCell className="text-right">{reading.readingValue.toFixed(2)}</TableCell>
+                                    <TableCell className="text-xs text-muted-foreground">{reading.notes}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                ) : (
+                    <p className="text-muted-foreground text-sm text-center py-4">No historical readings found.</p>
+                )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="shadow-lg">
+           <CardHeader>
+            <CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-500" />End of Month Actions</CardTitle>
+            <CardDescription>Close the current billing cycle for this meter. This action updates the previous reading and manages arrears.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4 pt-6">
+             <Button onClick={() => handleEndOfCycle(false)} disabled={isLoading}>
+                <CheckCircle className="mr-2 h-4 w-4" /> Mark Bill as Paid & Start New Cycle
+             </Button>
+             <Button variant="destructive" onClick={() => handleEndOfCycle(true)} disabled={isLoading}>
+                <RefreshCcw className="mr-2 h-4 w-4" /> Carry Balance Forward & Start New Cycle
+             </Button>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card className="shadow-lg">
         <CardHeader>
@@ -445,21 +485,23 @@ export default function BulkMeterDetailsPage() {
             <p><strong className="font-semibold w-60 inline-block">Number of Assigned Individual Customers:</strong> {associatedCustomers.length}</p>
             <p><strong className="font-semibold w-60 inline-block">Previous and current reading:</strong> {bmPreviousReading.toFixed(2)} / {bmCurrentReading.toFixed(2)} m³</p>
             <p><strong className="font-semibold w-60 inline-block">Bulk usage:</strong> {bulkUsage.toFixed(2)} m³</p>
-            <p><strong className="font-semibold w-60 inline-block">Difference usage:</strong> {differenceUsage.toFixed(2)} m³</p>
             <p><strong className="font-semibold w-60 inline-block">Meter Rent:</strong> ETB {billDetails.meterRent.toFixed(2)}</p>
             <p><strong className="font-semibold w-60 inline-block">Sanitation Fee:</strong> ETB {billDetails.sanitationFee.toFixed(2)}</p>
             {billDetails.sewerageCharge > 0 && (
               <p><strong className="font-semibold w-60 inline-block">Sewerage Fee:</strong> ETB {billDetails.sewerageCharge.toFixed(2)}</p>
             )}
             <p><strong className="font-semibold w-60 inline-block">VAT (15%):</strong> ETB {billDetails.vatAmount.toFixed(2)}</p>
+            <p><strong className="font-semibold w-60 inline-block">Difference usage:</strong> {differenceUsage.toFixed(2)} m³</p>
             <p><strong className="font-semibold w-60 inline-block">Total Difference bill:</strong> ETB {differenceBill.toFixed(2)}</p>
+            <p className="border-t pt-2 mt-2"><strong className="font-semibold w-60 inline-block">Arrears (Previous Balance):</strong> ETB {(bulkMeter.arrears || 0).toFixed(2)}</p>
+            <p className="font-bold text-base"><strong className="font-semibold w-60 inline-block">Total Amount Payable:</strong> ETB {totalPayable.toFixed(2)}</p>
             <p><strong className="font-semibold w-60 inline-block">Paid/Unpaid:</strong> {bulkMeter.paymentStatus}</p>
             <p><strong className="font-semibold w-60 inline-block">Month:</strong> {bulkMeter.month}</p>
           </div>
           
           <div className="pt-10 space-y-6 text-sm">
-            <p className="pb-2">Requested by: .........................................................</p>
-            <p className="pb-2">Check by: .............................................................</p>
+            <p>Requested by: .........................................................</p>
+            <p>Check by: .............................................................</p>
             <p>Approved by: ........................................................</p>
           </div>
         </CardContent>
@@ -520,4 +562,3 @@ export default function BulkMeterDetailsPage() {
     </div>
   );
 }
-    

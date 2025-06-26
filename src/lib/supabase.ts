@@ -66,6 +66,7 @@ export interface Database {
           total_bulk_bill?: number | null;
           difference_usage?: number | null;
           difference_bill?: number | null;
+          arrears?: number | null; // Added arrears
           createdAt?: string | null;
           updatedAt?: string | null;
         };
@@ -89,6 +90,7 @@ export interface Database {
           total_bulk_bill?: number | null;
           difference_usage?: number | null;
           difference_bill?: number | null;
+          arrears?: number | null; // Added arrears
           createdAt?: string | null;
           updatedAt?: string | null;
         };
@@ -112,6 +114,7 @@ export interface Database {
           total_bulk_bill?: number | null;
           difference_usage?: number | null;
           difference_bill?: number | null;
+          arrears?: number | null; // Added arrears
           createdAt?: string | null;
           updatedAt?: string | null;
         };
@@ -138,6 +141,7 @@ export interface Database {
           status: 'Active' | 'Inactive' | 'Suspended';
           paymentStatus: 'Paid' | 'Unpaid' | 'Pending';
           calculatedBill: number;
+          arrears?: number | null; // Added arrears
           branch_id?: string | null; 
           created_at?: string | null;
           updated_at?: string | null;
@@ -163,6 +167,7 @@ export interface Database {
           status?: 'Active' | 'Inactive' | 'Suspended';
           paymentStatus?: 'Paid' | 'Unpaid' | 'Pending';
           calculatedBill?: number;
+          arrears?: number | null; // Added arrears
           branch_id?: string | null; 
           created_at?: string | null;
           updated_at?: string | null;
@@ -188,6 +193,7 @@ export interface Database {
           status?: 'Active' | 'Inactive' | 'Suspended';
           paymentStatus?: 'Paid' | 'Unpaid' | 'Pending';
           calculatedBill?: number;
+          arrears?: number | null; // Added arrears
           branch_id?: string | null; 
           created_at?: string | null;
           updated_at?: string | null;
@@ -564,4 +570,3 @@ export const deleteReportLog = async (id: string) => supabase.from('reports').de
 // export const createVoucher = async (voucher: VoucherInsert) => supabase.from('vouchers').insert(voucher).select().single();
 // export const updateVoucher = async (id: string, voucher: VoucherUpdate) => supabase.from('vouchers').update(voucher).eq('id', id).select().single();
 // export const deleteVoucher = async (id: string) => supabase.from('vouchers').delete().eq('id', id).select().single();
-

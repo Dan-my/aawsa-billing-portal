@@ -1,4 +1,3 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import Tabs
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 
@@ -93,7 +93,7 @@ export function AddMeterReadingForm({ onSubmit, customers, bulkMeters, isLoading
   const form = useForm<AddMeterReadingFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      meterType: undefined,
+      meterType: 'individual_customer_meter', // Default to individual
       entityId: "",
       reading: 0,
       date: new Date(),
@@ -101,6 +101,7 @@ export function AddMeterReadingForm({ onSubmit, customers, bulkMeters, isLoading
   });
 
   const selectedMeterType = form.watch("meterType");
+  const selectedEntityId = form.watch("entityId");
 
   const availableMeters = React.useMemo(() => {
     if (selectedMeterType === 'individual_customer_meter') {
@@ -122,74 +123,58 @@ export function AddMeterReadingForm({ onSubmit, customers, bulkMeters, isLoading
     onSubmit(values);
   }
 
-  // When entityId changes, we might want to trigger validation on the 'reading' field if it has been touched.
-  const selectedEntityId = form.watch("entityId");
   React.useEffect(() => {
     if (form.getFieldState('reading').isTouched) {
       form.trigger('reading');
     }
   }, [selectedEntityId, form]);
 
+  const handleTabChange = (value: string) => {
+    form.setValue('meterType', value as AddMeterReadingFormValues['meterType']);
+    form.resetField('entityId');
+    form.resetField('reading');
+    form.clearErrors();
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <Tabs 
+          defaultValue="individual_customer_meter" 
+          onValueChange={handleTabChange} 
+          className="w-full"
+        >
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="individual_customer_meter">Individual Customer</TabsTrigger>
+            <TabsTrigger value="bulk_meter">Bulk Meter</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         <FormField
           control={form.control}
-          name="meterType"
+          name="entityId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Meter Type</FormLabel>
-              <Select 
-                 onValueChange={(value) => {
-                    field.onChange(value);
-                    form.resetField("entityId"); // Reset entity when type changes
-                    form.clearErrors("reading");
-                }} 
-                defaultValue={field.value} 
-                disabled={isLoading}
-              >
+              <FormLabel>Select Meter</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value} disabled={isLoading || availableMeters.length === 0}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select meter type" />
+                    <SelectValue placeholder={availableMeters.length === 0 ? "No meters available for type" : "Select a meter"} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="individual_customer_meter">Individual Customer Meter</SelectItem>
-                  <SelectItem value="bulk_meter">Bulk Meter</SelectItem>
+                  {availableMeters.map((meter) => (
+                    <SelectItem key={meter.value} value={meter.value}>
+                      {meter.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <FormMessage />
             </FormItem>
           )}
         />
-
-        {selectedMeterType && (
-          <FormField
-            control={form.control}
-            name="entityId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Select Meter</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={isLoading || availableMeters.length === 0}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder={availableMeters.length === 0 ? "No meters available for type" : "Select a meter"} />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {availableMeters.map((meter) => (
-                      <SelectItem key={meter.value} value={meter.value}>
-                        {meter.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
-
+        
         <FormField
           control={form.control}
           name="reading"

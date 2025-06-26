@@ -39,11 +39,11 @@ const readingCsvRowSchema = z.object({
   reading_value: z.coerce.number().min(0, { message: "reading_value must be a non-negative number." }),
   reading_date: z.string(), // Validate as a string first
 }).superRefine((data, ctx) => {
-  if (!isValid(parse(data.reading_date, 'dd-MM-yyyy', new Date()))) {
+  if (!isValid(parse(data.reading_date, 'dd-MMM-yy', new Date()))) {
     ctx.addIssue({
       path: ['reading_date'],
       code: z.ZodIssueCode.custom,
-      message: `Value '${data.reading_date}' is not a valid date. Please use DD-MM-YYYY format.`,
+      message: `Value '${data.reading_date}' is not a valid date. Please use DD-MMM-YY format (e.g., 26-May-25).`,
     });
   }
 });
@@ -117,7 +117,7 @@ export function CsvReadingUploadDialog({ open, onOpenChange, meterType, meters, 
 
         try {
           const validatedRow = readingCsvRowSchema.parse(rowData);
-          const readingDate = parse(validatedRow.reading_date, 'dd-MM-yyyy', new Date());
+          const readingDate = parse(validatedRow.reading_date, 'dd-MMM-yy', new Date());
 
           const meter = meters.find(m => m.meterNumber === validatedRow.meter_number);
 
@@ -200,7 +200,7 @@ export function CsvReadingUploadDialog({ open, onOpenChange, meterType, meters, 
         <DialogHeader>
           <UIDialogTitle>Upload {meterType === 'individual' ? 'Individual Customer' : 'Bulk Meter'} Readings</UIDialogTitle>
           <UIDialogDescription>
-              Select a CSV file with columns: meter_number, reading_value, reading_date (in DD-MM-YYYY format).
+              Select a CSV file with columns: meter_number, reading_value, reading_date (in DD-MMM-YY format, e.g., 26-May-25).
           </UIDialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">

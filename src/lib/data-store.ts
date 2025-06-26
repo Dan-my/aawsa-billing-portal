@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { IndividualCustomer as DomainIndividualCustomer, IndividualCustomerStatus } from '@/app/admin/individual-customers/individual-customer-types';
@@ -1114,15 +1115,35 @@ export const removeBill = async (billId: string): Promise<StoreOperationResult<v
 export const addMeterReading = async (readingData: Omit<DomainMeterReading, 'id'>): Promise<StoreOperationResult<DomainMeterReading>> => {
     const payload = mapDomainMeterReadingToSupabase(readingData) as MeterReadingInsert;
     const { data: newSupabaseReading, error } = await supabaseCreateMeterReading(payload);
+
     if (newSupabaseReading && !error) {
         const newReading = mapSupabaseMeterReadingToDomain(newSupabaseReading);
         meterReadings = [newReading, ...meterReadings];
         notifyMeterReadingListeners();
+
+        // Update the currentReading on the corresponding customer or bulk meter
+        if (newReading.meterType === 'individual_customer_meter' && newReading.individualCustomerId) {
+            const customer = customers.find(c => c.id === newReading.individualCustomerId);
+            if (customer) {
+                // We only want to update the current reading here, preserving other fields
+                const customerUpdatePayload = { ...customer, currentReading: newReading.readingValue };
+                await updateCustomer(customerUpdatePayload); // This will trigger its own notifications
+            }
+        } else if (newReading.meterType === 'bulk_meter' && newReading.bulkMeterId) {
+            const bulkMeter = bulkMeters.find(bm => bm.id === newReading.bulkMeterId);
+            if (bulkMeter) {
+                // Similarly, only update the current reading
+                const bulkMeterUpdatePayload = { ...bulkMeter, currentReading: newReading.readingValue };
+                await updateBulkMeter(bulkMeterUpdatePayload); // This will trigger its own notifications
+            }
+        }
+
         return { success: true, data: newReading };
     }
     console.error("DataStore: Failed to add meter reading. Supabase error:", JSON.stringify(error, null, 2));
     return { success: false, message: (error as any)?.message || "Failed to add meter reading.", error };
 };
+
 export const updateExistingMeterReading = async (id: string, readingUpdateData: Partial<Omit<DomainMeterReading, 'id'>>): Promise<StoreOperationResult<void>> => {
     const payload = mapDomainMeterReadingToSupabase(readingUpdateData) as MeterReadingUpdate;
     const { data: updatedSupabaseReading, error } = await supabaseUpdateMeterReading(id, payload);

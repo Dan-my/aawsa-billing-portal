@@ -1151,8 +1151,15 @@ export const addIndividualCustomerReading = async (readingData: Omit<DomainIndiv
 
         return { success: true, data: newReading };
     }
+    
+    // Enhanced error handling
+    let userMessage = (error as any)?.message || "Failed to add reading.";
+    if (error && (error as any).message.includes('violates row-level security policy')) {
+        userMessage = "Permission denied. Please check Row Level Security policies in your Supabase dashboard.";
+        console.error("DataStore RLS Error: The current user lacks permission to insert into 'individual_customer_readings'. Ensure a policy exists, for example: CREATE POLICY \"Allow insert for authenticated users\" ON individual_customer_readings FOR INSERT TO authenticated WITH CHECK (true);");
+    }
     console.error("DataStore: Failed to add individual reading. Supabase error:", JSON.stringify(error, null, 2));
-    return { success: false, message: (error as any)?.message || "Failed to add reading.", error };
+    return { success: false, message: userMessage, error };
 };
 
 export const addBulkMeterReading = async (readingData: Omit<DomainBulkMeterReading, 'id' | 'createdAt' | 'updatedAt'>): Promise<StoreOperationResult<DomainBulkMeterReading>> => {
@@ -1178,8 +1185,15 @@ export const addBulkMeterReading = async (readingData: Omit<DomainBulkMeterReadi
 
         return { success: true, data: newReading };
     }
+
+    // Enhanced error handling
+    let userMessage = (error as any)?.message || "Failed to add reading.";
+    if (error && (error as any).message.includes('violates row-level security policy')) {
+        userMessage = "Permission denied. Please check Row Level Security policies in your Supabase dashboard.";
+        console.error("DataStore RLS Error: The current user lacks permission to insert into 'bulk_meter_readings'. Ensure a policy exists, for example: CREATE POLICY \"Allow insert for authenticated users\" ON bulk_meter_readings FOR INSERT TO authenticated WITH CHECK (true);");
+    }
     console.error("DataStore: Failed to add bulk meter reading. Supabase error:", JSON.stringify(error, null, 2));
-    return { success: false, message: (error as any)?.message || "Failed to add reading.", error };
+    return { success: false, message: userMessage, error };
 };
 
 

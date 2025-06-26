@@ -31,7 +31,7 @@ import {
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { IndividualCustomer, IndividualCustomerStatus } from "@/app/admin/individual-customers/individual-customer-types";
 import type { DomainMeterReading } from "@/lib/data-store";
-import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus } from "@/lib/billing";
+import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult } from "@/lib/billing";
 import { BulkMeterFormDialog, type BulkMeterFormValues } from "@/app/admin/bulk-meters/bulk-meter-form-dialog";
 import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "@/app/admin/individual-customers/individual-customer-form-dialog";
 import { cn } from "@/lib/utils";
@@ -281,7 +281,9 @@ export default function StaffBulkMeterDetailsPage() {
   const bulkUsage = bmCurrentReading - bmPreviousReading;
   const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
   const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
-  const totalBulkBill = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection);
+  
+  const billDetails: BillCalculationResult = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
+  const totalBulkBill = billDetails.totalBill;
 
   const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + (cust.currentReading - cust.previousReading), 0);
   const totalIndividualBill = associatedCustomers.reduce((sum, cust) => sum + cust.calculatedBill, 0);
@@ -436,6 +438,7 @@ export default function StaffBulkMeterDetailsPage() {
           <div className="space-y-1.5">
             <p><strong className="font-semibold w-60 inline-block">Bulk meter name:</strong> {bulkMeter.name}</p>
             <p><strong className="font-semibold w-60 inline-block">Customer key number:</strong> {bulkMeter.customerKeyNumber}</p>
+            <p><strong className="font-semibold w-60 inline-block">Contract No:</strong> {bulkMeter.contractNumber ?? 'N/A'}</p>
             <p><strong className="font-semibold w-60 inline-block">Branch:</strong> {staffBranchName ?? bulkMeter.location ?? 'N/A'}</p>
             <p><strong className="font-semibold w-60 inline-block">Location:</strong> {displayCardLocation}</p>
             <p><strong className="font-semibold w-60 inline-block">Bulk Meter Category:</strong> Non-domestic</p>
@@ -443,6 +446,12 @@ export default function StaffBulkMeterDetailsPage() {
             <p><strong className="font-semibold w-60 inline-block">Previous and current reading:</strong> {bmPreviousReading.toFixed(2)} / {bmCurrentReading.toFixed(2)} m³</p>
             <p><strong className="font-semibold w-60 inline-block">Bulk usage:</strong> {bulkUsage.toFixed(2)} m³</p>
             <p><strong className="font-semibold w-60 inline-block">Difference usage:</strong> {differenceUsage.toFixed(2)} m³</p>
+            <p><strong className="font-semibold w-60 inline-block">Meter Rent:</strong> ETB {billDetails.meterRent.toFixed(2)}</p>
+            <p><strong className="font-semibold w-60 inline-block">Sanitation Fee:</strong> ETB {billDetails.sanitationFee.toFixed(2)}</p>
+            {billDetails.sewerageCharge > 0 && (
+              <p><strong className="font-semibold w-60 inline-block">Sewerage Fee:</strong> ETB {billDetails.sewerageCharge.toFixed(2)}</p>
+            )}
+            <p><strong className="font-semibold w-60 inline-block">VAT (15%):</strong> ETB {billDetails.vatAmount.toFixed(2)}</p>
             <p><strong className="font-semibold w-60 inline-block">Total Difference bill:</strong> ETB {differenceBill.toFixed(2)}</p>
             <p><strong className="font-semibold w-60 inline-block">Paid/Unpaid:</strong> {bulkMeter.paymentStatus}</p>
             <p><strong className="font-semibold w-60 inline-block">Month:</strong> {bulkMeter.month}</p>

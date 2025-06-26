@@ -91,12 +91,22 @@ export const NonDomesticTariffInfo = {
 
 const VAT_RATE = 0.15; // 15% VAT
 
+export interface BillCalculationResult {
+  totalBill: number;
+  baseWaterCharge: number;
+  maintenanceFee: number;
+  sanitationFee: number;
+  vatAmount: number;
+  meterRent: number;
+  sewerageCharge: number;
+}
+
 export function calculateBill(
   usageM3: number,
   customerType: CustomerType,
   sewerageConnection: SewerageConnection,
   meterSize: number
-): number {
+): BillCalculationResult {
   let baseWaterCharge = 0;
   const tariffConfig = customerType === "Domestic" ? DomesticTariffInfo : NonDomesticTariffInfo;
   const tiers = tariffConfig.tiers;
@@ -160,5 +170,13 @@ export function calculateBill(
 
   const totalBill = vatBase + vatAmount + meterRent + sewerageCharge;
 
-  return parseFloat(totalBill.toFixed(2));
+  return {
+    totalBill: parseFloat(totalBill.toFixed(2)),
+    baseWaterCharge: parseFloat(baseWaterCharge.toFixed(2)),
+    maintenanceFee: parseFloat(maintenanceFee.toFixed(2)),
+    sanitationFee: parseFloat(sanitationFee.toFixed(2)),
+    vatAmount: parseFloat(vatAmount.toFixed(2)),
+    meterRent: parseFloat(meterRent.toFixed(2)),
+    sewerageCharge: parseFloat(sewerageCharge.toFixed(2)),
+  };
 }

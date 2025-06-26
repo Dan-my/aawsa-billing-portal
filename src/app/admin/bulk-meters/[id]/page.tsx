@@ -122,7 +122,7 @@ export default function BulkMeterDetailsPage() {
 
     return () => {
       isMounted = false;
-      unsubscribeBM(); unsubscribeCust(); unsubscribeBranches(); unsubscribeMeterReadings(); unsubBills();
+      unsubBM(); unsubCust(); unsubBranches(); unsubMeterReadings(); unsubBills();
     };
   }, [bulkMeterId, router, toast, bulkMeter]);
 

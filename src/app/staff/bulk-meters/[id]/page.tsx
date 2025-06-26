@@ -218,10 +218,24 @@ export default function StaffBulkMeterDetailsPage() {
 
   const handleEndOfCycle = async (carryBalance: boolean) => {
     if (!bulkMeter || !bulkMeter.month) return;
+    
+    const parsedDate = parseISO(`${bulkMeter.month}-01`);
+    if (isNaN(parsedDate.getTime())) {
+        toast({
+            variant: "destructive",
+            title: "Invalid Month Format",
+            description: `The billing month for this meter ("${bulkMeter.month}") is not a valid YYYY-MM format.`,
+        });
+        return;
+    }
+
     const { totalBill, ...billBreakdown } = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
 
     const billDate = new Date();
-    const periodEndDate = lastDayOfMonth(parseISO(`${bulkMeter.month}-01`));
+    const periodEndDate = lastDayOfMonth(parsedDate);
+
+    const dueDateObject = new Date(periodEndDate);
+    dueDateObject.setDate(dueDateObject.getDate() + 15);
 
     const billToSave: Omit<DomainBill, 'id'> = {
       bulkMeterId: bulkMeter.id,
@@ -233,7 +247,7 @@ export default function StaffBulkMeterDetailsPage() {
       usageM3: bulkUsage,
       ...billBreakdown,
       totalAmountDue: totalBill,
-      dueDate: format(new Date(periodEndDate.setDate(periodEndDate.getDate() + 15)), 'yyyy-MM-dd'),
+      dueDate: format(dueDateObject, 'yyyy-MM-dd'),
       paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
       notes: `Bill generated on ${format(billDate, 'PP')}`,
     };
@@ -247,7 +261,7 @@ export default function StaffBulkMeterDetailsPage() {
     const updatePayload: BulkMeter = {
         ...bulkMeter,
         previousReading: bulkMeter.currentReading,
-        outStandingbill: carryBalance ? (bulkMeter.outStandingbill + totalBill) : 0,
+        outStandingbill: carryBalance ? ((bulkMeter.outStandingbill || 0) + totalBill) : 0,
         paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
     };
 
@@ -390,3 +404,5 @@ export default function StaffBulkMeterDetailsPage() {
     </div>
   );
 }
+
+    

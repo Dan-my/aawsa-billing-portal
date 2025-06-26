@@ -33,13 +33,21 @@ interface CsvReadingUploadDialogProps {
 const readingCsvHeaders = ["meter_number", "reading_value", "reading_date"];
 const CSV_SPLIT_REGEX = /,(?=(?:[^"]*"[^"]*")*[^"]*$)/;
 
+// Using superRefine for a more detailed error message
 const readingCsvRowSchema = z.object({
   meter_number: z.string().min(1, { message: "meter_number is required." }),
   reading_value: z.coerce.number().min(0, { message: "reading_value must be a non-negative number." }),
-  reading_date: z.string().refine(val => isValid(parse(val, 'dd-MM-yyyy', new Date())), {
-    message: "reading_date must be a valid date in DD-MM-YYYY format.",
-  }),
+  reading_date: z.string(), // Validate as a string first
+}).superRefine((data, ctx) => {
+  if (!isValid(parse(data.reading_date, 'dd-MM-yyyy', new Date()))) {
+    ctx.addIssue({
+      path: ['reading_date'],
+      code: z.ZodIssueCode.custom,
+      message: `Value '${data.reading_date}' is not a valid date. Please use DD-MM-YYYY format.`,
+    });
+  }
 });
+
 
 export function CsvReadingUploadDialog({ open, onOpenChange, meterType, meters, currentUser }: CsvReadingUploadDialogProps) {
   const { toast } = useToast();

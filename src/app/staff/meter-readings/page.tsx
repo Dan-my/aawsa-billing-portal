@@ -48,8 +48,8 @@ export default function StaffMeterReadingsPage() {
   
   const [allCombinedReadings, setAllCombinedReadings] = React.useState<DisplayReading[]>([]);
   
-  const [customersForForm, setCustomersForForm] = React.useState<Pick<IndividualCustomer, 'id' | 'name' | 'meterNumber'>[]>([]);
-  const [bulkMetersForForm, setBulkMetersForForm] = React.useState<Pick<BulkMeter, 'id' | 'name' | 'meterNumber'>[]>([]);
+  const [customersForForm, setCustomersForForm] = React.useState<IndividualCustomer[]>([]);
+  const [bulkMetersForForm, setBulkMetersForForm] = React.useState<BulkMeter[]>([]);
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState(""); 
@@ -65,8 +65,8 @@ export default function StaffMeterReadingsPage() {
     const branchBulkMeters = simpleBranchName ? allBulkMeters.filter(bm => (bm.location?.toLowerCase() || "").includes(simpleBranchName) || (bm.name?.toLowerCase() || "").includes(simpleBranchName)) : [];
     const branchCustomers = simpleBranchName ? allCustomers.filter(c => (c.location?.toLowerCase() || "").includes(simpleBranchName) || (c.assignedBulkMeterId && branchBulkMeters.some(bm => bm.id === c.assignedBulkMeterId))) : [];
 
-    setBulkMetersForForm(branchBulkMeters.map(bm => ({ id: bm.id, name: bm.name, meterNumber: bm.meterNumber })));
-    setCustomersForForm(branchCustomers.map(c => ({ id: c.id, name: c.name, meterNumber: c.meterNumber })));
+    setBulkMetersForForm(branchBulkMeters);
+    setCustomersForForm(branchCustomers);
 
     const displayedIndividualReadings: DisplayReading[] = allIndividualReadings
       .filter(r => branchCustomers.some(c => c.id === r.individualCustomerId))

@@ -47,9 +47,6 @@ export default function AdminMeterReadingsPage() {
   const [allBulkMeters, setAllBulkMeters] = React.useState<BulkMeter[]>([]);
   const [allCombinedReadings, setAllCombinedReadings] = React.useState<DisplayReading[]>([]);
   
-  const [customersForForm, setCustomersForForm] = React.useState<Pick<IndividualCustomer, 'id' | 'name' | 'meterNumber'>[]>([]);
-  const [bulkMetersForForm, setBulkMetersForForm] = React.useState<Pick<BulkMeter, 'id' | 'name' | 'meterNumber'>[]>([]);
-
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState(""); 
 
@@ -112,15 +109,8 @@ export default function AdminMeterReadingsPage() {
       initializeBulkMeterReadings(),
     ]).then(() => {
       if (!isMounted) return;
-      const fetchedCustomers = getCustomers();
-      const fetchedBulkMeters = getBulkMeters();
-      
-      setAllCustomers(fetchedCustomers);
-      setAllBulkMeters(fetchedBulkMeters);
-      
-      setCustomersForForm(fetchedCustomers.map(c => ({ id: c.id, name: c.name, meterNumber: c.meterNumber })));
-      setBulkMetersForForm(fetchedBulkMeters.map(bm => ({ id: bm.id, name: bm.name, meterNumber: bm.meterNumber })));
-      
+      setAllCustomers(getCustomers());
+      setAllBulkMeters(getBulkMeters());
       combineAndSortReadings();
       setIsLoading(false);
     }).catch(error => {
@@ -130,8 +120,8 @@ export default function AdminMeterReadingsPage() {
       setIsLoading(false);
     });
     
-    const unsubCust = subscribeToCustomers((updated) => { if(isMounted) { setAllCustomers(updated); setCustomersForForm(updated.map(c=>({id:c.id, name:c.name, meterNumber: c.meterNumber}))); combineAndSortReadings(); }});
-    const unsubBM = subscribeToBulkMeters((updated) => { if(isMounted) { setAllBulkMeters(updated); setBulkMetersForForm(updated.map(c=>({id:c.id, name:c.name, meterNumber: c.meterNumber}))); combineAndSortReadings(); }});
+    const unsubCust = subscribeToCustomers((updated) => { if(isMounted) { setAllCustomers(updated); combineAndSortReadings(); }});
+    const unsubBM = subscribeToBulkMeters((updated) => { if(isMounted) { setAllBulkMeters(updated); combineAndSortReadings(); }});
     const unsubIndiReadings = subscribeToIndividualCustomerReadings(() => { if(isMounted) combineAndSortReadings(); });
     const unsubBulkReadings = subscribeToBulkMeterReadings(() => { if(isMounted) combineAndSortReadings(); });
     
@@ -226,7 +216,7 @@ export default function AdminMeterReadingsPage() {
           </div>
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DialogTrigger asChild>
-              <Button disabled={isLoading && (customersForForm.length === 0 && bulkMetersForForm.length === 0)}>
+              <Button disabled={isLoading && (allCustomers.length === 0 && allBulkMeters.length === 0)}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add New Reading
               </Button>
             </DialogTrigger>
@@ -239,8 +229,8 @@ export default function AdminMeterReadingsPage() {
               </DialogHeader>
               <AddMeterReadingForm 
                   onSubmit={handleAddReadingSubmit} 
-                  customers={customersForForm}
-                  bulkMeters={bulkMetersForForm}
+                  customers={allCustomers}
+                  bulkMeters={allBulkMeters}
                   isLoading={isLoading}
               />
             </DialogContent>

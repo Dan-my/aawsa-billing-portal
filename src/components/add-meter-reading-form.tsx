@@ -35,27 +35,61 @@ import {
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 
-const formSchema = z.object({
+// Base schema for form fields, we will add a refinement check dynamically.
+const formSchemaBase = z.object({
   meterType: z.enum(['individual_customer_meter', 'bulk_meter'], {
     required_error: "Please select a meter type.",
   }),
   entityId: z.string().min(1, "Please select a meter."),
-  reading: z.coerce.number().min(0, "Reading must be a non-negative number"),
+  reading: z.coerce.number().min(0, "Reading must be a non-negative number."),
   date: z.date({
     required_error: "A date is required.",
   }),
 });
 
-export type AddMeterReadingFormValues = z.infer<typeof formSchema>;
+export type AddMeterReadingFormValues = z.infer<typeof formSchemaBase>;
 
 interface AddMeterReadingFormProps {
   onSubmit: (values: AddMeterReadingFormValues) => void;
-  customers: Pick<IndividualCustomer, 'id' | 'name' | 'meterNumber'>[];
-  bulkMeters: Pick<BulkMeter, 'id' | 'name' | 'meterNumber'>[];
+  // We now need the full objects to access currentReading for validation.
+  customers: IndividualCustomer[];
+  bulkMeters: BulkMeter[];
   isLoading?: boolean;
 }
 
 export function AddMeterReadingForm({ onSubmit, customers, bulkMeters, isLoading }: AddMeterReadingFormProps) {
+  
+  // The final schema is built dynamically inside the component to include a refinement check.
+  const formSchema = React.useMemo(() => {
+    return formSchemaBase.refine(
+      (data) => {
+        let lastReading = -1; // Use -1 to indicate not found, as 0 is a valid reading.
+        if (data.meterType === 'individual_customer_meter') {
+          const customer = customers.find(c => c.id === data.entityId);
+          if (customer) lastReading = customer.currentReading;
+        } else if (data.meterType === 'bulk_meter') {
+          const bulkMeter = bulkMeters.find(bm => bm.id === data.entityId);
+          if (bulkMeter) lastReading = bulkMeter.currentReading;
+        }
+        // If we haven't found the entity yet, don't block validation. Backend will catch it.
+        if (lastReading === -1) return true;
+        return data.reading >= lastReading;
+      },
+      (data) => {
+        let lastReading = 0;
+        if (data.meterType === 'individual_customer_meter') {
+          lastReading = customers.find(c => c.id === data.entityId)?.currentReading ?? 0;
+        } else {
+          lastReading = bulkMeters.find(bm => bm.id === data.entityId)?.currentReading ?? 0;
+        }
+        return {
+           message: `Reading cannot be lower than the last reading (${lastReading.toFixed(2)}).`,
+           path: ["reading"],
+        }
+      }
+    );
+  }, [customers, bulkMeters]);
+
   const form = useForm<AddMeterReadingFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -88,6 +122,14 @@ export function AddMeterReadingForm({ onSubmit, customers, bulkMeters, isLoading
     onSubmit(values);
   }
 
+  // When entityId changes, we might want to trigger validation on the 'reading' field if it has been touched.
+  const selectedEntityId = form.watch("entityId");
+  React.useEffect(() => {
+    if (form.getFieldState('reading').isTouched) {
+      form.trigger('reading');
+    }
+  }, [selectedEntityId, form]);
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
@@ -97,7 +139,15 @@ export function AddMeterReadingForm({ onSubmit, customers, bulkMeters, isLoading
           render={({ field }) => (
             <FormItem>
               <FormLabel>Meter Type</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+              <Select 
+                 onValueChange={(value) => {
+                    field.onChange(value);
+                    form.resetField("entityId"); // Reset entity when type changes
+                    form.clearErrors("reading");
+                }} 
+                defaultValue={field.value} 
+                disabled={isLoading}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select meter type" />
@@ -152,7 +202,7 @@ export function AddMeterReadingForm({ onSubmit, customers, bulkMeters, isLoading
                   step="0.01"
                   placeholder="Enter reading value"
                   {...field}
-                  disabled={isLoading}
+                  disabled={isLoading || !selectedEntityId}
                 />
               </FormControl>
               <FormMessage />

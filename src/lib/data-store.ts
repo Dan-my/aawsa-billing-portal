@@ -1129,6 +1129,14 @@ export const removeBill = async (billId: string): Promise<StoreOperationResult<v
 };
 
 export const addIndividualCustomerReading = async (readingData: Omit<DomainIndividualCustomerReading, 'id' | 'createdAt' | 'updatedAt'>): Promise<StoreOperationResult<DomainIndividualCustomerReading>> => {
+    const customer = customers.find(c => c.id === readingData.individualCustomerId);
+    if (!customer) {
+        return { success: false, message: "Customer not found." };
+    }
+    if (readingData.readingValue < customer.currentReading) {
+        return { success: false, message: `New reading (${readingData.readingValue}) cannot be lower than the current reading (${customer.currentReading}).` };
+    }
+
     const payload = mapDomainIndividualReadingToSupabase(readingData) as IndividualCustomerReadingInsert;
     const { data: newSupabaseReading, error } = await supabaseCreateIndividualCustomerReading(payload);
 
@@ -1137,11 +1145,9 @@ export const addIndividualCustomerReading = async (readingData: Omit<DomainIndiv
         individualCustomerReadings = [newReading, ...individualCustomerReadings];
         notifyIndividualCustomerReadingListeners();
 
-        const customer = customers.find(c => c.id === newReading.individualCustomerId);
-        if (customer) {
-            const customerUpdatePayload = { ...customer, currentReading: newReading.readingValue };
-            await updateCustomer(customerUpdatePayload);
-        }
+        // Also update the main customer record's current reading
+        const customerUpdatePayload = { ...customer, currentReading: newReading.readingValue };
+        await updateCustomer(customerUpdatePayload);
 
         return { success: true, data: newReading };
     }
@@ -1150,6 +1156,14 @@ export const addIndividualCustomerReading = async (readingData: Omit<DomainIndiv
 };
 
 export const addBulkMeterReading = async (readingData: Omit<DomainBulkMeterReading, 'id' | 'createdAt' | 'updatedAt'>): Promise<StoreOperationResult<DomainBulkMeterReading>> => {
+    const bulkMeter = bulkMeters.find(bm => bm.id === readingData.bulkMeterId);
+    if (!bulkMeter) {
+        return { success: false, message: "Bulk meter not found." };
+    }
+    if (readingData.readingValue < bulkMeter.currentReading) {
+        return { success: false, message: `New reading (${readingData.readingValue}) cannot be lower than the current reading (${bulkMeter.currentReading}).` };
+    }
+
     const payload = mapDomainBulkReadingToSupabase(readingData) as BulkMeterReadingInsert;
     const { data: newSupabaseReading, error } = await supabaseCreateBulkMeterReading(payload);
 
@@ -1158,11 +1172,9 @@ export const addBulkMeterReading = async (readingData: Omit<DomainBulkMeterReadi
         bulkMeterReadings = [newReading, ...bulkMeterReadings];
         notifyBulkMeterReadingListeners();
 
-        const bulkMeter = bulkMeters.find(bm => bm.id === newReading.bulkMeterId);
-        if (bulkMeter) {
-            const bulkMeterUpdatePayload = { ...bulkMeter, currentReading: newReading.readingValue };
-            await updateBulkMeter(bulkMeterUpdatePayload);
-        }
+        // Also update the main bulk meter record's current reading
+        const bulkMeterUpdatePayload = { ...bulkMeter, currentReading: newReading.readingValue };
+        await updateBulkMeter(bulkMeterUpdatePayload);
 
         return { success: true, data: newReading };
     }

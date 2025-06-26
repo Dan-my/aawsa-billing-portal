@@ -6,7 +6,7 @@ import type { BulkMeter as DomainBulkMeterTypeFromTypes } from '@/app/admin/bulk
 import type { Branch as DomainBranch } from '@/app/admin/branches/branch-types';
 import type { StaffMember } from '@/app/admin/staff-management/staff-types';
 // import type { Voucher as DomainVoucher, VoucherStatus, VoucherDiscountType } from '@/app/admin/voucher/voucher-types'; // Removed Voucher
-import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus } from '@/lib/billing';
+import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult } from '@/lib/billing';
 
 
 import type {
@@ -186,8 +186,8 @@ const notifyCustomerListeners = () => customerListeners.forEach(listener => list
 const notifyBulkMeterListeners = () => bulkMeterListeners.forEach(listener => listener([...bulkMeters]));
 const notifyStaffMemberListeners = () => staffMemberListeners.forEach(listener => listener([...staffMembers]));
 const notifyBillListeners = () => billListeners.forEach(listener => listener([...bills]));
-const notifyMeterReadingListeners = () => meterReadings.forEach(listener => listener([...meterReadings]));
-const notifyPaymentListeners = () => payments.forEach(listener => listener([...payments])); 
+const notifyMeterReadingListeners = () => meterReadingListeners.forEach(listener => listener([...meterReadings]));
+const notifyPaymentListeners = () => paymentListeners.forEach(listener => listener([...payments])); 
 const notifyReportLogListeners = () => reportLogListeners.forEach(listener => listener([...reportLogs]));
 // const notifyVoucherListeners = () => voucherListeners.forEach(listener => listener([...vouchers])); // Removed Voucher
 

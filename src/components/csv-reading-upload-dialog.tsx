@@ -36,8 +36,8 @@ const CSV_SPLIT_REGEX = /,(?=(?:[^"]*"[^"]*")*[^"]*$)/;
 const readingCsvRowSchema = z.object({
   meter_number: z.string().min(1, { message: "meter_number is required." }),
   reading_value: z.coerce.number().min(0, { message: "reading_value must be a non-negative number." }),
-  reading_date: z.string().refine(val => isValid(parse(val, 'yyyy-MM-dd', new Date())), {
-    message: "reading_date must be a valid date in YYYY-MM-DD format.",
+  reading_date: z.string().refine(val => isValid(parse(val, 'dd-MM-yyyy', new Date())), {
+    message: "reading_date must be a valid date in DD-MM-YYYY format.",
   }),
 });
 
@@ -109,7 +109,7 @@ export function CsvReadingUploadDialog({ open, onOpenChange, meterType, meters, 
 
         try {
           const validatedRow = readingCsvRowSchema.parse(rowData);
-          const readingDate = parse(validatedRow.reading_date, 'yyyy-MM-dd', new Date());
+          const readingDate = parse(validatedRow.reading_date, 'dd-MM-yyyy', new Date());
 
           const meter = meters.find(m => m.meterNumber === validatedRow.meter_number);
 
@@ -192,7 +192,7 @@ export function CsvReadingUploadDialog({ open, onOpenChange, meterType, meters, 
         <DialogHeader>
           <UIDialogTitle>Upload {meterType === 'individual' ? 'Individual Customer' : 'Bulk Meter'} Readings</UIDialogTitle>
           <UIDialogDescription>
-              Select a CSV file with columns: meter_number, reading_value, reading_date (in YYYY-MM-DD format).
+              Select a CSV file with columns: meter_number, reading_value, reading_date (in DD-MM-YYYY format).
           </UIDialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">

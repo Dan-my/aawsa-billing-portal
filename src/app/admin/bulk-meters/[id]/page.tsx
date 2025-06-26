@@ -311,7 +311,7 @@ export default function BulkMeterDetailsPage() {
           <div className="space-y-1">
              <p className="text-lg"><strong className="font-semibold">Current Usage:</strong> {bulkUsage.toFixed(2)} m³</p>
              <p className="text-xl text-primary"><strong className="font-semibold">Current Bill:</strong> ETB {totalBulkBillForPeriod.toFixed(2)}</p>
-             <p className={cn("text-sm font-semibold", (bulkMeter.arrears || 0) > 0 ? "text-destructive" : "text-muted-foreground")}>Arrears: ETB {(bulkMeter.arrears || 0).toFixed(2)}</p>
+             <p className={cn("text-sm font-semibold", (bulkMeter.arrears || 0) > 0 ? "text-destructive" : "text-muted-foreground")}>Outstanding Bill: ETB {(bulkMeter.arrears || 0).toFixed(2)}</p>
              <p className="text-2xl font-bold text-primary">Total Payable: ETB {totalPayable.toFixed(2)}</p>
              <div className="flex items-center gap-2 mt-1">
                <strong className="font-semibold">Payment Status:</strong>
@@ -493,7 +493,7 @@ export default function BulkMeterDetailsPage() {
             <p><strong className="font-semibold w-60 inline-block">VAT (15%):</strong> ETB {billDetails.vatAmount.toFixed(2)}</p>
             <p><strong className="font-semibold w-60 inline-block">Difference usage:</strong> {differenceUsage.toFixed(2)} m³</p>
             <p><strong className="font-semibold w-60 inline-block">Total Difference bill:</strong> ETB {differenceBill.toFixed(2)}</p>
-            <p className="border-t pt-2 mt-2"><strong className="font-semibold w-60 inline-block">Arrears (Previous Balance):</strong> ETB {(bulkMeter.arrears || 0).toFixed(2)}</p>
+            <p className="border-t pt-2 mt-2"><strong className="font-semibold w-60 inline-block">Outstanding Bill (Previous Balance):</strong> ETB {(bulkMeter.arrears || 0).toFixed(2)}</p>
             <p className="font-bold text-base"><strong className="font-semibold w-60 inline-block">Total Amount Payable:</strong> ETB {totalPayable.toFixed(2)}</p>
             <p><strong className="font-semibold w-60 inline-block">Paid/Unpaid:</strong> {bulkMeter.paymentStatus}</p>
             <p><strong className="font-semibold w-60 inline-block">Month:</strong> {bulkMeter.month}</p>

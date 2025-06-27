@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -21,9 +22,13 @@ import {
   getBulkMeters,
   subscribeToBulkMeters,
   initializeBulkMeters,
+  getBranches,
+  initializeBranches,
+  subscribeToBranches
 } from "@/lib/data-store";
 import type { PaymentStatus, CustomerType, SewerageConnection } from "@/lib/billing";
 import type { BulkMeter as AdminBulkMeterType } from "@/app/admin/bulk-meters/bulk-meter-types";
+import type { Branch } from "@/app/admin/branches/branch-types";
 
 
 interface User {
@@ -37,6 +42,7 @@ export default function StaffIndividualCustomersPage() {
   const [allCustomers, setAllCustomers] = React.useState<IndividualCustomer[]>([]);
   const [branchFilteredCustomers, setBranchFilteredCustomers] = React.useState<IndividualCustomer[]>([]);
   const [allBulkMeters, setAllBulkMeters] = React.useState<AdminBulkMeterType[]>([]);
+  const [allBranches, setAllBranches] = React.useState<Branch[]>([]);
   const [branchBulkMetersList, setBranchBulkMetersList] = React.useState<{id: string, name: string}[]>([]);
   
   const [isLoading, setIsLoading] = React.useState(true);
@@ -50,32 +56,25 @@ export default function StaffIndividualCustomersPage() {
   const filterDataByBranch = React.useCallback((
     customersToFilter: IndividualCustomer[],
     bulkMetersToFilter: AdminBulkMeterType[],
+    branchesToFilter: Branch[],
     branchName?: string
   ) => {
     if (!branchName) {
-      // If no branch name, staff sees no branch-specific customers.
-      // They can still see all bulk meters in the dropdown if adding, but it won't be pre-filtered.
       setBranchBulkMetersList(bulkMetersToFilter.map(bm => ({ id: bm.id, name: bm.name })));
       return { filteredCustomers: [], filteredBranchBulkMeters: bulkMetersToFilter };
     }
 
     const simpleBranchName = branchName.replace(/ Branch$/i, "").toLowerCase().trim();
+    const branch = branchesToFilter.find(b => b.name.toLowerCase().includes(simpleBranchName));
 
-    const localBranchBulkMeters = bulkMetersToFilter.filter(bm =>
-      (bm.location?.toLowerCase() || "").includes(simpleBranchName) ||
-      (bm.name?.toLowerCase() || "").includes(simpleBranchName) ||
-      (bm.ward?.toLowerCase() || "").includes(simpleBranchName)
-    );
+    const localBranchBulkMeters = bulkMetersToFilter.filter(bm => bm.branchId === branch?.id || (bm.location?.toLowerCase() || "").includes(simpleBranchName));
     setBranchBulkMetersList(localBranchBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
     
     const branchBulkMeterIds = localBranchBulkMeters.map(bm => bm.id);
 
     const localFilteredCustomers = customersToFilter.filter(customer => 
-      (customer.assignedBulkMeterId && branchBulkMeterIds.includes(customer.assignedBulkMeterId)) ||
-      (!customer.assignedBulkMeterId && // For customers not assigned to any bulk meter
-        ((customer.location?.toLowerCase() || "").includes(simpleBranchName) ||
-         (customer.ward?.toLowerCase() || "").includes(simpleBranchName))
-      )
+      customer.branchId === branch?.id ||
+      (customer.assignedBulkMeterId && branchBulkMeterIds.includes(customer.assignedBulkMeterId))
     );
     return { filteredCustomers: localFilteredCustomers, filteredBranchBulkMeters: localBranchBulkMeters };
   }, []);
@@ -101,38 +100,44 @@ export default function StaffIndividualCustomersPage() {
     setIsLoading(true);
     Promise.all([
       initializeBulkMeters(),
-      initializeCustomers()
+      initializeCustomers(),
+      initializeBranches()
     ]).then(() => {
       if (!isMounted) return;
       const currentCustomers = getCustomers();
       const currentBulkMeters = getBulkMeters();
+      const currentBranches = getBranches();
       setAllCustomers(currentCustomers);
       setAllBulkMeters(currentBulkMeters);
-      const { filteredCustomers } = filterDataByBranch(currentCustomers, currentBulkMeters, localBranchName);
+      setAllBranches(currentBranches);
+      const { filteredCustomers } = filterDataByBranch(currentCustomers, currentBulkMeters, currentBranches, localBranchName);
       setBranchFilteredCustomers(filteredCustomers);
       setIsLoading(false);
     });
 
-    const unsubscribeCustomers = subscribeToCustomers((updatedCustomers) => {
-      if (!isMounted) return;
-       setAllCustomers(updatedCustomers);
-       const { filteredCustomers } = filterDataByBranch(updatedCustomers, allBulkMeters, localBranchName);
-       setBranchFilteredCustomers(filteredCustomers);
-    });
-    const unsubscribeBulkMeters = subscribeToBulkMeters((updatedBulkMeters) => {
-      if (!isMounted) return;
-      setAllBulkMeters(updatedBulkMeters);
-      // When bulk meters update, re-filter customers and the branch bulk meter list
-      const { filteredCustomers } = filterDataByBranch(allCustomers, updatedBulkMeters, localBranchName);
-      setBranchFilteredCustomers(filteredCustomers);
-    });
+    const handleStoresUpdate = () => {
+        if(!isMounted) return;
+        const currentCustomers = getCustomers();
+        const currentBulkMeters = getBulkMeters();
+        const currentBranches = getBranches();
+        setAllCustomers(currentCustomers);
+        setAllBulkMeters(currentBulkMeters);
+        setAllBranches(currentBranches);
+        const { filteredCustomers } = filterDataByBranch(currentCustomers, currentBulkMeters, currentBranches, localBranchName);
+        setBranchFilteredCustomers(filteredCustomers);
+    }
+
+    const unsubscribeCustomers = subscribeToCustomers(handleStoresUpdate);
+    const unsubscribeBulkMeters = subscribeToBulkMeters(handleStoresUpdate);
+    const unsubscribeBranches = subscribeToBranches(handleStoresUpdate);
 
     return () => {
       isMounted = false;
       unsubscribeCustomers();
       unsubscribeBulkMeters();
+      unsubscribeBranches();
     };
-  }, [filterDataByBranch, allCustomers, allBulkMeters]);
+  }, [filterDataByBranch]);
 
   const handleAddCustomer = () => {
     setSelectedCustomer(null);
@@ -164,8 +169,7 @@ export default function StaffIndividualCustomersPage() {
 
   const handleSubmitCustomer = async (data: IndividualCustomerFormValues) => {
     if (selectedCustomer) {
-      const updatedCustomerData: IndividualCustomer = {
-        ...selectedCustomer,
+      const updatedCustomerData: Partial<Omit<IndividualCustomer, 'id'>> = {
         ...data,
         ordinal: Number(data.ordinal),
         meterSize: Number(data.meterSize),
@@ -177,7 +181,7 @@ export default function StaffIndividualCustomersPage() {
         sewerageConnection: data.sewerageConnection as SewerageConnection,
         assignedBulkMeterId: data.assignedBulkMeterId || undefined,
       };
-      const result = await updateCustomerInStore(updatedCustomerData);
+      const result = await updateCustomerInStore(selectedCustomer.id, updatedCustomerData);
       if (result.success) {
         toast({ title: "Customer Updated", description: `${data.name} has been updated.` });
       } else {
@@ -216,6 +220,7 @@ export default function StaffIndividualCustomersPage() {
   const searchedCustomers = branchFilteredCustomers.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.meterNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (customer.branchId && allBranches.find(b => b.id === customer.branchId)?.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
     customer.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.ward.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (customer.assignedBulkMeterId && getBulkMeterNameFromAll(customer.assignedBulkMeterId).toLowerCase().includes(searchTerm.toLowerCase()))
@@ -266,6 +271,7 @@ export default function StaffIndividualCustomersPage() {
               onEdit={handleEditCustomer}
               onDelete={handleDeleteCustomer}
               bulkMetersList={branchBulkMetersList} 
+              branches={allBranches}
             />
           )}
         </CardContent>

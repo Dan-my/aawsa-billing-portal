@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -204,9 +205,8 @@ export default function StaffBulkMeterDetailsPage() {
 
   const handleSubmitBulkMeterForm = async (data: BulkMeterFormValues) => {
     if (bulkMeter) {
-        const updatedBulkMeterData: BulkMeter = { ...bulkMeter, ...data };
-        await updateBulkMeterInStore(updatedBulkMeterData);
-        toast({ title: "Bulk Meter Updated", description: `${updatedBulkMeterData.name} has been updated.` });
+        await updateBulkMeterInStore(bulkMeter.id, data);
+        toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
     }
     setIsBulkMeterFormOpen(false);
   };
@@ -230,15 +230,15 @@ export default function StaffBulkMeterDetailsPage() {
 
   const handleSubmitCustomerForm = async (data: IndividualCustomerFormValues) => {
     if (selectedCustomer) {
-      const updatedCustomerData: IndividualCustomer = {
-          ...selectedCustomer, ...data, ordinal: Number(data.ordinal), meterSize: Number(data.meterSize),
+      const updatedCustomerData: Partial<Omit<IndividualCustomer, 'id'>> = {
+          ...data, ordinal: Number(data.ordinal), meterSize: Number(data.meterSize),
           previousReading: Number(data.previousReading), currentReading: Number(data.currentReading), 
           status: data.status as IndividualCustomerStatus, paymentStatus: data.paymentStatus as PaymentStatus,
           customerType: data.customerType as CustomerType, sewerageConnection: data.sewerageConnection as SewerageConnection,
           assignedBulkMeterId: data.assignedBulkMeterId || undefined,
       };
-      await updateCustomerInStore(updatedCustomerData);
-      toast({ title: "Customer Updated", description: `${updatedCustomerData.name} has been updated.` });
+      await updateCustomerInStore(selectedCustomer.id, updatedCustomerData);
+      toast({ title: "Customer Updated", description: `${data.name} has been updated.` });
     }
     setIsCustomerFormOpen(false); setSelectedCustomer(null);
   };
@@ -298,14 +298,13 @@ export default function StaffBulkMeterDetailsPage() {
 
     const outstandingForNextCycle = carryBalance ? totalPayableForThisPeriod : 0;
 
-    const updatePayload: BulkMeter = {
-        ...bulkMeter,
+    const updatePayload: Partial<Omit<BulkMeter, 'id'>> = {
         previousReading: bulkMeter.currentReading,
         outStandingbill: outstandingForNextCycle,
         paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
     };
 
-    await updateBulkMeterInStore(updatePayload);
+    await updateBulkMeterInStore(bulkMeter.id, updatePayload);
     toast({ title: "Billing Cycle Closed", description: carryBalance ? `Balance of ETB ${totalPayableForThisPeriod.toFixed(2)} carried forward.` : "Bill marked as paid and new cycle started." });
   };
 

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -17,8 +18,12 @@ import {
   updateBulkMeter as updateBulkMeterInStore, 
   deleteBulkMeter as deleteBulkMeterFromStore,
   subscribeToBulkMeters,
-  initializeBulkMeters 
+  initializeBulkMeters,
+  getBranches,
+  initializeBranches,
+  subscribeToBranches
 } from "@/lib/data-store";
+import type { Branch } from "@/app/admin/branches/branch-types";
 
 interface User {
   email: string;
@@ -30,6 +35,7 @@ export default function StaffBulkMetersPage() {
   const { toast } = useToast();
   const [allBulkMeters, setAllBulkMeters] = React.useState<BulkMeter[]>([]);
   const [branchFilteredBulkMeters, setBranchFilteredBulkMeters] = React.useState<BulkMeter[]>([]);
+  const [allBranches, setAllBranches] = React.useState<Branch[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
@@ -38,15 +44,16 @@ export default function StaffBulkMetersPage() {
   const [bulkMeterToDelete, setBulkMeterToDelete] = React.useState<BulkMeter | null>(null);
   const [staffBranchName, setStaffBranchName] = React.useState<string | undefined>(undefined);
 
-  const filterBulkMetersByBranch = React.useCallback((meters: BulkMeter[], branchName?: string) => {
-    if (!branchName) {
-      return []; // Or meters if staff should see all on error/no branch
+  const filterBulkMetersByBranch = React.useCallback((meters: BulkMeter[], branchName?: string, branches?: Branch[]) => {
+    if (!branchName || !branches) {
+      return []; 
     }
     const simpleBranchName = branchName.replace(/ Branch$/i, "").toLowerCase().trim();
+    const branch = branches.find(b => b.name.toLowerCase().includes(simpleBranchName));
+    
     return meters.filter(bm =>
-      (bm.location?.toLowerCase() || "").includes(simpleBranchName) ||
-      (bm.name?.toLowerCase() || "").includes(simpleBranchName) ||
-      (bm.ward?.toLowerCase() || "").includes(simpleBranchName)
+      bm.branchId === branch?.id ||
+      (bm.location?.toLowerCase() || "").includes(simpleBranchName)
     );
   }, []);
 
@@ -68,25 +75,37 @@ export default function StaffBulkMetersPage() {
     }
 
     setIsLoading(true);
-    initializeBulkMeters().then(() => {
+    Promise.all([
+        initializeBulkMeters(),
+        initializeBranches()
+    ]).then(() => {
       if (!isMounted) return;
       const currentMeters = getBulkMeters();
+      const currentBranches = getBranches();
       setAllBulkMeters(currentMeters);
-      setBranchFilteredBulkMeters(filterBulkMetersByBranch(currentMeters, localBranchName));
+      setAllBranches(currentBranches);
+      setBranchFilteredBulkMeters(filterBulkMetersByBranch(currentMeters, localBranchName, currentBranches));
       setIsLoading(false);
     });
     
-    const unsubscribe = subscribeToBulkMeters((updatedBulkMeters) => {
+    const unsubscribeBM = subscribeToBulkMeters((updatedBulkMeters) => {
       if (!isMounted) return;
        setAllBulkMeters(updatedBulkMeters);
-       setBranchFilteredBulkMeters(filterBulkMetersByBranch(updatedBulkMeters, localBranchName));
-       // setIsLoading(false); // Re-consider if needed here or just initial load
+       setBranchFilteredBulkMeters(filterBulkMetersByBranch(updatedBulkMeters, localBranchName, allBranches));
     });
+
+    const unsubscribeBranches = subscribeToBranches((updatedBranches) => {
+        if(!isMounted) return;
+        setAllBranches(updatedBranches);
+        setBranchFilteredBulkMeters(filterBulkMetersByBranch(allBulkMeters, localBranchName, updatedBranches));
+    });
+
     return () => {
       isMounted = false;
-      unsubscribe();
+      unsubscribeBM();
+      unsubscribeBranches();
     };
-  }, [filterBulkMetersByBranch]);
+  }, [filterBulkMetersByBranch, allBulkMeters, allBranches]);
 
   const handleAddBulkMeter = () => {
     setSelectedBulkMeter(null);
@@ -113,24 +132,15 @@ export default function StaffBulkMetersPage() {
   };
 
   const handleSubmitBulkMeter = async (data: BulkMeterFormValues) => {
-    // For staff, new bulk meters should ideally be associated with their branch.
-    // This might involve pre-filling location/ward if possible, or validation.
-    // For now, we'll rely on the form data.
     if (selectedBulkMeter) {
-      const updatedBulkMeterData: BulkMeter = {
-        id: selectedBulkMeter.id,
-        ...data, 
-      };
-      await updateBulkMeterInStore(updatedBulkMeterData);
+      await updateBulkMeterInStore(selectedBulkMeter.id, data);
       toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
     } else {
-      // Ensure new bulk meters are associated with the staff's branch if possible.
-      // This might require enhancing the form or how data is submitted.
-      // Defaulting to Active and Unpaid as per admin data entry.
       const newBulkMeterData: Omit<BulkMeter, 'id'> = {
         ...data,
         status: data.status || "Active", 
         paymentStatus: data.paymentStatus || "Unpaid",
+        outStandingbill: 0,
       };
       await addBulkMeterToStore(newBulkMeterData); 
       toast({ title: "Bulk Meter Added", description: `${data.name} has been added.` });
@@ -142,6 +152,7 @@ export default function StaffBulkMetersPage() {
   const searchedBulkMeters = branchFilteredBulkMeters.filter(bm =>
     bm.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     bm.meterNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (bm.branchId && allBranches.find(b => b.id === bm.branchId)?.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
     bm.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
     bm.ward.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -190,6 +201,7 @@ export default function StaffBulkMetersPage() {
               data={searchedBulkMeters}
               onEdit={handleEditBulkMeter}
               onDelete={handleDeleteBulkMeter}
+              branches={allBranches}
             />
           )}
         </CardContent>

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -30,8 +31,8 @@ import type { Branch } from "../branches/branch-types"; // Added
 
 // Fallback initial data, actual data comes from Supabase via data-store
 export const initialCustomers: IndividualCustomer[] = [
-  { id: "cust001", name: "Abebe Bikila", customerKeyNumber: "ICK001", contractNumber: "ICC001", customerType: "Domestic", bookNumber: "B001", ordinal: 1, meterSize: 0.75, meterNumber: "IMTR001", previousReading: 100, currentReading: 120, month: "2023-11", specificArea: "Kebele 17", location: "Bole", ward: "Woreda 3", sewerageConnection: "Yes", status: "Active", paymentStatus: "Paid", calculatedBill: 150.50, assignedBulkMeterId: "bm001", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "cust002", name: "Fatuma Roba", customerKeyNumber: "ICK002", contractNumber: "ICC002", customerType: "Non-domestic", bookNumber: "B002", ordinal: 1, meterSize: 1, meterNumber: "IMTR002", previousReading: 500, currentReading: 550, month: "2023-11", specificArea: "Industrial Zone", location: "Kality", ward: "Woreda 5", sewerageConnection: "No", status: "Active", paymentStatus: "Unpaid", calculatedBill: 750.00, assignedBulkMeterId: "bm002", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: "cust001", name: "Abebe Bikila", customerKeyNumber: "ICK001", contractNumber: "ICC001", customerType: "Domestic", bookNumber: "B001", ordinal: 1, meterSize: 0.75, meterNumber: "IMTR001", previousReading: 100, currentReading: 120, month: "2023-11", specificArea: "Kebele 17", location: "Bole", ward: "Woreda 3", sewerageConnection: "Yes", status: "Active", paymentStatus: "Paid", calculatedBill: 150.50, arrears: 0, assignedBulkMeterId: "bm001", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: "cust002", name: "Fatuma Roba", customerKeyNumber: "ICK002", contractNumber: "ICC002", customerType: "Non-domestic", bookNumber: "B002", ordinal: 1, meterSize: 1, meterNumber: "IMTR002", previousReading: 500, currentReading: 550, month: "2023-11", specificArea: "Industrial Zone", location: "Kality", ward: "Woreda 5", sewerageConnection: "No", status: "Active", paymentStatus: "Unpaid", calculatedBill: 750.00, arrears: 0, assignedBulkMeterId: "bm002", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
 ];
 
 
@@ -108,8 +109,7 @@ export default function IndividualCustomersPage() {
 
   const handleSubmitCustomer = async (data: IndividualCustomerFormValues) => {
     if (selectedCustomer) {
-      const updatedCustomerData: IndividualCustomer = {
-        ...selectedCustomer, 
+      const updatedCustomerData: Partial<Omit<IndividualCustomer, 'id'>> = {
         ...data, 
         ordinal: Number(data.ordinal),
         meterSize: Number(data.meterSize),
@@ -121,7 +121,7 @@ export default function IndividualCustomersPage() {
         sewerageConnection: data.sewerageConnection as SewerageConnection,
         assignedBulkMeterId: data.assignedBulkMeterId || undefined,
       };
-      const result = await updateCustomerInStore(updatedCustomerData);
+      const result = await updateCustomerInStore(selectedCustomer.id, updatedCustomerData);
       if (result.success) {
         toast({ title: "Customer Updated", description: `${data.name} has been updated.` });
       } else {

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -26,9 +27,9 @@ import type { Branch } from "../branches/branch-types"; // Added
 
 // Initial data is now mainly for reference or if Supabase fetch fails and a fallback is desired.
 export const initialBulkMeters: BulkMeter[] = [
-  { id: "bm001", name: "Kality Industrial Meter", customerKeyNumber: "BMK001", contractNumber: "BMC001", meterSize: 3, meterNumber: "MTR-BM-001", previousReading: 10000, currentReading: 10500, month: "2023-11", specificArea: "Ind. Zone A", location: "Kality", ward: "Woreda 5", status: "Active", paymentStatus: "Paid" },
-  { id: "bm002", name: "Bole Airport Feeder", customerKeyNumber: "BMB002", contractNumber: "BMC002", meterSize: 4, meterNumber: "MTR-BM-002", previousReading: 25000, currentReading: 26500, month: "2023-11", specificArea: "Airport Cargo", location: "Bole", ward: "Woreda 1", status: "Active", paymentStatus: "Unpaid" },
-  { id: "bm003", name: "Megenagna Res. Supply", customerKeyNumber: "BMM003", contractNumber: "BMC003", meterSize: 2.5, meterNumber: "MTR-BM-003", previousReading: 5000, currentReading: 5200, month: "2023-11", specificArea: "Block 10", location: "Megenagna", ward: "Woreda 8", status: "Maintenance", paymentStatus: "Paid" },
+  { id: "bm001", name: "Kality Industrial Meter", customerKeyNumber: "BMK001", contractNumber: "BMC001", meterSize: 3, meterNumber: "MTR-BM-001", previousReading: 10000, currentReading: 10500, month: "2023-11", specificArea: "Ind. Zone A", location: "Kality", ward: "Woreda 5", status: "Active", paymentStatus: "Paid", outStandingbill: 0 },
+  { id: "bm002", name: "Bole Airport Feeder", customerKeyNumber: "BMB002", contractNumber: "BMC002", meterSize: 4, meterNumber: "MTR-BM-002", previousReading: 25000, currentReading: 26500, month: "2023-11", specificArea: "Airport Cargo", location: "Bole", ward: "Woreda 1", status: "Active", paymentStatus: "Unpaid", outStandingbill: 0 },
+  { id: "bm003", name: "Megenagna Res. Supply", customerKeyNumber: "BMM003", contractNumber: "BMC003", meterSize: 2.5, meterNumber: "MTR-BM-003", previousReading: 5000, currentReading: 5200, month: "2023-11", specificArea: "Block 10", location: "Megenagna", ward: "Woreda 8", status: "Maintenance", paymentStatus: "Paid", outStandingbill: 0 },
 ];
 
 
@@ -94,11 +95,7 @@ export default function BulkMetersPage() {
 
   const handleSubmitBulkMeter = async (data: BulkMeterFormValues) => {
     if (selectedBulkMeter) {
-      const updatedBulkMeterData: BulkMeter = {
-        id: selectedBulkMeter.id,
-        ...data, 
-      };
-      await updateBulkMeterInStore(updatedBulkMeterData);
+      await updateBulkMeterInStore(selectedBulkMeter.id, data);
       toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
     } else {
       await addBulkMeterToStore(data); 

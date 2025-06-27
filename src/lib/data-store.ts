@@ -915,13 +915,12 @@ export const addBranch = async (branchData: Omit<DomainBranch, 'id'>): Promise<S
   return { success: false, message: error?.message || "Failed to add branch.", error };
 };
 
-export const updateBranch = async (updatedBranchData: DomainBranch): Promise<StoreOperationResult<void>> => {
-  const { id, ...domainData } = updatedBranchData;
-  const updatePayload = mapDomainBranchToUpdate(domainData);
+export const updateBranch = async (id: string, branchData: Partial<Omit<DomainBranch, 'id'>>): Promise<StoreOperationResult<void>> => {
+  const updatePayload = mapDomainBranchToUpdate(branchData);
   const { data: updatedSupabaseBranch, error } = await supabaseUpdateBranch(id, updatePayload);
   if (updatedSupabaseBranch && !error) {
     const updatedBranch = mapSupabaseBranchToDomain(updatedSupabaseBranch);
-    branches = branches.map(b => b.id === updatedBranch.id ? updatedBranch : b);
+    branches = branches.map(b => b.id === id ? updatedBranch : b);
     notifyBranchListeners();
     return { success: true };
   }
@@ -964,14 +963,13 @@ export const addCustomer = async (
   return { success: false, message: (error as any)?.message || "Failed to add customer.", error };
 };
 
-export const updateCustomer = async (updatedCustomerData: DomainIndividualCustomer): Promise<StoreOperationResult<void>> => {
-  const { id } = updatedCustomerData;
-  const updatePayloadSupabase = mapDomainCustomerToUpdate(updatedCustomerData);
+export const updateCustomer = async (id: string, customerData: Partial<Omit<DomainIndividualCustomer, 'id'>>): Promise<StoreOperationResult<void>> => {
+  const updatePayloadSupabase = mapDomainCustomerToUpdate({ id, ...customerData });
   const { data: updatedSupabaseCustomer, error } = await supabaseUpdateCustomer(id, updatePayloadSupabase);
 
   if (updatedSupabaseCustomer && !error) {
     const updatedCustomer = mapSupabaseCustomerToDomain(updatedSupabaseCustomer);
-    customers = customers.map(c => c.id === updatedCustomer.id ? updatedCustomer : c);
+    customers = customers.map(c => c.id === id ? updatedCustomer : c);
     notifyCustomerListeners();
     return { success: true };
   } else {
@@ -1015,13 +1013,12 @@ export const addBulkMeter = async (bulkMeterDomainData: Omit<BulkMeter, 'id'>): 
   return { success: false, message: (error as any)?.message || "Failed to add bulk meter.", error };
 };
 
-export const updateBulkMeter = async (updatedBulkMeterData: BulkMeter): Promise<StoreOperationResult<void>> => {
-  const { id, ...domainData } = updatedBulkMeterData;
-  const updatePayloadToSend = mapDomainBulkMeterToUpdate({ id, ...domainData }) as BulkMeterUpdate;
+export const updateBulkMeter = async (id: string, bulkMeterData: Partial<Omit<BulkMeter, 'id'>>): Promise<StoreOperationResult<void>> => {
+  const updatePayloadToSend = mapDomainBulkMeterToUpdate({ id, ...bulkMeterData }) as BulkMeterUpdate;
   const { data: updatedSupabaseBulkMeter, error } = await supabaseUpdateBulkMeter(id, updatePayloadToSend);
   if (updatedSupabaseBulkMeter && !error) {
     const updatedBulkMeter = mapSupabaseBulkMeterToDomain(updatedSupabaseBulkMeter);
-    bulkMeters = bulkMeters.map(bm => bm.id === updatedBulkMeter.id ? updatedBulkMeter : bm);
+    bulkMeters = bulkMeters.map(bm => bm.id === id ? updatedBulkMeter : bm);
     notifyBulkMeterListeners();
     return { success: true };
   }
@@ -1155,8 +1152,7 @@ export const addIndividualCustomerReading = async (readingData: Omit<DomainIndiv
         return { success: false, message: userMessage, error: readingInsertError };
     }
 
-    const customerUpdatePayload = { ...customer, previousReading: customer.currentReading, currentReading: newSupabaseReading.reading_value };
-    const updateResult = await updateCustomer(customerUpdatePayload);
+    const updateResult = await updateCustomer(customer.id, { previousReading: customer.currentReading, currentReading: newSupabaseReading.reading_value });
 
     if (!updateResult.success) {
         await supabaseDeleteIndividualCustomerReading(newSupabaseReading.id);
@@ -1193,8 +1189,7 @@ export const addBulkMeterReading = async (readingData: Omit<DomainBulkMeterReadi
         return { success: false, message: userMessage, error: readingInsertError };
     }
     
-    const bulkMeterUpdatePayload = { ...bulkMeter, previousReading: bulkMeter.currentReading, currentReading: newSupabaseReading.reading_value };
-    const updateResult = await updateBulkMeter(bulkMeterUpdatePayload);
+    const updateResult = await updateBulkMeter(bulkMeter.id, { previousReading: bulkMeter.currentReading, currentReading: newSupabaseReading.reading_value });
 
     if (!updateResult.success) {
         await supabaseDeleteBulkMeterReading(newSupabaseReading.id);

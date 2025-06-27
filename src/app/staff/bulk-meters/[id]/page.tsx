@@ -17,7 +17,7 @@ import {
   getBulkMeters, getCustomers, updateBulkMeter as updateBulkMeterInStore, deleteBulkMeter as deleteBulkMeterFromStore,
   updateCustomer as updateCustomerInStore, deleteCustomer as deleteCustomerFromStore, subscribeToBulkMeters, subscribeToCustomers,
   initializeBulkMeters, initializeCustomers, getBulkMeterReadings, initializeBulkMeterReadings, subscribeToBulkMeterReadings,
-  addBill, addBulkMeterReading
+  addBill, addBulkMeterReading, removeBill
 } from "@/lib/data-store";
 import { getBills, initializeBills, subscribeToBills } from "@/lib/data-store";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
@@ -61,6 +61,9 @@ export default function StaffBulkMeterDetailsPage() {
   const [isAddReadingOpen, setIsAddReadingOpen] = React.useState(false);
   
   const [branchBulkMetersForCustomerForm, setBranchBulkMetersForCustomerForm] = useState<{id: string, name: string}[]>([]);
+  
+  const [isBillDeleteDialogOpen, setIsBillDeleteDialogOpen] = React.useState(false);
+  const [billToDelete, setBillToDelete] = React.useState<DomainBill | null>(null);
 
 
   const checkAuthorization = useCallback((meter: BulkMeter | null, branchName?: string) => {
@@ -296,7 +299,21 @@ export default function StaffBulkMeterDetailsPage() {
     };
 
     await updateBulkMeterInStore(bulkMeter.id, updatePayload);
-    toast({ title: "Billing Cycle Closed", description: carryBalance ? `Balance of ETB ${totalPayableForThisPeriod.toFixed(2)} carried forward.` : "Bill marked as paid and new cycle started." });
+    toast({ title: "Billing Cycle Closed", description: carryBalance ? `Balance of ETB ${outstandingForNextCycle.toFixed(2)} carried forward.` : "Bill marked as paid and new cycle started." });
+  };
+  
+  const handleDeleteBillingRecord = (bill: DomainBill) => {
+    setBillToDelete(bill);
+    setIsBillDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteBillingRecord = async () => {
+    if (billToDelete) {
+      await removeBill(billToDelete.id);
+      toast({ title: "Billing Record Deleted", description: `The bill for ${billToDelete.monthYear} has been removed.` });
+      setBillToDelete(null);
+    }
+    setIsBillDeleteDialogOpen(false);
   };
 
 
@@ -378,7 +395,7 @@ export default function StaffBulkMeterDetailsPage() {
        <Card className="shadow-lg">
         <CardHeader><CardTitle className="flex items-center gap-2"><ListCollapse className="h-5 w-5 text-primary" />Billing History</CardTitle><CardDescription>Historical bills generated for this meter.</CardDescription></CardHeader>
         <CardContent>
-          <div className="overflow-x-auto max-h-96">{billingHistory.length > 0 ? (<Table><TableHeader><TableRow><TableHead>Month</TableHead><TableHead>Date Billed</TableHead><TableHead>Usage (m³)</TableHead><TableHead className="text-right">Outstanding (ETB)</TableHead><TableHead className="text-right">Current Bill (ETB)</TableHead><TableHead className="text-right">Total Payable (ETB)</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>{billingHistory.map(bill => (<TableRow key={bill.id}><TableCell>{bill.monthYear}</TableCell><TableCell>{format(parseISO(bill.billPeriodEndDate), "PP")}</TableCell><TableCell>{bill.usageM3?.toFixed(2) ?? 'N/A'}</TableCell><TableCell className="text-right">{bill.balanceCarriedForward?.toFixed(2) ?? '0.00'}</TableCell><TableCell className="text-right font-medium">{bill.totalAmountDue.toFixed(2)}</TableCell><TableCell className="text-right font-bold">{((bill.balanceCarriedForward ?? 0) + bill.totalAmountDue).toFixed(2)}</TableCell><TableCell><Badge variant={bill.paymentStatus === 'Paid' ? 'default' : 'destructive'}>{bill.paymentStatus}</Badge></TableCell></TableRow>))}</TableBody></Table>) : (<p className="text-muted-foreground text-sm text-center py-4">No billing history found.</p>)}</div>
+          <div className="overflow-x-auto max-h-96">{billingHistory.length > 0 ? (<Table><TableHeader><TableRow><TableHead>Month</TableHead><TableHead>Date Billed</TableHead><TableHead>Usage (m³)</TableHead><TableHead className="text-right">Outstanding (ETB)</TableHead><TableHead className="text-right">Current Bill (ETB)</TableHead><TableHead className="text-right">Total Payable (ETB)</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader><TableBody>{billingHistory.map(bill => (<TableRow key={bill.id}><TableCell>{bill.monthYear}</TableCell><TableCell>{format(parseISO(bill.billPeriodEndDate), "PP")}</TableCell><TableCell>{bill.usageM3?.toFixed(2) ?? 'N/A'}</TableCell><TableCell className="text-right">{bill.balanceCarriedForward?.toFixed(2) ?? '0.00'}</TableCell><TableCell className="text-right font-medium">{bill.totalAmountDue.toFixed(2)}</TableCell><TableCell className="text-right font-bold">{((bill.balanceCarriedForward ?? 0) + bill.totalAmountDue).toFixed(2)}</TableCell><TableCell><Badge variant={bill.paymentStatus === 'Paid' ? 'default' : 'destructive'}>{bill.paymentStatus}</Badge></TableCell><TableCell className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => handleDeleteBillingRecord(bill)} className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" />Delete Record</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell></TableRow>))}</TableBody></Table>) : (<p className="text-muted-foreground text-sm text-center py-4">No billing history found.</p>)}</div>
         </CardContent>
       </Card>
 
@@ -464,8 +481,22 @@ export default function StaffBulkMeterDetailsPage() {
           <AlertDialogFooter><AlertDialogCancel onClick={() => setCustomerToDelete(null)}>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteCustomer}>Delete</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+       <AlertDialog open={isBillDeleteDialogOpen} onOpenChange={setIsBillDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the billing record for {billToDelete?.monthYear}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setBillToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteBillingRecord} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }
-
-    

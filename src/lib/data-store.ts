@@ -1142,49 +1142,6 @@ export const deleteStaffMember = async (staffId: string): Promise<StoreOperation
 };
 
 
-export const addBill = async (billData: Omit<DomainBill, 'id'>): Promise<StoreOperationResult<DomainBill>> => {
-    const payload = mapDomainBillToSupabase(billData) as BillInsert;
-    const { data: newSupabaseBill, error } = await supabaseCreateBill(payload);
-    if (newSupabaseBill && !error) {
-        const newBill = mapSupabaseBillToDomain(newSupabaseBill);
-        bills = [newBill, ...bills];
-        notifyBillListeners();
-        return { success: true, data: newBill };
-    }
-    console.error("DataStore: Failed to add bill. Supabase error:", JSON.stringify(error, null, 2));
-    return { success: false, message: (error as any)?.message || "Failed to add bill.", error };
-};
-export const updateExistingBill = async (id: string, billUpdateData: Partial<Omit<DomainBill, 'id'>>): Promise<StoreOperationResult<void>> => {
-    const payload = mapDomainBillToSupabase(billUpdateData) as BillUpdate;
-    const { data: updatedSupabaseBill, error } = await supabaseUpdateBill(id, payload);
-    if (updatedSupabaseBill && !error) {
-        const updatedBill = mapSupabaseBillToDomain(updatedSupabaseBill);
-        bills = bills.map(b => b.id === id ? updatedBill : b);
-        notifyBillListeners();
-        return { success: true };
-    }
-    console.error("DataStore: Failed to update bill. Supabase error:", JSON.stringify(error, null, 2));
-    let userMessage = "Failed to update bill.";
-    let isNotFoundError = false;
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'PGRST204') {
-      userMessage = "Failed to update bill: Record not found.";
-      isNotFoundError = true;
-    } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-      userMessage = `Failed to update bill: ${error.message}`;
-    }
-    return { success: false, message: userMessage, isNotFoundError, error };
-};
-export const removeBill = async (billId: string): Promise<StoreOperationResult<void>> => {
-    const { error } = await supabaseDeleteBill(billId);
-    if (!error) {
-        bills = bills.filter(b => b.id !== billId);
-        notifyBillListeners();
-        return { success: true };
-    }
-    console.error("DataStore: Failed to delete bill. Supabase error:", JSON.stringify(error, null, 2));
-    return { success: false, message: (error as any)?.message || "Failed to delete bill.", error };
-};
-
 export const addIndividualCustomerReading = async (readingData: Omit<DomainIndividualCustomerReading, 'id' | 'createdAt' | 'updatedAt'>): Promise<StoreOperationResult<DomainIndividualCustomerReading>> => {
     const customer = customers.find(c => c.id === readingData.individualCustomerId);
     if (!customer) {
@@ -1195,33 +1152,38 @@ export const addIndividualCustomerReading = async (readingData: Omit<DomainIndiv
     }
 
     const payload = mapDomainIndividualReadingToSupabase(readingData) as IndividualCustomerReadingInsert;
-    const { data: newSupabaseReading, error } = await supabaseCreateIndividualCustomerReading(payload);
+    const { data: newSupabaseReading, error: readingInsertError } = await supabaseCreateIndividualCustomerReading(payload);
 
-    if (newSupabaseReading && !error) {
-        const newReading = mapSupabaseIndividualReadingToDomain(newSupabaseReading);
-        individualCustomerReadings = [newReading, ...individualCustomerReadings];
-        notifyIndividualCustomerReadingListeners();
-
-        // Also update the main customer record's current reading
-        const customerUpdatePayload = { ...customer, currentReading: newReading.readingValue };
-        const updateResult = await updateCustomer(customerUpdatePayload);
-
-        if (!updateResult.success) {
-            const errorMessage = `Reading recorded, but failed to update the customer's main record. Error: ${updateResult.message}`;
-            console.error(errorMessage, updateResult.error);
-            return { success: false, message: errorMessage, error: updateResult.error };
+    if (readingInsertError || !newSupabaseReading) {
+        let userMessage = (readingInsertError as any)?.message || "Failed to add reading.";
+        if (readingInsertError && (readingInsertError as any).message.includes('violates row-level security policy')) {
+             userMessage = "Permission denied to add readings. Please check Row Level Security policies in Supabase.";
         }
+        console.error("DataStore: Failed to add individual reading. Supabase error:", JSON.stringify(readingInsertError, null, 2));
+        return { success: false, message: userMessage, error: readingInsertError };
+    }
 
-        return { success: true, data: newReading };
+    // At this point, reading is inserted. Now try to update the customer.
+    const customerUpdatePayload = { ...customer, currentReading: newSupabaseReading.reading_value };
+    const updateResult = await updateCustomer(customerUpdatePayload);
+
+    if (!updateResult.success) {
+        // The customer update failed. We must roll back the reading insert.
+        await supabaseDeleteIndividualCustomerReading(newSupabaseReading.id);
+
+        const errorMessage = `Failed to update the customer's main record, so the new reading was discarded. Reason: ${updateResult.message}`;
+        console.error(errorMessage, updateResult.error);
+        return { success: false, message: errorMessage, error: updateResult.error };
     }
-    
-    let userMessage = (error as any)?.message || "Failed to add reading.";
-    if (error && (error as any).message.includes('violates row-level security policy')) {
-        userMessage = "Permission denied. Please check Row Level Security policies in your Supabase dashboard.";
-        console.error("DataStore RLS Error: The current user lacks permission to insert into 'individual_customer_readings'. Ensure a policy exists, for example: CREATE POLICY \"Allow insert for authenticated users\" ON individual_customer_readings FOR INSERT TO authenticated WITH CHECK (true);");
-    }
-    console.error("DataStore: Failed to add individual reading. Supabase error:", JSON.stringify(error, null, 2));
-    return { success: false, message: userMessage, error };
+
+    // Both operations succeeded. Now update local caches and notify.
+    const newReading = mapSupabaseIndividualReadingToDomain(newSupabaseReading);
+    individualCustomerReadings = [newReading, ...individualCustomerReadings];
+    notifyIndividualCustomerReadingListeners();
+
+    // The customer cache was already updated inside `updateCustomer`, so we are consistent.
+
+    return { success: true, data: newReading };
 };
 
 export const addBulkMeterReading = async (readingData: Omit<DomainBulkMeterReading, 'id' | 'createdAt' | 'updatedAt'>): Promise<StoreOperationResult<DomainBulkMeterReading>> => {
@@ -1234,28 +1196,36 @@ export const addBulkMeterReading = async (readingData: Omit<DomainBulkMeterReadi
     }
 
     const payload = mapDomainBulkReadingToSupabase(readingData) as BulkMeterReadingInsert;
-    const { data: newSupabaseReading, error } = await supabaseCreateBulkMeterReading(payload);
+    const { data: newSupabaseReading, error: readingInsertError } = await supabaseCreateBulkMeterReading(payload);
 
-    if (newSupabaseReading && !error) {
-        const newReading = mapSupabaseBulkReadingToDomain(newSupabaseReading);
-        bulkMeterReadings = [newReading, ...bulkMeterReadings];
-        notifyBulkMeterReadingListeners();
-
-        // Also update the main bulk meter record's current reading
-        const bulkMeterUpdatePayload = { ...bulkMeter, currentReading: newReading.readingValue };
-        await updateBulkMeter(bulkMeterUpdatePayload);
-
-        return { success: true, data: newReading };
+    if (readingInsertError || !newSupabaseReading) {
+        let userMessage = (readingInsertError as any)?.message || "Failed to add reading.";
+        if (readingInsertError && (readingInsertError as any).message.includes('violates row-level security policy')) {
+            userMessage = "Permission denied to add readings. Please check Row Level Security policies in Supabase.";
+        }
+        console.error("DataStore: Failed to add bulk meter reading. Supabase error:", JSON.stringify(readingInsertError, null, 2));
+        return { success: false, message: userMessage, error: readingInsertError };
     }
+    
+    // At this point, reading is inserted. Now try to update the bulk meter.
+    const bulkMeterUpdatePayload = { ...bulkMeter, currentReading: newSupabaseReading.reading_value };
+    const updateResult = await updateBulkMeter(bulkMeterUpdatePayload);
 
-    // Enhanced error handling
-    let userMessage = (error as any)?.message || "Failed to add reading.";
-    if (error && (error as any).message.includes('violates row-level security policy')) {
-        userMessage = "Permission denied. Please check Row Level Security policies in your Supabase dashboard.";
-        console.error("DataStore RLS Error: The current user lacks permission to insert into 'bulk_meter_readings'. Ensure a policy exists, for example: CREATE POLICY \"Allow insert for authenticated users\" ON bulk_meter_readings FOR INSERT TO authenticated WITH CHECK (true);");
+    if (!updateResult.success) {
+        // The bulk meter update failed. We must roll back the reading insert.
+        await supabaseDeleteBulkMeterReading(newSupabaseReading.id);
+
+        const errorMessage = `Failed to update the bulk meter's main record, so the new reading was discarded. Reason: ${updateResult.message}`;
+        console.error(errorMessage, updateResult.error);
+        return { success: false, message: errorMessage, error: updateResult.error };
     }
-    console.error("DataStore: Failed to add bulk meter reading. Supabase error:", JSON.stringify(error, null, 2));
-    return { success: false, message: userMessage, error };
+    
+    // Both operations succeeded. Now update local caches and notify.
+    const newReading = mapSupabaseBulkReadingToDomain(newSupabaseReading);
+    bulkMeterReadings = [newReading, ...bulkMeterReadings];
+    notifyBulkMeterReadingListeners();
+    
+    return { success: true, data: newReading };
 };
 
 

@@ -18,8 +18,9 @@ import {
   updateCustomer as updateCustomerInStore, deleteCustomer as deleteCustomerFromStore, subscribeToBulkMeters, subscribeToCustomers,
   initializeBulkMeters, initializeCustomers, getBranches, initializeBranches, subscribeToBranches,
   getBulkMeterReadings, initializeBulkMeterReadings, subscribeToBulkMeterReadings,
-  getBills, initializeBills, subscribeToBills, addBill, addBulkMeterReading
+  addBill, addBulkMeterReading
 } from "@/lib/data-store";
+import { getBills, initializeBills, subscribeToBills } from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meter-types";
 import type { IndividualCustomer, IndividualCustomerStatus } from "../../individual-customers/individual-customer-types";
 import type { Branch } from "../../branches/branch-types"; 
@@ -155,20 +156,10 @@ export default function BulkMeterDetailsPage() {
 
   const handleAddNewReading = async (readingValue: number) => {
     if (!bulkMeter) return;
-    const storedUser = localStorage.getItem("user");
-    let currentUser = null;
-    if (storedUser) {
-        currentUser = JSON.parse(storedUser);
-    }
-    
+
     const result = await addBulkMeterReading({
       bulkMeterId: bulkMeter.id,
-      readerStaffId: currentUser?.id,
-      readingDate: format(new Date(), "yyyy-MM-dd"),
-      monthYear: format(new Date(), "yyyy-MM"),
       readingValue: readingValue,
-      isEstimate: false,
-      notes: `Manual entry by ${currentUser?.email || 'Admin'}`,
     });
 
     if (result.success) {
@@ -411,7 +402,7 @@ export default function BulkMeterDetailsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {billingHistory.slice(0, 5).map(bill => (
+                  {billingHistory.slice(0, 1).map(bill => (
                     <TableRow key={bill.id}>
                       <TableCell>{bill.monthYear}</TableCell>
                       <TableCell>{bill.usageM3?.toFixed(2) ?? 'N/A'}</TableCell>
@@ -457,3 +448,5 @@ export default function BulkMeterDetailsPage() {
     </div>
   );
 }
+
+    

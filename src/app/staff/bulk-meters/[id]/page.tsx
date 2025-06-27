@@ -17,8 +17,9 @@ import {
   getBulkMeters, getCustomers, updateBulkMeter as updateBulkMeterInStore, deleteBulkMeter as deleteBulkMeterFromStore,
   updateCustomer as updateCustomerInStore, deleteCustomer as deleteCustomerFromStore, subscribeToBulkMeters, subscribeToCustomers,
   initializeBulkMeters, initializeCustomers, getBulkMeterReadings, initializeBulkMeterReadings, subscribeToBulkMeterReadings,
-  getBills, initializeBills, subscribeToBills, addBill, addBulkMeterReading
+  addBill, addBulkMeterReading
 } from "@/lib/data-store";
+import { getBills, initializeBills, subscribeToBills } from "@/lib/data-store";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { IndividualCustomer, IndividualCustomerStatus } from "@/app/admin/individual-customers/individual-customer-types";
 import type { DomainBulkMeterReading, DomainBill } from "@/lib/data-store";
@@ -179,20 +180,10 @@ export default function StaffBulkMeterDetailsPage() {
 
   const handleAddNewReading = async (readingValue: number) => {
     if (!bulkMeter) return;
-    const storedUser = localStorage.getItem("user");
-    let currentUser = null;
-    if (storedUser) {
-        currentUser = JSON.parse(storedUser);
-    }
-    
+
     const result = await addBulkMeterReading({
       bulkMeterId: bulkMeter.id,
-      readerStaffId: currentUser?.id,
-      readingDate: format(new Date(), "yyyy-MM-dd"),
-      monthYear: format(new Date(), "yyyy-MM"),
       readingValue: readingValue,
-      isEstimate: false,
-      notes: `Manual entry by ${currentUser?.email || 'Staff'}`,
     });
 
     if (result.success) {
@@ -435,7 +426,7 @@ export default function StaffBulkMeterDetailsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {billingHistory.slice(0, 5).map(bill => (
+                  {billingHistory.slice(0, 1).map(bill => (
                     <TableRow key={bill.id}>
                       <TableCell>{bill.monthYear}</TableCell>
                       <TableCell>{bill.usageM3?.toFixed(2) ?? 'N/A'}</TableCell>
@@ -476,3 +467,5 @@ export default function StaffBulkMeterDetailsPage() {
     </div>
   );
 }
+
+    

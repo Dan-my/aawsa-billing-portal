@@ -276,7 +276,7 @@ const mapSupabaseCustomerToDomain = (sc: SupabaseIndividualCustomerRow): DomainI
     status: sc.status as IndividualCustomerStatus,
     paymentStatus: sc.paymentStatus as PaymentStatus,
     calculatedBill: bill,
-    arrears: sc.arrears ? Number(sc.arrears) : 0,
+    arrears: 0, // Default to 0, as the column does not exist in the DB schema.
     created_at: sc.created_at,
     updated_at: sc.updated_at,
   };
@@ -308,7 +308,7 @@ const mapDomainCustomerToInsert = (
     status: 'Active', 
     paymentStatus: 'Unpaid', 
     calculatedBill: bill,
-    arrears: customer.arrears ? Number(customer.arrears) : 0,
+    // Do not include 'arrears' as the column does not exist in the DB.
   };
 };
 
@@ -334,7 +334,7 @@ const mapDomainCustomerToUpdate = (customer: Partial<DomainIndividualCustomer>):
   if(customer.branchId !== undefined) updatePayload.branch_id = customer.branchId; 
   if(customer.status !== undefined) updatePayload.status = customer.status;
   if(customer.paymentStatus !== undefined) updatePayload.paymentStatus = customer.paymentStatus;
-  if(customer.arrears !== undefined) updatePayload.arrears = Number(customer.arrears);
+  // Do not include 'arrears' in the update payload as the column does not exist.
 
   if (customer.currentReading !== undefined || customer.previousReading !== undefined || customer.customerType !== undefined || customer.sewerageConnection !== undefined || customer.meterSize !== undefined) {
     const existingCustomer = customers.find(c => c.id === customer.id);
@@ -1170,7 +1170,6 @@ export const addIndividualCustomerReading = async (readingData: Omit<DomainIndiv
     if (!updateResult.success) {
         // The customer update failed. We must roll back the reading insert.
         await supabaseDeleteIndividualCustomerReading(newSupabaseReading.id);
-
         const errorMessage = `Failed to update the customer's main record, so the new reading was discarded. Reason: ${updateResult.message}`;
         console.error(errorMessage, updateResult.error);
         return { success: false, message: errorMessage, error: updateResult.error };

@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -456,36 +455,6 @@ export default function StaffBulkMeterDetailsPage() {
             <p><strong className="font-semibold w-60 inline-block">Month:</strong> {bulkMeter.month}</p>
           </div>
           
-          {billingHistory.length > 0 && (
-            <div className="pt-6">
-              <h3 className="text-base font-semibold mb-2 border-b pb-1">Recent Billing History</h3>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Month</TableHead>
-                    <TableHead>Usage (m³)</TableHead>
-                    <TableHead className="text-right">Total Bill (ETB)</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {billingHistory.slice(0, 1).map(bill => (
-                    <TableRow key={bill.id}>
-                      <TableCell>{bill.monthYear}</TableCell>
-                      <TableCell>{bill.usageM3?.toFixed(2) ?? 'N/A'}</TableCell>
-                      <TableCell className="text-right">{((bill.balanceCarriedForward ?? 0) + bill.totalAmountDue).toFixed(2)}</TableCell>
-                      <TableCell>
-                        <Badge variant={bill.paymentStatus === 'Paid' ? 'default' : 'destructive'} className="text-xs">
-                          {bill.paymentStatus}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-
           <div className="pt-10 space-y-6 text-sm"><p>Requested by: .........................................................</p><p>Check by: .............................................................</p><p>Approved by: ........................................................</p></div>
         </CardContent>
          <CardHeader className="border-t pt-4 text-center mt-4"><h1 className="text-sm font-semibold tracking-wider uppercase">Addis Ababa Water and Sewerage Authority</h1></CardHeader>

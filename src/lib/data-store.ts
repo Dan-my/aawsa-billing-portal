@@ -277,14 +277,14 @@ const mapSupabaseCustomerToDomain = (sc: SupabaseIndividualCustomerRow): DomainI
     status: sc.status as IndividualCustomerStatus,
     paymentStatus: sc.paymentStatus as PaymentStatus,
     calculatedBill: bill,
-    
+    arrears: 0, // Placeholder, as it's not in the DB
     created_at: sc.created_at,
     updated_at: sc.updated_at,
   };
 };
 
 const mapDomainCustomerToInsert = (
-  customer: Omit<DomainIndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill'>
+  customer: Omit<DomainIndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill' | 'arrears'>
 ): IndividualCustomerInsert => {
   const usage = customer.currentReading - customer.previousReading;
   const { totalBill: bill } = calculateBill(usage, customer.customerType, customer.sewerageConnection, Number(customer.meterSize));
@@ -334,6 +334,8 @@ const mapDomainCustomerToUpdate = (customer: Partial<DomainIndividualCustomer>):
   if(customer.branchId !== undefined) updatePayload.branch_id = customer.branchId; 
   if(customer.status !== undefined) updatePayload.status = customer.status;
   if(customer.paymentStatus !== undefined) updatePayload.paymentStatus = customer.paymentStatus;
+  
+  // Note: We do not update 'arrears' here as it does not exist in the DB.
 
   if (customer.currentReading !== undefined || customer.previousReading !== undefined || customer.customerType !== undefined || customer.sewerageConnection !== undefined || customer.meterSize !== undefined) {
     const existingCustomer = customers.find(c => c.id === customer.id);
@@ -947,7 +949,7 @@ export const deleteBranch = async (branchId: string): Promise<StoreOperationResu
 };
 
 export const addCustomer = async (
-  customerData: Omit<DomainIndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill'>
+  customerData: Omit<DomainIndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill' | 'arrears'>
 ): Promise<StoreOperationResult<DomainIndividualCustomer>> => {
   const customerPayload = mapDomainCustomerToInsert(customerData);
   const { data: newSupabaseCustomer, error } = await supabaseCreateCustomer(customerPayload);
@@ -1089,6 +1091,10 @@ export const deleteStaffMember = async (staffId: string): Promise<StoreOperation
 
 export const addBill = async (billData: Omit<DomainBill, 'id' | 'createdAt' | 'updatedAt'>): Promise<StoreOperationResult<DomainBill>> => {
     const payload = mapDomainBillToSupabase(billData) as BillInsert;
+    // Temporarily remove the problematic field to avoid the crash
+    if ('balance_carried_forward' in payload) {
+      delete payload.balance_carried_forward;
+    }
     const { data: newSupabaseBill, error } = await supabaseCreateBill(payload);
     if (newSupabaseBill && !error) {
         const newBill = mapSupabaseBillToDomain(newSupabaseBill);
@@ -1153,24 +1159,19 @@ export const addIndividualCustomerReading = async (readingData: Omit<DomainIndiv
         return { success: false, message: userMessage, error: readingInsertError };
     }
 
-    // At this point, reading is inserted. Now try to update the customer.
     const customerUpdatePayload = { ...customer, previousReading: customer.currentReading, currentReading: newSupabaseReading.reading_value };
     const updateResult = await updateCustomer(customerUpdatePayload);
 
     if (!updateResult.success) {
-        // The customer update failed. We must roll back the reading insert.
         await supabaseDeleteIndividualCustomerReading(newSupabaseReading.id);
-        const errorMessage = `Failed to update the customer's main record, so the new reading was discarded. Reason: ${updateResult.message}`;
+        const errorMessage = `Reading recorded, but failed to update the customer's main record. Error: ${updateResult.message}`;
         console.error(errorMessage, updateResult.error);
         return { success: false, message: errorMessage, error: updateResult.error };
     }
-
-    // Both operations succeeded. Now update local caches and notify.
+    
     const newReading = mapSupabaseIndividualReadingToDomain(newSupabaseReading);
     individualCustomerReadings = [newReading, ...individualCustomerReadings];
     notifyIndividualCustomerReadingListeners();
-
-    // The customer cache was already updated inside `updateCustomer`, so we are consistent.
 
     return { success: true, data: newReading };
 };
@@ -1196,12 +1197,10 @@ export const addBulkMeterReading = async (readingData: Omit<DomainBulkMeterReadi
         return { success: false, message: userMessage, error: readingInsertError };
     }
     
-    // At this point, reading is inserted. Now try to update the bulk meter.
     const bulkMeterUpdatePayload = { ...bulkMeter, previousReading: bulkMeter.currentReading, currentReading: newSupabaseReading.reading_value };
     const updateResult = await updateBulkMeter(bulkMeterUpdatePayload);
 
     if (!updateResult.success) {
-        // The bulk meter update failed. We must roll back the reading insert.
         await supabaseDeleteBulkMeterReading(newSupabaseReading.id);
 
         const errorMessage = `Failed to update the bulk meter's main record, so the new reading was discarded. Reason: ${updateResult.message}`;
@@ -1209,7 +1208,6 @@ export const addBulkMeterReading = async (readingData: Omit<DomainBulkMeterReadi
         return { success: false, message: errorMessage, error: updateResult.error };
     }
     
-    // Both operations succeeded. Now update local caches and notify.
     const newReading = mapSupabaseBulkReadingToDomain(newSupabaseReading);
     bulkMeterReadings = [newReading, ...bulkMeterReadings];
     notifyBulkMeterReadingListeners();

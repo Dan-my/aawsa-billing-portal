@@ -480,7 +480,6 @@ const mapSupabaseStaffToDomain = (ss: SupabaseStaffMemberRow): StaffMember => ({
 const mapDomainStaffToInsert = (staff: Omit<StaffMember, 'id'>): StaffMemberInsert => ({
   name: staff.name,
   email: staff.email,
-  password: staff.password,
   branch: staff.branch,
   status: staff.status,
   phone: staff.phone,
@@ -491,9 +490,7 @@ const mapDomainStaffToInsert = (staff: Omit<StaffMember, 'id'>): StaffMemberInse
 const mapDomainStaffToUpdate = (staff: Partial<Omit<StaffMember, 'id'>>): StaffMemberUpdate => {
     const updatePayload: StaffMemberUpdate = {};
     if(staff.name !== undefined) updatePayload.name = staff.name;
-    // Do not update email, as it's the auth identifier.
-    // if(staff.email !== undefined) updatePayload.email = staff.email;
-    if(staff.password !== undefined && staff.password !== '') updatePayload.password = staff.password; // Only update if provided
+    // Email is the unique identifier, should not be updated.
     if(staff.branch !== undefined) updatePayload.branch = staff.branch;
     if(staff.status !== undefined) updatePayload.status = staff.status;
     if(staff.phone !== undefined) updatePayload.phone = staff.phone;
@@ -1041,7 +1038,7 @@ export const deleteBulkMeter = async (bulkMeterId: string): Promise<StoreOperati
   return { success: false, message: (error as any)?.message || "Failed to delete bulk meter.", error };
 };
 
-export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>): Promise<StoreOperationResult<StaffMember>> => {
+export const addStaffMember = async (staffData: Omit<StaffMember, 'id' | 'password'> & { password?: string }): Promise<StoreOperationResult<StaffMember>> => {
   if (!staffData.password) {
     return { success: false, message: "Password is required to create a new staff member." };
   }
@@ -1055,7 +1052,7 @@ export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>): Promis
   if (authError || !authData.user) {
     console.error("DataStore Auth Error:", authError);
     if (authError?.message.includes("already registered")) {
-      return { success: false, message: "A user with this email already exists." };
+      return { success: false, message: "A user with this email already exists in the authentication system." };
     }
     return { success: false, message: authError?.message || "Failed to create authentication user." };
   }
@@ -1066,15 +1063,11 @@ export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>): Promis
     id: authData.user.id, // Use the ID from the new auth user
   };
   
-  // The 'password' field in the staff_members table is for reference and is not used for login.
-  // It's a potential security risk and could be removed if not needed for other purposes.
-  // We'll keep it for now as per the existing schema.
-  
   const { data: newSupabaseStaff, error: profileError } = await supabaseCreateStaffMember(staffPayload);
 
   if (profileError) {
     console.error("DataStore Profile Error:", profileError);
-    // In a real app, you might try to delete the auth user for cleanup, which requires admin privileges.
+    // In a real app, you would try to delete the auth user for cleanup, which requires admin privileges.
     return { success: false, message: (profileError as any)?.message || "Authentication user was created, but failed to create the staff profile." };
   }
   
@@ -1090,45 +1083,54 @@ export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>): Promis
 
 
 export const updateStaffMember = async (updatedStaffData: StaffMember): Promise<StoreOperationResult<void>> => {
-  const { id, ...domainData } = updatedStaffData;
+  const { id, password, ...domainData } = updatedStaffData;
   const staffUpdatePayload = mapDomainStaffToUpdate(domainData);
-  
-  // Password updates should be handled separately via Supabase Auth
-  if (staffUpdatePayload.password) {
-    delete staffUpdatePayload.password;
+
+  // Update profile in staff_members table
+  const { data: updatedSupabaseStaff, error: profileError } = await supabaseUpdateStaffMember(id, staffUpdatePayload);
+
+  if (profileError) {
+    console.error("DataStore: Failed to update staff member profile. Error:", JSON.stringify(profileError, null, 2));
+    return { success: false, message: "Failed to update staff profile." };
   }
 
-  const { data: updatedSupabaseStaff, error } = await supabaseUpdateStaffMember(id, staffUpdatePayload);
-  if (updatedSupabaseStaff && !error) {
+  // If a new password was provided, update it in Supabase Auth
+  if (password) {
+    const { error: authError } = await supabase.auth.admin.updateUserById(id, { password });
+    if (authError) {
+      console.error("DataStore: Failed to update user password in Auth. Error:", JSON.stringify(authError, null, 2));
+      // Even if password update fails, the profile update might have succeeded.
+      // We will still notify listeners with the updated profile data but return an error message.
+      if(updatedSupabaseStaff) {
+         staffMembers = staffMembers.map(s => s.id === id ? mapSupabaseStaffToDomain(updatedSupabaseStaff) : s);
+         notifyStaffMemberListeners();
+      }
+      return { success: false, message: "Profile updated, but failed to update password. Please use a server-side function for this." };
+    }
+  }
+
+  if (updatedSupabaseStaff) {
     const updatedStaff = mapSupabaseStaffToDomain(updatedSupabaseStaff);
-    staffMembers = staffMembers.map(s => s.id === updatedStaff.id ? updatedStaff : s);
+    staffMembers = staffMembers.map(s => s.id === id ? updatedStaff : s);
     notifyStaffMemberListeners();
     return { success: true };
   }
-  console.error("DataStore: Failed to update staff member. Error:", JSON.stringify(error, null, 2));
-  let userMessage = "Failed to update staff member.";
-  let isNotFoundError = false;
-  if (error && typeof error === 'object' && 'code' in error && error.code === 'PGRST204') {
-    userMessage = "Failed to update staff member: Record not found.";
-    isNotFoundError = true;
-  } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-    userMessage = `Failed to update staff member: ${error.message}`;
-  }
-  return { success: false, message: userMessage, isNotFoundError, error };
+  
+  return { success: false, message: "Failed to update staff member." };
 };
 
 export const deleteStaffMember = async (staffId: string): Promise<StoreOperationResult<void>> => {
   // IMPORTANT: This only deletes the profile from the `staff_members` table.
-  // It does NOT delete the user from Supabase's central authentication system.
-  // Deleting an auth user requires admin privileges and should be done in a secure server environment.
+  // Deleting the auth user requires admin privileges and is a separate, more complex operation.
+  // For this application, we will only delete the profile. The auth user will be orphaned.
   const { error } = await supabaseDeleteStaffMember(staffId);
   if (!error) {
     staffMembers = staffMembers.filter(s => s.id !== staffId);
     notifyStaffMemberListeners();
     return { success: true };
   }
-  console.error("DataStore: Failed to delete staff member. Error:", JSON.stringify(error, null, 2));
-  return { success: false, message: (error as any)?.message || "Failed to delete staff member.", error };
+  console.error("DataStore: Failed to delete staff member profile. Error:", JSON.stringify(error, null, 2));
+  return { success: false, message: (error as any)?.message || "Failed to delete staff member profile.", error };
 };
 
 export const addBill = async (billData: Omit<DomainBill, 'id'>): Promise<StoreOperationResult<DomainBill>> => {

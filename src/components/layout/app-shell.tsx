@@ -31,16 +31,19 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { supabase } from '@/lib/supabase';
+import type { Session } from '@supabase/supabase-js';
 
-interface User {
+interface UserProfile {
   id: string; 
   email: string;
   role: 'admin' | 'staff';
   branchName?: string;
+  name?: string;
 }
 
 interface AppHeaderContentProps {
-   user: User | null;
+   user: UserProfile | null;
    appName?: string;
 }
 
@@ -48,8 +51,8 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal" }: AppHeaderC
   const { toggleSidebar, isMobile, state: sidebarState } = useSidebar();
   const router = useRouter();
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     router.push('/');
   };
   
@@ -85,7 +88,7 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal" }: AppHeaderC
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel className="truncate max-w-[200px]">{user.email}</DropdownMenuLabel>
+              <DropdownMenuLabel className="truncate max-w-[200px]">{user.name || user.email}</DropdownMenuLabel>
               <DropdownMenuLabel className="text-xs text-muted-foreground font-normal -mt-2">
                 Role: {user.role === 'staff' && user.branchName ? `Staff (${user.branchName})` : user.role.charAt(0).toUpperCase() + user.role.slice(1)}
               </DropdownMenuLabel>
@@ -106,56 +109,83 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal" }: AppHeaderC
 export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 'staff', sidebar?: React.ReactNode, children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = React.useState<User | null>(null);
+  const [user, setUser] = React.useState<UserProfile | null>(null);
   const [appName, setAppName] = React.useState("AAWSA Billing Portal");
   const [authChecked, setAuthChecked] = React.useState(false);
   const currentYear = new Date().getFullYear();
 
   React.useEffect(() => {
-    // Set app name from local storage
+    // --- General Setup ---
     const storedAppName = localStorage.getItem("aawsa-app-name");
     if (storedAppName) {
       setAppName(storedAppName);
-      if (typeof document !== 'undefined') {
-        document.title = storedAppName;
-      }
+      if (typeof document !== 'undefined') document.title = storedAppName;
     }
     
-    // Dark mode logic
     if (typeof document !== 'undefined') {
       const storedDarkMode = localStorage.getItem("aawsa-dark-mode-default");
-      if (storedDarkMode === "true") {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
+      document.documentElement.classList.toggle('dark', storedDarkMode === "true");
     }
 
-    // Check for user session in localStorage
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      const parsedUser: User = JSON.parse(storedUser);
-      if (parsedUser.role === userRole) {
-        setUser(parsedUser);
-      } else {
-        // Wrong role for this layout, log them out.
-        localStorage.removeItem('user');
-        if (pathname !== '/') {
+    // --- Auth Listener ---
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session: Session | null) => {
+        if (session) {
+          // User is logged in, fetch their profile
+          const { data: profile } = await supabase
+            .from('staff_members')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (profile) {
+            const userProfile: UserProfile = {
+              id: session.user.id,
+              email: session.user.email!,
+              role: profile.role.toLowerCase() as 'admin' | 'staff',
+              branchName: profile.branch,
+              name: profile.name,
+            };
+            
+            // Check if user role matches the layout
+            if (userProfile.role === userRole) {
+              setUser(userProfile);
+              // Redirect if they land on the wrong dashboard
+              const expectedPath = `/${userProfile.role}/`;
+              if (!pathname.startsWith(expectedPath) && pathname !== '/_next/static/chunks/main-app.js') { // Added check to prevent irrelevant redirects
+                 router.push(`${expectedPath}dashboard`);
+              }
+            } else {
+              // Role mismatch, sign them out and redirect
+              await supabase.auth.signOut();
+              setUser(null);
+              router.push('/');
+            }
+          } else {
+            // No profile found for logged-in user, sign them out
+            await supabase.auth.signOut();
+            setUser(null);
             router.push('/');
+          }
+        } else {
+          // User is not logged in
+          setUser(null);
+          if (pathname !== '/') {
+            router.push('/');
+          }
         }
+        setAuthChecked(true);
       }
-    } else {
-      // No user session found
-      if (pathname !== '/') {
-        router.push('/');
-      }
-    }
-    setAuthChecked(true);
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
 
   }, [router, pathname, userRole]);
 
 
-  if (!authChecked) { // Show skeleton while auth is being checked
+  if (!authChecked) { 
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-background">
         <div className="space-y-4 w-full max-w-xs p-4">
@@ -168,14 +198,12 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
     );
   }
   
+  // If auth is checked but there's no user, and we are not on the login page, it means we should not render the shell
   if (!user && pathname !== '/') {
-    return (
-         <div className="flex min-h-screen items-center justify-center bg-background">
-            <p>Redirecting to login...</p>
-         </div>
-    );
+    return null; // or a redirecting message
   }
 
+  // If we are on the login page, just render the children (the AuthForm)
   if (pathname === '/') {
       return <>{children}</>;
   }

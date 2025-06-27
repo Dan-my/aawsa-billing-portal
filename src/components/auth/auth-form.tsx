@@ -51,63 +51,38 @@ export function AuthForm() {
   const onSubmit = async (values: LoginFormValues) => {
     setIsLoading(true);
 
-    const { data: staffProfile, error: profileError } = await supabase
-      .from('staff_members')
-      .select('*')
-      .eq('email', values.email)
-      .single();
-
-    if (profileError || !staffProfile) {
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: "User not found.",
-      });
-      setIsLoading(false);
-      return;
-    }
-    
-    if (staffProfile.status !== 'Active') {
-       toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: `Your account is currently ${staffProfile.status}. Please contact an administrator.`,
-      });
-      setIsLoading(false);
-      return;
-    }
-
-    if (staffProfile.password !== values.password) {
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: "Incorrect password.",
-      });
-      setIsLoading(false);
-      return;
-    }
-
-    const userSession = {
-      id: staffProfile.id,
-      email: staffProfile.email,
-      role: staffProfile.role.toLowerCase(),
-      branchName: staffProfile.branch,
-    };
-
-    localStorage.setItem("user", JSON.stringify(userSession));
-
-    toast({
-      title: "Login Successful",
-      description: `Welcome back, ${staffProfile.name}!`,
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: values.email,
+      password: values.password,
     });
 
-    if (userSession.role === "admin") {
-      router.push("/admin/dashboard");
-    } else {
-      router.push("/staff/dashboard");
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: error.message || "Invalid login credentials.",
+      });
+      setIsLoading(false);
+      return;
     }
 
-    setIsLoading(false);
+    if (data.session) {
+      // The onAuthStateChange listener in AppShell will handle fetching profile
+      // and redirecting. We just need to show a success toast here.
+      toast({
+        title: "Login Successful",
+        description: `Welcome! Redirecting to your dashboard...`,
+      });
+      // The redirect is handled in AppShell to avoid race conditions
+    } else {
+        // This case should ideally not be reached if there's no error but also no session
+        toast({
+            variant: "destructive",
+            title: "Login Failed",
+            description: "Could not establish a session. Please try again.",
+        });
+        setIsLoading(false);
+    }
   };
 
   return (

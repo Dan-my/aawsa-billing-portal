@@ -31,6 +31,7 @@ import type {
 } from './supabase';
 
 import {
+  supabase, // Import the supabase client directly
   getAllBranches as supabaseGetAllBranches,
   createBranch as supabaseCreateBranch,
   updateBranch as supabaseUpdateBranch,
@@ -1040,21 +1041,55 @@ export const deleteBulkMeter = async (bulkMeterId: string): Promise<StoreOperati
 };
 
 export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>): Promise<StoreOperationResult<StaffMember>> => {
-  const staffPayload = mapDomainStaffToInsert(staffData);
-  const { data: newSupabaseStaff, error } = await supabaseCreateStaffMember(staffPayload);
-  if (newSupabaseStaff && !error) {
-    const newStaff = mapSupabaseStaffToDomain(newSupabaseStaff);
-    staffMembers = [newStaff, ...staffMembers];
-    notifyStaffMemberListeners();
-    return { success: true, data: newStaff };
+  if (!staffData.password) {
+    return { success: false, message: "Password is required to create a new staff member." };
   }
-  console.error("DataStore: Failed to add staff member. Error:", JSON.stringify(error, null, 2));
-  return { success: false, message: (error as any)?.message || "Failed to add staff member.", error };
+
+  // 1. Create the auth user.
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email: staffData.email,
+    password: staffData.password,
+  });
+
+  if (authError || !authData.user) {
+    console.error("DataStore Auth Error:", authError);
+    if (authError?.message.includes("already registered")) {
+      return { success: false, message: "A user with this email already exists in the authentication system." };
+    }
+    return { success: false, message: authError?.message || "Failed to create authentication user." };
+  }
+
+  // 2. Create the profile, linked by the new user's ID.
+  const staffPayload: StaffMemberInsert = {
+    ...mapDomainStaffToInsert(staffData),
+    id: authData.user.id, // Use the ID from the new auth user
+  };
+
+  const { data: newSupabaseStaff, error: profileError } = await supabaseCreateStaffMember(staffPayload);
+
+  if (profileError) {
+    console.error("DataStore Profile Error:", profileError);
+    // In a real app, you might try to delete the auth user for cleanup.
+    return { success: false, message: (profileError as any)?.message || "Authentication user was created, but failed to create the staff profile." };
+  }
+  
+  if (newSupabaseStaff) {
+      const newStaff = mapSupabaseStaffToDomain(newSupabaseStaff);
+      staffMembers = [newStaff, ...staffMembers];
+      notifyStaffMemberListeners();
+      return { success: true, data: newStaff };
+  }
+
+  return { success: false, message: "An unknown error occurred while creating the staff member." };
 };
 
 export const updateStaffMember = async (updatedStaffData: StaffMember): Promise<StoreOperationResult<void>> => {
   const { id, ...domainData } = updatedStaffData;
   const staffUpdatePayload = mapDomainStaffToUpdate(domainData);
+  
+  // NOTE: This logic does not handle password updates through the form yet.
+  // That would require a call to supabase.auth.updateUser().
+
   const { data: updatedSupabaseStaff, error } = await supabaseUpdateStaffMember(id, staffUpdatePayload);
   if (updatedSupabaseStaff && !error) {
     const updatedStaff = mapSupabaseStaffToDomain(updatedSupabaseStaff);
@@ -1075,6 +1110,9 @@ export const updateStaffMember = async (updatedStaffData: StaffMember): Promise<
 };
 
 export const deleteStaffMember = async (staffId: string): Promise<StoreOperationResult<void>> => {
+  // Note: This only deletes the profile, not the auth.user.
+  // For a full cleanup, you would need to use a service role key on a serverless function
+  // to call supabase.auth.admin.deleteUser(staffId).
   const { error } = await supabaseDeleteStaffMember(staffId);
   if (!error) {
     staffMembers = staffMembers.filter(s => s.id !== staffId);

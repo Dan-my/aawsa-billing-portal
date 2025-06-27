@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { supabase } from '@/lib/supabase'; // Import supabase client
 
 interface User {
   email: string;
@@ -47,7 +48,8 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal" }: AppHeaderC
   const { toggleSidebar, isMobile, state: sidebarState } = useSidebar();
   const router = useRouter();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     localStorage.removeItem('user');
     router.push('/'); // Redirect to login page
   };

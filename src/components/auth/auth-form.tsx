@@ -53,29 +53,42 @@ export function AuthForm() {
   const onSubmit = async (values: LoginFormValues) => {
     setIsLoading(true);
     try {
-      const { data: staffMember, error } = await supabase
+      const { data: sessionData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: values.email,
+        password: values.password,
+      });
+
+      if (signInError) {
+        throw new Error(signInError.message);
+      }
+      if (!sessionData.user) {
+        throw new Error("Login failed: No user session returned.");
+      }
+
+      // After successful sign-in, the supabase client has the session.
+      // Now, fetch the user's profile from the public table.
+      const { data: staffMember, error: profileError } = await supabase
         .from("staff_members")
         .select("*")
-        .eq("email", values.email)
+        .eq("id", sessionData.user.id) // Query by the auth user's ID
         .single();
-
-      if (error || !staffMember) {
-        throw new Error("Invalid email or password.");
-      }
-
-      // In a real application, passwords must be hashed and verified.
-      // This is a simplified check for demonstration purposes based on the current database structure.
-      if (staffMember.password !== values.password) {
-        throw new Error("Invalid email or password.");
-      }
       
+      if (profileError || !staffMember) {
+        // This is a problem state. Auth user exists, but no profile.
+        // We should sign them out.
+        await supabase.auth.signOut();
+        throw new Error("Login failed: User profile not found.");
+      }
+
       if (staffMember.status !== 'Active') {
+        await supabase.auth.signOut();
         throw new Error(`Your account is currently ${staffMember.status}. Please contact an administrator.`);
       }
 
+      // Store the profile info in localStorage for the AppShell to use.
       const userSession = {
         email: staffMember.email,
-        role: staffMember.role.toLowerCase(), // 'admin' or 'staff'
+        role: staffMember.role.toLowerCase(),
         branchName: staffMember.branch,
         id: staffMember.id,
       };

@@ -26,8 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { LogIn } from "lucide-react";
-import { supabase } from "@/lib/supabase"; // Import supabase client
-
+import { supabase } from "@/lib/supabase";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -51,103 +50,43 @@ export function AuthForm() {
 
   const onSubmit = async (values: LoginFormValues) => {
     setIsLoading(true);
-    
-    // Step 1: Authenticate with Supabase Auth
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-      email: values.email,
-      password: values.password,
-    });
 
-    if (signInError) {
-      // If Supabase auth fails, provide more specific feedback.
-      // This is especially for users who exist in `staff_members` but not in `auth.users`.
-      if (signInError.message === "Invalid login credentials") {
-        const { data: staffProfile } = await supabase
-          .from('staff_members')
-          .select('status')
-          .eq('email', values.email)
-          .single();
-
-        if (staffProfile) {
-          // The user exists in our system.
-          if (staffProfile.status !== 'Active') {
-            toast({
-              variant: "destructive",
-              title: "Account Not Active",
-              description: `Your account status is "${staffProfile.status}". Please contact an administrator.`,
-            });
-          } else {
-            // The account is active, but login failed. This means their password in Supabase Auth is wrong
-            // or they don't have an auth account.
-            toast({
-              variant: "destructive",
-              title: "Authentication Failed",
-              description: "Your credentials did not match. If you are an existing user, your account may need to be synced. Please contact an admin to reset your password.",
-            });
-          }
-        } else {
-          // The user doesn't exist in our system at all. Standard error.
-          toast({
-            variant: "destructive",
-            title: "Login Failed",
-            description: "Invalid login credentials.",
-          });
-        }
-      } else {
-        // Handle other potential Supabase auth errors (e.g., network issues)
-        toast({
-          variant: "destructive",
-          title: "Login Error",
-          description: signInError.message,
-        });
-      }
-      
-      setIsLoading(false);
-      return;
-    }
-
-    if (!signInData.user) {
-        toast({
-            variant: "destructive",
-            title: "Login Failed",
-            description: "Could not retrieve user session. Please try again.",
-        });
-        setIsLoading(false);
-        return;
-    }
-
-
-    // Step 2: Fetch the user's profile from the staff_members table
     const { data: staffProfile, error: profileError } = await supabase
       .from('staff_members')
       .select('*')
-      .eq('id', signInData.user.id)
+      .eq('email', values.email)
       .single();
-      
+
     if (profileError || !staffProfile) {
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: "Authentication successful, but we couldn't find your staff profile. Please contact an administrator.",
+        description: "User not found.",
       });
-      await supabase.auth.signOut(); // Clean up the partial login
-      setIsLoading(false);
-      return;
-    }
-
-    // Step 3: Check if the account is active
-    if (staffProfile.status !== 'Active') {
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: `Your account is currently ${staffProfile.status}. Please contact an administrator.`,
-      });
-      await supabase.auth.signOut();
       setIsLoading(false);
       return;
     }
     
-    // Step 4: Create user session object and store it
+    if (staffProfile.status !== 'Active') {
+       toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: `Your account is currently ${staffProfile.status}. Please contact an administrator.`,
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    if (staffProfile.password !== values.password) {
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: "Incorrect password.",
+      });
+      setIsLoading(false);
+      return;
+    }
+
     const userSession = {
       id: staffProfile.id,
       email: staffProfile.email,
@@ -162,7 +101,6 @@ export function AuthForm() {
       description: `Welcome back, ${staffProfile.name}!`,
     });
 
-    // Step 5: Redirect to the correct dashboard
     if (userSession.role === "admin") {
       router.push("/admin/dashboard");
     } else {

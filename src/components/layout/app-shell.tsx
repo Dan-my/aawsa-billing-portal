@@ -31,7 +31,6 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { supabase } from '@/lib/supabase'; // Import Supabase client
 
 interface User {
   id: string; 
@@ -49,8 +48,7 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal" }: AppHeaderC
   const { toggleSidebar, isMobile, state: sidebarState } = useSidebar();
   const router = useRouter();
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleLogout = () => {
     localStorage.removeItem("user");
     router.push('/');
   };
@@ -133,50 +131,28 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
       }
     }
 
-    // Listen for authentication state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (!session) {
-            setUser(null);
-            localStorage.removeItem('user');
-            if (pathname !== '/') {
-                router.push('/');
-            }
-        } else if (session && (!user || user.id !== session.user.id)) {
-            // Fetch profile from DB if we don't have it or it's a different user
-            const { data: staffProfile } = await supabase
-                .from('staff_members')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
-            
-            if (staffProfile) {
-                const userSession: User = {
-                    id: staffProfile.id,
-                    email: staffProfile.email,
-                    role: staffProfile.role.toLowerCase() as 'admin' | 'staff',
-                    branchName: staffProfile.branch,
-                };
-
-                if (userSession.role !== userRole) {
-                    // Logged in user has wrong role for this layout
-                    await supabase.auth.signOut();
-                } else {
-                    setUser(userSession);
-                    localStorage.setItem('user', JSON.stringify(userSession));
-                }
-            } else {
-                // Auth user exists but no profile, so sign out
-                await supabase.auth.signOut();
-            }
+    // Check for user session in localStorage
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const parsedUser: User = JSON.parse(storedUser);
+      if (parsedUser.role === userRole) {
+        setUser(parsedUser);
+      } else {
+        // Wrong role for this layout, log them out.
+        localStorage.removeItem('user');
+        if (pathname !== '/') {
+            router.push('/');
         }
-        setAuthChecked(true);
-    });
+      }
+    } else {
+      // No user session found
+      if (pathname !== '/') {
+        router.push('/');
+      }
+    }
+    setAuthChecked(true);
 
-    return () => {
-        subscription.unsubscribe();
-    };
-
-  }, [router, userRole, pathname, user]);
+  }, [router, pathname, userRole]);
 
 
   if (!authChecked) { // Show skeleton while auth is being checked

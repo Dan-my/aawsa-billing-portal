@@ -17,7 +17,7 @@ import {
   updateCustomer as updateCustomerInStore, deleteCustomer as deleteCustomerFromStore, subscribeToBulkMeters, subscribeToCustomers,
   initializeBulkMeters, initializeCustomers, getBranches, initializeBranches, subscribeToBranches,
   getBulkMeterReadings, initializeBulkMeterReadings, subscribeToBulkMeterReadings,
-  getBills, initializeBills, subscribeToBills, addBill,
+  getBills, initializeBills, subscribeToBills, addBill, addBulkMeterReading
 } from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meter-types";
 import type { IndividualCustomer, IndividualCustomerStatus } from "../../individual-customers/individual-customer-types";
@@ -26,6 +26,7 @@ import type { DomainBulkMeterReading, DomainBill } from "@/lib/data-store";
 import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult } from "@/lib/billing";
 import { BulkMeterFormDialog, type BulkMeterFormValues } from "../bulk-meter-form-dialog";
 import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "../../individual-customers/individual-customer-form-dialog";
+import { AddReadingDialog } from "@/components/add-reading-dialog";
 import { cn } from "@/lib/utils";
 import { format, parseISO, lastDayOfMonth } from "date-fns";
 
@@ -49,6 +50,7 @@ export default function BulkMeterDetailsPage() {
   const [selectedCustomer, setSelectedCustomer] = React.useState<IndividualCustomer | null>(null);
   const [customerToDelete, setCustomerToDelete] = React.useState<IndividualCustomer | null>(null);
   const [isCustomerDeleteDialogOpen, setIsCustomerDeleteDialogOpen] = React.useState(false);
+  const [isAddReadingOpen, setIsAddReadingOpen] = React.useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -150,6 +152,32 @@ export default function BulkMeterDetailsPage() {
     }
     setIsBulkMeterFormOpen(false);
   };
+
+  const handleAddNewReading = async (readingValue: number) => {
+    if (!bulkMeter) return;
+    const storedUser = localStorage.getItem("user");
+    let currentUser = null;
+    if (storedUser) {
+        currentUser = JSON.parse(storedUser);
+    }
+    
+    const result = await addBulkMeterReading({
+      bulkMeterId: bulkMeter.id,
+      readerStaffId: currentUser?.id,
+      readingDate: format(new Date(), "yyyy-MM-dd"),
+      monthYear: format(new Date(), "yyyy-MM"),
+      readingValue: readingValue,
+      isEstimate: false,
+      notes: `Manual entry by ${currentUser?.email || 'Admin'}`,
+    });
+
+    if (result.success) {
+      toast({ title: "Reading Added", description: "The new meter reading has been saved." });
+    } else {
+      toast({ variant: "destructive", title: "Failed to Add Reading", description: result.message });
+    }
+  };
+
 
   const handleEditCustomer = (customer: IndividualCustomer) => {
     setSelectedCustomer(customer);
@@ -271,6 +299,7 @@ export default function BulkMeterDetailsPage() {
             <CardTitle className="text-2xl">Bulk Meter: {bulkMeter.name}</CardTitle>
           </div>
           <div>
+            <Button variant="outline" size="sm" onClick={() => setIsAddReadingOpen(true)} className="mr-2"><PlusCircleIcon className="mr-2 h-4 w-4" /> Add Reading</Button>
             <Button variant="outline" size="sm" onClick={handlePrint} className="mr-2 border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive-foreground focus-visible:ring-destructive"><Printer className="mr-2 h-4 w-4" /> Print / Export PDF</Button>
             <Button variant="outline" size="sm" onClick={handleEditBulkMeter} className="mr-2"><FileEdit className="mr-2 h-4 w-4" /> Edit Bulk Meter</Button>
             <Button variant="destructive" size="sm" onClick={handleDeleteBulkMeter}><Trash2 className="mr-2 h-4 w-4" /> Delete Bulk Meter</Button>
@@ -368,6 +397,7 @@ export default function BulkMeterDetailsPage() {
       </Card>
 
       {bulkMeter && (<BulkMeterFormDialog open={isBulkMeterFormOpen} onOpenChange={setIsBulkMeterFormOpen} onSubmit={handleSubmitBulkMeterForm} defaultValues={bulkMeter}/>)}
+      {bulkMeter && (<AddReadingDialog open={isAddReadingOpen} onOpenChange={setIsAddReadingOpen} onSubmit={handleAddNewReading} meter={bulkMeter} />)}
       <AlertDialog open={isBulkMeterDeleteDialogOpen} onOpenChange={setIsBulkMeterDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader><AlertDialogTitle>Are you sure you want to delete this bulk meter?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the bulk meter: {bulkMeter?.name}. Associated individual customers will need to be reassigned.</AlertDialogDescription></AlertDialogHeader>
@@ -386,5 +416,3 @@ export default function BulkMeterDetailsPage() {
     </div>
   );
 }
-
-    

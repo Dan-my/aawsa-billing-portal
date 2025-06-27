@@ -16,7 +16,7 @@ import {
   getBulkMeters, getCustomers, updateBulkMeter as updateBulkMeterInStore, deleteBulkMeter as deleteBulkMeterFromStore,
   updateCustomer as updateCustomerInStore, deleteCustomer as deleteCustomerFromStore, subscribeToBulkMeters, subscribeToCustomers,
   initializeBulkMeters, initializeCustomers, getBulkMeterReadings, initializeBulkMeterReadings, subscribeToBulkMeterReadings,
-  getBills, initializeBills, subscribeToBills, addBill,
+  getBills, initializeBills, subscribeToBills, addBill, addBulkMeterReading
 } from "@/lib/data-store";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { IndividualCustomer, IndividualCustomerStatus } from "@/app/admin/individual-customers/individual-customer-types";
@@ -24,10 +24,12 @@ import type { DomainBulkMeterReading, DomainBill } from "@/lib/data-store";
 import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult } from "@/lib/billing";
 import { BulkMeterFormDialog, type BulkMeterFormValues } from "@/app/admin/bulk-meters/bulk-meter-form-dialog";
 import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "@/app/admin/individual-customers/individual-customer-form-dialog";
+import { AddReadingDialog } from "@/components/add-reading-dialog";
 import { cn } from "@/lib/utils";
 import { format, parseISO, lastDayOfMonth } from "date-fns";
 
 interface UserAuth {
+  id?: string;
   email: string;
   role: "admin" | "staff";
   branchName?: string;
@@ -54,6 +56,7 @@ export default function StaffBulkMeterDetailsPage() {
   const [selectedCustomer, setSelectedCustomer] = React.useState<IndividualCustomer | null>(null);
   const [customerToDelete, setCustomerToDelete] = React.useState<IndividualCustomer | null>(null);
   const [isCustomerDeleteDialogOpen, setIsCustomerDeleteDialogOpen] = React.useState(false);
+  const [isAddReadingOpen, setIsAddReadingOpen] = React.useState(false);
   
   const [branchBulkMetersForCustomerForm, setBranchBulkMetersForCustomerForm] = useState<{id: string, name: string}[]>([]);
 
@@ -172,6 +175,32 @@ export default function StaffBulkMeterDetailsPage() {
     }
     setIsBulkMeterDeleteDialogOpen(false);
   };
+
+  const handleAddNewReading = async (readingValue: number) => {
+    if (!bulkMeter) return;
+    const storedUser = localStorage.getItem("user");
+    let currentUser = null;
+    if (storedUser) {
+        currentUser = JSON.parse(storedUser);
+    }
+    
+    const result = await addBulkMeterReading({
+      bulkMeterId: bulkMeter.id,
+      readerStaffId: currentUser?.id,
+      readingDate: format(new Date(), "yyyy-MM-dd"),
+      monthYear: format(new Date(), "yyyy-MM"),
+      readingValue: readingValue,
+      isEstimate: false,
+      notes: `Manual entry by ${currentUser?.email || 'Staff'}`,
+    });
+
+    if (result.success) {
+      toast({ title: "Reading Added", description: "The new meter reading has been saved." });
+    } else {
+      toast({ variant: "destructive", title: "Failed to Add Reading", description: result.message });
+    }
+  };
+
 
   const handleSubmitBulkMeterForm = async (data: BulkMeterFormValues) => {
     if (bulkMeter) {
@@ -310,6 +339,7 @@ export default function StaffBulkMeterDetailsPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2"><Gauge className="h-6 w-6 text-primary" /><CardTitle className="text-2xl">Bulk Meter: {bulkMeter.name} ({staffBranchName})</CardTitle></div>
           <div>
+            <Button variant="outline" size="sm" onClick={() => setIsAddReadingOpen(true)} className="mr-2"><PlusCircleIcon className="mr-2 h-4 w-4" /> Add Reading</Button>
             <Button variant="outline" size="sm" onClick={handlePrint} className="mr-2 border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive-foreground focus-visible:ring-destructive"><Printer className="mr-2 h-4 w-4" /> Print / Export PDF</Button>
             <Button variant="outline" size="sm" onClick={handleEditBulkMeter} className="mr-2"><FileEdit className="mr-2 h-4 w-4" /> Edit Bulk Meter</Button>
             <Button variant="destructive" size="sm" onClick={handleDeleteBulkMeter}><Trash2 className="mr-2 h-4 w-4" /> Delete Bulk Meter</Button>
@@ -387,6 +417,7 @@ export default function StaffBulkMeterDetailsPage() {
       </Card>
 
       {bulkMeter && (<BulkMeterFormDialog open={isBulkMeterFormOpen} onOpenChange={setIsBulkMeterFormOpen} onSubmit={handleSubmitBulkMeterForm} defaultValues={bulkMeter}/> )}
+      {bulkMeter && (<AddReadingDialog open={isAddReadingOpen} onOpenChange={setIsAddReadingOpen} onSubmit={handleAddNewReading} meter={bulkMeter} />)}
       <AlertDialog open={isBulkMeterDeleteDialogOpen} onOpenChange={setIsBulkMeterDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader><AlertDialogTitle>Delete Bulk Meter?</AlertDialogTitle><AlertDialogDescription>This will permanently delete {bulkMeter?.name}. Associated customers will need reassignment.</AlertDialogDescription></AlertDialogHeader>
@@ -404,5 +435,3 @@ export default function StaffBulkMeterDetailsPage() {
     </div>
   );
 }
-
-    

@@ -134,6 +134,7 @@ export function CsvReadingUploadDialog({ open, onOpenChange, meterType, meters, 
               readingDate: format(readingDate, "yyyy-MM-dd"),
               monthYear: format(readingDate, "yyyy-MM"),
               readingValue: validatedRow.reading_value,
+              isEstimate: false,
               notes: `CSV Upload by ${currentUser.email}`,
             });
           } else { // bulk
@@ -143,6 +144,7 @@ export function CsvReadingUploadDialog({ open, onOpenChange, meterType, meters, 
               readingDate: format(readingDate, "yyyy-MM-dd"),
               monthYear: format(readingDate, "yyyy-MM"),
               readingValue: validatedRow.reading_value,
+              isEstimate: false,
               notes: `CSV Upload by ${currentUser.email}`,
             });
           }

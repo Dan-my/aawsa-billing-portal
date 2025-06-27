@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -51,54 +50,75 @@ export function AuthForm() {
   const onSubmit = async (values: LoginFormValues) => {
     setIsLoading(true);
 
-    // Step 1: Attempt to sign in with Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
-    });
-
-    if (authData.session) {
-        // Successful login, the AppShell listener will handle redirection
+    // Query the staff_members table directly
+    const { data: staffProfile, error: queryError } = await supabase
+      .from('staff_members')
+      .select('*')
+      .eq('email', values.email)
+      .single();
+      
+    if (queryError && queryError.code !== 'PGRST116') { // PGRST116 means no rows found, which is not a server error.
         toast({
-            title: "Login Successful",
-            description: "Welcome back! Redirecting...",
+            variant: "destructive",
+            title: "Database Error",
+            description: "Could not query user data. Please try again later.",
+        });
+        console.error("Supabase query error:", queryError);
+        setIsLoading(false);
+        return;
+    }
+
+    if (!staffProfile) {
+        toast({
+            variant: "destructive",
+            title: "Login Failed",
+            description: "User with this email not found.",
+        });
+        setIsLoading(false);
+        return;
+    }
+    
+    if (staffProfile.status !== 'Active') {
+        toast({
+            variant: "destructive",
+            title: "Account Not Active",
+            description: `This account's status is '${staffProfile.status}'. Please contact an administrator.`,
         });
         setIsLoading(false);
         return;
     }
 
-    // Step 2: If auth fails, provide more specific feedback
-    if (authError) {
-        // Check if a profile exists in the staff_members table
-        const { data: staffProfile } = await supabase
-            .from('staff_members')
-            .select('*')
-            .eq('email', values.email)
-            .single();
+    if (staffProfile.password !== values.password) {
+        toast({
+            variant: "destructive",
+            title: "Login Failed",
+            description: "Incorrect password. Please try again.",
+        });
+        setIsLoading(false);
+        return;
+    }
 
-        if (staffProfile) {
-            // A profile exists, so the password was likely wrong or the account is out of sync.
-            if (staffProfile.status !== 'Active') {
-                toast({
-                    variant: "destructive",
-                    title: "Account Not Active",
-                    description: `This account's status is '${staffProfile.status}'. Please contact an administrator.`,
-                });
-            } else {
-                toast({
-                    variant: "destructive",
-                    title: "Password Incorrect",
-                    description: "The password for this account is incorrect. If you believe this is an error, please contact an administrator to sync your account.",
-                });
-            }
-        } else {
-            // No profile was found for this email
-            toast({
-                variant: "destructive",
-                title: "Login Failed",
-                description: "User not found. Please check your email and password.",
-            });
-        }
+    // --- Login Successful ---
+    const userSessionData = {
+        id: staffProfile.id,
+        email: staffProfile.email,
+        role: staffProfile.role.toLowerCase(), // Ensure role is lowercase
+        branchName: staffProfile.branch,
+        name: staffProfile.name,
+    };
+
+    localStorage.setItem('user', JSON.stringify(userSessionData));
+
+    toast({
+        title: "Login Successful",
+        description: "Welcome back! Redirecting...",
+    });
+
+    // Redirect based on role
+    if (userSessionData.role === 'admin') {
+      router.push('/admin/dashboard');
+    } else {
+      router.push('/staff/dashboard');
     }
     
     setIsLoading(false);

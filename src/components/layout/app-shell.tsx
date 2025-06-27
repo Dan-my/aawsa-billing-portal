@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -31,6 +30,7 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+// Supabase client is not needed for auth here, but might be for other things. Keep it.
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 
@@ -52,8 +52,9 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal" }: AppHeaderC
   const router = useRouter();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    // The onAuthStateChange listener will handle redirecting to '/'
+    // Clear the user from localStorage and redirect to login
+    localStorage.removeItem('user');
+    router.push('/');
   };
   
   const dashboardHref = user?.role === 'admin' ? '/admin/dashboard' : '/staff/dashboard';
@@ -127,54 +128,38 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
       document.documentElement.classList.toggle('dark', storedDarkMode === "true");
     }
 
-    // --- Auth Listener ---
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session: Session | null) => {
-        if (session) {
-          // User is logged in, fetch their profile
-          const { data: profile } = await supabase
-            .from('staff_members')
-            .select('*')
-            .eq('id', session.user.id) // Query by the auth user's ID
-            .single();
-          
-          if (profile) {
-            const userProfile: UserProfile = {
-              id: session.user.id,
-              email: session.user.email!,
-              role: profile.role.toLowerCase() as 'admin' | 'staff',
-              branchName: profile.branch,
-              name: profile.name,
-            };
+    // --- Custom Auth Check using localStorage ---
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+        try {
+            const userProfile: UserProfile = JSON.parse(storedUser);
             setUser(userProfile);
-            
-            // Redirect if they land on the wrong dashboard or root page
-            const expectedPath = `/${userProfile.role}/dashboard`;
-            if (pathname !== expectedPath) {
-               router.push(expectedPath);
+
+            // Redirect if they are on the login page
+            if (pathname === '/') {
+                const dashboardPath = userProfile.role === 'admin' ? '/admin/dashboard' : '/staff/dashboard';
+                router.replace(dashboardPath);
             }
-          } else {
-            // No profile found for logged-in user, sign them out
-            await supabase.auth.signOut();
+        } catch (error) {
+            console.error("Failed to parse user from localStorage", error);
+            localStorage.removeItem('user');
             setUser(null);
-            router.push('/');
-          }
-        } else {
-          // User is not logged in
-          setUser(null);
-          if (pathname !== '/') {
-            router.push('/');
-          }
+            if (pathname !== '/') {
+                router.replace('/');
+            }
         }
-        setAuthChecked(true);
-      }
-    );
+    } else {
+        // No user in storage
+        setUser(null);
+        if (pathname !== '/') {
+            router.replace('/');
+        }
+    }
+    setAuthChecked(true);
 
-    return () => {
-      subscription.unsubscribe();
-    };
-
-  }, [router, pathname]);
+  // The router and pathname dependencies ensure this effect re-runs on navigation,
+  // which is important for protecting routes.
+  }, [pathname, router]);
 
 
   if (!authChecked) { 
@@ -190,14 +175,16 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
     );
   }
   
-  // If auth is checked but there's no user, and we are not on the login page, it means we should not render the shell
-  if (!user && pathname !== '/') {
-    return null; // or a redirecting message
-  }
-
   // If we are on the login page, just render the children (the AuthForm)
+  // This allows the login page to be displayed while AppShell manages the redirect logic.
   if (pathname === '/') {
       return <>{children}</>;
+  }
+
+  // If auth is checked but there's no user, it means we should be on the login page.
+  // Returning null here prevents a flash of the dashboard layout.
+  if (!user) {
+    return null;
   }
 
   // If user is loaded but role doesn't match the layout, don't render anything until redirect happens

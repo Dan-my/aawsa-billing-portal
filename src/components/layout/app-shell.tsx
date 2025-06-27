@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import Image from 'next/image'; // Import next/image
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LogOut,
@@ -34,6 +34,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/lib/supabase'; // Import supabase client
 
 interface User {
+  id: string; // Add id to user interface
   email: string;
   role: 'admin' | 'staff';
   branchName?: string;
@@ -49,9 +50,8 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal" }: AppHeaderC
   const router = useRouter();
 
   const handleLogout = async () => {
+    // onAuthStateChange will handle redirect and localStorage cleanup
     await supabase.auth.signOut();
-    localStorage.removeItem('user');
-    router.push('/'); // Redirect to login page
   };
   
   const dashboardHref = user?.role === 'admin' ? '/admin/dashboard' : '/staff/dashboard';
@@ -72,8 +72,8 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal" }: AppHeaderC
           <Image
             src="https://veiethiopia.com/photo/partner/par2.png"
             alt="AAWSA Logo"
-            width={48} // Adjusted width for this logo
-            height={30} // Adjusted height for this logo
+            width={48}
+            height={30}
             className="flex-shrink-0" 
           />
           <span className="hidden sm:inline-block">{appName}</span>
@@ -109,47 +109,13 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
   const pathname = usePathname();
   const [user, setUser] = React.useState<User | null>(null);
   const [appName, setAppName] = React.useState("AAWSA Billing Portal");
-  const [isMounted, setIsMounted] = React.useState(false);
+  const [authChecked, setAuthChecked] = React.useState(false);
   const currentYear = new Date().getFullYear();
 
   React.useEffect(() => {
-    setIsMounted(true);
-    const storedUserJson = localStorage.getItem('user');
+    // This effect runs once on mount to set up the auth listener and UI details.
     
-    if (storedUserJson) {
-      try {
-        const parsedUser: User = JSON.parse(storedUserJson);
-        
-        if (parsedUser.role !== userRole) {
-          localStorage.removeItem('user');
-          router.push('/');
-          return;
-        }
-
-        const expectedPathPrefix = `/${parsedUser.role}`;
-        const expectedDashboardPath = `${expectedPathPrefix}/dashboard`;
-
-        if (pathname !== '/' && !pathname.startsWith(expectedPathPrefix) && pathname !== expectedDashboardPath && !pathname.startsWith(expectedDashboardPath + '/')) {
-           // If the current path isn't the login page, isn't the expected dashboard, or a sub-path of dashboard, redirect.
-           // This handles cases where user might be on /admin but should be /admin/dashboard, or on /admin/some-other-page.
-          if (pathname !== expectedDashboardPath) { // Avoid redirect loop if already on dashboard
-            router.push(expectedDashboardPath);
-            return;
-          }
-        }
-        
-        setUser(parsedUser);
-
-      } catch (error) {
-        console.error("Failed to parse user from localStorage or role mismatch:", error);
-        localStorage.removeItem('user');
-        router.push('/');
-        return;
-      }
-    } else if (pathname !== '/') { 
-      router.push('/');
-    }
-
+    // Set app name from local storage
     const storedAppName = localStorage.getItem("aawsa-app-name");
     if (storedAppName) {
       setAppName(storedAppName);
@@ -157,10 +123,9 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
         document.title = storedAppName;
       }
     }
-  }, [router, userRole, pathname]);
-  
-  React.useEffect(() => {
-    if (isMounted && typeof document !== 'undefined') {
+    
+    // Dark mode logic
+    if (typeof document !== 'undefined') {
       const storedDarkMode = localStorage.getItem("aawsa-dark-mode-default");
       if (storedDarkMode === "true") {
         document.documentElement.classList.add('dark');
@@ -168,9 +133,56 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
         document.documentElement.classList.remove('dark');
       }
     }
-  }, [isMounted]);
 
-  if (!isMounted) {
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        // User is signed in. Fetch their profile.
+        const { data: staffMember, error } = await supabase
+          .from('staff_members')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (error) {
+          console.error("Error fetching user profile:", error);
+          await supabase.auth.signOut(); // Force sign out on profile error
+        } else if (staffMember) {
+           const userProfile: User = {
+                id: staffMember.id,
+                email: staffMember.email,
+                role: staffMember.role.toLowerCase() as 'admin' | 'staff',
+                branchName: staffMember.branch,
+            };
+
+            // Before setting user, check role and path
+            if (userProfile.role !== userRole) {
+                // Wrong role for this layout, sign out and redirect
+                // This prevents a staff from accessing /admin routes, for example.
+                await supabase.auth.signOut();
+            } else {
+                setUser(userProfile);
+                localStorage.setItem("user", JSON.stringify(userProfile));
+            }
+        }
+      } else {
+        // User is signed out.
+        setUser(null);
+        localStorage.removeItem('user');
+        if (pathname !== '/') {
+            router.push('/');
+        }
+      }
+      setAuthChecked(true); // Mark auth as checked
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [router, userRole, pathname]);
+
+
+  if (!authChecked) { // Show skeleton while auth is being checked
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-background">
         <div className="space-y-4 w-full max-w-xs p-4">
@@ -182,17 +194,21 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
       </div>
     );
   }
-
-  if (pathname === '/') {
-      return <>{children}</>;
-  }
   
+  // If we've checked auth and there's no user, but we're not on the login page,
+  // we are in a redirect state. The onAuthStateChange listener has already called router.push('/')
+  // so we just show a loader to avoid flashing the protected page content.
   if (!user && pathname !== '/') {
     return (
          <div className="flex min-h-screen items-center justify-center bg-background">
-            <p>Verifying session...</p>
+            <p>Redirecting to login...</p>
          </div>
     );
+  }
+
+  // The login page is a special case that doesn't use the AppShell layout.
+  if (pathname === '/') {
+      return <>{children}</>;
   }
 
   return (

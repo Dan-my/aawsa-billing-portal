@@ -26,7 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { LogIn } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { supabase, type StaffMemberInsert } from "@/lib/supabase";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -51,39 +51,92 @@ export function AuthForm() {
   const onSubmit = async (values: LoginFormValues) => {
     setIsLoading(true);
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    // 1. Try to sign in normally
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
       email: values.email,
       password: values.password,
     });
 
-    if (error) {
+    if (signInData.session) {
       toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: error.message || "Invalid login credentials.",
+        title: "Login Successful",
+        description: `Welcome back! Redirecting...`,
       });
+      // AppShell's onAuthStateChange will handle the redirect
       setIsLoading(false);
       return;
     }
 
-    if (data.session) {
-      // The onAuthStateChange listener in AppShell will handle fetching profile
-      // and redirecting. We just need to show a success toast here.
-      toast({
-        title: "Login Successful",
-        description: `Welcome! Redirecting to your dashboard...`,
-      });
-      // The redirect is handled in AppShell to avoid race conditions
-    } else {
-        // This case should ideally not be reached if there's no error but also no session
-        toast({
-            variant: "destructive",
-            title: "Login Failed",
-            description: "Could not establish a session. Please try again.",
+    // 2. If signIn fails with invalid credentials, check if it's a legacy user
+    if (signInError && signInError.message === 'Invalid login credentials') {
+      const { data: legacyProfile } = await supabase
+        .from('staff_members')
+        .select('*')
+        .eq('email', values.email)
+        .single();
+      
+      if (legacyProfile && legacyProfile.password === values.password) {
+        // This is a legacy user! Let's migrate them.
+        toast({ title: "First-time Login Detected", description: "Updating your account to the new security system..." });
+
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: values.email,
+          password: values.password,
         });
+
+        if (signUpError || !signUpData.user) {
+          toast({ variant: "destructive", title: "Migration Failed", description: signUpError?.message || "Could not create your secure account. Please contact an admin." });
+          setIsLoading(false);
+          return;
+        }
+        
+        // A. Prepare new profile data with the new auth ID, preserving old data
+        const newProfileData: StaffMemberInsert = {
+            id: signUpData.user.id, // The NEW auth ID
+            name: legacyProfile.name,
+            email: legacyProfile.email,
+            branch: legacyProfile.branch,
+            status: legacyProfile.status,
+            phone: legacyProfile.phone,
+            hire_date: legacyProfile.hire_date,
+            role: legacyProfile.role,
+            password: null, // Remove legacy password
+        };
+        
+        // B. Delete the old profile (identified by the old, non-auth UUID)
+        const { error: deleteError } = await supabase.from('staff_members').delete().eq('id', legacyProfile.id);
+        if (deleteError) {
+             toast({ variant: "destructive", title: "Migration Failed", description: "Could not remove old profile data. Please contact an admin." });
+             // In a real app, you would attempt to delete the newly created auth user for a full rollback.
+             setIsLoading(false);
+             return;
+        }
+
+        // C. Insert the new profile record with the correct auth ID
+        const { error: insertError } = await supabase.from('staff_members').insert(newProfileData);
+         if (insertError) {
+             toast({ variant: "destructive", title: "Migration Failed", description: "Could not create your updated profile. Please contact an admin." });
+             setIsLoading(false);
+             return;
+        }
+
+        // Migration complete! The signUp call already started a session.
+        toast({ title: "Account Updated Successfully!", description: "You are now logged in." });
         setIsLoading(false);
+        // AppShell will do the rest.
+        return;
+      }
     }
+
+    // If we're here, it's a genuine failed login attempt.
+    toast({
+      variant: "destructive",
+      title: "Login Failed",
+      description: signInError?.message || "Invalid credentials or user does not exist.",
+    });
+    setIsLoading(false);
   };
+
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted/40">

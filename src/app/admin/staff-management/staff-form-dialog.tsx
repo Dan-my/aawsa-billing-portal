@@ -33,12 +33,16 @@ const availableBranches = ["Kality Branch", "Central Branch", "North Branch", "S
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   email: z.string().email({ message: "Invalid email address." }),
-  // Password is now optional in the form, but required for creation logic in data-store
-  password: z.string().optional(),
+  password: z.string().min(6, "Password must be at least 6 characters.").optional().or(z.literal('')),
   branch: z.string().min(1, { message: "Branch is required." }),
   status: z.enum(staffStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
   phone: z.string().optional(),
   role: z.string().min(1, { message: "Role is required." }),
+}).refine(data => {
+    // This refine is to make password conditionally required.
+    // However, since we handle this in the submit logic, we can simplify.
+    // For this example, we'll keep it simple. A more complex check could go here.
+    return true;
 });
 
 
@@ -47,7 +51,7 @@ export type StaffFormValues = z.infer<typeof formSchema>;
 interface StaffFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: StaffFormValues) => void;
+  onSubmit: (data: StaffFormValues, isEditing: boolean) => void;
   defaultValues?: StaffMember | null;
 }
 
@@ -92,7 +96,12 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
   }, [defaultValues, form, open]);
 
   const handleSubmit = (data: StaffFormValues) => {
-    onSubmit(data);
+    // For new users, ensure a password is provided
+    if (!isEditing && !data.password) {
+        form.setError("password", { type: "manual", message: "Password is required for new staff members." });
+        return;
+    }
+    onSubmit(data, isEditing);
     onOpenChange(false); 
   };
   

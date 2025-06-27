@@ -53,7 +53,7 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal" }: AppHeaderC
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/');
+    // The onAuthStateChange listener will handle redirecting to '/'
   };
   
   const dashboardHref = user?.role === 'admin' ? '/admin/dashboard' : '/staff/dashboard';
@@ -135,7 +135,7 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
           const { data: profile } = await supabase
             .from('staff_members')
             .select('*')
-            .eq('id', session.user.id)
+            .eq('id', session.user.id) // Query by the auth user's ID
             .single();
           
           if (profile) {
@@ -146,20 +146,12 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
               branchName: profile.branch,
               name: profile.name,
             };
+            setUser(userProfile);
             
-            // Check if user role matches the layout
-            if (userProfile.role === userRole) {
-              setUser(userProfile);
-              // Redirect if they land on the wrong dashboard
-              const expectedPath = `/${userProfile.role}/`;
-              if (!pathname.startsWith(expectedPath) && pathname !== '/_next/static/chunks/main-app.js') { // Added check to prevent irrelevant redirects
-                 router.push(`${expectedPath}dashboard`);
-              }
-            } else {
-              // Role mismatch, sign them out and redirect
-              await supabase.auth.signOut();
-              setUser(null);
-              router.push('/');
+            // Redirect if they land on the wrong dashboard or root page
+            const expectedPath = `/${userProfile.role}/dashboard`;
+            if (pathname !== expectedPath) {
+               router.push(expectedPath);
             }
           } else {
             // No profile found for logged-in user, sign them out
@@ -182,7 +174,7 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
       subscription.unsubscribe();
     };
 
-  }, [router, pathname, userRole]);
+  }, [router, pathname]);
 
 
   if (!authChecked) { 
@@ -206,6 +198,11 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
   // If we are on the login page, just render the children (the AuthForm)
   if (pathname === '/') {
       return <>{children}</>;
+  }
+
+  // If user is loaded but role doesn't match the layout, don't render anything until redirect happens
+  if (user && user.role !== userRole) {
+    return null;
   }
 
   return (

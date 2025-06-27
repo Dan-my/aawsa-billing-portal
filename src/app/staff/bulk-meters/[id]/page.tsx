@@ -232,7 +232,7 @@ export default function StaffBulkMeterDetailsPage() {
     if (selectedCustomer) {
       const updatedCustomerData: IndividualCustomer = {
           ...selectedCustomer, ...data, ordinal: Number(data.ordinal), meterSize: Number(data.meterSize),
-          previousReading: Number(data.previousReading), currentReading: Number(data.currentReading), arrears: Number(data.arrears),
+          previousReading: Number(data.previousReading), currentReading: Number(data.currentReading), 
           status: data.status as IndividualCustomerStatus, paymentStatus: data.paymentStatus as PaymentStatus,
           customerType: data.customerType as CustomerType, sewerageConnection: data.sewerageConnection as SewerageConnection,
           assignedBulkMeterId: data.assignedBulkMeterId || undefined,
@@ -275,6 +275,7 @@ export default function StaffBulkMeterDetailsPage() {
       currentReadingValue: bulkMeter.currentReading,
       usageM3: bulkUsage,
       ...billBreakdown,
+      balanceCarriedForward: bulkMeter.outStandingbill || 0,
       totalAmountDue: totalBill,
       dueDate: format(dueDateObject, 'yyyy-MM-dd'),
       paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
@@ -377,7 +378,7 @@ export default function StaffBulkMeterDetailsPage() {
        <Card className="shadow-lg">
         <CardHeader><CardTitle className="flex items-center gap-2"><ListCollapse className="h-5 w-5 text-primary" />Billing History</CardTitle><CardDescription>Historical bills generated for this meter.</CardDescription></CardHeader>
         <CardContent>
-          <div className="overflow-x-auto max-h-96">{billingHistory.length > 0 ? (<Table><TableHeader><TableRow><TableHead>Month</TableHead><TableHead>Date Billed</TableHead><TableHead>Usage (m³)</TableHead><TableHead className="text-right">Amount Due (ETB)</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>{billingHistory.map(bill => (<TableRow key={bill.id}><TableCell>{bill.monthYear}</TableCell><TableCell>{format(parseISO(bill.billPeriodEndDate), "PP")}</TableCell><TableCell>{bill.usageM3?.toFixed(2) ?? 'N/A'}</TableCell><TableCell className="text-right font-medium">{bill.totalAmountDue.toFixed(2)}</TableCell><TableCell><Badge variant={bill.paymentStatus === 'Paid' ? 'default' : 'destructive'}>{bill.paymentStatus}</Badge></TableCell></TableRow>))}</TableBody></Table>) : (<p className="text-muted-foreground text-sm text-center py-4">No billing history found.</p>)}</div>
+          <div className="overflow-x-auto max-h-96">{billingHistory.length > 0 ? (<Table><TableHeader><TableRow><TableHead>Month</TableHead><TableHead>Date Billed</TableHead><TableHead>Usage (m³)</TableHead><TableHead className="text-right">Outstanding (ETB)</TableHead><TableHead className="text-right">Current Bill (ETB)</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>{billingHistory.map(bill => (<TableRow key={bill.id}><TableCell>{bill.monthYear}</TableCell><TableCell>{format(parseISO(bill.billPeriodEndDate), "PP")}</TableCell><TableCell>{bill.usageM3?.toFixed(2) ?? 'N/A'}</TableCell><TableCell className="text-right">{bill.balanceCarriedForward?.toFixed(2) ?? '0.00'}</TableCell><TableCell className="text-right font-medium">{bill.totalAmountDue.toFixed(2)}</TableCell><TableCell><Badge variant={bill.paymentStatus === 'Paid' ? 'default' : 'destructive'}>{bill.paymentStatus}</Badge></TableCell></TableRow>))}</TableBody></Table>) : (<p className="text-muted-foreground text-sm text-center py-4">No billing history found.</p>)}</div>
         </CardContent>
       </Card>
 

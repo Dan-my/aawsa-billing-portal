@@ -86,6 +86,7 @@ export interface DomainBill {
   maintenanceFee?: number | null;
   sanitationFee?: number | null;
   meterRent?: number | null;
+  balanceCarriedForward?: number | null;
   totalAmountDue: number;
   amountPaid?: number;
   balanceDue?: number | null;
@@ -276,7 +277,7 @@ const mapSupabaseCustomerToDomain = (sc: SupabaseIndividualCustomerRow): DomainI
     status: sc.status as IndividualCustomerStatus,
     paymentStatus: sc.paymentStatus as PaymentStatus,
     calculatedBill: bill,
-    arrears: sc.arrears || 0,
+    
     created_at: sc.created_at,
     updated_at: sc.updated_at,
   };
@@ -520,6 +521,7 @@ const mapSupabaseBillToDomain = (sb: SupabaseBillRow): DomainBill => ({
   maintenanceFee: sb.maintenance_fee ? Number(sb.maintenance_fee) : null,
   sanitationFee: sb.sanitation_fee ? Number(sb.sanitation_fee) : null,
   meterRent: sb.meter_rent ? Number(sb.meter_rent) : null,
+  balanceCarriedForward: sb.balance_carried_forward ? Number(sb.balance_carried_forward) : null,
   totalAmountDue: Number(sb.total_amount_due),
   amountPaid: sb.amount_paid ? Number(sb.amount_paid) : undefined,
   balanceDue: sb.balance_due ? Number(sb.balance_due) : null,
@@ -545,6 +547,7 @@ const mapDomainBillToSupabase = (bill: Partial<DomainBill>): Partial<BillInsert 
     if (bill.maintenanceFee !== undefined) payload.maintenance_fee = bill.maintenanceFee;
     if (bill.sanitationFee !== undefined) payload.sanitation_fee = bill.sanitationFee;
     if (bill.meterRent !== undefined) payload.meter_rent = bill.meterRent;
+    if (bill.balanceCarriedForward !== undefined) payload.balance_carried_forward = bill.balanceCarriedForward;
     if (bill.totalAmountDue !== undefined) payload.total_amount_due = bill.totalAmountDue;
     if (bill.amountPaid !== undefined) payload.amount_paid = bill.amountPaid;
     if (bill.dueDate !== undefined) payload.due_date = bill.dueDate;
@@ -1365,4 +1368,3 @@ export async function loadInitialData() {
     initializeReportLogs(),
   ]);
 }
-

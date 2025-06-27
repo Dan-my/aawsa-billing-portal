@@ -141,7 +141,7 @@ export interface Database {
           status: 'Active' | 'Inactive' | 'Suspended';
           paymentStatus: 'Paid' | 'Unpaid' | 'Pending';
           calculatedBill: number;
-          arrears: number;
+          
           branch_id?: string | null; 
           created_at?: string | null;
           updated_at?: string | null;
@@ -167,7 +167,7 @@ export interface Database {
           status?: 'Active' | 'Inactive' | 'Suspended';
           paymentStatus?: 'Paid' | 'Unpaid' | 'Pending';
           calculatedBill?: number;
-          arrears?: number;
+          
           branch_id?: string | null; 
           created_at?: string | null;
           updated_at?: string | null;
@@ -193,7 +193,7 @@ export interface Database {
           status?: 'Active' | 'Inactive' | 'Suspended';
           paymentStatus?: 'Paid' | 'Unpaid' | 'Pending';
           calculatedBill?: number;
-          arrears?: number;
+          
           branch_id?: string | null; 
           created_at?: string | null;
           updated_at?: string | null;
@@ -256,6 +256,7 @@ export interface Database {
           maintenance_fee?: number | null;
           sanitation_fee?: number | null;
           meter_rent?: number | null;
+          balance_carried_forward?: number | null;
           total_amount_due: number;
           amount_paid?: number;
           balance_due?: number | null;
@@ -280,6 +281,7 @@ export interface Database {
           maintenance_fee?: number | null;
           sanitation_fee?: number | null;
           meter_rent?: number | null;
+          balance_carried_forward?: number | null;
           total_amount_due: number;
           amount_paid?: number;
           due_date: string;
@@ -303,6 +305,7 @@ export interface Database {
           maintenance_fee?: number | null;
           sanitation_fee?: number | null;
           meter_rent?: number | null;
+          balance_carried_forward?: number | null;
           total_amount_due?: number;
           amount_paid?: number;
           due_date?: string;

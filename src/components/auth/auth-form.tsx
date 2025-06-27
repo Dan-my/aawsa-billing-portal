@@ -26,7 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { LogIn } from "lucide-react";
-import { supabase } from "@/lib/supabase"; // Import supabase client
+import { getStaffMembers, initializeStaffMembers } from "@/lib/data-store";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -47,68 +47,57 @@ export function AuthForm() {
       password: "",
     },
   });
+  
+  React.useEffect(() => {
+    // Pre-load staff members on component mount to ensure they are available for login check
+    initializeStaffMembers();
+  }, []);
 
-  const onSubmit = async (values: LoginFormValues) => {
+  const onSubmit = (values: LoginFormValues) => {
     setIsLoading(true);
-
-    // Use Supabase Auth to sign in
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: values.email,
-      password: values.password,
-    });
-
-    if (authError || !authData.user) {
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: authError?.message || "Invalid email or password.",
-      });
-      setIsLoading(false);
-      return;
-    }
-
-    // After successful Supabase auth, fetch the user's profile from staff_members
-    const { data: userProfile, error: profileError } = await supabase
-      .from('staff_members')
-      .select('*')
-      .eq('id', authData.user.id)
-      .single();
     
-    if (profileError || !userProfile) {
+    // This is a simplified, non-production-ready authentication check.
+    // It directly queries the client-side data store.
+    const staffList = getStaffMembers();
+    const user = staffList.find(staff => staff.email.toLowerCase() === values.email.toLowerCase());
+
+    if (user && user.password === values.password) {
+      if(user.status !== "Active") {
+          toast({
+            variant: "destructive",
+            title: "Login Failed",
+            description: `This account is currently ${user.status}. Please contact an administrator.`,
+          });
+          setIsLoading(false);
+          return;
+      }
+      
       toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: "Could not find a staff profile for this user.",
+        title: "Login Successful",
+        description: "Welcome back! Redirecting...",
       });
-      // Sign out the user since they don't have a profile
-      await supabase.auth.signOut();
-      setIsLoading(false);
-      return;
-    }
+      
+      // Store user info in localStorage for session persistence
+      const sessionUser = {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        branchName: user.branch,
+        name: user.name,
+      };
+      localStorage.setItem("user", JSON.stringify(sessionUser));
 
-    if (userProfile.status !== "Active") {
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: `This account is currently ${userProfile.status}. Please contact an administrator.`,
-      });
-      await supabase.auth.signOut();
-      setIsLoading(false);
-      return;
-    }
-
-    // We don't need to manually store the session in localStorage anymore.
-    // The AppShell will handle this by listening to onAuthStateChange.
-
-    toast({
-      title: "Login Successful",
-      description: "Welcome back! Redirecting...",
-    });
-
-    if (userProfile.role.toLowerCase() === "admin") {
-      router.push("/admin/dashboard");
+      if (user.role.toLowerCase() === "admin") {
+        router.push("/admin/dashboard");
+      } else {
+        router.push("/staff/dashboard");
+      }
     } else {
-      router.push("/staff/dashboard");
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: "Invalid email or password.",
+      });
     }
 
     setIsLoading(false);

@@ -52,7 +52,7 @@ export type StaffFormValues = z.infer<typeof formSchema>;
 interface StaffFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: StaffFormValues, isEditing: boolean) => void;
+  onSubmit: (data: StaffFormValues) => void;
   defaultValues?: StaffMember | null;
 }
 
@@ -102,7 +102,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
         form.setError("password", { type: "manual", message: "Password is required for new staff members." });
         return;
     }
-    onSubmit(data, isEditing);
+    onSubmit(data);
     onOpenChange(false); 
   };
   
@@ -138,7 +138,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
                 <FormItem>
                   <FormLabel>Email (Login ID)</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="e.g., kality@aawsa.com" {...field} disabled={isEditing} />
+                    <Input type="email" placeholder="e.g., kality@aawsa.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

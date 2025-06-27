@@ -31,12 +31,11 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { supabase } from '@/lib/supabase'; // Import supabase
 
 interface UserProfile {
   id: string; 
   email: string;
-  role: 'Admin' | 'Staff'; // Use capitalized roles
+  role: 'Admin' | 'Staff';
   branchName?: string;
   name?: string;
 }
@@ -121,47 +120,32 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
       document.documentElement.classList.toggle('dark', storedDarkMode === "true");
     }
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-        const authUser = session?.user;
-        if (authUser) {
-            // If there's an auth user, fetch their profile from the staff_members table
-            const { data: userProfile, error } = await supabase
-                .from('staff_members')
-                .select('*')
-                .eq('id', authUser.id)
-                .single();
-
-            if (userProfile && !error) {
-                setUser({
-                    id: userProfile.id,
-                    email: userProfile.email,
-                    role: userProfile.role,
-                    branchName: userProfile.branch,
-                    name: userProfile.name,
-                });
+    // Check for user session in localStorage
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+        try {
+            const parsedUser: UserProfile = JSON.parse(storedUser);
+            if (parsedUser.role.toLowerCase() === userRole) {
+                setUser(parsedUser);
             } else {
-                // Auth user exists but no profile, or error fetching. Log them out.
-                await supabase.auth.signOut();
-                setUser(null);
-            }
-        } else {
-            // No session, user is logged out
-            setUser(null);
-            if (pathname !== '/') {
+                // Wrong role for this layout, redirect to login
                 router.replace('/');
             }
+        } catch (e) {
+            // Invalid JSON, clear it and redirect
+            localStorage.removeItem('user');
+            router.replace('/');
         }
-        setAuthChecked(true);
-    });
+    } else if (pathname !== '/') {
+        // No user and not on login page, redirect
+        router.replace('/');
+    }
+    setAuthChecked(true);
 
-    return () => {
-        authListener.subscription.unsubscribe();
-    };
-
-  }, [pathname, router]);
+  }, [pathname, router, userRole]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    localStorage.removeItem("user");
     setUser(null);
     router.push("/");
   };

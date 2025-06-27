@@ -73,8 +73,8 @@ export default function StaffManagementPage() {
     setIsDeleteDialogOpen(false);
   };
 
-  const handleSubmitStaff = async (data: StaffFormValues, isEditing: boolean) => {
-    if (isEditing && selectedStaff) {
+  const handleSubmitStaff = async (data: StaffFormValues) => {
+    if (selectedStaff) {
       const result = await updateStaffMemberInStore(selectedStaff.id, data);
       if (result.success) {
         toast({ title: "Staff Updated", description: `${data.name} has been updated.` });

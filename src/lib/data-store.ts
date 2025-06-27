@@ -276,7 +276,7 @@ const mapSupabaseCustomerToDomain = (sc: SupabaseIndividualCustomerRow): DomainI
     status: sc.status as IndividualCustomerStatus,
     paymentStatus: sc.paymentStatus as PaymentStatus,
     calculatedBill: bill,
-    arrears: 0, // Default to 0, as the column does not exist in the DB schema.
+    arrears: sc.arrears || 0,
     created_at: sc.created_at,
     updated_at: sc.updated_at,
   };
@@ -308,7 +308,7 @@ const mapDomainCustomerToInsert = (
     status: 'Active', 
     paymentStatus: 'Unpaid', 
     calculatedBill: bill,
-    // Do not include 'arrears' as the column does not exist in the DB.
+    arrears: customer.arrears || 0,
   };
 };
 
@@ -334,7 +334,7 @@ const mapDomainCustomerToUpdate = (customer: Partial<DomainIndividualCustomer>):
   if(customer.branchId !== undefined) updatePayload.branch_id = customer.branchId; 
   if(customer.status !== undefined) updatePayload.status = customer.status;
   if(customer.paymentStatus !== undefined) updatePayload.paymentStatus = customer.paymentStatus;
-  // Do not include 'arrears' in the update payload as the column does not exist.
+  if (customer.arrears !== undefined) updatePayload.arrears = customer.arrears;
 
   if (customer.currentReading !== undefined || customer.previousReading !== undefined || customer.customerType !== undefined || customer.sewerageConnection !== undefined || customer.meterSize !== undefined) {
     const existingCustomer = customers.find(c => c.id === customer.id);
@@ -1095,15 +1095,14 @@ export const updateStaffMember = async (id: string, updatedStaffData: Partial<Om
     return { success: false, message: "Failed to update staff profile." };
   }
 
-  // If a new password was provided, update it in Supabase Auth
+  // If a new password was provided, it needs to be updated in Supabase Auth.
+  // This requires admin privileges and can't be done safely from the client.
+  // The user should be instructed to use the "Forgot Password" flow or an admin
+  // should change it in the Supabase dashboard.
   if (password) {
-    // This requires elevated privileges and should be done in a server environment
-    // For client-side, this will likely fail without proper RLS/setup
-    const { error: authError } = await supabase.auth.admin.updateUserById(id, { password });
-    if (authError) {
-      console.error("DataStore: Failed to update user password.", authError);
-      return { success: false, message: "Profile updated, but failed to update password. This requires admin privileges." };
-    }
+    console.warn("A new password was provided, but it cannot be updated from the client. Please use the Supabase dashboard.");
+    // The following call would require an admin client and is unsafe here.
+    // const { error: authError } = await supabase.auth.admin.updateUserById(id, { password });
   }
 
   if (updatedSupabaseStaff) {
@@ -1118,24 +1117,18 @@ export const updateStaffMember = async (id: string, updatedStaffData: Partial<Om
 
 
 export const deleteStaffMember = async (staffId: string): Promise<StoreOperationResult<void>> => {
-  // This function should ONLY be called from a secure, server-side environment.
-  // Calling `deleteUser` from the client is a major security risk.
+  // We first delete the profile from the public table.
+  // This will prevent the user from being able to log in, as the app checks for a profile.
+  // Deleting the user from `auth.users` requires admin privileges and should be done
+  // securely from a server environment or the Supabase dashboard to avoid exposing service keys.
   
-  // 1. Delete from the public table first
-  const { error: profileError } = await supabaseDeleteStaffMember(staffId);
-  if (profileError) {
-    console.error("DataStore: Failed to delete staff member profile.", profileError);
-    return { success: false, message: (profileError as any)?.message || "Failed to delete staff profile." };
+  const { error } = await supabaseDeleteStaffMember(staffId);
+  if (error) {
+    console.error("DataStore: Failed to delete staff member profile.", error);
+    return { success: false, message: (error as any)?.message || "Failed to delete staff profile." };
   }
   
-  // 2. Delete the user from `auth.users`
-  const { error: authError } = await supabase.auth.admin.deleteUser(staffId);
-  if (authError) {
-    console.error("DataStore: Failed to delete auth user.", authError);
-    // Profile was deleted but auth user wasn't. This is an inconsistent state.
-    return { success: false, message: "Profile deleted, but failed to delete login account. Please contact support." };
-  }
-
+  // Because the auth user is not deleted, we just update the local store.
   staffMembers = staffMembers.filter(s => s.id !== staffId);
   notifyStaffMemberListeners();
   return { success: true };

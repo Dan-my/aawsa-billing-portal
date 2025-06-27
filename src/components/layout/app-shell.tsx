@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -30,11 +31,12 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { supabase } from '@/lib/supabase'; // Import supabase
 
 interface UserProfile {
   id: string; 
   email: string;
-  role: 'admin' | 'staff';
+  role: 'Admin' | 'Staff'; // Use capitalized roles
   branchName?: string;
   name?: string;
 }
@@ -48,7 +50,7 @@ interface AppHeaderContentProps {
 function AppHeaderContent({ user, appName = "AAWSA Billing Portal", onLogout }: AppHeaderContentProps) {
   const { toggleSidebar, isMobile, state: sidebarState } = useSidebar();
   
-  const dashboardHref = user?.role === 'admin' ? '/admin/dashboard' : '/staff/dashboard';
+  const dashboardHref = user?.role.toLowerCase() === 'admin' ? '/admin/dashboard' : '/staff/dashboard';
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
@@ -82,7 +84,7 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal", onLogout }: 
             <DropdownMenuContent align="end">
               <DropdownMenuLabel className="truncate max-w-[200px]">{user.name || user.email}</DropdownMenuLabel>
               <DropdownMenuLabel className="text-xs text-muted-foreground font-normal -mt-2">
-                Role: {user.role === 'staff' && user.branchName ? `Staff (${user.branchName})` : user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                Role: {user.role === 'Staff' && user.branchName ? `Staff (${user.branchName})` : user.role}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onLogout}>
@@ -119,32 +121,47 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
       document.documentElement.classList.toggle('dark', storedDarkMode === "true");
     }
 
-    // --- LocalStorage Auth Check ---
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-        try {
-            const parsedUser: UserProfile = JSON.parse(storedUser);
-            setUser(parsedUser);
-            if (pathname === '/') {
-                const dashboardPath = parsedUser.role === 'admin' ? '/admin/dashboard' : '/staff/dashboard';
-                router.replace(dashboardPath);
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+        const authUser = session?.user;
+        if (authUser) {
+            // If there's an auth user, fetch their profile from the staff_members table
+            const { data: userProfile, error } = await supabase
+                .from('staff_members')
+                .select('*')
+                .eq('id', authUser.id)
+                .single();
+
+            if (userProfile && !error) {
+                setUser({
+                    id: userProfile.id,
+                    email: userProfile.email,
+                    role: userProfile.role,
+                    branchName: userProfile.branch,
+                    name: userProfile.name,
+                });
+            } else {
+                // Auth user exists but no profile, or error fetching. Log them out.
+                await supabase.auth.signOut();
+                setUser(null);
             }
-        } catch(e) {
-            console.error("Failed to parse user from localStorage", e);
+        } else {
+            // No session, user is logged out
             setUser(null);
-            localStorage.removeItem('user');
-            if (pathname !== '/') router.replace('/');
+            if (pathname !== '/') {
+                router.replace('/');
+            }
         }
-    } else {
-        setUser(null);
-        if (pathname !== '/') router.replace('/');
-    }
-    setAuthChecked(true);
+        setAuthChecked(true);
+    });
+
+    return () => {
+        authListener.subscription.unsubscribe();
+    };
 
   }, [pathname, router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
     router.push("/");
   };
@@ -162,15 +179,18 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
     );
   }
   
+  // Allow AuthForm to render on the home page
   if (pathname === '/') {
       return <>{children}</>;
   }
-
+  
+  // If not on home page, and no user, show nothing until redirect kicks in
   if (!user) {
     return null;
   }
 
-  if (user && user.role !== userRole) {
+  // If user role does not match the layout role, show nothing
+  if (user && user.role.toLowerCase() !== userRole) {
     return null;
   }
 

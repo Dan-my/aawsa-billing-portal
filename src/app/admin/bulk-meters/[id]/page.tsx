@@ -159,10 +159,14 @@ export default function BulkMeterDetailsPage() {
 
   const handleAddNewReading = async (readingValue: number) => {
     if (!bulkMeter) return;
+    
+    const readingDate = new Date();
 
     const result = await addBulkMeterReading({
       bulkMeterId: bulkMeter.id,
       readingValue: readingValue,
+      readingDate: format(readingDate, "yyyy-MM-dd"),
+      monthYear: format(readingDate, "yyyy-MM"),
     });
 
     if (result.success) {

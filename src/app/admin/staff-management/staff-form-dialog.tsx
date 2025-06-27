@@ -29,6 +29,7 @@ import { Label } from "@/components/ui/label";
 
 const staffStatuses: StaffStatus[] = ['Active', 'Inactive', 'On Leave'];
 const availableBranches = ["Kality Branch", "Central Branch", "North Branch", "South Branch", "East Branch", "West Branch", "Bole Branch", "Piassa Branch", "Megenagna Branch"];
+const staffRoles = ['Admin', 'Staff'] as const;
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -37,7 +38,7 @@ const formSchema = z.object({
   branch: z.string().min(1, { message: "Branch is required." }),
   status: z.enum(staffStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
   phone: z.string().optional(),
-  role: z.string().min(1, { message: "Role is required." }),
+  role: z.enum(staffRoles, { required_error: "Role is required." }),
 }).refine(data => {
     // This refine is to make password conditionally required.
     // However, since we handle this in the submit logic, we can simplify.
@@ -65,7 +66,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
       branch: "",
       status: undefined,
       phone: "",
-      role: "",
+      role: undefined,
     },
   });
   

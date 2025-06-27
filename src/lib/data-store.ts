@@ -308,7 +308,6 @@ const mapDomainCustomerToInsert = (
     status: 'Active', 
     paymentStatus: 'Unpaid', 
     calculatedBill: bill,
-    arrears: customer.arrears || 0,
   };
 };
 
@@ -334,7 +333,6 @@ const mapDomainCustomerToUpdate = (customer: Partial<DomainIndividualCustomer>):
   if(customer.branchId !== undefined) updatePayload.branch_id = customer.branchId; 
   if(customer.status !== undefined) updatePayload.status = customer.status;
   if(customer.paymentStatus !== undefined) updatePayload.paymentStatus = customer.paymentStatus;
-  if (customer.arrears !== undefined) updatePayload.arrears = customer.arrears;
 
   if (customer.currentReading !== undefined || customer.previousReading !== undefined || customer.customerType !== undefined || customer.sewerageConnection !== undefined || customer.meterSize !== undefined) {
     const existingCustomer = customers.find(c => c.id === customer.id);
@@ -1086,6 +1084,50 @@ export const deleteStaffMember = async (staffId: string): Promise<StoreOperation
   return { success: true };
 };
 
+export const addBill = async (billData: Omit<DomainBill, 'id' | 'createdAt' | 'updatedAt'>): Promise<StoreOperationResult<DomainBill>> => {
+    const payload = mapDomainBillToSupabase(billData) as BillInsert;
+    const { data: newSupabaseBill, error } = await supabaseCreateBill(payload);
+    if (newSupabaseBill && !error) {
+        const newBill = mapSupabaseBillToDomain(newSupabaseBill);
+        bills = [newBill, ...bills];
+        notifyBillListeners();
+        return { success: true, data: newBill };
+    }
+    console.error("DataStore: Failed to add bill. Supabase error:", JSON.stringify(error, null, 2));
+    return { success: false, message: (error as any)?.message || "Failed to add bill.", error };
+};
+
+export const updateExistingBill = async (id: string, billUpdateData: Partial<Omit<DomainBill, 'id'>>): Promise<StoreOperationResult<void>> => {
+    const payload = mapDomainBillToSupabase(billUpdateData) as BillUpdate;
+    const { data: updatedSupabaseBill, error } = await supabaseUpdateBill(id, payload);
+    if (updatedSupabaseBill && !error) {
+        const updatedBill = mapSupabaseBillToDomain(updatedSupabaseBill);
+        bills = bills.map(b => b.id === id ? updatedBill : b);
+        notifyBillListeners();
+        return { success: true };
+    }
+    console.error("DataStore: Failed to update bill. Supabase error:", JSON.stringify(error, null, 2));
+    let userMessage = "Failed to update bill.";
+    let isNotFoundError = false;
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'PGRST204') {
+      userMessage = "Failed to update bill: Record not found.";
+      isNotFoundError = true;
+    } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+      userMessage = `Failed to update bill: ${error.message}`;
+    }
+    return { success: false, message: userMessage, isNotFoundError, error };
+};
+
+export const removeBill = async (billId: string): Promise<StoreOperationResult<void>> => {
+    const { error } = await supabaseDeleteBill(billId);
+    if (!error) {
+        bills = bills.filter(b => b.id !== billId);
+        notifyBillListeners();
+        return { success: true };
+    }
+    console.error("DataStore: Failed to delete bill. Supabase error:", JSON.stringify(error, null, 2));
+    return { success: false, message: (error as any)?.message || "Failed to delete bill.", error };
+};
 
 export const addIndividualCustomerReading = async (readingData: Omit<DomainIndividualCustomerReading, 'id' | 'createdAt' | 'updatedAt'>): Promise<StoreOperationResult<DomainIndividualCustomerReading>> => {
     const customer = customers.find(c => c.id === readingData.individualCustomerId);

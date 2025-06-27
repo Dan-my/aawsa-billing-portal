@@ -46,6 +46,7 @@ export default function StaffBulkMeterDetailsPage() {
   const [bulkMeter, setBulkMeter] = useState<BulkMeter | null>(null);
   const [associatedCustomers, setAssociatedCustomers] = useState<IndividualCustomer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isProcessingCycle, setIsProcessingCycle] = React.useState(false);
   const [staffBranchName, setStaffBranchName] = React.useState<string | undefined>(undefined);
   const [isAuthorized, setIsAuthorized] = useState(false); 
   const [meterReadingHistory, setMeterReadingHistory] = useState<DomainBulkMeterReading[]>([]);
@@ -244,70 +245,78 @@ export default function StaffBulkMeterDetailsPage() {
   const handlePrint = () => window.print();
 
   const handleEndOfCycle = async (carryBalance: boolean) => {
-    if (!bulkMeter || !bulkMeter.month) return;
-    
-    const parsedDate = parseISO(`${bulkMeter.month}-01`);
-    if (isNaN(parsedDate.getTime())) {
-        toast({
-            variant: "destructive",
-            title: "Invalid Month Format",
-            description: `The billing month for this meter ("${bulkMeter.month}") is not a valid YYYY-MM format.`,
-        });
-        return;
-    }
-    const bmPreviousReading = bulkMeter.previousReading ?? 0;
-    const bmCurrentReading = bulkMeter.currentReading ?? 0;
-    const bulkUsage = bmCurrentReading - bmPreviousReading;
-    const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
-    const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
+    if (!bulkMeter || !bulkMeter.month || isProcessingCycle) return;
+    setIsProcessingCycle(true);
 
-    const { totalBill, ...billBreakdown } = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
+    try {
+      const parsedDate = parseISO(`${bulkMeter.month}-01`);
+      if (isNaN(parsedDate.getTime())) {
+          toast({
+              variant: "destructive",
+              title: "Invalid Month Format",
+              description: `The billing month for this meter ("${bulkMeter.month}") is not a valid YYYY-MM format.`,
+          });
+          return;
+      }
+      const bmPreviousReading = bulkMeter.previousReading ?? 0;
+      const bmCurrentReading = bulkMeter.currentReading ?? 0;
+      const bulkUsage = bmCurrentReading - bmPreviousReading;
+      const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
+      const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
 
-    const billDate = new Date();
-    const periodEndDate = lastDayOfMonth(parsedDate);
+      const { totalBill, ...billBreakdown } = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
 
-    const dueDateObject = new Date(periodEndDate);
-    dueDateObject.setDate(dueDateObject.getDate() + 15);
+      const billDate = new Date();
+      const periodEndDate = lastDayOfMonth(parsedDate);
 
-    const balanceFromPreviousPeriods = bulkMeter.outStandingbill || 0;
-    const totalPayableForThisPeriod = totalBill + balanceFromPreviousPeriods;
+      const dueDateObject = new Date(periodEndDate);
+      dueDateObject.setDate(dueDateObject.getDate() + 15);
 
-    const billToSave: Omit<DomainBill, 'id'> = {
-      bulkMeterId: bulkMeter.id,
-      billPeriodStartDate: `${bulkMeter.month}-01`,
-      billPeriodEndDate: format(periodEndDate, 'yyyy-MM-dd'),
-      monthYear: bulkMeter.month,
-      previousReadingValue: bulkMeter.previousReading,
-      currentReadingValue: bulkMeter.currentReading,
-      usageM3: bulkUsage,
-      ...billBreakdown,
-      balanceCarriedForward: balanceFromPreviousPeriods,
-      totalAmountDue: totalBill,
-      dueDate: format(dueDateObject, 'yyyy-MM-dd'),
-      paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
-      notes: `Bill generated on ${format(billDate, 'PP')}`,
-    };
-    
-    const addBillResult = await addBill(billToSave);
-    if (!addBillResult.success) {
-      toast({ variant: "destructive", title: "Failed to Save Bill", description: addBillResult.message });
-      return;
-    }
+      const balanceFromPreviousPeriods = bulkMeter.outStandingbill || 0;
+      const totalPayableForThisPeriod = totalBill + balanceFromPreviousPeriods;
 
-    const outstandingForNextCycle = carryBalance ? totalPayableForThisPeriod : 0;
-
-    const updatePayload: Partial<Omit<BulkMeter, 'id'>> = {
-        previousReading: bulkMeter.currentReading,
-        outStandingbill: outstandingForNextCycle,
+      const billToSave: Omit<DomainBill, 'id'> = {
+        bulkMeterId: bulkMeter.id,
+        billPeriodStartDate: `${bulkMeter.month}-01`,
+        billPeriodEndDate: format(periodEndDate, 'yyyy-MM-dd'),
+        monthYear: bulkMeter.month,
+        previousReadingValue: bulkMeter.previousReading,
+        currentReadingValue: bulkMeter.currentReading,
+        usageM3: bulkUsage,
+        ...billBreakdown,
+        balanceCarriedForward: balanceFromPreviousPeriods,
+        totalAmountDue: totalBill,
+        dueDate: format(dueDateObject, 'yyyy-MM-dd'),
         paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
-    };
+        notes: `Bill generated on ${format(billDate, 'PP')}`,
+      };
+      
+      const addBillResult = await addBill(billToSave);
+      if (!addBillResult.success) {
+        toast({ variant: "destructive", title: "Failed to Save Bill", description: addBillResult.message });
+        return;
+      }
 
-    const updateResult = await updateBulkMeterInStore(bulkMeter.id, updatePayload);
-    if (updateResult.success && updateResult.data) {
-      setBulkMeter(updateResult.data);
+      const outstandingForNextCycle = carryBalance ? totalPayableForThisPeriod : 0;
+
+      const updatePayload: Partial<Omit<BulkMeter, 'id'>> = {
+          previousReading: bulkMeter.currentReading,
+          outStandingbill: outstandingForNextCycle,
+          paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
+      };
+
+      const updateResult = await updateBulkMeterInStore(bulkMeter.id, updatePayload);
+      if (updateResult.success && updateResult.data) {
+        setBulkMeter(updateResult.data);
+      }
+
+      toast({ title: "Billing Cycle Closed", description: carryBalance ? `Balance of ETB ${outstandingForNextCycle.toFixed(2)} carried forward.` : "Bill marked as paid and new cycle started." });
+    } catch(error) {
+        console.error("Error during end of cycle process:", error);
+        toast({ variant: "destructive", title: "Processing Error", description: "An unexpected error occurred while closing the billing cycle." });
+    } finally {
+        setIsProcessingCycle(false);
     }
-
-    toast({ title: "Billing Cycle Closed", description: carryBalance ? `Balance of ETB ${outstandingForNextCycle.toFixed(2)} carried forward.` : "Bill marked as paid and new cycle started." });
   };
   
   const handleDeleteBillingRecord = (bill: DomainBill) => {
@@ -394,8 +403,8 @@ export default function StaffBulkMeterDetailsPage() {
         <Card className="shadow-lg">
            <CardHeader><CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-500" />End of Month Actions</CardTitle><CardDescription>Close the current billing cycle for this meter. This action creates a historical bill record, updates the previous reading, and manages arrears.</CardDescription></CardHeader>
           <CardContent className="flex flex-col gap-4 pt-6">
-             <Button onClick={() => handleEndOfCycle(false)} disabled={isLoading}><CheckCircle className="mr-2 h-4 w-4" /> Mark Bill as Paid & Start New Cycle</Button>
-             <Button variant="destructive" onClick={() => handleEndOfCycle(true)} disabled={isLoading}><RefreshCcw className="mr-2 h-4 w-4" /> Carry Balance Forward & Start New Cycle</Button>
+             <Button onClick={() => handleEndOfCycle(false)} disabled={isLoading || isProcessingCycle}><CheckCircle className="mr-2 h-4 w-4" /> Mark Bill as Paid & Start New Cycle</Button>
+             <Button variant="destructive" onClick={() => handleEndOfCycle(true)} disabled={isLoading || isProcessingCycle}><RefreshCcw className="mr-2 h-4 w-4" /> Carry Balance Forward & Start New Cycle</Button>
           </CardContent>
         </Card>
       </div>

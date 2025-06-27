@@ -30,7 +30,6 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { supabase } from '@/lib/supabase';
 
 interface UserProfile {
   id: string; 
@@ -43,16 +42,11 @@ interface UserProfile {
 interface AppHeaderContentProps {
    user: UserProfile | null;
    appName?: string;
+   onLogout: () => void;
 }
 
-function AppHeaderContent({ user, appName = "AAWSA Billing Portal" }: AppHeaderContentProps) {
+function AppHeaderContent({ user, appName = "AAWSA Billing Portal", onLogout }: AppHeaderContentProps) {
   const { toggleSidebar, isMobile, state: sidebarState } = useSidebar();
-  const router = useRouter();
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
-  };
   
   const dashboardHref = user?.role === 'admin' ? '/admin/dashboard' : '/staff/dashboard';
 
@@ -91,7 +85,7 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal" }: AppHeaderC
                 Role: {user.role === 'staff' && user.branchName ? `Staff (${user.branchName})` : user.role.charAt(0).toUpperCase() + user.role.slice(1)}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
+              <DropdownMenuItem onClick={onLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Logout
               </DropdownMenuItem>
@@ -125,55 +119,35 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
       document.documentElement.classList.toggle('dark', storedDarkMode === "true");
     }
 
-    // --- Supabase Auth Listener ---
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      const supabaseUser = session?.user;
-      
-      if (supabaseUser) {
-        // User is logged in according to Supabase. Fetch their profile.
-        const { data: staffProfile, error } = await supabase
-          .from('staff_members')
-          .select('*')
-          .eq('id', supabaseUser.id)
-          .single();
-
-        if (staffProfile && !error) {
-          const userProfile: UserProfile = {
-            id: staffProfile.id,
-            email: staffProfile.email,
-            role: staffProfile.role.toLowerCase() as 'admin' | 'staff',
-            branchName: staffProfile.branch,
-            name: staffProfile.name,
-          };
-          setUser(userProfile);
-          
-          // Redirect to the correct dashboard if they land on the login page
-          if (pathname === '/') {
-            const dashboardPath = userProfile.role === 'admin' ? '/admin/dashboard' : '/staff/dashboard';
-            router.replace(dashboardPath);
-          }
-        } else {
-          // Auth user exists but profile doesn't. This is an inconsistent state.
-          // Log them out to be safe.
-          await supabase.auth.signOut();
-          setUser(null);
+    // --- LocalStorage Auth Check ---
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+        try {
+            const parsedUser: UserProfile = JSON.parse(storedUser);
+            setUser(parsedUser);
+            if (pathname === '/') {
+                const dashboardPath = parsedUser.role === 'admin' ? '/admin/dashboard' : '/staff/dashboard';
+                router.replace(dashboardPath);
+            }
+        } catch(e) {
+            console.error("Failed to parse user from localStorage", e);
+            setUser(null);
+            localStorage.removeItem('user');
+            if (pathname !== '/') router.replace('/');
         }
-      } else {
-        // No valid session, user is logged out.
+    } else {
         setUser(null);
-        // If not on the login page, redirect there.
-        if (pathname !== '/') {
-          router.replace('/');
-        }
-      }
-      setAuthChecked(true);
-    });
+        if (pathname !== '/') router.replace('/');
+    }
+    setAuthChecked(true);
 
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
   }, [pathname, router]);
 
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    setUser(null);
+    router.push("/");
+  };
 
   if (!authChecked) { 
     return (
@@ -212,7 +186,7 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
         </SidebarFooter>
       </Sidebar>
       <SidebarInset> 
-        <AppHeaderContent user={user} appName={appName} />
+        <AppHeaderContent user={user} appName={appName} onLogout={handleLogout} />
         <main className="flex-1 p-4 sm:p-6 space-y-6 bg-background">
           {children}
         </main>

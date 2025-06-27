@@ -25,7 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { LogIn } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { getStaffMembers, initializeStaffMembers } from "@/lib/data-store";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -50,65 +50,52 @@ export function AuthForm() {
   const onSubmit = async (values: LoginFormValues) => {
     setIsLoading(true);
 
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-      email: values.email,
-      password: values.password,
-    });
+    await initializeStaffMembers();
+    const staffMembers = getStaffMembers();
 
-    if (signInError) {
+    const user = staffMembers.find(
+      (staff) => staff.email.toLowerCase() === values.email.toLowerCase()
+    );
+
+    if (user && user.password === values.password) {
+      if (user.status !== "Active") {
+        toast({
+          variant: "destructive",
+          title: "Login Failed",
+          description: `This account is currently ${user.status}. Please contact an administrator.`,
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      const sessionUser = {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        branchName: user.branch,
+        name: user.name,
+      };
+
+      localStorage.setItem("user", JSON.stringify(sessionUser));
+
+      toast({
+        title: "Login Successful",
+        description: "Welcome back! Redirecting...",
+      });
+      
+      if (user.role.toLowerCase() === "admin") {
+        router.push("/admin/dashboard");
+      } else {
+        router.push("/staff/dashboard");
+      }
+    } else {
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: signInError.message,
+        description: "Invalid email or password.",
       });
-      setIsLoading(false);
-      return;
     }
 
-    if (signInData.user) {
-      // After successful Supabase login, fetch the user's profile to get their role
-      const { data: staffProfile, error: profileError } = await supabase
-        .from('staff_members')
-        .select('role, status')
-        .eq('id', signInData.user.id)
-        .single();
-      
-      if (profileError || !staffProfile) {
-         toast({
-            variant: "destructive",
-            title: "Login Failed",
-            description: "Could not retrieve user profile after login.",
-        });
-        await supabase.auth.signOut(); // Log them out if profile is missing
-        setIsLoading(false);
-        return;
-      }
-
-      if (staffProfile.status !== 'Active') {
-        toast({
-            variant: "destructive",
-            title: "Account Not Active",
-            description: `This account's status is '${staffProfile.status}'. Please contact an administrator.`,
-        });
-        await supabase.auth.signOut(); // Log them out if not active
-        setIsLoading(false);
-        return;
-      }
-
-      // --- Login Successful ---
-      toast({
-          title: "Login Successful",
-          description: "Welcome back! Redirecting...",
-      });
-
-      // Redirect based on role
-      if (staffProfile.role.toLowerCase() === 'admin') {
-        router.push('/admin/dashboard');
-      } else {
-        router.push('/staff/dashboard');
-      }
-    }
-    
     setIsLoading(false);
   };
 

@@ -58,15 +58,64 @@ export function AuthForm() {
       password: values.password,
     });
 
-    if (signInError || !signInData.user) {
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: signInError?.message || "Invalid email or password.",
-      });
+    if (signInError) {
+      // If Supabase auth fails, provide more specific feedback.
+      // This is especially for users who exist in `staff_members` but not in `auth.users`.
+      if (signInError.message === "Invalid login credentials") {
+        const { data: staffProfile } = await supabase
+          .from('staff_members')
+          .select('status')
+          .eq('email', values.email)
+          .single();
+
+        if (staffProfile) {
+          // The user exists in our system.
+          if (staffProfile.status !== 'Active') {
+            toast({
+              variant: "destructive",
+              title: "Account Not Active",
+              description: `Your account status is "${staffProfile.status}". Please contact an administrator.`,
+            });
+          } else {
+            // The account is active, but login failed. This means their password in Supabase Auth is wrong
+            // or they don't have an auth account.
+            toast({
+              variant: "destructive",
+              title: "Authentication Failed",
+              description: "Your credentials did not match. If you are an existing user, your account may need to be synced. Please contact an admin to reset your password.",
+            });
+          }
+        } else {
+          // The user doesn't exist in our system at all. Standard error.
+          toast({
+            variant: "destructive",
+            title: "Login Failed",
+            description: "Invalid login credentials.",
+          });
+        }
+      } else {
+        // Handle other potential Supabase auth errors (e.g., network issues)
+        toast({
+          variant: "destructive",
+          title: "Login Error",
+          description: signInError.message,
+        });
+      }
+      
       setIsLoading(false);
       return;
     }
+
+    if (!signInData.user) {
+        toast({
+            variant: "destructive",
+            title: "Login Failed",
+            description: "Could not retrieve user session. Please try again.",
+        });
+        setIsLoading(false);
+        return;
+    }
+
 
     // Step 2: Fetch the user's profile from the staff_members table
     const { data: staffProfile, error: profileError } = await supabase

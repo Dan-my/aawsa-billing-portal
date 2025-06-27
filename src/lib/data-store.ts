@@ -1151,7 +1151,7 @@ export const addIndividualCustomerReading = async (readingData: Omit<DomainIndiv
     }
 
     // At this point, reading is inserted. Now try to update the customer.
-    const customerUpdatePayload = { ...customer, currentReading: newSupabaseReading.reading_value };
+    const customerUpdatePayload = { ...customer, previousReading: customer.currentReading, currentReading: newSupabaseReading.reading_value };
     const updateResult = await updateCustomer(customerUpdatePayload);
 
     if (!updateResult.success) {
@@ -1194,7 +1194,7 @@ export const addBulkMeterReading = async (readingData: Omit<DomainBulkMeterReadi
     }
     
     // At this point, reading is inserted. Now try to update the bulk meter.
-    const bulkMeterUpdatePayload = { ...bulkMeter, currentReading: newSupabaseReading.reading_value };
+    const bulkMeterUpdatePayload = { ...bulkMeter, previousReading: bulkMeter.currentReading, currentReading: newSupabaseReading.reading_value };
     const updateResult = await updateBulkMeter(bulkMeterUpdatePayload);
 
     if (!updateResult.success) {
@@ -1365,3 +1365,4 @@ export async function loadInitialData() {
     initializeReportLogs(),
   ]);
 }
+

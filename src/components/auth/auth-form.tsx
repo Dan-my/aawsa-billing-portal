@@ -50,75 +50,63 @@ export function AuthForm() {
   const onSubmit = async (values: LoginFormValues) => {
     setIsLoading(true);
 
-    // Query the staff_members table directly
-    const { data: staffProfile, error: queryError } = await supabase
-      .from('staff_members')
-      .select('*')
-      .eq('email', values.email)
-      .single();
-      
-    if (queryError && queryError.code !== 'PGRST116') { // PGRST116 means no rows found, which is not a server error.
-        toast({
-            variant: "destructive",
-            title: "Database Error",
-            description: "Could not query user data. Please try again later.",
-        });
-        console.error("Supabase query error:", queryError);
-        setIsLoading(false);
-        return;
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email: values.email,
+      password: values.password,
+    });
+
+    if (signInError) {
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: signInError.message,
+      });
+      setIsLoading(false);
+      return;
     }
 
-    if (!staffProfile) {
-        toast({
+    if (signInData.user) {
+      // After successful Supabase login, fetch the user's profile to get their role
+      const { data: staffProfile, error: profileError } = await supabase
+        .from('staff_members')
+        .select('role, status')
+        .eq('id', signInData.user.id)
+        .single();
+      
+      if (profileError || !staffProfile) {
+         toast({
             variant: "destructive",
             title: "Login Failed",
-            description: "User with this email not found.",
+            description: "Could not retrieve user profile after login.",
         });
+        await supabase.auth.signOut(); // Log them out if profile is missing
         setIsLoading(false);
         return;
-    }
-    
-    if (staffProfile.status !== 'Active') {
+      }
+
+      if (staffProfile.status !== 'Active') {
         toast({
             variant: "destructive",
             title: "Account Not Active",
             description: `This account's status is '${staffProfile.status}'. Please contact an administrator.`,
         });
+        await supabase.auth.signOut(); // Log them out if not active
         setIsLoading(false);
         return;
-    }
+      }
 
-    if (staffProfile.password !== values.password) {
-        toast({
-            variant: "destructive",
-            title: "Login Failed",
-            description: "Incorrect password. Please try again.",
-        });
-        setIsLoading(false);
-        return;
-    }
+      // --- Login Successful ---
+      toast({
+          title: "Login Successful",
+          description: "Welcome back! Redirecting...",
+      });
 
-    // --- Login Successful ---
-    const userSessionData = {
-        id: staffProfile.id,
-        email: staffProfile.email,
-        role: staffProfile.role.toLowerCase(), // Ensure role is lowercase
-        branchName: staffProfile.branch,
-        name: staffProfile.name,
-    };
-
-    localStorage.setItem('user', JSON.stringify(userSessionData));
-
-    toast({
-        title: "Login Successful",
-        description: "Welcome back! Redirecting...",
-    });
-
-    // Redirect based on role
-    if (userSessionData.role === 'admin') {
-      router.push('/admin/dashboard');
-    } else {
-      router.push('/staff/dashboard');
+      // Redirect based on role
+      if (staffProfile.role.toLowerCase() === 'admin') {
+        router.push('/admin/dashboard');
+      } else {
+        router.push('/staff/dashboard');
+      }
     }
     
     setIsLoading(false);

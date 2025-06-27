@@ -25,8 +25,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
+import { getStaffMembers, initializeStaffMembers } from "@/lib/data-store";
 import { LogIn } from "lucide-react";
+
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }).regex(/^[a-zA-Z0-9._%+-]+@aawsa\.com$/, {
@@ -42,6 +43,10 @@ export function AuthForm() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
 
+  React.useEffect(() => {
+    initializeStaffMembers();
+  }, []);
+
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -52,40 +57,39 @@ export function AuthForm() {
 
   const onSubmit = async (values: LoginFormValues) => {
     setIsLoading(true);
-    try {
-      const { data: sessionData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
+    await initializeStaffMembers();
+    const staffMembers = getStaffMembers();
+    
+    const staffMember = staffMembers.find(
+      (staff) => staff.email.toLowerCase() === values.email.toLowerCase()
+    );
+
+    if (!staffMember) {
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: "No user found with that email address.",
       });
-
-      if (signInError) {
-        throw new Error(signInError.message);
-      }
-      if (!sessionData.user) {
-        throw new Error("Login failed: No user session returned.");
-      }
-
-      // After successful sign-in, the supabase client has the session.
-      // Now, fetch the user's profile from the public table.
-      const { data: staffMember, error: profileError } = await supabase
-        .from("staff_members")
-        .select("*")
-        .eq("id", sessionData.user.id) // Query by the auth user's ID
-        .single();
-      
-      if (profileError || !staffMember) {
-        // This is a problem state. Auth user exists, but no profile.
-        // We should sign them out.
-        await supabase.auth.signOut();
-        throw new Error("Login failed: User profile not found.");
-      }
-
-      if (staffMember.status !== 'Active') {
-        await supabase.auth.signOut();
-        throw new Error(`Your account is currently ${staffMember.status}. Please contact an administrator.`);
-      }
-
-      // Store the profile info in localStorage for the AppShell to use.
+    } else if (!staffMember.password) {
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: "Your account does not have a password set. Please contact an administrator to reset it.",
+      });
+    } else if (staffMember.password !== values.password) {
+       toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: "The password you entered is incorrect.",
+      });
+    } else if (staffMember.status !== 'Active') {
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: `Your account is currently ${staffMember.status}. Please contact an administrator.`,
+      });
+    } else {
+      // Successful login
       const userSession = {
         email: staffMember.email,
         role: staffMember.role.toLowerCase(),
@@ -105,16 +109,9 @@ export function AuthForm() {
       } else {
         router.push("/staff/dashboard");
       }
-
-    } catch (err: any) {
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: err.message || "An unexpected error occurred.",
-      });
-    } finally {
-      setIsLoading(false);
     }
+    
+    setIsLoading(false);
   };
 
   return (

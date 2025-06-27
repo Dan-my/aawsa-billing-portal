@@ -310,7 +310,7 @@ export default function BulkMeterDetailsPage() {
           </div>
           <div>
             <Button variant="outline" size="sm" onClick={() => setIsAddReadingOpen(true)} className="mr-2"><PlusCircleIcon className="mr-2 h-4 w-4" /> Add Reading</Button>
-            <Button variant="outline" size="sm" onClick={handlePrint} className="mr-2 border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive-foreground focus-visible:ring-destructive"><Printer className="mr-2 h-4 w-4" /> Print / Export PDF</Button>
+            <Button variant="outline" size="sm" onClick={handlePrint} className="mr-2"><Printer className="mr-2 h-4 w-4" /> Print / Export PDF</Button>
             <Button variant="outline" size="sm" onClick={handleEditBulkMeter} className="mr-2"><FileEdit className="mr-2 h-4 w-4" /> Edit Bulk Meter</Button>
             <Button variant="destructive" size="sm" onClick={handleDeleteBulkMeter}><Trash2 className="mr-2 h-4 w-4" /> Delete Bulk Meter</Button>
           </div>

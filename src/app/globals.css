@@ -146,53 +146,33 @@ body {
 /* Print specific styles */
 @media print {
   @page {
-    margin: 0cm; /* Attempt to remove browser default headers/footers by setting page margins to 0. */
-    size: auto; /* Let content dictate page size */
+    margin: 1cm;
+    size: A4 portrait;
   }
 
   body {
-    background-color: white !important; /* Ensure body is white for printing */
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-  }
-
-  /* Strategy: Hide everything, then selectively show the printable card and its container. */
-  body * {
-    visibility: hidden !important;
-  }
-
-  /* Make the main content area (where the card resides) visible */
-  main, main *,
-  .printable-bill-card,
-  .printable-bill-card * {
-    visibility: visible !important;
+    background-color: white !important;
   }
   
-  /* Reset styles for the main container in print context */
-  main {
-    display: block !important; /* Ensure main is displayed */
-    padding: 0 !important;
-    margin: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    overflow: visible !important; /* Prevent content from being cut off */
-  }
-
-  /* Hide elements that should definitely not be part of the printed bill itself */
-  header, nav, aside, footer,
-  button:not(.printable-bill-card button) { /* Hide all buttons except potential ones inside the card */
+  /* Hide all major layout components and non-printable elements */
+  header, nav, aside, footer, main > div > *:not(.printable-bill-card) {
     display: none !important;
   }
 
-  /* Style the printable card to take over the page */
+  /* Reset padding/margin on the containers so the card can take up the full space */
+  main, main > div {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: none !important;
+  }
+
+  /* Style the printable card to look like a document */
   .printable-bill-card {
-    display: block !important; /* Ensure the card itself is displayed as a block */
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+    display: block !important;
+    position: static !important;
     width: 100% !important;
-    min-height: 100% !important; /* Use min-height of page for card */
-    height: auto !important;     /* Allow card to grow if content is long */
     margin: 0 !important;
     padding: 25px !important;
     border: none !important;
@@ -202,23 +182,22 @@ body {
     color: #000 !important;
     background-color: white !important;
   }
-
-  /* Ensure all children of the printable card are also visible and styled correctly */
+  
+  /* Ensure all children of the printable card have correct print styles */
   .printable-bill-card * {
     color: #000 !important;
     background-color: transparent !important;
     font-size: inherit !important;
     line-height: inherit !important;
     box-shadow: none !important;
-    border-color: #ccc !important; /* For internal borders if any */
+    border-color: #ccc !important;
     transform: none !important;
     filter: none !important;
   }
   
   /* Specific formatting for the content within the printable card */
-  .printable-bill-card .CardHeader-title, /* Note: Tailwind might not generate this exact class */
-  .printable-bill-card h1.text-lg.font-semibold, /* Target specific H1s if needed */
-  .printable-bill-card h2.text-xl.font-semibold { /* Target specific H2s if needed */
+  .printable-bill-card .CardHeader-title,
+  .printable-bill-card h1, .printable-bill-card h2, .printable-bill-card h3 {
     text-align: center !important;
     color: #000 !important;
   }
@@ -231,6 +210,7 @@ body {
     padding-bottom: 0.75rem !important;
     margin-bottom: 1rem !important;
   }
+  
   .printable-bill-card .flex.flex-row.items-center.justify-center img {
     margin-right: 1rem !important;
     width: 60px !important;
@@ -246,26 +226,23 @@ body {
 
   .printable-bill-card .space-y-1\.5 > p > strong.font-semibold {
     display: inline-block !important;
-    width: 220px !important; /* Fixed width for labels to align values */
+    width: 220px !important;
     min-width: 220px !important;
     margin-right: 1em !important;
     font-weight: 600 !important;
-    color: #000 !important;
     vertical-align: top;
   }
-
-  .printable-bill-card .pt-10.space-y-6.text-sm {
-    padding-top: 2rem !important;
-  }
+  
   .printable-bill-card .pt-10.space-y-6.text-sm p {
     margin-bottom: 1.2rem !important;
     border-bottom: 1px dashed #555 !important;
     padding-bottom: 0.4rem !important;
-    color: #000 !important;
   }
+
   .printable-bill-card .pt-10.space-y-6.text-sm p:last-child {
     border-bottom-style: none !important;
   }
+
   .printable-bill-card .border-t.pt-4.text-center.mt-4 {
     border-top: 1px solid #aaa !important;
     padding-top: 1rem !important;

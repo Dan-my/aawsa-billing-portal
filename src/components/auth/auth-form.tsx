@@ -26,7 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { LogIn } from "lucide-react";
-import { supabase, type StaffMemberInsert } from "@/lib/supabase";
+import { supabase, type StaffMemberUpdate } from "@/lib/supabase";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -79,6 +79,7 @@ export function AuthForm() {
         // This is a legacy user! Let's migrate them.
         toast({ title: "First-time Login Detected", description: "Updating your account to the new security system..." });
 
+        // A. Create the new user in Supabase Auth. A trigger will auto-create a basic profile.
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: values.email,
           password: values.password,
@@ -90,34 +91,34 @@ export function AuthForm() {
           return;
         }
         
-        // A. Prepare new profile data with the new auth ID, preserving old data
-        const newProfileData: StaffMemberInsert = {
-            id: signUpData.user.id, // The NEW auth ID
+        // B. Prepare an update payload with the data from the legacy profile
+        const profileUpdateData: StaffMemberUpdate = {
             name: legacyProfile.name,
-            email: legacyProfile.email,
             branch: legacyProfile.branch,
             status: legacyProfile.status,
             phone: legacyProfile.phone,
             hire_date: legacyProfile.hire_date,
             role: legacyProfile.role,
-            password: null, // Remove legacy password
+            password: null, // Ensure legacy password is not carried over
         };
         
-        // B. Delete the old profile (identified by the old, non-auth UUID)
-        const { error: deleteError } = await supabase.from('staff_members').delete().eq('id', legacyProfile.id);
-        if (deleteError) {
-             toast({ variant: "destructive", title: "Migration Failed", description: "Could not remove old profile data. Please contact an admin." });
-             // In a real app, you would attempt to delete the newly created auth user for a full rollback.
+        // C. Update the *newly created* profile with the legacy data.
+        const { error: updateError } = await supabase
+            .from('staff_members')
+            .update(profileUpdateData)
+            .eq('id', signUpData.user.id);
+
+        if (updateError) {
+             toast({ variant: "destructive", title: "Migration Failed", description: "Could not create your updated profile. Please contact an admin." });
              setIsLoading(false);
              return;
         }
 
-        // C. Insert the new profile record with the correct auth ID
-        const { error: insertError } = await supabase.from('staff_members').insert(newProfileData);
-         if (insertError) {
-             toast({ variant: "destructive", title: "Migration Failed", description: "Could not create your updated profile. Please contact an admin." });
-             setIsLoading(false);
-             return;
+        // D. Delete the old, unlinked profile record.
+        const { error: deleteError } = await supabase.from('staff_members').delete().eq('id', legacyProfile.id);
+        if (deleteError) {
+             toast({ variant: "destructive", title: "Migration Cleanup Failed", description: "Could not remove old profile data. Please contact an admin." });
+             // Don't block login, but alert the user and admin.
         }
 
         // Migration complete! The signUp call already started a session.

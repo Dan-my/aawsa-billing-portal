@@ -966,7 +966,7 @@ export const updateCustomer = async (updatedCustomerData: DomainIndividualCustom
     notifyCustomerListeners();
     return { success: true };
   } else {
-    console.error("DataStore: Failed to update customer. Original error object:", error);
+    console.error("DataStore: Failed to update customer. Original error object:", JSON.stringify(error, null, 2));
     let userMessage = "Failed to update customer due to an unexpected error.";
     let isNotFoundError = false;
     if (error && typeof error === 'object') {
@@ -1068,7 +1068,7 @@ export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>): Promis
   const { data: newSupabaseStaff, error: profileError } = await supabaseCreateStaffMember(staffPayload);
 
   if (profileError) {
-    console.error("DataStore Profile Error:", profileError);
+    console.error("DataStore Profile Error:", JSON.stringify(profileError, null, 2));
     // In a real app, you would try to delete the auth user for cleanup, which requires admin privileges.
     return { success: false, message: (profileError as any)?.message || "Auth user created, but failed to create staff profile." };
   }
@@ -1204,7 +1204,13 @@ export const addIndividualCustomerReading = async (readingData: Omit<DomainIndiv
 
         // Also update the main customer record's current reading
         const customerUpdatePayload = { ...customer, currentReading: newReading.readingValue };
-        await updateCustomer(customerUpdatePayload);
+        const updateResult = await updateCustomer(customerUpdatePayload);
+
+        if (!updateResult.success) {
+            const errorMessage = `Reading recorded, but failed to update the customer's main record. Error: ${updateResult.message}`;
+            console.error(errorMessage, updateResult.error);
+            return { success: false, message: errorMessage, error: updateResult.error };
+        }
 
         return { success: true, data: newReading };
     }

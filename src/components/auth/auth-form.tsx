@@ -25,14 +25,12 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { getStaffMembers, initializeStaffMembers } from "@/lib/data-store";
 import { LogIn } from "lucide-react";
+import { supabase } from "@/lib/supabase"; // Import supabase client
 
 
 const loginSchema = z.object({
-  email: z.string().email({ message: "Invalid email address." }).regex(/^[a-zA-Z0-9._%+-]+@aawsa\.com$/, {
-    message: "Email must be a valid @aawsa.com address.",
-  }),
+  email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(1, { message: "Password is required." }),
 });
 
@@ -42,10 +40,6 @@ export function AuthForm() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
-
-  React.useEffect(() => {
-    initializeStaffMembers();
-  }, []);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -57,60 +51,75 @@ export function AuthForm() {
 
   const onSubmit = async (values: LoginFormValues) => {
     setIsLoading(true);
-    await initializeStaffMembers();
-    const staffMembers = getStaffMembers();
     
-    const staffMember = staffMembers.find(
-      (staff) => staff.email.toLowerCase() === values.email.toLowerCase()
-    );
+    // Step 1: Authenticate with Supabase Auth
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email: values.email,
+      password: values.password,
+    });
 
-    if (!staffMember) {
+    if (signInError || !signInData.user) {
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: "No user found with that email address.",
+        description: signInError?.message || "Invalid email or password.",
       });
-    } else if (!staffMember.password) {
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: "Your account does not have a password set. Please contact an administrator to reset it.",
-      });
-    } else if (staffMember.password !== values.password) {
-       toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: "The password you entered is incorrect.",
-      });
-    } else if (staffMember.status !== 'Active') {
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: `Your account is currently ${staffMember.status}. Please contact an administrator.`,
-      });
-    } else {
-      // Successful login
-      const userSession = {
-        email: staffMember.email,
-        role: staffMember.role.toLowerCase(),
-        branchName: staffMember.branch,
-        id: staffMember.id,
-      };
+      setIsLoading(false);
+      return;
+    }
+
+    // Step 2: Fetch the user's profile from the staff_members table
+    const { data: staffProfile, error: profileError } = await supabase
+      .from('staff_members')
+      .select('*')
+      .eq('id', signInData.user.id)
+      .single();
       
-      localStorage.setItem("user", JSON.stringify(userSession));
-
+    if (profileError || !staffProfile) {
       toast({
-        title: "Login Successful",
-        description: `Welcome back, ${staffMember.name}!`,
+        variant: "destructive",
+        title: "Login Failed",
+        description: "Authentication successful, but we couldn't find your staff profile. Please contact an administrator.",
       });
+      await supabase.auth.signOut(); // Clean up the partial login
+      setIsLoading(false);
+      return;
+    }
 
-      if (userSession.role === "admin") {
-        router.push("/admin/dashboard");
-      } else {
-        router.push("/staff/dashboard");
-      }
+    // Step 3: Check if the account is active
+    if (staffProfile.status !== 'Active') {
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: `Your account is currently ${staffProfile.status}. Please contact an administrator.`,
+      });
+      await supabase.auth.signOut();
+      setIsLoading(false);
+      return;
     }
     
+    // Step 4: Create user session object and store it
+    const userSession = {
+      id: staffProfile.id,
+      email: staffProfile.email,
+      role: staffProfile.role.toLowerCase(),
+      branchName: staffProfile.branch,
+    };
+
+    localStorage.setItem("user", JSON.stringify(userSession));
+
+    toast({
+      title: "Login Successful",
+      description: `Welcome back, ${staffProfile.name}!`,
+    });
+
+    // Step 5: Redirect to the correct dashboard
+    if (userSession.role === "admin") {
+      router.push("/admin/dashboard");
+    } else {
+      router.push("/staff/dashboard");
+    }
+
     setIsLoading(false);
   };
 

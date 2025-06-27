@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { supabase } from '@/lib/supabase'; // Import Supabase client
 
 interface User {
   id: string; 
@@ -48,7 +49,8 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal" }: AppHeaderC
   const { toggleSidebar, isMobile, state: sidebarState } = useSidebar();
   const router = useRouter();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     localStorage.removeItem("user");
     router.push('/');
   };
@@ -131,32 +133,50 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
       }
     }
 
-    // Check auth from local storage
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      try {
-        const parsedUser: User = JSON.parse(storedUser);
-        if (parsedUser.role !== userRole) {
-          // Wrong layout for this user role
-          localStorage.removeItem("user");
-          router.push("/");
-        } else {
-          setUser(parsedUser);
-        }
-      } catch (e) {
-        console.error("Failed to parse user from localStorage", e);
-        localStorage.removeItem("user");
-        router.push("/");
-      }
-    } else {
-      // Not logged in
-      if (pathname !== "/") {
-        router.push("/");
-      }
-    }
-    setAuthChecked(true);
+    // Listen for authentication state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (!session) {
+            setUser(null);
+            localStorage.removeItem('user');
+            if (pathname !== '/') {
+                router.push('/');
+            }
+        } else if (session && (!user || user.id !== session.user.id)) {
+            // Fetch profile from DB if we don't have it or it's a different user
+            const { data: staffProfile } = await supabase
+                .from('staff_members')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+            
+            if (staffProfile) {
+                const userSession: User = {
+                    id: staffProfile.id,
+                    email: staffProfile.email,
+                    role: staffProfile.role.toLowerCase() as 'admin' | 'staff',
+                    branchName: staffProfile.branch,
+                };
 
-  }, [router, userRole, pathname]);
+                if (userSession.role !== userRole) {
+                    // Logged in user has wrong role for this layout
+                    await supabase.auth.signOut();
+                } else {
+                    setUser(userSession);
+                    localStorage.setItem('user', JSON.stringify(userSession));
+                }
+            } else {
+                // Auth user exists but no profile, so sign out
+                await supabase.auth.signOut();
+            }
+        }
+        setAuthChecked(true);
+    });
+
+    return () => {
+        subscription.unsubscribe();
+    };
+
+  }, [router, userRole, pathname, user]);
 
 
   if (!authChecked) { // Show skeleton while auth is being checked
@@ -172,9 +192,6 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
     );
   }
   
-  // If we've checked auth and there's no user, but we're not on the login page,
-  // we are in a redirect state. The logic in useEffect has already called router.push('/')
-  // so we just show a loader to avoid flashing the protected page content.
   if (!user && pathname !== '/') {
     return (
          <div className="flex min-h-screen items-center justify-center bg-background">
@@ -183,7 +200,6 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
     );
   }
 
-  // The login page is a special case that doesn't use the AppShell layout.
   if (pathname === '/') {
       return <>{children}</>;
   }

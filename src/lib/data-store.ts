@@ -491,8 +491,9 @@ const mapDomainStaffToInsert = (staff: Omit<StaffMember, 'id'>): StaffMemberInse
 const mapDomainStaffToUpdate = (staff: Partial<Omit<StaffMember, 'id'>>): StaffMemberUpdate => {
     const updatePayload: StaffMemberUpdate = {};
     if(staff.name !== undefined) updatePayload.name = staff.name;
-    if(staff.email !== undefined) updatePayload.email = staff.email;
-    if(staff.password !== undefined) updatePayload.password = staff.password;
+    // Do not update email, as it's the auth identifier.
+    // if(staff.email !== undefined) updatePayload.email = staff.email;
+    if(staff.password !== undefined && staff.password !== '') updatePayload.password = staff.password; // Only update if provided
     if(staff.branch !== undefined) updatePayload.branch = staff.branch;
     if(staff.status !== undefined) updatePayload.status = staff.status;
     if(staff.phone !== undefined) updatePayload.phone = staff.phone;
@@ -1054,7 +1055,7 @@ export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>): Promis
   if (authError || !authData.user) {
     console.error("DataStore Auth Error:", authError);
     if (authError?.message.includes("already registered")) {
-      return { success: false, message: "A user with this email already exists in the authentication system." };
+      return { success: false, message: "A user with this email already exists." };
     }
     return { success: false, message: authError?.message || "Failed to create authentication user." };
   }
@@ -1064,12 +1065,16 @@ export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>): Promis
     ...mapDomainStaffToInsert(staffData),
     id: authData.user.id, // Use the ID from the new auth user
   };
-
+  
+  // The 'password' field in the staff_members table is for reference and is not used for login.
+  // It's a potential security risk and could be removed if not needed for other purposes.
+  // We'll keep it for now as per the existing schema.
+  
   const { data: newSupabaseStaff, error: profileError } = await supabaseCreateStaffMember(staffPayload);
 
   if (profileError) {
     console.error("DataStore Profile Error:", profileError);
-    // In a real app, you might try to delete the auth user for cleanup.
+    // In a real app, you might try to delete the auth user for cleanup, which requires admin privileges.
     return { success: false, message: (profileError as any)?.message || "Authentication user was created, but failed to create the staff profile." };
   }
   
@@ -1083,12 +1088,15 @@ export const addStaffMember = async (staffData: Omit<StaffMember, 'id'>): Promis
   return { success: false, message: "An unknown error occurred while creating the staff member." };
 };
 
+
 export const updateStaffMember = async (updatedStaffData: StaffMember): Promise<StoreOperationResult<void>> => {
   const { id, ...domainData } = updatedStaffData;
   const staffUpdatePayload = mapDomainStaffToUpdate(domainData);
   
-  // NOTE: This logic does not handle password updates through the form yet.
-  // That would require a call to supabase.auth.updateUser().
+  // Password updates should be handled separately via Supabase Auth
+  if (staffUpdatePayload.password) {
+    delete staffUpdatePayload.password;
+  }
 
   const { data: updatedSupabaseStaff, error } = await supabaseUpdateStaffMember(id, staffUpdatePayload);
   if (updatedSupabaseStaff && !error) {
@@ -1110,9 +1118,9 @@ export const updateStaffMember = async (updatedStaffData: StaffMember): Promise<
 };
 
 export const deleteStaffMember = async (staffId: string): Promise<StoreOperationResult<void>> => {
-  // Note: This only deletes the profile, not the auth.user.
-  // For a full cleanup, you would need to use a service role key on a serverless function
-  // to call supabase.auth.admin.deleteUser(staffId).
+  // IMPORTANT: This only deletes the profile from the `staff_members` table.
+  // It does NOT delete the user from Supabase's central authentication system.
+  // Deleting an auth user requires admin privileges and should be done in a secure server environment.
   const { error } = await supabaseDeleteStaffMember(staffId);
   if (!error) {
     staffMembers = staffMembers.filter(s => s.id !== staffId);
@@ -1190,7 +1198,6 @@ export const addIndividualCustomerReading = async (readingData: Omit<DomainIndiv
         return { success: true, data: newReading };
     }
     
-    // Enhanced error handling
     let userMessage = (error as any)?.message || "Failed to add reading.";
     if (error && (error as any).message.includes('violates row-level security policy')) {
         userMessage = "Permission denied. Please check Row Level Security policies in your Supabase dashboard.";

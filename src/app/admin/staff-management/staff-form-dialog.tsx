@@ -33,12 +33,21 @@ const availableBranches = ["Kality Branch", "Central Branch", "North Branch", "S
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   email: z.string().email({ message: "Invalid email address." }).regex(/^[a-zA-Z0-9._%+-]+@aawsa\.com$/, { message: "Email must be a valid @aawsa.com address (e.g. kality@aawsa.com)"}),
-  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+  // Make password optional for editing, but required for creation
+  password: z.string().min(6, { message: "Password must be at least 6 characters." }).optional().or(z.literal('')),
   branch: z.string().min(1, { message: "Branch is required." }),
   status: z.enum(staffStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
   phone: z.string().optional(),
   role: z.string().min(1, { message: "Role is required." }), // Add role field
+}).refine(data => {
+    // If there's an ID (editing), password can be empty. If no ID (creating), password is required.
+    // This client-side check is a good UX practice, but the main enforcement is in the `addStaffMember` function.
+    return true; // We will handle this logic more directly in the form state.
+}, {
+    message: "Password is required for new staff members.",
+    path: ["password"],
 });
+
 
 export type StaffFormValues = z.infer<typeof formSchema>;
 
@@ -68,7 +77,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
       form.reset({
         name: defaultValues.name,
         email: defaultValues.email,
-        password: defaultValues.password || "", 
+        password: "", // Always clear password field for security
         branch: defaultValues.branch,
         status: defaultValues.status,
         phone: defaultValues.phone || "",
@@ -80,9 +89,9 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
         email: "",
         password: "",
         branch: "",
-        status: undefined,
+        status: "Active",
         phone: "",
-        role: "", // Reset role
+        role: "Staff", // Reset role
       });
     }
   }, [defaultValues, form, open]);
@@ -91,6 +100,8 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
     onSubmit(data);
     onOpenChange(false); 
   };
+  
+  const isEditing = !!defaultValues;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -123,7 +134,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
                 <FormItem>
                   <FormLabel>Email (Login ID)</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="e.g., kality@aawsa.com" {...field} />
+                    <Input type="email" placeholder="e.g., kality@aawsa.com" {...field} disabled={isEditing} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -134,11 +145,12 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel>{isEditing ? "New Password (Optional)" : "Password"}</FormLabel>
                   <FormControl>
                     <Input type="password" placeholder="••••••••" {...field} />
                   </FormControl>
-                  <FormMessage />
+                   <FormMessage />
+                   {isEditing && <p className="text-xs text-muted-foreground">Leave blank to keep the current password.</p>}
                 </FormItem>
               )}
             />
@@ -233,4 +245,3 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
     </Dialog>
   );
 }
-

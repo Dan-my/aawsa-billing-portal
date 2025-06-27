@@ -1013,14 +1013,14 @@ export const addBulkMeter = async (bulkMeterDomainData: Omit<BulkMeter, 'id'>): 
   return { success: false, message: (error as any)?.message || "Failed to add bulk meter.", error };
 };
 
-export const updateBulkMeter = async (id: string, bulkMeterData: Partial<Omit<BulkMeter, 'id'>>): Promise<StoreOperationResult<void>> => {
+export const updateBulkMeter = async (id: string, bulkMeterData: Partial<Omit<BulkMeter, 'id'>>): Promise<StoreOperationResult<BulkMeter>> => {
   const updatePayloadToSend = mapDomainBulkMeterToUpdate({ id, ...bulkMeterData }) as BulkMeterUpdate;
   const { data: updatedSupabaseBulkMeter, error } = await supabaseUpdateBulkMeter(id, updatePayloadToSend);
   if (updatedSupabaseBulkMeter && !error) {
     const updatedBulkMeter = mapSupabaseBulkMeterToDomain(updatedSupabaseBulkMeter);
     bulkMeters = bulkMeters.map(bm => bm.id === id ? updatedBulkMeter : bm);
     notifyBulkMeterListeners();
-    return { success: true };
+    return { success: true, data: updatedBulkMeter };
   }
   console.error("DataStore: Failed to update bulk meter. Error:", JSON.stringify(error, null, 2));
   let userMessage = "Failed to update bulk meter.";

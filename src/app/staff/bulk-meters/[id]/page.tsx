@@ -302,7 +302,11 @@ export default function StaffBulkMeterDetailsPage() {
         paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
     };
 
-    await updateBulkMeterInStore(bulkMeter.id, updatePayload);
+    const updateResult = await updateBulkMeterInStore(bulkMeter.id, updatePayload);
+    if (updateResult.success && updateResult.data) {
+      setBulkMeter(updateResult.data);
+    }
+
     toast({ title: "Billing Cycle Closed", description: carryBalance ? `Balance of ETB ${outstandingForNextCycle.toFixed(2)} carried forward.` : "Bill marked as paid and new cycle started." });
   };
   

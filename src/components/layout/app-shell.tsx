@@ -31,10 +31,9 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { supabase } from '@/lib/supabase'; // Import supabase client
 
 interface User {
-  id: string; // Add id to user interface
+  id: string; 
   email: string;
   role: 'admin' | 'staff';
   branchName?: string;
@@ -49,9 +48,9 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal" }: AppHeaderC
   const { toggleSidebar, isMobile, state: sidebarState } = useSidebar();
   const router = useRouter();
 
-  const handleLogout = async () => {
-    // onAuthStateChange will handle redirect and localStorage cleanup
-    await supabase.auth.signOut();
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    router.push('/');
   };
   
   const dashboardHref = user?.role === 'admin' ? '/admin/dashboard' : '/staff/dashboard';
@@ -113,8 +112,6 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
   const currentYear = new Date().getFullYear();
 
   React.useEffect(() => {
-    // This effect runs once on mount to set up the auth listener and UI details.
-    
     // Set app name from local storage
     const storedAppName = localStorage.getItem("aawsa-app-name");
     if (storedAppName) {
@@ -134,51 +131,31 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
       }
     }
 
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        // User is signed in. Fetch their profile.
-        const { data: staffMember, error } = await supabase
-          .from('staff_members')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-
-        if (error) {
-          console.error("Error fetching user profile:", error);
-          await supabase.auth.signOut(); // Force sign out on profile error
-        } else if (staffMember) {
-           const userProfile: User = {
-                id: staffMember.id,
-                email: staffMember.email,
-                role: staffMember.role.toLowerCase() as 'admin' | 'staff',
-                branchName: staffMember.branch,
-            };
-
-            // Before setting user, check role and path
-            if (userProfile.role !== userRole) {
-                // Wrong role for this layout, sign out and redirect
-                // This prevents a staff from accessing /admin routes, for example.
-                await supabase.auth.signOut();
-            } else {
-                setUser(userProfile);
-                localStorage.setItem("user", JSON.stringify(userProfile));
-            }
+    // Check auth from local storage
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const parsedUser: User = JSON.parse(storedUser);
+        if (parsedUser.role !== userRole) {
+          // Wrong layout for this user role
+          localStorage.removeItem("user");
+          router.push("/");
+        } else {
+          setUser(parsedUser);
         }
-      } else {
-        // User is signed out.
-        setUser(null);
-        localStorage.removeItem('user');
-        if (pathname !== '/') {
-            router.push('/');
-        }
+      } catch (e) {
+        console.error("Failed to parse user from localStorage", e);
+        localStorage.removeItem("user");
+        router.push("/");
       }
-      setAuthChecked(true); // Mark auth as checked
-    });
+    } else {
+      // Not logged in
+      if (pathname !== "/") {
+        router.push("/");
+      }
+    }
+    setAuthChecked(true);
 
-    return () => {
-      subscription.unsubscribe();
-    };
   }, [router, userRole, pathname]);
 
 
@@ -196,7 +173,7 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
   }
   
   // If we've checked auth and there's no user, but we're not on the login page,
-  // we are in a redirect state. The onAuthStateChange listener has already called router.push('/')
+  // we are in a redirect state. The logic in useEffect has already called router.push('/')
   // so we just show a loader to avoid flashing the protected page content.
   if (!user && pathname !== '/') {
     return (

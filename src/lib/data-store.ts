@@ -1091,10 +1091,6 @@ export const deleteStaffMember = async (staffId: string): Promise<StoreOperation
 
 export const addBill = async (billData: Omit<DomainBill, 'id' | 'createdAt' | 'updatedAt'>): Promise<StoreOperationResult<DomainBill>> => {
     const payload = mapDomainBillToSupabase(billData) as BillInsert;
-    // Temporarily remove the problematic field to avoid the crash
-    if ('balance_carried_forward' in payload) {
-      delete payload.balance_carried_forward;
-    }
     const { data: newSupabaseBill, error } = await supabaseCreateBill(payload);
     if (newSupabaseBill && !error) {
         const newBill = mapSupabaseBillToDomain(newSupabaseBill);

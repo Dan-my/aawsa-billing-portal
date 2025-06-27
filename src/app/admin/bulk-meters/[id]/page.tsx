@@ -224,6 +224,7 @@ export default function BulkMeterDetailsPage() {
               title: "Invalid Month Format",
               description: `The billing month for this meter ("${bulkMeter.month}") is not a valid YYYY-MM format.`,
           });
+          setIsProcessingCycle(false);
           return;
       }
       const bmPreviousReading = bulkMeter.previousReading ?? 0;
@@ -232,7 +233,7 @@ export default function BulkMeterDetailsPage() {
       const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
       const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
 
-      const { totalBill, ...billBreakdown } = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
+      const { totalBill: billForCurrentPeriod, ...billBreakdown } = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
       
       const billDate = new Date();
       const periodEndDate = lastDayOfMonth(parsedDate);
@@ -241,7 +242,7 @@ export default function BulkMeterDetailsPage() {
       dueDateObject.setDate(dueDateObject.getDate() + 15);
       
       const balanceFromPreviousPeriods = bulkMeter.outStandingbill || 0;
-      const totalPayableForThisPeriod = totalBill + balanceFromPreviousPeriods;
+      const totalPayableThisCycle = billForCurrentPeriod + balanceFromPreviousPeriods;
 
       const billToSave: Omit<DomainBill, 'id'> = {
         bulkMeterId: bulkMeter.id,
@@ -253,7 +254,7 @@ export default function BulkMeterDetailsPage() {
         usageM3: bulkUsage,
         ...billBreakdown,
         balanceCarriedForward: balanceFromPreviousPeriods,
-        totalAmountDue: totalBill,
+        totalAmountDue: billForCurrentPeriod,
         dueDate: format(dueDateObject, 'yyyy-MM-dd'),
         paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
         notes: `Bill generated on ${format(billDate, 'PP')}`,
@@ -262,23 +263,31 @@ export default function BulkMeterDetailsPage() {
       const addBillResult = await addBill(billToSave);
       if (!addBillResult.success) {
           toast({ variant: "destructive", title: "Failed to Save Bill", description: addBillResult.message });
+          setIsProcessingCycle(false);
           return;
       }
 
-      const outstandingForNextCycle = carryBalance ? totalPayableForThisPeriod : 0;
+      const newOutstandingBalance = carryBalance ? totalPayableThisCycle : 0;
 
       const updatePayload: Partial<Omit<BulkMeter, 'id'>> = {
           previousReading: bulkMeter.currentReading,
-          outStandingbill: outstandingForNextCycle,
+          outStandingbill: newOutstandingBalance,
           paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
       };
 
       const updateResult = await updateBulkMeterInStore(bulkMeter.id, updatePayload);
       if (updateResult.success && updateResult.data) {
         setBulkMeter(updateResult.data);
+        toast({ 
+            title: "Billing Cycle Closed", 
+            description: carryBalance 
+                ? `Total of ETB ${totalPayableThisCycle.toFixed(2)} carried forward as new outstanding balance.` 
+                : "Bill marked as paid and new cycle started." 
+        });
+      } else {
+        toast({ variant: "destructive", title: "Update Failed", description: "Could not update the meter after creating the bill record." });
       }
       
-      toast({ title: "Billing Cycle Closed", description: carryBalance ? `Balance of ETB ${outstandingForNextCycle.toFixed(2)} carried forward.` : "Bill marked as paid and new cycle started." });
     } catch(error) {
         console.error("Error during end of cycle process:", error);
         toast({ variant: "destructive", title: "Processing Error", description: "An unexpected error occurred while closing the billing cycle." });

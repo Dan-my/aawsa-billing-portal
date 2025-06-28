@@ -57,6 +57,100 @@ export default function BulkMeterDetailsPage() {
   const [isBillDeleteDialogOpen, setIsBillDeleteDialogOpen] = React.useState(false);
   const [billToDelete, setBillToDelete] = React.useState<DomainBill | null>(null);
 
+  const {
+    bmPreviousReading,
+    bmCurrentReading,
+    bulkUsage,
+    totalBulkBillForPeriod,
+    totalPayable,
+    differenceUsage,
+    differenceBill,
+    displayBranchName,
+    displayCardLocation,
+    billCardDetails,
+  } = React.useMemo(() => {
+    if (!bulkMeter) {
+      return {
+        bmPreviousReading: 0, bmCurrentReading: 0, bulkUsage: 0,
+        totalBulkBillForPeriod: 0, totalPayable: 0, differenceUsage: 0,
+        differenceBill: 0, displayBranchName: "N/A", displayCardLocation: "N/A",
+        billCardDetails: {
+          prevReading: 0, currReading: 0, usage: 0, baseWaterCharge: 0,
+          maintenanceFee: 0, sanitationFee: 0, sewerageCharge: 0, meterRent: 0,
+          vatAmount: 0, totalDifferenceBill: 0, differenceUsage: 0,
+          outstandingBill: 0, totalPayable: 0, paymentStatus: 'Unpaid' as PaymentStatus,
+          month: 'N/A',
+        }
+      };
+    }
+
+    const bmPreviousReading = bulkMeter.previousReading ?? 0;
+    const bmCurrentReading = bulkMeter.currentReading ?? 0;
+    const bulkUsage = bmCurrentReading - bmPreviousReading;
+
+    const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
+    const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
+    
+    const billDetails: BillCalculationResult = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
+    const totalBulkBillForPeriod = billDetails.totalBill;
+    
+    const outStandingBillValue = (bulkMeter.outStandingbill || 0);
+    const totalPayable = totalBulkBillForPeriod + outStandingBillValue;
+
+    const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + (cust.currentReading - cust.previousReading), 0);
+    const totalIndividualBill = associatedCustomers.reduce((sum, cust) => sum + cust.calculatedBill, 0);
+
+    const differenceUsage = bulkMeter.differenceUsage ?? (bulkUsage - totalIndividualUsage);
+    const differenceBill = bulkMeter.differenceBill ?? (totalBulkBillForPeriod - totalIndividualBill);
+    
+    const displayBranchName = bulkMeter.branchId ? branches.find(b => b.id === bulkMeter.branchId)?.name : bulkMeter.location;
+    const displayCardLocation = bulkMeter.specificArea || bulkMeter.ward || "N/A";
+    
+    const mostRecentBill = billingHistory.length > 0 ? billingHistory[0] : null;
+
+    const finalBillCardDetails = (() => {
+      if (mostRecentBill) {
+          const historicalBillDetails = calculateBill(mostRecentBill.usageM3 ?? 0, 'Non-domestic', 'No', bulkMeter.meterSize);
+          return {
+              prevReading: mostRecentBill.previousReadingValue,
+              currReading: mostRecentBill.currentReadingValue,
+              usage: mostRecentBill.usageM3 ?? 0,
+              baseWaterCharge: mostRecentBill.baseWaterCharge,
+              maintenanceFee: mostRecentBill.maintenanceFee ?? 0,
+              sanitationFee: mostRecentBill.sanitationFee ?? 0,
+              sewerageCharge: mostRecentBill.sewerageCharge ?? 0,
+              meterRent: mostRecentBill.meterRent ?? 0,
+              vatAmount: calculateBill(mostRecentBill.usageM3 ?? 0, 'Non-domestic', 'No', bulkMeter.meterSize).vatAmount,
+              totalDifferenceBill: differenceBill,
+              differenceUsage: differenceUsage,
+              outstandingBill: mostRecentBill.balanceCarriedForward ?? 0,
+              totalPayable: (mostRecentBill.balanceCarriedForward ?? 0) + mostRecentBill.totalAmountDue,
+              paymentStatus: mostRecentBill.paymentStatus,
+              month: mostRecentBill.monthYear,
+          };
+      }
+      return {
+          prevReading: bmPreviousReading,
+          currReading: bmCurrentReading,
+          usage: bulkUsage,
+          ...billDetails,
+          totalDifferenceBill: differenceBill,
+          differenceUsage: differenceUsage,
+          outstandingBill: outStandingBillValue,
+          totalPayable: totalPayable,
+          paymentStatus: bulkMeter.paymentStatus,
+          month: bulkMeter.month || 'N/A'
+      };
+    })();
+
+    return {
+      bmPreviousReading, bmCurrentReading, bulkUsage, totalBulkBillForPeriod,
+      totalPayable, differenceUsage, differenceBill, displayBranchName,
+      displayCardLocation, billCardDetails: finalBillCardDetails,
+    };
+  }, [bulkMeter, associatedCustomers, branches, billingHistory]);
+
+
   useEffect(() => {
     let isMounted = true;
 
@@ -85,7 +179,16 @@ export default function BulkMeterDetailsPage() {
       if (foundBM) {
         setBulkMeter(foundBM);
         setAssociatedCustomers(currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId));
-        setMeterReadingHistory(getBulkMeterReadings().filter(r => r.bulkMeterId === bulkMeterId).sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime()));
+        setMeterReadingHistory(getBulkMeterReadings().filter(r => r.bulkMeterId === bulkMeterId).sort((a, b) => {
+            const dateA = new Date(a.readingDate).getTime();
+            const dateB = new Date(b.readingDate).getTime();
+            if (dateB !== dateA) {
+                return dateB - dateA;
+            }
+            const creationA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const creationB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return creationB - creationA;
+        }));
         setBillingHistory(getBills().filter(b => b.bulkMeterId === bulkMeterId).sort((a, b) => {
             const dateA = new Date(a.billPeriodEndDate);
             const dateB = new Date(b.billPeriodEndDate);
@@ -122,7 +225,16 @@ export default function BulkMeterDetailsPage() {
       if (foundBM) {
         setBulkMeter(foundBM);
         setAssociatedCustomers(currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId));
-        setMeterReadingHistory(getBulkMeterReadings().filter(r => r.bulkMeterId === bulkMeterId).sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime()));
+        setMeterReadingHistory(getBulkMeterReadings().filter(r => r.bulkMeterId === bulkMeterId).sort((a, b) => {
+            const dateA = new Date(a.readingDate).getTime();
+            const dateB = new Date(b.readingDate).getTime();
+            if (dateB !== dateA) {
+                return dateB - dateA;
+            }
+            const creationA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const creationB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return creationB - creationA;
+        }));
         setBillingHistory(getBills().filter(b => b.bulkMeterId === bulkMeterId).sort((a, b) => {
             const dateA = new Date(a.billPeriodEndDate);
             const dateB = new Date(b.billPeriodEndDate);
@@ -295,7 +407,7 @@ export default function BulkMeterDetailsPage() {
       }
 
       const newOutstandingBalance = carryBalance ? totalPayableThisCycle : 0;
-
+      
       const updatePayload: Partial<Omit<BulkMeter, 'id'>> = {
           previousReading: currentBulkMeterState.currentReading,
           outStandingbill: newOutstandingBalance,
@@ -336,101 +448,9 @@ export default function BulkMeterDetailsPage() {
     setIsBillDeleteDialogOpen(false);
   };
 
-  const {
-    bmPreviousReading,
-    bmCurrentReading,
-    bulkUsage,
-    totalBulkBillForPeriod,
-    totalPayable,
-    differenceUsage,
-    differenceBill,
-    displayBranchName,
-    displayCardLocation,
-    billCardDetails,
-  } = React.useMemo(() => {
-    if (!bulkMeter) {
-      return {
-        bmPreviousReading: 0, bmCurrentReading: 0, bulkUsage: 0,
-        totalBulkBillForPeriod: 0, totalPayable: 0, differenceUsage: 0,
-        differenceBill: 0, displayBranchName: "N/A", displayCardLocation: "N/A",
-        billCardDetails: {
-          prevReading: 0, currReading: 0, usage: 0, baseWaterCharge: 0,
-          maintenanceFee: 0, sanitationFee: 0, sewerageCharge: 0, meterRent: 0,
-          vatAmount: 0, totalDifferenceBill: 0, differenceUsage: 0,
-          outstandingBill: 0, totalPayable: 0, paymentStatus: 'Unpaid' as PaymentStatus,
-          month: 'N/A',
-        }
-      };
-    }
-
-    const bmPreviousReading = bulkMeter.previousReading ?? 0;
-    const bmCurrentReading = bulkMeter.currentReading ?? 0;
-    const bulkUsage = bmCurrentReading - bmPreviousReading;
-
-    const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
-    const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
-    
-    const billDetails: BillCalculationResult = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
-    const totalBulkBillForPeriod = billDetails.totalBill;
-    const totalPayable = totalBulkBillForPeriod + (bulkMeter.outStandingbill || 0);
-
-    const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + (cust.currentReading - cust.previousReading), 0);
-    const totalIndividualBill = associatedCustomers.reduce((sum, cust) => sum + cust.calculatedBill, 0);
-
-    const differenceUsage = bulkMeter.differenceUsage ?? (bulkUsage - totalIndividualUsage);
-    const differenceBill = bulkMeter.differenceBill ?? (totalBulkBillForPeriod - totalIndividualBill);
-    
-    const displayBranchName = bulkMeter.branchId ? branches.find(b => b.id === bulkMeter.branchId)?.name : bulkMeter.location;
-    const displayCardLocation = bulkMeter.specificArea || bulkMeter.ward || "N/A";
-    
-    const mostRecentBill = billingHistory.length > 0 ? billingHistory[0] : null;
-
-    const finalBillCardDetails = (() => {
-      if (mostRecentBill) {
-          const historicalBillDetails = calculateBill(mostRecentBill.usageM3 ?? 0, 'Non-domestic', 'No', bulkMeter.meterSize);
-          return {
-              prevReading: mostRecentBill.previousReadingValue,
-              currReading: mostRecentBill.currentReadingValue,
-              usage: mostRecentBill.usageM3 ?? 0,
-              baseWaterCharge: historicalBillDetails.baseWaterCharge,
-              maintenanceFee: historicalBillDetails.maintenanceFee,
-              sanitationFee: historicalBillDetails.sanitationFee,
-              sewerageCharge: historicalBillDetails.sewerageCharge,
-              meterRent: historicalBillDetails.meterRent,
-              vatAmount: historicalBillDetails.vatAmount,
-              totalDifferenceBill: differenceBill,
-              differenceUsage: differenceUsage,
-              outstandingBill: mostRecentBill.balanceCarriedForward ?? 0,
-              totalPayable: (mostRecentBill.balanceCarriedForward ?? 0) + mostRecentBill.totalAmountDue,
-              paymentStatus: mostRecentBill.paymentStatus,
-              month: mostRecentBill.monthYear,
-          };
-      }
-      return {
-          prevReading: bmPreviousReading,
-          currReading: bmCurrentReading,
-          usage: bulkUsage,
-          ...billDetails,
-          totalDifferenceBill: differenceBill,
-          differenceUsage: differenceUsage,
-          outstandingBill: bulkMeter.outStandingbill || 0,
-          totalPayable: totalPayable,
-          paymentStatus: bulkMeter.paymentStatus,
-          month: bulkMeter.month || 'N/A'
-      };
-    })();
-
-    return {
-      bmPreviousReading, bmCurrentReading, bulkUsage, totalBulkBillForPeriod,
-      totalPayable, differenceUsage, differenceBill, displayBranchName,
-      displayCardLocation, billCardDetails: finalBillCardDetails,
-    };
-  }, [bulkMeter, associatedCustomers, branches, billingHistory]);
-
   if (isLoading) return <div className="p-4 text-center">Loading bulk meter details...</div>;
   if (!bulkMeter && !isLoading) return <div className="p-4 text-center">Bulk meter not found or an error occurred.</div>;
-  if (!bulkMeter) return <div className="p-4 text-center">Bulk meter data is unavailable.</div>;
-
+  
   return (
     <div className="space-y-6 p-4">
       <Card className="shadow-lg">
@@ -468,9 +488,9 @@ export default function BulkMeterDetailsPage() {
              <p className="text-2xl font-bold text-primary">Total Amount Payable: ETB {totalPayable.toFixed(2)}</p>
              <div className="flex items-center gap-2 mt-1">
                <strong className="font-semibold">Payment Status:</strong>
-                <Badge variant={bulkMeter.paymentStatus === 'Paid' ? 'default' : 'destructive'} className="cursor-pointer hover:opacity-80">
-                  {bulkMeter.paymentStatus === 'Paid' ? <CheckCircle className="mr-1 h-3.5 w-3.5"/> : <XCircle className="mr-1 h-3.5 w-3.5"/>}
-                  {bulkMeter.paymentStatus}
+                <Badge variant={bulkMeter.outStandingbill === 0 ? 'default' : 'destructive'} className="cursor-pointer hover:opacity-80">
+                  {bulkMeter.outStandingbill === 0 ? <CheckCircle className="mr-1 h-3.5 w-3.5"/> : <XCircle className="mr-1 h-3.5 w-3.5"/>}
+                  {bulkMeter.outStandingbill === 0 ? 'Paid' : 'Unpaid'}
                 </Badge>
              </div>
           </div>

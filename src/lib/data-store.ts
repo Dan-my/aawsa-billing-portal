@@ -876,6 +876,19 @@ export const initializeReportLogs = async () => {
     if (!reportLogsFetched || reportLogs.length === 0) await fetchAllReportLogs();
 };
 
+export async function getBulkMeterDirectly(id: string): Promise<StoreOperationResult<BulkMeter>> {
+    const { data, error } = await supabase.from('bulk_meters').select('*').eq('id', id).single();
+    if (error) {
+        console.error("DataStore: Failed to fetch single bulk meter. Error:", JSON.stringify(error, null, 2));
+        return { success: false, message: "Could not fetch meter data from database.", error };
+    }
+    if (!data) {
+        return { success: false, message: "Meter not found in database.", isNotFoundError: true };
+    }
+    const domainMeter = mapSupabaseBulkMeterToDomain(data);
+    return { success: true, data: domainMeter };
+}
+
 export const getBranches = (): DomainBranch[] => [...branches];
 export const getCustomers = (): DomainIndividualCustomer[] => [...customers];
 export const getBulkMeters = (): BulkMeter[] => [...bulkMeters];

@@ -17,7 +17,7 @@ import {
   updateCustomer as updateCustomerInStore, deleteCustomer as deleteCustomerFromStore, subscribeToBulkMeters, subscribeToCustomers,
   initializeBulkMeters, initializeCustomers, getBranches, initializeBranches, subscribeToBranches,
   getBulkMeterReadings, initializeBulkMeterReadings, subscribeToBulkMeterReadings,
-  addBill, addBulkMeterReading, removeBill
+  addBill, addBulkMeterReading, removeBill, getBulkMeterDirectly
 } from "@/lib/data-store";
 import { getBills, initializeBills, subscribeToBills } from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meter-types";
@@ -245,12 +245,14 @@ export default function BulkMeterDetailsPage() {
           return;
       }
       
-      const currentBulkMeterState = getBulkMeters().find(bm => bm.id === bulkMeter.id);
-      if (!currentBulkMeterState) {
-          toast({ variant: "destructive", title: "Meter Not Found", description: "Could not find the current state of the meter." });
+      const directFetchResult = await getBulkMeterDirectly(bulkMeter.id);
+
+      if (!directFetchResult.success || !directFetchResult.data) {
+          toast({ variant: "destructive", title: "Meter Not Found", description: "Could not find the current state of the meter in the database." });
           setIsProcessingCycle(false);
           return;
       }
+      const currentBulkMeterState = directFetchResult.data;
 
       const bmPreviousReading = currentBulkMeterState.previousReading ?? 0;
       const bmCurrentReading = currentBulkMeterState.currentReading ?? 0;

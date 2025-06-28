@@ -86,7 +86,16 @@ export default function BulkMeterDetailsPage() {
         setBulkMeter(foundBM);
         setAssociatedCustomers(currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId));
         setMeterReadingHistory(getBulkMeterReadings().filter(r => r.bulkMeterId === bulkMeterId).sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime()));
-        setBillingHistory(getBills().filter(b => b.bulkMeterId === bulkMeterId).sort((a,b) => new Date(b.billPeriodEndDate).getTime() - new Date(a.billPeriodEndDate).getTime()));
+        setBillingHistory(getBills().filter(b => b.bulkMeterId === bulkMeterId).sort((a, b) => {
+            const dateA = new Date(a.billPeriodEndDate);
+            const dateB = new Date(b.billPeriodEndDate);
+            if (dateB.getTime() !== dateA.getTime()) {
+              return dateB.getTime() - dateA.getTime();
+            }
+            const creationA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const creationB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return creationB - creationA;
+          }));
       } else {
         setBulkMeter(null);
         toast({ title: "Bulk Meter Not Found", description: "This bulk meter may not exist or has been deleted.", variant: "destructive" });
@@ -114,7 +123,16 @@ export default function BulkMeterDetailsPage() {
         setBulkMeter(foundBM);
         setAssociatedCustomers(currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId));
         setMeterReadingHistory(getBulkMeterReadings().filter(r => r.bulkMeterId === bulkMeterId).sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime()));
-        setBillingHistory(getBills().filter(b => b.bulkMeterId === bulkMeterId).sort((a,b) => new Date(b.billPeriodEndDate).getTime() - new Date(a.billPeriodEndDate).getTime()));
+        setBillingHistory(getBills().filter(b => b.bulkMeterId === bulkMeterId).sort((a, b) => {
+            const dateA = new Date(a.billPeriodEndDate);
+            const dateB = new Date(b.billPeriodEndDate);
+            if (dateB.getTime() !== dateA.getTime()) {
+              return dateB.getTime() - dateA.getTime();
+            }
+            const creationA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const creationB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return creationB - creationA;
+          }));
       } else if (bulkMeter) {
          toast({ title: "Bulk Meter Update", description: "The bulk meter being viewed may have been deleted or is no longer accessible.", variant: "destructive" });
          setBulkMeter(null);

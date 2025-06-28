@@ -329,7 +329,7 @@ export default function StaffBulkMeterDetailsPage() {
       const updatePayload: Partial<Omit<BulkMeter, 'id'>> = {
           previousReading: currentBulkMeterState.currentReading,
           outStandingbill: newOutstandingBalance,
-          paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
+          paymentStatus: newOutstandingBalance > 0 ? 'Unpaid' : 'Paid',
       };
 
       const updateResult = await updateBulkMeterInStore(currentBulkMeterState.id, updatePayload);

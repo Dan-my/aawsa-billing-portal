@@ -258,13 +258,21 @@ export default function StaffBulkMeterDetailsPage() {
           setIsProcessingCycle(false);
           return;
       }
-      const bmPreviousReading = bulkMeter.previousReading ?? 0;
-      const bmCurrentReading = bulkMeter.currentReading ?? 0;
+
+      const currentBulkMeterState = getBulkMeters().find(bm => bm.id === bulkMeter.id);
+      if (!currentBulkMeterState) {
+          toast({ variant: "destructive", title: "Meter Not Found", description: "Could not find the current state of the meter." });
+          setIsProcessingCycle(false);
+          return;
+      }
+      
+      const bmPreviousReading = currentBulkMeterState.previousReading ?? 0;
+      const bmCurrentReading = currentBulkMeterState.currentReading ?? 0;
       const bulkUsage = bmCurrentReading - bmPreviousReading;
       const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
       const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
 
-      const { totalBill: billForCurrentPeriod, ...billBreakdown } = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
+      const { totalBill: billForCurrentPeriod, ...billBreakdown } = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, currentBulkMeterState.meterSize);
 
       const billDate = new Date();
       const periodEndDate = lastDayOfMonth(parsedDate);
@@ -272,23 +280,23 @@ export default function StaffBulkMeterDetailsPage() {
       const dueDateObject = new Date(periodEndDate);
       dueDateObject.setDate(dueDateObject.getDate() + 15);
 
-      const balanceFromPreviousPeriods = bulkMeter.outStandingbill || 0;
+      const balanceFromPreviousPeriods = currentBulkMeterState.outStandingbill || 0;
       const totalPayableThisCycle = billForCurrentPeriod + balanceFromPreviousPeriods;
 
       const billToSave: Omit<DomainBill, 'id'> = {
-        bulkMeterId: bulkMeter.id,
-        billPeriodStartDate: `${bulkMeter.month}-01`,
+        bulkMeterId: currentBulkMeterState.id,
+        billPeriodStartDate: `${currentBulkMeterState.month}-01`,
         billPeriodEndDate: format(periodEndDate, 'yyyy-MM-dd'),
-        monthYear: bulkMeter.month,
-        previousReadingValue: bulkMeter.previousReading,
-        currentReadingValue: bulkMeter.currentReading,
+        monthYear: currentBulkMeterState.month,
+        previousReadingValue: bmPreviousReading,
+        currentReadingValue: bmCurrentReading,
         usageM3: bulkUsage,
         ...billBreakdown,
         balanceCarriedForward: balanceFromPreviousPeriods,
         totalAmountDue: billForCurrentPeriod,
         dueDate: format(dueDateObject, 'yyyy-MM-dd'),
         paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
-        notes: `Bill generated on ${format(billDate, 'PP')}`,
+        notes: `Bill generated on ${format(billDate, 'PP')}. Total payable was ${totalPayableThisCycle.toFixed(2)}.`,
       };
       
       const addBillResult = await addBill(billToSave);
@@ -301,12 +309,12 @@ export default function StaffBulkMeterDetailsPage() {
       const newOutstandingBalance = carryBalance ? totalPayableThisCycle : 0;
 
       const updatePayload: Partial<Omit<BulkMeter, 'id'>> = {
-          previousReading: bulkMeter.currentReading,
+          previousReading: currentBulkMeterState.currentReading,
           outStandingbill: newOutstandingBalance,
           paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
       };
 
-      const updateResult = await updateBulkMeterInStore(bulkMeter.id, updatePayload);
+      const updateResult = await updateBulkMeterInStore(currentBulkMeterState.id, updatePayload);
       if (updateResult.success && updateResult.data) {
         setBulkMeter(updateResult.data);
          toast({ 
@@ -374,6 +382,8 @@ export default function StaffBulkMeterDetailsPage() {
   const differenceBill = bulkMeter.differenceBill ?? (totalBulkBillForPeriod - totalIndividualBill);
   
   const displayCardLocation = bulkMeter.specificArea || bulkMeter.ward || "N/A";
+  
+  const mostRecentBill = billingHistory.length > 0 ? billingHistory[0] : null;
 
 
   return (
@@ -442,13 +452,17 @@ export default function StaffBulkMeterDetailsPage() {
             <p><strong className="font-semibold w-60 inline-block">Bulk Meter Category:</strong> Non-domestic</p>
             <p><strong className="font-semibold w-60 inline-block">Number of Assigned Individual Customers:</strong> {associatedCustomers.length}</p>
             <p><strong className="font-semibold w-60 inline-block">Previous and current reading:</strong> {bmPreviousReading.toFixed(2)} / {bmCurrentReading.toFixed(2)} m³</p>
+            
             <p><strong className="font-semibold w-60 inline-block">Bulk usage:</strong> {bulkUsage.toFixed(2)} m³</p>
-            <p><strong className="font-semibold w-60 inline-block">Meter Rent:</strong> ETB {billDetails.meterRent.toFixed(2)}</p>
+            <p><strong className="font-semibold w-60 inline-block">Base Water Charge:</strong> ETB {billDetails.baseWaterCharge.toFixed(2)}</p>
+            <p><strong className="font-semibold w-60 inline-block">Maintenance Fee:</strong> ETB {billDetails.maintenanceFee.toFixed(2)}</p>
             <p><strong className="font-semibold w-60 inline-block">Sanitation Fee:</strong> ETB {billDetails.sanitationFee.toFixed(2)}</p>
-            {billDetails.sewerageCharge > 0 && (<p><strong className="font-semibold w-60 inline-block">Sewerage Fee:</strong> ETB {billDetails.sewerageCharge.toFixed(2)}</p>)}
+            <p><strong className="font-semibold w-60 inline-block">Sewerage Fee:</strong> ETB {billDetails.sewerageCharge.toFixed(2)}</p>
+            <p><strong className="font-semibold w-60 inline-block">Meter Rent:</strong> ETB {billDetails.meterRent.toFixed(2)}</p>
             <p><strong className="font-semibold w-60 inline-block">VAT (15%):</strong> ETB {billDetails.vatAmount.toFixed(2)}</p>
             <p><strong className="font-semibold w-60 inline-block">Difference usage:</strong> {differenceUsage.toFixed(2)} m³</p>
             <p><strong className="font-semibold w-60 inline-block">Total Difference bill:</strong> ETB {differenceBill.toFixed(2)}</p>
+
             <p className="border-t pt-2 mt-2"><strong className="font-semibold w-60 inline-block">Outstanding Bill (Previous Balance):</strong> ETB {(bulkMeter.outStandingbill || 0).toFixed(2)}</p>
             <p className="font-bold text-base"><strong className="font-semibold w-60 inline-block">Total Amount Payable:</strong> ETB {totalPayable.toFixed(2)}</p>
             <p><strong className="font-semibold w-60 inline-block">Paid/Unpaid:</strong> {bulkMeter.paymentStatus}</p>

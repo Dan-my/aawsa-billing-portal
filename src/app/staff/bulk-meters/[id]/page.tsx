@@ -405,6 +405,42 @@ export default function StaffBulkMeterDetailsPage() {
   
   const mostRecentBill = billingHistory.length > 0 ? billingHistory[0] : null;
 
+  const billCardDetails = React.useMemo(() => {
+    if (mostRecentBill) {
+        const historicalBillDetails = calculateBill(mostRecentBill.usageM3 ?? 0, 'Non-domestic', 'No', bulkMeter.meterSize);
+        return {
+            prevReading: mostRecentBill.previousReadingValue,
+            currReading: mostRecentBill.currentReadingValue,
+            usage: mostRecentBill.usageM3 ?? 0,
+            baseWaterCharge: historicalBillDetails.baseWaterCharge,
+            maintenanceFee: historicalBillDetails.maintenanceFee,
+            sanitationFee: historicalBillDetails.sanitationFee,
+            sewerageCharge: historicalBillDetails.sewerageCharge,
+            meterRent: historicalBillDetails.meterRent,
+            vatAmount: historicalBillDetails.vatAmount,
+            totalDifferenceBill: differenceBill, 
+            differenceUsage: differenceUsage, 
+            outstandingBill: mostRecentBill.balanceCarriedForward ?? 0,
+            totalPayable: (mostRecentBill.balanceCarriedForward ?? 0) + mostRecentBill.totalAmountDue,
+            paymentStatus: mostRecentBill.paymentStatus,
+            month: mostRecentBill.monthYear,
+        };
+    }
+    // Fallback to current state
+    return {
+        prevReading: bmPreviousReading,
+        currReading: bmCurrentReading,
+        usage: bulkUsage,
+        ...billDetails,
+        totalDifferenceBill: differenceBill,
+        differenceUsage: differenceUsage,
+        outstandingBill: bulkMeter.outStandingbill || 0,
+        totalPayable: totalPayable,
+        paymentStatus: bulkMeter.paymentStatus,
+        month: bulkMeter.month || 'N/A'
+    };
+  }, [mostRecentBill, bulkMeter, differenceBill, differenceUsage, bmPreviousReading, bmCurrentReading, bulkUsage, billDetails, totalPayable]);
+
 
   return (
     <div className="space-y-6 p-4">
@@ -471,22 +507,22 @@ export default function StaffBulkMeterDetailsPage() {
             <p><strong className="font-semibold w-60 inline-block">Location:</strong> {displayCardLocation}</p>
             <p><strong className="font-semibold w-60 inline-block">Bulk Meter Category:</strong> Non-domestic</p>
             <p><strong className="font-semibold w-60 inline-block">Number of Assigned Individual Customers:</strong> {associatedCustomers.length}</p>
-            <p><strong className="font-semibold w-60 inline-block">Previous and current reading:</strong> {bmPreviousReading.toFixed(2)} / {bmCurrentReading.toFixed(2)} m³</p>
             
-            <p><strong className="font-semibold w-60 inline-block">Bulk usage:</strong> {bulkUsage.toFixed(2)} m³</p>
-            <p><strong className="font-semibold w-60 inline-block">Base Water Charge:</strong> ETB {billDetails.baseWaterCharge.toFixed(2)}</p>
-            <p><strong className="font-semibold w-60 inline-block">Maintenance Fee:</strong> ETB {billDetails.maintenanceFee.toFixed(2)}</p>
-            <p><strong className="font-semibold w-60 inline-block">Sanitation Fee:</strong> ETB {billDetails.sanitationFee.toFixed(2)}</p>
-            <p><strong className="font-semibold w-60 inline-block">Sewerage Fee:</strong> ETB {billDetails.sewerageCharge.toFixed(2)}</p>
-            <p><strong className="font-semibold w-60 inline-block">Meter Rent:</strong> ETB {billDetails.meterRent.toFixed(2)}</p>
-            <p><strong className="font-semibold w-60 inline-block">VAT (15%):</strong> ETB {billDetails.vatAmount.toFixed(2)}</p>
-            <p><strong className="font-semibold w-60 inline-block">Difference usage:</strong> {differenceUsage.toFixed(2)} m³</p>
-            <p><strong className="font-semibold w-60 inline-block">Total Difference bill:</strong> ETB {differenceBill.toFixed(2)}</p>
+            <p><strong className="font-semibold w-60 inline-block">Previous and current reading:</strong> {billCardDetails.prevReading.toFixed(2)} / {billCardDetails.currReading.toFixed(2)} m³</p>
+            <p><strong className="font-semibold w-60 inline-block">Bulk usage:</strong> {billCardDetails.usage.toFixed(2)} m³</p>
+            <p><strong className="font-semibold w-60 inline-block">Base Water Charge:</strong> ETB {billCardDetails.baseWaterCharge.toFixed(2)}</p>
+            <p><strong className="font-semibold w-60 inline-block">Maintenance Fee:</strong> ETB {billCardDetails.maintenanceFee.toFixed(2)}</p>
+            <p><strong className="font-semibold w-60 inline-block">Sanitation Fee:</strong> ETB {billCardDetails.sanitationFee.toFixed(2)}</p>
+            <p><strong className="font-semibold w-60 inline-block">Sewerage Fee:</strong> ETB {billCardDetails.sewerageCharge.toFixed(2)}</p>
+            <p><strong className="font-semibold w-60 inline-block">Meter Rent:</strong> ETB {billCardDetails.meterRent.toFixed(2)}</p>
+            <p><strong className="font-semibold w-60 inline-block">VAT (15%):</strong> ETB {billCardDetails.vatAmount.toFixed(2)}</p>
+            <p><strong className="font-semibold w-60 inline-block">Difference usage:</strong> {billCardDetails.differenceUsage.toFixed(2)} m³</p>
+            <p><strong className="font-semibold w-60 inline-block">Total Difference bill:</strong> ETB {billCardDetails.totalDifferenceBill.toFixed(2)}</p>
 
-            <p className="border-t pt-2 mt-2"><strong className="font-semibold w-60 inline-block">Outstanding Bill (Previous Balance):</strong> ETB {(bulkMeter.outStandingbill || 0).toFixed(2)}</p>
-            <p className="font-bold text-base"><strong className="font-semibold w-60 inline-block">Total Amount Payable:</strong> ETB {totalPayable.toFixed(2)}</p>
-            <p><strong className="font-semibold w-60 inline-block">Paid/Unpaid:</strong> {bulkMeter.paymentStatus}</p>
-            <p><strong className="font-semibold w-60 inline-block">Month:</strong> {bulkMeter.month}</p>
+            <p className="border-t pt-2 mt-2"><strong className="font-semibold w-60 inline-block">Outstanding Bill (Previous Balance):</strong> ETB {billCardDetails.outstandingBill.toFixed(2)}</p>
+            <p className="font-bold text-base"><strong className="font-semibold w-60 inline-block">Total Amount Payable:</strong> ETB {billCardDetails.totalPayable.toFixed(2)}</p>
+            <p><strong className="font-semibold w-60 inline-block">Paid/Unpaid:</strong> {billCardDetails.paymentStatus}</p>
+            <p><strong className="font-semibold w-60 inline-block">Month:</strong> {billCardDetails.month}</p>
           </div>
           
           <div className="pt-10 space-y-6 text-sm"><p>Requested by: .........................................................</p><p>Check by: .............................................................</p><p>Approved by: ........................................................</p></div>

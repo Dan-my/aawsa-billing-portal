@@ -5,7 +5,7 @@ import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle as UIDialogTitle, DialogDescription as UIDialogDescription } from "@/components/ui/dialog";
-import { PlusCircle, Search, UploadCloud } from "lucide-react";
+import { PlusCircle, Search, UploadCloud, FileText } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AddMeterReadingForm, type AddMeterReadingFormValues } from "@/components/add-meter-reading-form";
 import MeterReadingsTable from "@/components/meter-readings-table";
@@ -33,6 +33,7 @@ import { format } from "date-fns";
 import { CsvReadingUploadDialog } from "@/components/csv-reading-upload-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 
 interface User {
@@ -245,33 +246,29 @@ export default function AdminMeterReadingsPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button variant="outline" onClick={() => setIsIndividualCsvModalOpen(true)}>
-              <UploadCloud className="mr-2 h-4 w-4" /> Upload Individual Readings
-          </Button>
-          <Button variant="outline" onClick={() => setIsBulkCsvModalOpen(true)}>
-              <UploadCloud className="mr-2 h-4 w-4" /> Upload Bulk Readings
-          </Button>
-          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogTrigger asChild>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button disabled={isLoading && (allCustomers.length === 0 && allBulkMeters.length === 0)}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add New Reading
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Reading
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[480px]">
-              <DialogHeader>
-                <UIDialogTitle>Add New Meter Reading</UIDialogTitle>
-                <UIDialogDescription>
-                  Select the meter type, then the specific meter, and enter the reading details.
-                </UIDialogDescription>
-              </DialogHeader>
-              <AddMeterReadingForm 
-                  onSubmit={handleAddReadingSubmit} 
-                  customers={allCustomers}
-                  bulkMeters={allBulkMeters}
-                  isLoading={isLoading}
-              />
-            </DialogContent>
-          </Dialog>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Add New Reading</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => setIsModalOpen(true)}>
+                <FileText className="mr-2 h-4 w-4" />
+                <span>Manual Entry</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setIsIndividualCsvModalOpen(true)}>
+                <UploadCloud className="mr-2 h-4 w-4" />
+                <span>Upload Individual (CSV)</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setIsBulkCsvModalOpen(true)}>
+                <UploadCloud className="mr-2 h-4 w-4" />
+                <span>Upload Bulk (CSV)</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
       <Tabs defaultValue="individual">
@@ -338,6 +335,23 @@ export default function AdminMeterReadingsPage() {
             </Card>
           </TabsContent>
       </Tabs>
+      
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <UIDialogTitle>Add New Meter Reading</UIDialogTitle>
+            <UIDialogDescription>
+              Select the meter type, then the specific meter, and enter the reading details.
+            </UIDialogDescription>
+          </DialogHeader>
+          <AddMeterReadingForm 
+              onSubmit={handleAddReadingSubmit} 
+              customers={allCustomers}
+              bulkMeters={allBulkMeters}
+              isLoading={isLoading}
+          />
+        </DialogContent>
+      </Dialog>
       
       <CsvReadingUploadDialog
         open={isIndividualCsvModalOpen}

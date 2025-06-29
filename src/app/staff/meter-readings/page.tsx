@@ -5,7 +5,7 @@ import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle as UIDialogTitle, DialogDescription as UIDialogDescription } from "@/components/ui/dialog";
-import { PlusCircle, Search, UploadCloud, AlertCircle } from "lucide-react";
+import { PlusCircle, Search, UploadCloud, AlertCircle, FileText } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AddMeterReadingForm, type AddMeterReadingFormValues } from "@/components/add-meter-reading-form";
 import MeterReadingsTable from "@/components/meter-readings-table";
@@ -33,6 +33,7 @@ import { CsvReadingUploadDialog } from "@/components/csv-reading-upload-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 
 interface User {
@@ -230,45 +231,29 @@ export default function StaffMeterReadingsPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button variant="outline" onClick={() => setIsIndividualCsvModalOpen(true)}>
-              <UploadCloud className="mr-2 h-4 w-4" /> Upload Individual Readings
-          </Button>
-          <Button variant="outline" onClick={() => setIsBulkCsvModalOpen(true)}>
-              <UploadCloud className="mr-2 h-4 w-4" /> Upload Bulk Readings
-          </Button>
-          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogTrigger asChild>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button disabled={isLoading && (customersForForm.length === 0 && bulkMetersForForm.length === 0)}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add New Reading
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Reading
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[480px]">
-              <DialogHeader>
-                <UIDialogTitle>Add New Meter Reading</UIDialogTitle>
-                <UIDialogDescription>
-                  Select the meter type, then the specific meter, and enter the reading details.
-                </UIDialogDescription>
-              </DialogHeader>
-              {(isLoading && (customersForForm.length === 0 && bulkMetersForForm.length === 0)) ? <p>Loading meter data...</p> : (
-                (!isLoading && customersForForm.length === 0 && bulkMetersForForm.length === 0) ? (
-                    <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>No Meters Found</AlertTitle>
-                        <UIAlertDescription>
-                            No customers or bulk meters could be loaded for your branch ({branchName}) to add readings. Please check if data exists or contact an administrator.
-                        </UIAlertDescription>
-                    </Alert>
-                ) : (
-                    <AddMeterReadingForm 
-                        onSubmit={handleAddReadingSubmit} 
-                        customers={customersForForm}
-                        bulkMeters={bulkMetersForForm}
-                        isLoading={isLoading}
-                    />
-                )
-              )}
-            </DialogContent>
-          </Dialog>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Add New Reading</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => setIsModalOpen(true)}>
+                <FileText className="mr-2 h-4 w-4" />
+                <span>Manual Entry</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setIsIndividualCsvModalOpen(true)}>
+                <UploadCloud className="mr-2 h-4 w-4" />
+                <span>Upload Individual (CSV)</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setIsBulkCsvModalOpen(true)}>
+                <UploadCloud className="mr-2 h-4 w-4" />
+                <span>Upload Bulk (CSV)</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
       <Tabs defaultValue="individual">
@@ -335,6 +320,35 @@ export default function StaffMeterReadingsPage() {
             </Card>
           </TabsContent>
       </Tabs>
+      
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <UIDialogTitle>Add New Meter Reading</UIDialogTitle>
+            <UIDialogDescription>
+              Select the meter type, then the specific meter, and enter the reading details.
+            </UIDialogDescription>
+          </DialogHeader>
+          {(isLoading && (customersForForm.length === 0 && bulkMetersForForm.length === 0)) ? <p>Loading meter data...</p> : (
+            (!isLoading && customersForForm.length === 0 && bulkMetersForForm.length === 0) ? (
+                <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>No Meters Found</AlertTitle>
+                    <UIAlertDescription>
+                        No customers or bulk meters could be loaded for your branch ({branchName}) to add readings. Please check if data exists or contact an administrator.
+                    </UIAlertDescription>
+                </Alert>
+            ) : (
+                <AddMeterReadingForm 
+                    onSubmit={handleAddReadingSubmit} 
+                    customers={customersForForm}
+                    bulkMeters={bulkMetersForForm}
+                    isLoading={isLoading}
+                />
+            )
+          )}
+        </DialogContent>
+      </Dialog>
       
       <CsvReadingUploadDialog
         open={isIndividualCsvModalOpen}

@@ -30,6 +30,7 @@ import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from 
 import { AddReadingDialog } from "@/components/add-reading-dialog";
 import { cn } from "@/lib/utils";
 import { format, parseISO, lastDayOfMonth } from "date-fns";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 export default function BulkMeterDetailsPage() {
   const params = useParams();
@@ -56,6 +57,16 @@ export default function BulkMeterDetailsPage() {
 
   const [isBillDeleteDialogOpen, setIsBillDeleteDialogOpen] = React.useState(false);
   const [billToDelete, setBillToDelete] = React.useState<DomainBill | null>(null);
+
+  // Pagination state for billing history
+  const [billingHistoryPage, setBillingHistoryPage] = React.useState(0);
+  const [billingHistoryRowsPerPage, setBillingHistoryRowsPerPage] = React.useState(10);
+
+  const paginatedBillingHistory = billingHistory.slice(
+    billingHistoryPage * billingHistoryRowsPerPage,
+    billingHistoryPage * billingHistoryRowsPerPage + billingHistoryRowsPerPage
+  );
+
 
   const {
     bmPreviousReading,
@@ -484,13 +495,13 @@ export default function BulkMeterDetailsPage() {
              <p className="text-xl text-primary"><strong className="font-semibold">Total Bulk Bill:</strong> ETB {totalBulkBillForPeriod.toFixed(2)}</p>
              <p className={cn("text-sm", differenceUsage >= 0 ? "text-green-600" : "text-amber-600")}><strong className="font-semibold">Difference Usage:</strong> {differenceUsage.toFixed(2)} m³</p>
              <p className={cn("text-sm", differenceBill >= 0 ? "text-green-600" : "text-amber-600")}><strong className="font-semibold">Difference Bill:</strong> ETB {differenceBill.toFixed(2)}</p>
-             <p className={cn("text-sm font-semibold", (bulkMeter.outStandingbill || 0) > 0 ? "text-destructive" : "text-muted-foreground")}>Outstanding Bill: ETB {(bulkMeter.outStandingbill || 0).toFixed(2)}</p>
+             <p className={cn("text-sm font-semibold", bulkMeter.outStandingbill > 0 ? "text-destructive" : "text-muted-foreground")}>Outstanding Bill: ETB {bulkMeter.outStandingbill.toFixed(2)}</p>
              <p className="text-2xl font-bold text-primary">Total Amount Payable: ETB {totalPayable.toFixed(2)}</p>
              <div className="flex items-center gap-2 mt-1">
                <strong className="font-semibold">Payment Status:</strong>
-                <Badge variant={bulkMeter.outStandingbill === 0 ? 'default' : 'destructive'} className="cursor-pointer hover:opacity-80">
-                  {bulkMeter.outStandingbill === 0 ? <CheckCircle className="mr-1 h-3.5 w-3.5"/> : <XCircle className="mr-1 h-3.5 w-3.5"/>}
-                  {bulkMeter.outStandingbill === 0 ? 'Paid' : 'Unpaid'}
+                <Badge variant={bulkMeter.paymentStatus === 'Paid' ? 'default' : 'destructive'} className="cursor-pointer hover:opacity-80">
+                  {bulkMeter.paymentStatus === 'Paid' ? <CheckCircle className="mr-1 h-3.5 w-3.5"/> : <XCircle className="mr-1 h-3.5 w-3.5"/>}
+                  {bulkMeter.paymentStatus}
                 </Badge>
              </div>
           </div>
@@ -513,9 +524,22 @@ export default function BulkMeterDetailsPage() {
       
       <Card className="shadow-lg">
         <CardHeader><CardTitle className="flex items-center gap-2"><ListCollapse className="h-5 w-5 text-primary" />Billing History</CardTitle><CardDescription>Historical bills generated for this meter.</CardDescription></CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto max-h-96">{billingHistory.length > 0 ? (<Table><TableHeader><TableRow><TableHead>Month</TableHead><TableHead>Date Billed</TableHead><TableHead>Usage (m³)</TableHead><TableHead className="text-right">Outstanding (ETB)</TableHead><TableHead className="text-right">Current Bill (ETB)</TableHead><TableHead className="text-right">Total Payable (ETB)</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader><TableBody>{billingHistory.map(bill => (<TableRow key={bill.id}><TableCell>{bill.monthYear}</TableCell><TableCell>{format(parseISO(bill.billPeriodEndDate), "PP")}</TableCell><TableCell>{bill.usageM3?.toFixed(2) ?? 'N/A'}</TableCell><TableCell className="text-right">{bill.balanceCarriedForward?.toFixed(2) ?? '0.00'}</TableCell><TableCell className="text-right font-medium">{bill.totalAmountDue.toFixed(2)}</TableCell><TableCell className="text-right font-bold">{((bill.balanceCarriedForward ?? 0) + bill.totalAmountDue).toFixed(2)}</TableCell><TableCell><Badge variant={bill.paymentStatus === 'Paid' ? 'default' : 'destructive'}>{bill.paymentStatus}</Badge></TableCell><TableCell className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => handleDeleteBillingRecord(bill)} className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" />Delete Record</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell></TableRow>))}</TableBody></Table>) : (<p className="text-muted-foreground text-sm text-center py-4">No billing history found.</p>)}</div>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">{billingHistory.length > 0 ? (<Table><TableHeader><TableRow><TableHead>Month</TableHead><TableHead>Date Billed</TableHead><TableHead>Usage (m³)</TableHead><TableHead className="text-right">Outstanding (ETB)</TableHead><TableHead className="text-right">Current Bill (ETB)</TableHead><TableHead className="text-right">Total Payable (ETB)</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader><TableBody>{paginatedBillingHistory.map(bill => (<TableRow key={bill.id}><TableCell>{bill.monthYear}</TableCell><TableCell>{format(parseISO(bill.billPeriodEndDate), "PP")}</TableCell><TableCell>{bill.usageM3?.toFixed(2) ?? 'N/A'}</TableCell><TableCell className="text-right">{bill.balanceCarriedForward?.toFixed(2) ?? '0.00'}</TableCell><TableCell className="text-right font-medium">{bill.totalAmountDue.toFixed(2)}</TableCell><TableCell className="text-right font-bold">{((bill.balanceCarriedForward ?? 0) + bill.totalAmountDue).toFixed(2)}</TableCell><TableCell><Badge variant={bill.paymentStatus === 'Paid' ? 'default' : 'destructive'}>{bill.paymentStatus}</Badge></TableCell><TableCell className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => handleDeleteBillingRecord(bill)} className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" />Delete Record</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell></TableRow>))}</TableBody></Table>) : (<p className="text-muted-foreground text-sm text-center py-4">No billing history found.</p>)}</div>
         </CardContent>
+        {billingHistory.length > 0 && (
+          <TablePagination
+            count={billingHistory.length}
+            page={billingHistoryPage}
+            rowsPerPage={billingHistoryRowsPerPage}
+            onPageChange={setBillingHistoryPage}
+            onRowsPerPageChange={(value) => {
+              setBillingHistoryRowsPerPage(value);
+              setBillingHistoryPage(0);
+            }}
+            rowsPerPageOptions={[5, 10, 25]}
+          />
+        )}
       </Card>
 
       <Card className="shadow-lg">

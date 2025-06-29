@@ -67,101 +67,6 @@ export default function BulkMeterDetailsPage() {
     billingHistoryPage * billingHistoryRowsPerPage + billingHistoryRowsPerPage
   );
 
-
-  const {
-    bmPreviousReading,
-    bmCurrentReading,
-    bulkUsage,
-    totalBulkBillForPeriod,
-    totalPayable,
-    differenceUsage,
-    differenceBill,
-    displayBranchName,
-    displayCardLocation,
-    billCardDetails,
-  } = React.useMemo(() => {
-    if (!bulkMeter) {
-      return {
-        bmPreviousReading: 0, bmCurrentReading: 0, bulkUsage: 0,
-        totalBulkBillForPeriod: 0, totalPayable: 0, differenceUsage: 0,
-        differenceBill: 0, displayBranchName: "N/A", displayCardLocation: "N/A",
-        billCardDetails: {
-          prevReading: 0, currReading: 0, usage: 0, baseWaterCharge: 0,
-          maintenanceFee: 0, sanitationFee: 0, sewerageCharge: 0, meterRent: 0,
-          vatAmount: 0, totalDifferenceBill: 0, differenceUsage: 0,
-          outstandingBill: 0, totalPayable: 0, paymentStatus: 'Unpaid' as PaymentStatus,
-          month: 'N/A',
-        }
-      };
-    }
-
-    const bmPreviousReading = bulkMeter.previousReading ?? 0;
-    const bmCurrentReading = bulkMeter.currentReading ?? 0;
-    const bulkUsage = bmCurrentReading - bmPreviousReading;
-
-    const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
-    const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
-    
-    const billDetails: BillCalculationResult = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
-    const totalBulkBillForPeriod = billDetails.totalBill;
-    
-    const outStandingBillValue = (bulkMeter.outStandingbill || 0);
-    const totalPayable = totalBulkBillForPeriod + outStandingBillValue;
-
-    const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + (cust.currentReading - cust.previousReading), 0);
-    const totalIndividualBill = associatedCustomers.reduce((sum, cust) => sum + cust.calculatedBill, 0);
-
-    const differenceUsage = bulkMeter.differenceUsage ?? (bulkUsage - totalIndividualUsage);
-    const differenceBill = bulkMeter.differenceBill ?? (totalBulkBillForPeriod - totalIndividualBill);
-    
-    const displayBranchName = bulkMeter.branchId ? branches.find(b => b.id === bulkMeter.branchId)?.name : bulkMeter.location;
-    const displayCardLocation = bulkMeter.specificArea || bulkMeter.ward || "N/A";
-    
-    const mostRecentBill = billingHistory.length > 0 ? billingHistory[0] : null;
-
-    const finalBillCardDetails = (() => {
-      if (mostRecentBill) {
-          const historicalBillDetails = calculateBill(mostRecentBill.usageM3 ?? 0, 'Non-domestic', 'No', bulkMeter.meterSize);
-          return {
-              prevReading: mostRecentBill.previousReadingValue,
-              currReading: mostRecentBill.currentReadingValue,
-              usage: mostRecentBill.usageM3 ?? 0,
-              baseWaterCharge: mostRecentBill.baseWaterCharge,
-              maintenanceFee: mostRecentBill.maintenanceFee ?? 0,
-              sanitationFee: mostRecentBill.sanitationFee ?? 0,
-              sewerageCharge: mostRecentBill.sewerageCharge ?? 0,
-              meterRent: mostRecentBill.meterRent ?? 0,
-              vatAmount: calculateBill(mostRecentBill.usageM3 ?? 0, 'Non-domestic', 'No', bulkMeter.meterSize).vatAmount,
-              totalDifferenceBill: differenceBill,
-              differenceUsage: differenceUsage,
-              outstandingBill: mostRecentBill.balanceCarriedForward ?? 0,
-              totalPayable: (mostRecentBill.balanceCarriedForward ?? 0) + mostRecentBill.totalAmountDue,
-              paymentStatus: mostRecentBill.paymentStatus,
-              month: mostRecentBill.monthYear,
-          };
-      }
-      return {
-          prevReading: bmPreviousReading,
-          currReading: bmCurrentReading,
-          usage: bulkUsage,
-          ...billDetails,
-          totalDifferenceBill: differenceBill,
-          differenceUsage: differenceUsage,
-          outstandingBill: outStandingBillValue,
-          totalPayable: totalPayable,
-          paymentStatus: bulkMeter.paymentStatus,
-          month: bulkMeter.month || 'N/A'
-      };
-    })();
-
-    return {
-      bmPreviousReading, bmCurrentReading, bulkUsage, totalBulkBillForPeriod,
-      totalPayable, differenceUsage, differenceBill, displayBranchName,
-      displayCardLocation, billCardDetails: finalBillCardDetails,
-    };
-  }, [bulkMeter, associatedCustomers, branches, billingHistory]);
-
-
   useEffect(() => {
     let isMounted = true;
 
@@ -277,6 +182,101 @@ export default function BulkMeterDetailsPage() {
       unsubBills();
     };
   }, [bulkMeterId, router, toast, bulkMeter]);
+  
+  const {
+    bmPreviousReading,
+    bmCurrentReading,
+    bulkUsage,
+    totalBulkBillForPeriod,
+    totalPayable,
+    differenceUsage,
+    differenceBill,
+    displayBranchName,
+    displayCardLocation,
+    billCardDetails,
+  } = React.useMemo(() => {
+    if (!bulkMeter) {
+      return {
+        bmPreviousReading: 0, bmCurrentReading: 0, bulkUsage: 0,
+        totalBulkBillForPeriod: 0, totalPayable: 0, differenceUsage: 0,
+        differenceBill: 0, displayBranchName: "N/A", displayCardLocation: "N/A",
+        billCardDetails: {
+          prevReading: 0, currReading: 0, usage: 0, baseWaterCharge: 0,
+          maintenanceFee: 0, sanitationFee: 0, sewerageCharge: 0, meterRent: 0,
+          vatAmount: 0, totalDifferenceBill: 0, differenceUsage: 0,
+          outstandingBill: 0, totalPayable: 0, paymentStatus: 'Unpaid' as PaymentStatus,
+          month: 'N/A',
+        }
+      };
+    }
+
+    const bmPreviousReading = bulkMeter.previousReading ?? 0;
+    const bmCurrentReading = bulkMeter.currentReading ?? 0;
+    const bulkUsage = bmCurrentReading - bmPreviousReading;
+
+    const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
+    const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
+    
+    const billDetails: BillCalculationResult = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
+    const totalBulkBillForPeriod = billDetails.totalBill;
+    
+    const outStandingBillValue = (bulkMeter.outStandingbill || 0);
+    const totalPayable = totalBulkBillForPeriod + outStandingBillValue;
+    const paymentStatus = outStandingBillValue === 0 && totalBulkBillForPeriod === 0 ? 'Paid' : bulkMeter.paymentStatus;
+
+
+    const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + (cust.currentReading - cust.previousReading), 0);
+    const totalIndividualBill = associatedCustomers.reduce((sum, cust) => sum + cust.calculatedBill, 0);
+
+    const differenceUsage = bulkMeter.differenceUsage ?? (bulkUsage - totalIndividualUsage);
+    const differenceBill = bulkMeter.differenceBill ?? (totalBulkBillForPeriod - totalIndividualBill);
+    
+    const displayBranchName = bulkMeter.branchId ? branches.find(b => b.id === bulkMeter.branchId)?.name : bulkMeter.location;
+    const displayCardLocation = bulkMeter.specificArea || bulkMeter.ward || "N/A";
+    
+    const mostRecentBill = billingHistory.length > 0 ? billingHistory[0] : null;
+
+    const finalBillCardDetails = (() => {
+      if (mostRecentBill) {
+          const historicalBillDetails = calculateBill(mostRecentBill.usageM3 ?? 0, 'Non-domestic', 'No', bulkMeter.meterSize);
+          return {
+              prevReading: mostRecentBill.previousReadingValue,
+              currReading: mostRecentBill.currentReadingValue,
+              usage: mostRecentBill.usageM3 ?? 0,
+              baseWaterCharge: mostRecentBill.baseWaterCharge,
+              maintenanceFee: mostRecentBill.maintenanceFee ?? 0,
+              sanitationFee: mostRecentBill.sanitationFee ?? 0,
+              sewerageCharge: mostRecentBill.sewerageCharge ?? 0,
+              meterRent: mostRecentBill.meterRent ?? 0,
+              vatAmount: calculateBill(mostRecentBill.usageM3 ?? 0, 'Non-domestic', 'No', bulkMeter.meterSize).vatAmount,
+              totalDifferenceBill: differenceBill,
+              differenceUsage: differenceUsage,
+              outstandingBill: mostRecentBill.balanceCarriedForward ?? 0,
+              totalPayable: (mostRecentBill.balanceCarriedForward ?? 0) + mostRecentBill.totalAmountDue,
+              paymentStatus: mostRecentBill.paymentStatus,
+              month: mostRecentBill.monthYear,
+          };
+      }
+      return {
+          prevReading: bmPreviousReading,
+          currReading: bmCurrentReading,
+          usage: bulkUsage,
+          ...billDetails,
+          totalDifferenceBill: differenceBill,
+          differenceUsage: differenceUsage,
+          outstandingBill: outStandingBillValue,
+          totalPayable: totalPayable,
+          paymentStatus: paymentStatus,
+          month: bulkMeter.month || 'N/A'
+      };
+    })();
+
+    return {
+      bmPreviousReading, bmCurrentReading, bulkUsage, totalBulkBillForPeriod,
+      totalPayable, differenceUsage, differenceBill, displayBranchName,
+      displayCardLocation, billCardDetails: finalBillCardDetails,
+    };
+  }, [bulkMeter, associatedCustomers, branches, billingHistory]);
 
 
   const handleEditBulkMeter = () => setIsBulkMeterFormOpen(true);
@@ -499,29 +499,20 @@ export default function BulkMeterDetailsPage() {
              <p className="text-2xl font-bold text-primary">Total Amount Payable: ETB {totalPayable.toFixed(2)}</p>
              <div className="flex items-center gap-2 mt-1">
                <strong className="font-semibold">Payment Status:</strong>
-                <Badge variant={bulkMeter.paymentStatus === 'Paid' ? 'default' : 'destructive'} className="cursor-pointer hover:opacity-80">
-                  {bulkMeter.paymentStatus === 'Paid' ? <CheckCircle className="mr-1 h-3.5 w-3.5"/> : <XCircle className="mr-1 h-3.5 w-3.5"/>}
-                  {bulkMeter.paymentStatus}
+                <Badge variant={billCardDetails.paymentStatus === 'Paid' ? 'default' : 'destructive'} className="cursor-pointer hover:opacity-80">
+                  {billCardDetails.paymentStatus === 'Paid' ? <CheckCircle className="mr-1 h-3.5 w-3.5"/> : <XCircle className="mr-1 h-3.5 w-3.5"/>}
+                  {billCardDetails.paymentStatus}
                 </Badge>
              </div>
           </div>
         </CardContent>
       </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="shadow-lg">
-          <CardHeader><CardTitle className="flex items-center gap-2"><History className="h-5 w-5 text-primary" />Reading History</CardTitle><CardDescription>Historical readings logged for this meter.</CardDescription></CardHeader>
-          <CardContent><div className="overflow-x-auto max-h-96">{meterReadingHistory.length > 0 ? (<Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">Reading Value</TableHead><TableHead>Notes</TableHead></TableRow></TableHeader><TableBody>{meterReadingHistory.map(reading => (<TableRow key={reading.id}><TableCell>{format(parseISO(reading.readingDate), "PP")}</TableCell><TableCell className="text-right">{reading.readingValue.toFixed(2)}</TableCell><TableCell className="text-xs text-muted-foreground">{reading.notes}</TableCell></TableRow>))}</TableBody></Table>) : (<p className="text-muted-foreground text-sm text-center py-4">No historical readings found.</p>)}</div></CardContent>
-        </Card>
-        <Card className="shadow-lg">
-           <CardHeader><CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-500" />End of Month Actions</CardTitle><CardDescription>Close the current billing cycle for this meter. This action creates a historical bill record, updates the previous reading, and manages arrears.</CardDescription></CardHeader>
-          <CardContent className="flex flex-col gap-4 pt-6">
-             <Button onClick={() => handleEndOfCycle(false)} disabled={isLoading || isProcessingCycle}><CheckCircle className="mr-2 h-4 w-4" /> Mark Bill as Paid & Start New Cycle</Button>
-             <Button variant="destructive" onClick={() => handleEndOfCycle(true)} disabled={isLoading || isProcessingCycle}><RefreshCcw className="mr-2 h-4 w-4" /> Carry Balance Forward & Start New Cycle</Button>
-          </CardContent>
-        </Card>
-      </div>
       
+      <Card className="shadow-lg">
+        <CardHeader><CardTitle className="flex items-center gap-2"><History className="h-5 w-5 text-primary" />Reading History</CardTitle><CardDescription>Historical readings logged for this meter.</CardDescription></CardHeader>
+        <CardContent><div className="overflow-x-auto max-h-96">{meterReadingHistory.length > 0 ? (<Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">Reading Value</TableHead><TableHead>Notes</TableHead></TableRow></TableHeader><TableBody>{meterReadingHistory.map(reading => (<TableRow key={reading.id}><TableCell>{format(parseISO(reading.readingDate), "PP")}</TableCell><TableCell className="text-right">{reading.readingValue.toFixed(2)}</TableCell><TableCell className="text-xs text-muted-foreground">{reading.notes}</TableCell></TableRow>))}</TableBody></Table>) : (<p className="text-muted-foreground text-sm text-center py-4">No historical readings found.</p>)}</div></CardContent>
+      </Card>
+
       <Card className="shadow-lg">
         <CardHeader><CardTitle className="flex items-center gap-2"><ListCollapse className="h-5 w-5 text-primary" />Billing History</CardTitle><CardDescription>Historical bills generated for this meter.</CardDescription></CardHeader>
         <CardContent className="p-0">
@@ -540,6 +531,14 @@ export default function BulkMeterDetailsPage() {
             rowsPerPageOptions={[5, 10, 25]}
           />
         )}
+      </Card>
+
+      <Card className="shadow-lg">
+         <CardHeader><CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-500" />End of Month Actions</CardTitle><CardDescription>Close the current billing cycle for this meter. This action creates a historical bill record, updates the previous reading, and manages arrears.</CardDescription></CardHeader>
+        <CardContent className="flex flex-col gap-4 pt-6">
+           <Button onClick={() => handleEndOfCycle(false)} disabled={isLoading || isProcessingCycle}><CheckCircle className="mr-2 h-4 w-4" /> Mark Bill as Paid & Start New Cycle</Button>
+           <Button variant="destructive" onClick={() => handleEndOfCycle(true)} disabled={isLoading || isProcessingCycle}><RefreshCcw className="mr-2 h-4 w-4" /> Carry Balance Forward & Start New Cycle</Button>
+        </CardContent>
       </Card>
 
       <Card className="shadow-lg">

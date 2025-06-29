@@ -122,8 +122,8 @@ export default function StaffBulkMeterDetailsPage() {
     const totalBulkBillForPeriod = billDetails.totalBill;
 
     const outStandingBillValue = (bulkMeter.outStandingbill || 0);
+    const paymentStatus = outStandingBillValue > 0 ? 'Unpaid' : 'Paid';
     const totalPayable = totalBulkBillForPeriod + outStandingBillValue;
-    const paymentStatus = outStandingBillValue === 0 && totalBulkBillForPeriod === 0 ? 'Paid' : bulkMeter.paymentStatus;
 
     const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + (cust.currentReading - cust.previousReading), 0);
     const totalIndividualBill = associatedCustomers.reduce((sum, cust) => sum + cust.calculatedBill, 0);
@@ -527,6 +527,15 @@ export default function StaffBulkMeterDetailsPage() {
                   {billCardDetails.paymentStatus}
                 </Badge>
             </div>
+             <div className="pt-4 mt-4 border-t space-y-2">
+                <h4 className="font-semibold text-sm text-muted-foreground">End of Month Actions</h4>
+                <Button size="sm" onClick={() => handleEndOfCycle(false)} disabled={isLoading || isProcessingCycle} className="w-full justify-center">
+                    <CheckCircle className="mr-2 h-4 w-4" /> Mark Paid & Start New Cycle
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => handleEndOfCycle(true)} disabled={isLoading || isProcessingCycle} className="w-full justify-center">
+                    <RefreshCcw className="mr-2 h-4 w-4" /> Carry Balance & Start New Cycle
+                </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -556,14 +565,6 @@ export default function StaffBulkMeterDetailsPage() {
         )}
       </Card>
       
-      <Card className="shadow-lg">
-         <CardHeader><CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-500" />End of Month Actions</CardTitle><CardDescription>Close the current billing cycle for this meter. This action creates a historical bill record, updates the previous reading, and manages arrears.</CardDescription></CardHeader>
-        <CardContent className="flex flex-col gap-4 pt-6">
-           <Button onClick={() => handleEndOfCycle(false)} disabled={isLoading || isProcessingCycle}><CheckCircle className="mr-2 h-4 w-4" /> Mark Bill as Paid & Start New Cycle</Button>
-           <Button variant="destructive" onClick={() => handleEndOfCycle(true)} disabled={isLoading || isProcessingCycle}><RefreshCcw className="mr-2 h-4 w-4" /> Carry Balance Forward & Start New Cycle</Button>
-        </CardContent>
-      </Card>
-
       <Card className="shadow-lg">
         <CardHeader><CardTitle className="flex items-center gap-2"><UsersIcon className="h-5 w-5 text-primary" />Associated Individual Customers</CardTitle><CardDescription>List of individual customers connected to this bulk meter ({associatedCustomers.length} found).</CardDescription></CardHeader>
         <CardContent>{associatedCustomers.length === 0 ? (<div className="text-center text-muted-foreground py-4">No individual customers are currently associated with this bulk meter.</div>) : (<div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Customer Name</TableHead><TableHead>Meter No.</TableHead><TableHead>Usage (m³)</TableHead><TableHead>Bill (ETB)</TableHead><TableHead>Pay Status</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader><TableBody>{associatedCustomers.map((customer) => { const usage = customer.currentReading - customer.previousReading; return (<TableRow key={customer.id}><TableCell className="font-medium">{customer.name}</TableCell><TableCell>{customer.meterNumber}</TableCell><TableCell>{usage.toFixed(2)}</TableCell><TableCell>{customer.calculatedBill.toFixed(2)}</TableCell><TableCell><Badge variant={ customer.paymentStatus === 'Paid' ? 'default' : customer.paymentStatus === 'Unpaid' ? 'destructive' : 'secondary' } className={cn( customer.paymentStatus === 'Paid' && "bg-green-500 hover:bg-green-600", customer.paymentStatus === 'Pending' && "bg-yellow-500 hover:bg-yellow-600" )}>{customer.paymentStatus === 'Paid' ? <CheckCircle className="mr-1 h-3.5 w-3.5"/> : customer.paymentStatus === 'Unpaid' ? <XCircle className="mr-1 h-3.5 w-3.5"/> : <Clock className="mr-1 h-3.5 w-3.5"/>}{customer.paymentStatus}</Badge></TableCell><TableCell><Badge variant={customer.status === 'Active' ? 'default' : 'destructive'}>{customer.status}</Badge></TableCell><TableCell className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuLabel>Actions</DropdownMenuLabel><DropdownMenuItem onClick={() => handleEditCustomer(customer)}><Edit className="mr-2 h-4 w-4" />Edit Customer</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => handleDeleteCustomer(customer)} className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" />Delete Customer</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell></TableRow>);})}</TableBody></Table></div>)}</CardContent>

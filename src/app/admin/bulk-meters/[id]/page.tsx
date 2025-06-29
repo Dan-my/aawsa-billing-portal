@@ -221,8 +221,8 @@ export default function BulkMeterDetailsPage() {
     const totalBulkBillForPeriod = billDetails.totalBill;
     
     const outStandingBillValue = (bulkMeter.outStandingbill || 0);
+    const paymentStatus = outStandingBillValue > 0 ? 'Unpaid' : 'Paid';
     const totalPayable = totalBulkBillForPeriod + outStandingBillValue;
-    const paymentStatus = outStandingBillValue === 0 && totalBulkBillForPeriod === 0 ? 'Paid' : bulkMeter.paymentStatus;
 
 
     const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + (cust.currentReading - cust.previousReading), 0);
@@ -504,6 +504,15 @@ export default function BulkMeterDetailsPage() {
                   {billCardDetails.paymentStatus}
                 </Badge>
              </div>
+             <div className="pt-4 mt-4 border-t space-y-2">
+                <h4 className="font-semibold text-sm text-muted-foreground">End of Month Actions</h4>
+                <Button size="sm" onClick={() => handleEndOfCycle(false)} disabled={isLoading || isProcessingCycle} className="w-full justify-center">
+                    <CheckCircle className="mr-2 h-4 w-4" /> Mark Paid & Start New Cycle
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => handleEndOfCycle(true)} disabled={isLoading || isProcessingCycle} className="w-full justify-center">
+                    <RefreshCcw className="mr-2 h-4 w-4" /> Carry Balance & Start New Cycle
+                </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -531,14 +540,6 @@ export default function BulkMeterDetailsPage() {
             rowsPerPageOptions={[5, 10, 25]}
           />
         )}
-      </Card>
-
-      <Card className="shadow-lg">
-         <CardHeader><CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-500" />End of Month Actions</CardTitle><CardDescription>Close the current billing cycle for this meter. This action creates a historical bill record, updates the previous reading, and manages arrears.</CardDescription></CardHeader>
-        <CardContent className="flex flex-col gap-4 pt-6">
-           <Button onClick={() => handleEndOfCycle(false)} disabled={isLoading || isProcessingCycle}><CheckCircle className="mr-2 h-4 w-4" /> Mark Bill as Paid & Start New Cycle</Button>
-           <Button variant="destructive" onClick={() => handleEndOfCycle(true)} disabled={isLoading || isProcessingCycle}><RefreshCcw className="mr-2 h-4 w-4" /> Carry Balance Forward & Start New Cycle</Button>
-        </CardContent>
       </Card>
 
       <Card className="shadow-lg">

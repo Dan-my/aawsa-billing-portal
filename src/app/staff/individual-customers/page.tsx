@@ -29,6 +29,7 @@ import {
 import type { PaymentStatus, CustomerType, SewerageConnection } from "@/lib/billing";
 import type { BulkMeter as AdminBulkMeterType } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { Branch } from "@/app/admin/branches/branch-types";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 
 interface User {
@@ -52,6 +53,9 @@ export default function StaffIndividualCustomersPage() {
   const [selectedCustomer, setSelectedCustomer] = React.useState<IndividualCustomer | null>(null);
   const [customerToDelete, setCustomerToDelete] = React.useState<IndividualCustomer | null>(null);
   const [staffBranchName, setStaffBranchName] = React.useState<string | undefined>(undefined);
+
+  const [page, setPage] = React.useState(0);
+  const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
   const filterDataByBranch = React.useCallback((
     customersToFilter: IndividualCustomer[],
@@ -226,6 +230,11 @@ export default function StaffIndividualCustomersPage() {
     (customer.assignedBulkMeterId && getBulkMeterNameFromAll(customer.assignedBulkMeterId).toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const paginatedCustomers = searchedCustomers.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
@@ -267,7 +276,7 @@ export default function StaffIndividualCustomersPage() {
              </div>
           ) : (
             <IndividualCustomerTable
-              data={searchedCustomers}
+              data={paginatedCustomers}
               onEdit={handleEditCustomer}
               onDelete={handleDeleteCustomer}
               bulkMetersList={branchBulkMetersList} 
@@ -275,6 +284,19 @@ export default function StaffIndividualCustomersPage() {
             />
           )}
         </CardContent>
+        {searchedCustomers.length > 0 && (
+          <TablePagination
+            count={searchedCustomers.length}
+            page={page}
+            rowsPerPage={rowsPerPage}
+            onPageChange={setPage}
+            onRowsPerPageChange={(value) => {
+              setRowsPerPage(value);
+              setPage(0);
+            }}
+            rowsPerPageOptions={[5, 10, 25]}
+          />
+        )}
       </Card>
 
       <IndividualCustomerFormDialog

@@ -5,7 +5,7 @@ import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle as UIDialogTitle, DialogDescription as UIDialogDescription } from "@/components/ui/dialog";
-import { PlusCircle, Search, UploadCloud } from "lucide-react";
+import { PlusCircle, Search, UploadCloud, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AddMeterReadingForm, type AddMeterReadingFormValues } from "@/components/add-meter-reading-form";
 import MeterReadingsTable from "@/components/meter-readings-table";
@@ -23,15 +23,16 @@ import {
   getBulkMeterReadings,
   initializeBulkMeterReadings,
   subscribeToBulkMeterReadings,
-  getBranches, // For branch filtering logic
+  getBranches,
 } from "@/lib/data-store";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { DisplayReading } from "@/lib/data-store";
 import { format } from "date-fns";
-import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
 import { CsvReadingUploadDialog } from "@/components/csv-reading-upload-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
 
 
 interface User {
@@ -41,7 +42,6 @@ interface User {
   branchName?: string;
 }
 
-
 export default function StaffMeterReadingsPage() {
   const { toast } = useToast();
   const [branchName, setBranchName] = React.useState<string>("Your Branch");
@@ -50,13 +50,20 @@ export default function StaffMeterReadingsPage() {
   const [isBulkCsvModalOpen, setIsBulkCsvModalOpen] = React.useState(false);
   const [currentUser, setCurrentUser] = React.useState<User | null>(null);
   
-  const [allCombinedReadings, setAllCombinedReadings] = React.useState<DisplayReading[]>([]);
+  const [individualReadings, setIndividualReadings] = React.useState<DisplayReading[]>([]);
+  const [bulkReadings, setBulkReadings] = React.useState<DisplayReading[]>([]);
   
   const [customersForForm, setCustomersForForm] = React.useState<IndividualCustomer[]>([]);
   const [bulkMetersForForm, setBulkMetersForForm] = React.useState<BulkMeter[]>([]);
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState(""); 
+
+  const [individualPage, setIndividualPage] = React.useState(0);
+  const [individualRowsPerPage, setIndividualRowsPerPage] = React.useState(10);
+  const [bulkPage, setBulkPage] = React.useState(0);
+  const [bulkRowsPerPage, setBulkRowsPerPage] = React.useState(10);
+
 
   const combineAndSortReadings = React.useCallback((currentBranchName?: string) => {
     const allCustomers = getCustomers();
@@ -80,7 +87,7 @@ export default function StaffMeterReadingsPage() {
         meterType: 'individual',
         meterIdentifier: allCustomers.find(c => c.id === r.individualCustomerId)?.name || `Cust ID ${r.individualCustomerId}`,
         readingValue: r.readingValue, readingDate: r.readingDate, monthYear: r.monthYear, notes: r.notes
-      }));
+      })).sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
 
     const displayedBulkReadings: DisplayReading[] = allBulkReadings
       .filter(r => branchBulkMeters.some(bm => bm.id === r.bulkMeterId))
@@ -90,12 +97,10 @@ export default function StaffMeterReadingsPage() {
         meterType: 'bulk',
         meterIdentifier: allBulkMeters.find(bm => bm.id === r.bulkMeterId)?.name || `BM ID ${r.bulkMeterId}`,
         readingValue: r.readingValue, readingDate: r.readingDate, monthYear: r.monthYear, notes: r.notes
-      }));
-
-    const combined = [...displayedIndividualReadings, ...displayedBulkReadings];
-    combined.sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
-    setAllCombinedReadings(combined);
-
+      })).sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
+    
+    setIndividualReadings(displayedIndividualReadings);
+    setBulkReadings(displayedBulkReadings);
   }, []);
 
   React.useEffect(() => {
@@ -185,13 +190,30 @@ export default function StaffMeterReadingsPage() {
     }
   };
   
-  const displayedReadings = allCombinedReadings.filter(reading => {
+  const filteredIndividualReadings = individualReadings.filter(reading => {
     if (!searchTerm) return true;
     const lowerSearchTerm = searchTerm.toLowerCase();
-    
     return reading.meterIdentifier.toLowerCase().includes(lowerSearchTerm) ||
            String(reading.readingValue).includes(lowerSearchTerm);
   });
+  
+  const paginatedIndividualReadings = filteredIndividualReadings.slice(
+    individualPage * individualRowsPerPage,
+    individualPage * individualRowsPerPage + individualRowsPerPage
+  );
+  
+  const filteredBulkReadings = bulkReadings.filter(reading => {
+    if (!searchTerm) return true;
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    return reading.meterIdentifier.toLowerCase().includes(lowerSearchTerm) ||
+           String(reading.readingValue).includes(lowerSearchTerm);
+  });
+
+  const paginatedBulkReadings = filteredBulkReadings.slice(
+    bulkPage * bulkRowsPerPage,
+    bulkPage * bulkRowsPerPage + bulkRowsPerPage
+  );
+
 
   return (
     <div className="space-y-6">
@@ -249,22 +271,71 @@ export default function StaffMeterReadingsPage() {
           </Dialog>
         </div>
       </div>
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>Meter Reading List</CardTitle>
-          <CardDescription>View and manage meter readings for {branchName}.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading && displayedReadings.length === 0 ? (
-             <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
-                Loading meter readings...
-             </div>
-          ) : (
-            <MeterReadingsTable data={displayedReadings} />
-          )}
-        </CardContent>
-      </Card>
-
+      <Tabs defaultValue="individual">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="individual">Individual Readings ({filteredIndividualReadings.length})</TabsTrigger>
+            <TabsTrigger value="bulk">Bulk Meter Readings ({filteredBulkReadings.length})</TabsTrigger>
+          </TabsList>
+          <TabsContent value="individual">
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle>Individual Customer Reading List</CardTitle>
+                <CardDescription>View and manage readings for individual customers in your branch.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                 {isLoading && paginatedIndividualReadings.length === 0 ? (
+                    <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
+                        Loading readings...
+                    </div>
+                 ) : (
+                    <MeterReadingsTable data={paginatedIndividualReadings} />
+                 )}
+              </CardContent>
+              {filteredIndividualReadings.length > 0 && (
+                 <TablePagination
+                    count={filteredIndividualReadings.length}
+                    page={individualPage}
+                    rowsPerPage={individualRowsPerPage}
+                    onPageChange={setIndividualPage}
+                    onRowsPerPageChange={(value) => {
+                        setIndividualRowsPerPage(value);
+                        setIndividualPage(0);
+                    }}
+                 />
+              )}
+            </Card>
+          </TabsContent>
+          <TabsContent value="bulk">
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle>Bulk Meter Reading List</CardTitle>
+                <CardDescription>View and manage readings for bulk meters in your branch.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                 {isLoading && paginatedBulkReadings.length === 0 ? (
+                    <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
+                        Loading readings...
+                    </div>
+                 ) : (
+                    <MeterReadingsTable data={paginatedBulkReadings} />
+                 )}
+              </CardContent>
+              {filteredBulkReadings.length > 0 && (
+                 <TablePagination
+                    count={filteredBulkReadings.length}
+                    page={bulkPage}
+                    rowsPerPage={bulkRowsPerPage}
+                    onPageChange={setBulkPage}
+                    onRowsPerPageChange={(value) => {
+                        setBulkRowsPerPage(value);
+                        setBulkPage(0);
+                    }}
+                 />
+              )}
+            </Card>
+          </TabsContent>
+      </Tabs>
+      
       <CsvReadingUploadDialog
         open={isIndividualCsvModalOpen}
         onOpenChange={setIsIndividualCsvModalOpen}

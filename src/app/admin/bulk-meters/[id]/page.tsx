@@ -45,6 +45,7 @@ export default function BulkMeterDetailsPage() {
   const [isProcessingCycle, setIsProcessingCycle] = React.useState(false);
   const [meterReadingHistory, setMeterReadingHistory] = useState<DomainBulkMeterReading[]>([]);
   const [billingHistory, setBillingHistory] = useState<DomainBill[]>([]);
+  const [billForPrintView, setBillForPrintView] = React.useState<DomainBill | null>(null);
 
   const [isBulkMeterFormOpen, setIsBulkMeterFormOpen] = React.useState(false);
   const [isBulkMeterDeleteDialogOpen, setIsBulkMeterDeleteDialogOpen] = React.useState(false);
@@ -66,6 +67,101 @@ export default function BulkMeterDetailsPage() {
     billingHistoryPage * billingHistoryRowsPerPage,
     billingHistoryPage * billingHistoryRowsPerPage + billingHistoryRowsPerPage
   );
+
+  const {
+    bmPreviousReading,
+    bmCurrentReading,
+    bulkUsage,
+    totalBulkBillForPeriod,
+    totalPayable,
+    differenceUsage,
+    differenceBill,
+    displayBranchName,
+    displayCardLocation,
+    billCardDetails,
+  } = React.useMemo(() => {
+    if (!bulkMeter) {
+      return {
+        bmPreviousReading: 0, bmCurrentReading: 0, bulkUsage: 0,
+        totalBulkBillForPeriod: 0, totalPayable: 0, differenceUsage: 0,
+        differenceBill: 0, displayBranchName: "N/A", displayCardLocation: "N/A",
+        billCardDetails: {
+          prevReading: 0, currReading: 0, usage: 0, baseWaterCharge: 0,
+          maintenanceFee: 0, sanitationFee: 0, sewerageCharge: 0, meterRent: 0,
+          vatAmount: 0, totalDifferenceBill: 0, differenceUsage: 0,
+          outstandingBill: 0, totalPayable: 0, paymentStatus: 'Unpaid' as PaymentStatus,
+          month: 'N/A',
+        }
+      };
+    }
+
+    const bmPreviousReading = bulkMeter.previousReading ?? 0;
+    const bmCurrentReading = bulkMeter.currentReading ?? 0;
+    const bulkUsage = bmCurrentReading - bmPreviousReading;
+
+    const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
+    const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
+    
+    const billDetails: BillCalculationResult = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
+    const totalBulkBillForPeriod = billDetails.totalBill;
+    
+    const outStandingBillValue = (bulkMeter.outStandingbill || 0);
+    const paymentStatus = outStandingBillValue > 0 ? 'Unpaid' : 'Paid';
+    const totalPayable = totalBulkBillForPeriod + outStandingBillValue;
+
+
+    const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + (cust.currentReading - cust.previousReading), 0);
+    const totalIndividualBill = associatedCustomers.reduce((sum, cust) => sum + cust.calculatedBill, 0);
+
+    const differenceUsage = bulkMeter.differenceUsage ?? (bulkUsage - totalIndividualUsage);
+    const differenceBill = bulkMeter.differenceBill ?? (totalBulkBillForPeriod - totalIndividualBill);
+    
+    const displayBranchName = bulkMeter.branchId ? branches.find(b => b.id === bulkMeter.branchId)?.name : bulkMeter.location;
+    const displayCardLocation = bulkMeter.specificArea || bulkMeter.ward || "N/A";
+    
+    const billToRender = billForPrintView || (billingHistory.length > 0 ? billingHistory[0] : null);
+
+    const finalBillCardDetails = (() => {
+      if (billToRender) {
+          const historicalBillDetails = calculateBill(billToRender.usageM3 ?? 0, 'Non-domestic', 'No', bulkMeter.meterSize);
+          return {
+              prevReading: billToRender.previousReadingValue,
+              currReading: billToRender.currentReadingValue,
+              usage: billToRender.usageM3 ?? 0,
+              baseWaterCharge: billToRender.baseWaterCharge,
+              maintenanceFee: billToRender.maintenanceFee ?? 0,
+              sanitationFee: billToRender.sanitationFee ?? 0,
+              sewerageCharge: billToRender.sewerageCharge ?? 0,
+              meterRent: billToRender.meterRent ?? 0,
+              vatAmount: calculateBill(billToRender.usageM3 ?? 0, 'Non-domestic', 'No', bulkMeter.meterSize).vatAmount,
+              totalDifferenceBill: differenceBill,
+              differenceUsage: differenceUsage,
+              outstandingBill: billToRender.balanceCarriedForward ?? 0,
+              totalPayable: (billToRender.balanceCarriedForward ?? 0) + billToRender.totalAmountDue,
+              paymentStatus: billToRender.paymentStatus,
+              month: billToRender.monthYear,
+          };
+      }
+      return {
+          prevReading: bmPreviousReading,
+          currReading: bmCurrentReading,
+          usage: bulkUsage,
+          ...billDetails,
+          totalDifferenceBill: differenceBill,
+          differenceUsage: differenceUsage,
+          outstandingBill: outStandingBillValue,
+          totalPayable: totalPayable,
+          paymentStatus: paymentStatus,
+          month: bulkMeter.month || 'N/A'
+      };
+    })();
+
+    return {
+      bmPreviousReading, bmCurrentReading, bulkUsage, totalBulkBillForPeriod,
+      totalPayable, differenceUsage, differenceBill, displayBranchName,
+      displayCardLocation, billCardDetails: finalBillCardDetails,
+    };
+  }, [bulkMeter, associatedCustomers, branches, billingHistory, billForPrintView]);
 
   useEffect(() => {
     let isMounted = true;
@@ -183,102 +279,6 @@ export default function BulkMeterDetailsPage() {
     };
   }, [bulkMeterId, router, toast, bulkMeter]);
   
-  const {
-    bmPreviousReading,
-    bmCurrentReading,
-    bulkUsage,
-    totalBulkBillForPeriod,
-    totalPayable,
-    differenceUsage,
-    differenceBill,
-    displayBranchName,
-    displayCardLocation,
-    billCardDetails,
-  } = React.useMemo(() => {
-    if (!bulkMeter) {
-      return {
-        bmPreviousReading: 0, bmCurrentReading: 0, bulkUsage: 0,
-        totalBulkBillForPeriod: 0, totalPayable: 0, differenceUsage: 0,
-        differenceBill: 0, displayBranchName: "N/A", displayCardLocation: "N/A",
-        billCardDetails: {
-          prevReading: 0, currReading: 0, usage: 0, baseWaterCharge: 0,
-          maintenanceFee: 0, sanitationFee: 0, sewerageCharge: 0, meterRent: 0,
-          vatAmount: 0, totalDifferenceBill: 0, differenceUsage: 0,
-          outstandingBill: 0, totalPayable: 0, paymentStatus: 'Unpaid' as PaymentStatus,
-          month: 'N/A',
-        }
-      };
-    }
-
-    const bmPreviousReading = bulkMeter.previousReading ?? 0;
-    const bmCurrentReading = bulkMeter.currentReading ?? 0;
-    const bulkUsage = bmCurrentReading - bmPreviousReading;
-
-    const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
-    const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
-    
-    const billDetails: BillCalculationResult = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
-    const totalBulkBillForPeriod = billDetails.totalBill;
-    
-    const outStandingBillValue = (bulkMeter.outStandingbill || 0);
-    const paymentStatus = outStandingBillValue > 0 ? 'Unpaid' : 'Paid';
-    const totalPayable = totalBulkBillForPeriod + outStandingBillValue;
-
-
-    const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + (cust.currentReading - cust.previousReading), 0);
-    const totalIndividualBill = associatedCustomers.reduce((sum, cust) => sum + cust.calculatedBill, 0);
-
-    const differenceUsage = bulkMeter.differenceUsage ?? (bulkUsage - totalIndividualUsage);
-    const differenceBill = bulkMeter.differenceBill ?? (totalBulkBillForPeriod - totalIndividualBill);
-    
-    const displayBranchName = bulkMeter.branchId ? branches.find(b => b.id === bulkMeter.branchId)?.name : bulkMeter.location;
-    const displayCardLocation = bulkMeter.specificArea || bulkMeter.ward || "N/A";
-    
-    const mostRecentBill = billingHistory.length > 0 ? billingHistory[0] : null;
-
-    const finalBillCardDetails = (() => {
-      if (mostRecentBill) {
-          const historicalBillDetails = calculateBill(mostRecentBill.usageM3 ?? 0, 'Non-domestic', 'No', bulkMeter.meterSize);
-          return {
-              prevReading: mostRecentBill.previousReadingValue,
-              currReading: mostRecentBill.currentReadingValue,
-              usage: mostRecentBill.usageM3 ?? 0,
-              baseWaterCharge: mostRecentBill.baseWaterCharge,
-              maintenanceFee: mostRecentBill.maintenanceFee ?? 0,
-              sanitationFee: mostRecentBill.sanitationFee ?? 0,
-              sewerageCharge: mostRecentBill.sewerageCharge ?? 0,
-              meterRent: mostRecentBill.meterRent ?? 0,
-              vatAmount: calculateBill(mostRecentBill.usageM3 ?? 0, 'Non-domestic', 'No', bulkMeter.meterSize).vatAmount,
-              totalDifferenceBill: differenceBill,
-              differenceUsage: differenceUsage,
-              outstandingBill: mostRecentBill.balanceCarriedForward ?? 0,
-              totalPayable: (mostRecentBill.balanceCarriedForward ?? 0) + mostRecentBill.totalAmountDue,
-              paymentStatus: mostRecentBill.paymentStatus,
-              month: mostRecentBill.monthYear,
-          };
-      }
-      return {
-          prevReading: bmPreviousReading,
-          currReading: bmCurrentReading,
-          usage: bulkUsage,
-          ...billDetails,
-          totalDifferenceBill: differenceBill,
-          differenceUsage: differenceUsage,
-          outstandingBill: outStandingBillValue,
-          totalPayable: totalPayable,
-          paymentStatus: paymentStatus,
-          month: bulkMeter.month || 'N/A'
-      };
-    })();
-
-    return {
-      bmPreviousReading, bmCurrentReading, bulkUsage, totalBulkBillForPeriod,
-      totalPayable, differenceUsage, differenceBill, displayBranchName,
-      displayCardLocation, billCardDetails: finalBillCardDetails,
-    };
-  }, [bulkMeter, associatedCustomers, branches, billingHistory]);
-
-
   const handleEditBulkMeter = () => setIsBulkMeterFormOpen(true);
   const handleDeleteBulkMeter = () => setIsBulkMeterDeleteDialogOpen(true);
   const confirmDeleteBulkMeter = async () => {
@@ -350,7 +350,13 @@ export default function BulkMeterDetailsPage() {
     setIsCustomerFormOpen(false); setSelectedCustomer(null);
   };
 
-  const handlePrint = () => window.print();
+  const handlePrint = (bill: DomainBill) => {
+    setBillForPrintView(bill);
+    setTimeout(() => {
+        window.print();
+        setTimeout(() => setBillForPrintView(null), 1000); 
+    }, 100);
+  };
 
   const handleEndOfCycle = async (carryBalance: boolean) => {
     if (!bulkMeter || !bulkMeter.month || isProcessingCycle) return;
@@ -472,7 +478,6 @@ export default function BulkMeterDetailsPage() {
           </div>
           <div>
             <Button variant="outline" size="sm" onClick={() => setIsAddReadingOpen(true)} className="mr-2"><PlusCircleIcon className="mr-2 h-4 w-4" /> Add Reading</Button>
-            <Button variant="outline" size="sm" onClick={handlePrint} className="mr-2"><Printer className="mr-2 h-4 w-4" /> Print / Export PDF</Button>
             <Button variant="outline" size="sm" onClick={handleEditBulkMeter} className="mr-2"><FileEdit className="mr-2 h-4 w-4" /> Edit Bulk Meter</Button>
             <Button variant="destructive" size="sm" onClick={handleDeleteBulkMeter}><Trash2 className="mr-2 h-4 w-4" /> Delete Bulk Meter</Button>
           </div>
@@ -525,7 +530,7 @@ export default function BulkMeterDetailsPage() {
       <Card className="shadow-lg">
         <CardHeader><CardTitle className="flex items-center gap-2"><ListCollapse className="h-5 w-5 text-primary" />Billing History</CardTitle><CardDescription>Historical bills generated for this meter.</CardDescription></CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">{billingHistory.length > 0 ? (<Table><TableHeader><TableRow><TableHead>Month</TableHead><TableHead>Date Billed</TableHead><TableHead className="text-right">Prev. Reading</TableHead><TableHead className="text-right">Curr. Reading</TableHead><TableHead>Usage (m³)</TableHead><TableHead className="text-right">Outstanding (ETB)</TableHead><TableHead className="text-right">Current Bill (ETB)</TableHead><TableHead className="text-right">Total Payable (ETB)</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader><TableBody>{paginatedBillingHistory.map(bill => (<TableRow key={bill.id}><TableCell>{bill.monthYear}</TableCell><TableCell>{format(parseISO(bill.billPeriodEndDate), "PP")}</TableCell><TableCell className="text-right">{bill.previousReadingValue.toFixed(2)}</TableCell><TableCell className="text-right">{bill.currentReadingValue.toFixed(2)}</TableCell><TableCell>{bill.usageM3?.toFixed(2) ?? 'N/A'}</TableCell><TableCell className="text-right">{bill.balanceCarriedForward?.toFixed(2) ?? '0.00'}</TableCell><TableCell className="text-right font-medium">{bill.totalAmountDue.toFixed(2)}</TableCell><TableCell className="text-right font-bold">{((bill.balanceCarriedForward ?? 0) + bill.totalAmountDue).toFixed(2)}</TableCell><TableCell><Badge variant={bill.paymentStatus === 'Paid' ? 'default' : 'destructive'}>{bill.paymentStatus}</Badge></TableCell><TableCell className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => handleDeleteBillingRecord(bill)} className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" />Delete Record</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell></TableRow>))}</TableBody></Table>) : (<p className="text-muted-foreground text-sm text-center py-4">No billing history found.</p>)}</div>
+          <div className="overflow-x-auto">{billingHistory.length > 0 ? (<Table><TableHeader><TableRow><TableHead>Month</TableHead><TableHead>Date Billed</TableHead><TableHead className="text-right">Prev. Reading</TableHead><TableHead className="text-right">Curr. Reading</TableHead><TableHead>Usage (m³)</TableHead><TableHead className="text-right">Outstanding (ETB)</TableHead><TableHead className="text-right">Current Bill (ETB)</TableHead><TableHead className="text-right">Total Payable (ETB)</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader><TableBody>{paginatedBillingHistory.map(bill => (<TableRow key={bill.id}><TableCell>{bill.monthYear}</TableCell><TableCell>{format(parseISO(bill.billPeriodEndDate), "PP")}</TableCell><TableCell className="text-right">{bill.previousReadingValue.toFixed(2)}</TableCell><TableCell className="text-right">{bill.currentReadingValue.toFixed(2)}</TableCell><TableCell>{bill.usageM3?.toFixed(2) ?? 'N/A'}</TableCell><TableCell className="text-right">{bill.balanceCarriedForward?.toFixed(2) ?? '0.00'}</TableCell><TableCell className="text-right font-medium">{bill.totalAmountDue.toFixed(2)}</TableCell><TableCell className="text-right font-bold">{((bill.balanceCarriedForward ?? 0) + bill.totalAmountDue).toFixed(2)}</TableCell><TableCell><Badge variant={bill.paymentStatus === 'Paid' ? 'default' : 'destructive'}>{bill.paymentStatus}</Badge></TableCell><TableCell className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuLabel>Actions</DropdownMenuLabel><DropdownMenuItem onClick={() => handlePrint(bill)}><Printer className="mr-2 h-4 w-4" />Print/Export Bill</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => handleDeleteBillingRecord(bill)} className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" />Delete Record</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell></TableRow>))}</TableBody></Table>) : (<p className="text-muted-foreground text-sm text-center py-4">No billing history found.</p>)}</div>
         </CardContent>
         {billingHistory.length > 0 && (
           <TablePagination

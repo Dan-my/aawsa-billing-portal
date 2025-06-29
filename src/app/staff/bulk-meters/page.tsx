@@ -24,6 +24,7 @@ import {
   subscribeToBranches
 } from "@/lib/data-store";
 import type { Branch } from "@/app/admin/branches/branch-types";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 interface User {
   email: string;
@@ -43,6 +44,9 @@ export default function StaffBulkMetersPage() {
   const [selectedBulkMeter, setSelectedBulkMeter] = React.useState<BulkMeter | null>(null);
   const [bulkMeterToDelete, setBulkMeterToDelete] = React.useState<BulkMeter | null>(null);
   const [staffBranchName, setStaffBranchName] = React.useState<string | undefined>(undefined);
+
+  const [page, setPage] = React.useState(0);
+  const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
   const filterBulkMetersByBranch = React.useCallback((meters: BulkMeter[], branchName?: string, branches?: Branch[]) => {
     if (!branchName || !branches) {
@@ -156,6 +160,12 @@ export default function StaffBulkMetersPage() {
     bm.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
     bm.ward.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  
+  const paginatedBulkMeters = searchedBulkMeters.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+
 
   return (
     <div className="space-y-6">
@@ -198,13 +208,26 @@ export default function StaffBulkMetersPage() {
             </div>
           ) : (
             <BulkMeterTable
-              data={searchedBulkMeters}
+              data={paginatedBulkMeters}
               onEdit={handleEditBulkMeter}
               onDelete={handleDeleteBulkMeter}
               branches={allBranches}
             />
           )}
         </CardContent>
+         {searchedBulkMeters.length > 0 && (
+          <TablePagination
+            count={searchedBulkMeters.length}
+            page={page}
+            rowsPerPage={rowsPerPage}
+            onPageChange={setPage}
+            onRowsPerPageChange={(value) => {
+              setRowsPerPage(value);
+              setPage(0);
+            }}
+            rowsPerPageOptions={[5, 10, 25]}
+          />
+        )}
       </Card>
 
       <BulkMeterFormDialog

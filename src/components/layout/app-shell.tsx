@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -31,6 +30,7 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useIdleTimeout } from '@/hooks/use-idle-timeout';
 
 interface UserProfile {
   id: string; 
@@ -107,6 +107,15 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
   const [authChecked, setAuthChecked] = React.useState(false);
   const currentYear = new Date().getFullYear();
 
+  const handleLogout = React.useCallback(async () => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("session_expires_at");
+    setUser(null);
+    router.push("/");
+  }, [router]);
+
+  useIdleTimeout(handleLogout);
+
   React.useEffect(() => {
     // General Setup
     const storedAppName = localStorage.getItem("aawsa-app-name");
@@ -128,13 +137,12 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
             if (parsedUser.role.toLowerCase() === userRole) {
                 setUser(parsedUser);
             } else {
-                // Wrong role for this layout, redirect to login
-                router.replace('/');
+                // Wrong role for this layout, log out and redirect
+                handleLogout();
             }
         } catch (e) {
             // Invalid JSON, clear it and redirect
-            localStorage.removeItem('user');
-            router.replace('/');
+            handleLogout();
         }
     } else if (pathname !== '/') {
         // No user and not on login page, redirect
@@ -142,13 +150,7 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
     }
     setAuthChecked(true);
 
-  }, [pathname, router, userRole]);
-
-  const handleLogout = async () => {
-    localStorage.removeItem("user");
-    setUser(null);
-    router.push("/");
-  };
+  }, [pathname, router, userRole, handleLogout]);
 
   if (!authChecked) { 
     return (

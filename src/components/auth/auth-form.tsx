@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -86,6 +85,10 @@ export function AuthForm() {
         name: user.name,
       };
       localStorage.setItem("user", JSON.stringify(sessionUser));
+
+      // Set session expiration for idle timeout
+      const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+      localStorage.setItem('session_expires_at', String(Date.now() + INACTIVITY_TIMEOUT));
 
       if (user.role.toLowerCase() === "admin") {
         router.push("/admin/dashboard");

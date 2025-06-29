@@ -479,7 +479,6 @@ export default function BulkMeterDetailsPage() {
             <CardTitle className="text-2xl">Bulk Meter: {bulkMeter.name}</CardTitle>
           </div>
           <div>
-            <Button variant="outline" size="sm" onClick={() => setIsAddReadingOpen(true)} className="mr-2"><PlusCircleIcon className="mr-2 h-4 w-4" /> Add Reading</Button>
             <Button variant="outline" size="sm" onClick={handleEditBulkMeter} className="mr-2"><FileEdit className="mr-2 h-4 w-4" /> Edit Bulk Meter</Button>
             <Button variant="destructive" size="sm" onClick={handleDeleteBulkMeter}><Trash2 className="mr-2 h-4 w-4" /> Delete Bulk Meter</Button>
           </div>
@@ -526,7 +525,17 @@ export default function BulkMeterDetailsPage() {
       </Card>
       
       <Card className="shadow-lg">
-        <CardHeader><CardTitle className="flex items-center gap-2"><History className="h-5 w-5 text-primary" />Reading History</CardTitle><CardDescription>Historical readings logged for this meter.</CardDescription></CardHeader>
+        <CardHeader>
+            <div className="flex items-center justify-between">
+                <div>
+                    <CardTitle className="flex items-center gap-2"><History className="h-5 w-5 text-primary" />Reading History</CardTitle>
+                    <CardDescription>Historical readings logged for this meter.</CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => setIsAddReadingOpen(true)}>
+                    <PlusCircleIcon className="mr-2 h-4 w-4" /> Add Reading
+                </Button>
+            </div>
+        </CardHeader>
         <CardContent><div className="overflow-x-auto max-h-96">{meterReadingHistory.length > 0 ? (<Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">Reading Value</TableHead><TableHead>Notes</TableHead></TableRow></TableHeader><TableBody>{meterReadingHistory.map(reading => (<TableRow key={reading.id}><TableCell>{format(parseISO(reading.readingDate), "PP")}</TableCell><TableCell className="text-right">{reading.readingValue.toFixed(2)}</TableCell><TableCell className="text-xs text-muted-foreground">{reading.notes}</TableCell></TableRow>))}</TableBody></Table>) : (<p className="text-muted-foreground text-sm text-center py-4">No historical readings found.</p>)}</div></CardContent>
       </Card>
 

@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image"; 
 import { Droplets, Edit, Trash2, MoreHorizontal, User, CheckCircle, XCircle, FileEdit, RefreshCcw, Gauge, Users as UsersIcon, DollarSign, TrendingUp, Clock, MinusCircle, PlusCircle as PlusCircleIcon, Printer, History, AlertTriangle, ListCollapse } from "lucide-react";
@@ -68,18 +68,7 @@ export default function BulkMeterDetailsPage() {
     billingHistoryPage * billingHistoryRowsPerPage + billingHistoryRowsPerPage
   );
 
-  const {
-    bmPreviousReading,
-    bmCurrentReading,
-    bulkUsage,
-    totalBulkBillForPeriod,
-    totalPayable,
-    differenceUsage,
-    differenceBill,
-    displayBranchName,
-    displayCardLocation,
-    billCardDetails,
-  } = React.useMemo(() => {
+  const memoizedDetails = useMemo(() => {
     if (!bulkMeter) {
       return {
         bmPreviousReading: 0, bmCurrentReading: 0, bulkUsage: 0,
@@ -105,7 +94,7 @@ export default function BulkMeterDetailsPage() {
     const billDetails: BillCalculationResult = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
     const totalBulkBillForPeriod = billDetails.totalBill;
     
-    const outStandingBillValue = (bulkMeter.outStandingbill || 0);
+    const outStandingBillValue = bulkMeter.outStandingbill ?? 0;
     const paymentStatus = outStandingBillValue > 0 ? 'Unpaid' : 'Paid';
     const totalPayable = totalBulkBillForPeriod + outStandingBillValue;
 
@@ -162,6 +151,19 @@ export default function BulkMeterDetailsPage() {
       displayCardLocation, billCardDetails: finalBillCardDetails,
     };
   }, [bulkMeter, associatedCustomers, branches, billingHistory, billForPrintView]);
+
+    const {
+    bmPreviousReading,
+    bmCurrentReading,
+    bulkUsage,
+    totalBulkBillForPeriod,
+    totalPayable,
+    differenceUsage,
+    differenceBill,
+    displayBranchName,
+    displayCardLocation,
+    billCardDetails,
+  } = memoizedDetails;
 
   useEffect(() => {
     let isMounted = true;
@@ -484,6 +486,7 @@ export default function BulkMeterDetailsPage() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
+            <p><strong className="font-semibold">Branch:</strong> {displayBranchName ?? 'N/A'}</p>
             <p><strong className="font-semibold">Location:</strong> {bulkMeter.location ?? 'N/A'}, {bulkMeter.ward ?? 'N/A'}</p>
             <p><strong className="font-semibold">Specific Area:</strong> {bulkMeter.specificArea ?? 'N/A'}</p>
             <p><strong className="font-semibold">Meter No:</strong> {bulkMeter.meterNumber ?? 'N/A'}</p>

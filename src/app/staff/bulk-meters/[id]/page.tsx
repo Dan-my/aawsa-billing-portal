@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image"; 
 import { Droplets, Edit, Trash2, MoreHorizontal, User, CheckCircle, XCircle, FileEdit, RefreshCcw, Gauge, Users as UsersIcon, DollarSign, TrendingUp, Clock, AlertTriangle, MinusCircle, PlusCircle as PlusCircleIcon, Printer, History, ListCollapse } from "lucide-react";
@@ -16,7 +16,8 @@ import {
   getBulkMeters, getCustomers, updateBulkMeter as updateBulkMeterInStore, deleteBulkMeter as deleteBulkMeterFromStore,
   updateCustomer as updateCustomerInStore, deleteCustomer as deleteCustomerFromStore, subscribeToBulkMeters, subscribeToCustomers,
   initializeBulkMeters, initializeCustomers, getBulkMeterReadings, initializeBulkMeterReadings, subscribeToBulkMeterReadings,
-  addBill, addBulkMeterReading, removeBill, getBulkMeterDirectly
+  addBill, addBulkMeterReading, removeBill, getBulkMeterDirectly,
+  getBranches, initializeBranches, subscribeToBranches
 } from "@/lib/data-store";
 import { getBills, initializeBills, subscribeToBills } from "@/lib/data-store";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
@@ -28,6 +29,7 @@ import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from 
 import { AddReadingDialog } from "@/components/add-reading-dialog";
 import { cn } from "@/lib/utils";
 import { format, parseISO, lastDayOfMonth } from "date-fns";
+import type { Branch } from "@/app/admin/branches/branch-types";
 import { TablePagination } from "@/components/ui/table-pagination";
 
 interface UserAuth {
@@ -45,6 +47,7 @@ export default function StaffBulkMeterDetailsPage() {
 
   const [bulkMeter, setBulkMeter] = useState<BulkMeter | null>(null);
   const [associatedCustomers, setAssociatedCustomers] = useState<IndividualCustomer[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessingCycle, setIsProcessingCycle] = React.useState(false);
   const [staffBranchName, setStaffBranchName] = React.useState<string | undefined>(undefined);
@@ -87,22 +90,12 @@ export default function StaffBulkMeterDetailsPage() {
     );
   }, []);
 
-  const {
-    bmPreviousReading,
-    bmCurrentReading,
-    bulkUsage,
-    totalBulkBillForPeriod,
-    totalPayable,
-    differenceUsage,
-    differenceBill,
-    displayCardLocation,
-    billCardDetails,
-  } = React.useMemo(() => {
+  const memoizedDetails = useMemo(() => {
     if (!bulkMeter) {
       return {
         bmPreviousReading: 0, bmCurrentReading: 0, bulkUsage: 0,
         totalBulkBillForPeriod: 0, totalPayable: 0, differenceUsage: 0,
-        differenceBill: 0, displayCardLocation: "N/A",
+        differenceBill: 0, displayBranchName: "N/A", displayCardLocation: "N/A",
         billCardDetails: {
           prevReading: 0, currReading: 0, usage: 0, baseWaterCharge: 0,
           maintenanceFee: 0, sanitationFee: 0, sewerageCharge: 0, meterRent: 0,
@@ -122,7 +115,7 @@ export default function StaffBulkMeterDetailsPage() {
     const billDetails: BillCalculationResult = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
     const totalBulkBillForPeriod = billDetails.totalBill;
 
-    const outStandingBillValue = (bulkMeter.outStandingbill || 0);
+    const outStandingBillValue = bulkMeter.outStandingbill ?? 0;
     const paymentStatus = outStandingBillValue > 0 ? 'Unpaid' : 'Paid';
     const totalPayable = totalBulkBillForPeriod + outStandingBillValue;
 
@@ -132,6 +125,7 @@ export default function StaffBulkMeterDetailsPage() {
     const differenceUsage = bulkMeter.differenceUsage ?? (bulkUsage - totalIndividualUsage);
     const differenceBill = bulkMeter.differenceBill ?? (totalBulkBillForPeriod - totalIndividualBill);
     
+    const displayBranchName = bulkMeter.branchId ? branches.find(b => b.id === bulkMeter.branchId)?.name : bulkMeter.location;
     const displayCardLocation = bulkMeter.specificArea || bulkMeter.ward || "N/A";
     
     const billToRender = billForPrintView || (billingHistory.length > 0 ? billingHistory[0] : null);
@@ -172,10 +166,23 @@ export default function StaffBulkMeterDetailsPage() {
 
     return {
       bmPreviousReading, bmCurrentReading, bulkUsage, totalBulkBillForPeriod,
-      totalPayable, differenceUsage, differenceBill, displayCardLocation,
+      totalPayable, differenceUsage, differenceBill, displayBranchName, displayCardLocation,
       billCardDetails: finalBillCardDetails,
     };
-  }, [bulkMeter, associatedCustomers, billingHistory, billForPrintView]);
+  }, [bulkMeter, associatedCustomers, branches, billingHistory, billForPrintView]);
+
+    const {
+    bmPreviousReading,
+    bmCurrentReading,
+    bulkUsage,
+    totalBulkBillForPeriod,
+    totalPayable,
+    differenceUsage,
+    differenceBill,
+    displayBranchName,
+    displayCardLocation,
+    billCardDetails,
+  } = memoizedDetails;
 
   useEffect(() => {
     let isMounted = true;
@@ -202,10 +209,12 @@ export default function StaffBulkMeterDetailsPage() {
     }
 
     setIsLoading(true);
-    Promise.all([initializeBulkMeters(), initializeCustomers(), initializeBulkMeterReadings(), initializeBills()]).then(() => {
+    Promise.all([initializeBulkMeters(), initializeCustomers(), initializeBulkMeterReadings(), initializeBills(), initializeBranches()]).then(() => {
       if (!isMounted) return;
       const currentGlobalMeters = getBulkMeters();
       const currentGlobalCustomers = getCustomers();
+      const currentGlobalBranches = getBranches();
+      setBranches(currentGlobalBranches);
       
       const foundBM = currentGlobalMeters.find(bm => bm.id === bulkMeterId);
 
@@ -255,6 +264,8 @@ export default function StaffBulkMeterDetailsPage() {
       if (!isMounted) return;
       const currentGlobalMeters = getBulkMeters();
       const currentGlobalCustomers = getCustomers();
+      const currentGlobalBranches = getBranches();
+      setBranches(currentGlobalBranches);
       
       const foundBM = currentGlobalMeters.find(bm => bm.id === bulkMeterId);
 
@@ -300,10 +311,11 @@ export default function StaffBulkMeterDetailsPage() {
 
     const unsubBM = subscribeToBulkMeters(handleStoresUpdate);
     const unsubCust = subscribeToCustomers(handleStoresUpdate);
+    const unsubBranches = subscribeToBranches(handleStoresUpdate);
     const unsubMeterReadings = subscribeToBulkMeterReadings(handleStoresUpdate);
     const unsubBills = subscribeToBills(handleStoresUpdate);
 
-    return () => { isMounted = false; unsubBM(); unsubCust(); unsubMeterReadings(); unsubBills(); };
+    return () => { isMounted = false; unsubBM(); unsubCust(); unsubBranches(); unsubMeterReadings(); unsubBills(); };
   }, [bulkMeterId, router, toast, checkAuthorization, bulkMeter]); 
 
 
@@ -518,8 +530,13 @@ export default function StaffBulkMeterDetailsPage() {
           </div>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-          <div><p><strong className="font-semibold">Location:</strong> {bulkMeter.location ?? 'N/A'}, {bulkMeter.ward ?? 'N/A'}</p><p><strong className="font-semibold">Specific Area:</strong> {bulkMeter.specificArea ?? 'N/A'}</p><p><strong className="font-semibold">Meter No:</strong> {bulkMeter.meterNumber ?? 'N/A'}</p><p><strong className="font-semibold">Meter Size:</strong> {bulkMeter.meterSize} inch</p></div>
-          <div><p><strong className="font-semibold">Customer Key:</strong> {bulkMeter.customerKeyNumber ?? 'N/A'}</p><p><strong className="font-semibold">Contract No:</strong> {bulkMeter.contractNumber ?? 'N/A'}</p><p><strong className="font-semibold">Month:</strong> {bulkMeter.month ?? 'N/A'}</p><p><strong className="font-semibold">Billed Readings (Prev/Curr):</strong> {(bmPreviousReading).toFixed(2)} / {(bmCurrentReading).toFixed(2)}</p></div>
+          <div>
+            <p><strong className="font-semibold">Branch:</strong> {displayBranchName ?? 'N/A'}</p>
+            <p><strong className="font-semibold">Location:</strong> {bulkMeter.location ?? 'N/A'}, {bulkMeter.ward ?? 'N/A'}</p><p><strong className="font-semibold">Specific Area:</strong> {bulkMeter.specificArea ?? 'N/A'}</p><p><strong className="font-semibold">Meter No:</strong> {bulkMeter.meterNumber ?? 'N/A'}</p><p><strong className="font-semibold">Meter Size:</strong> {bulkMeter.meterSize} inch</p>
+          </div>
+          <div>
+            <p><strong className="font-semibold">Customer Key:</strong> {bulkMeter.customerKeyNumber ?? 'N/A'}</p><p><strong className="font-semibold">Contract No:</strong> {bulkMeter.contractNumber ?? 'N/A'}</p><p><strong className="font-semibold">Month:</strong> {bulkMeter.month ?? 'N/A'}</p><p><strong className="font-semibold">Billed Readings (Prev/Curr):</strong> {(bmPreviousReading).toFixed(2)} / {(bmCurrentReading).toFixed(2)}</p>
+          </div>
           <div className="space-y-1">
              <p className="text-lg"><strong className="font-semibold">Bulk Usage:</strong> {bulkUsage.toFixed(2)} m³</p>
              <p className="text-xl text-primary"><strong className="font-semibold">Total Bulk Bill:</strong> ETB {totalBulkBillForPeriod.toFixed(2)}</p>
@@ -584,7 +601,7 @@ export default function StaffBulkMeterDetailsPage() {
             <p><strong className="font-semibold w-60 inline-block">Bulk meter name:</strong> {bulkMeter.name}</p>
             <p><strong className="font-semibold w-60 inline-block">Customer key number:</strong> {bulkMeter.customerKeyNumber}</p>
             <p><strong className="font-semibold w-60 inline-block">Contract No:</strong> {bulkMeter.contractNumber ?? 'N/A'}</p>
-            <p><strong className="font-semibold w-60 inline-block">Branch:</strong> {staffBranchName ?? bulkMeter.location ?? 'N/A'}</p>
+            <p><strong className="font-semibold w-60 inline-block">Branch:</strong> {displayBranchName ?? 'N/A'}</p>
             <p><strong className="font-semibold w-60 inline-block">Location:</strong> {displayCardLocation}</p>
             <p><strong className="font-semibold w-60 inline-block">Bulk Meter Category:</strong> Non-domestic</p>
             <p><strong className="font-semibold w-60 inline-block">Number of Assigned Individual Customers:</strong> {associatedCustomers.length}</p>

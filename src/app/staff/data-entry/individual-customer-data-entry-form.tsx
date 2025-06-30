@@ -4,7 +4,7 @@
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import * as z from "zod";
+import * as z from "zod"; 
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { baseIndividualCustomerDataSchema, meterSizeOptions } from "@/app/admin/data-entry/customer-data-entry-types"; 
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
     addCustomer as addCustomerToStore, 
@@ -30,11 +31,11 @@ import {
     initializeBranches as initializeAdminBranches
 } from "@/lib/data-store";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
-import type { Branch } from "../branches/branch-types";
+import type { Branch } from "@/app/admin/branches/branch-types";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse, isValid } from "date-fns";
 import { customerTypes, sewerageConnections, paymentStatuses } from "@/lib/billing";
-import { individualCustomerStatuses } from "../individual-customers/individual-customer-types";
+import { individualCustomerStatuses } from "@/app/admin/individual-customers/individual-customer-types";
 
 
 interface StaffIndividualCustomerEntryFormProps {
@@ -46,6 +47,7 @@ const StaffEntryFormSchema = baseIndividualCustomerDataSchema.extend({
   paymentStatus: z.enum(paymentStatuses, { errorMap: () => ({ message: "Please select a valid payment status."}) }),
 });
 type StaffEntryFormValues = z.infer<typeof StaffEntryFormSchema>;
+
 
 const UNASSIGNED_BULK_METER_VALUE = "_SELECT_NONE_BULK_METER_";
 
@@ -123,7 +125,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
       branchId: staffBranchId, // Ensure branchId is set from state
     };
     
-    const result = await addCustomerToStore(submissionData as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'calculatedBill'>);
+    const result = await addCustomerToStore(submissionData as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'calculatedBill' | 'arrears'>);
     if (result.success && result.data) {
         toast({
         title: "Data Entry Submitted",

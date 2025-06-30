@@ -6,9 +6,9 @@ import {
   LayoutDashboard, 
   FileText,
   ClipboardList,
-  BarChart2, // Added for Reports icon
-  Gauge,    // For Bulk Meters
-  Users,    // For Individual Customers
+  BarChart2,
+  Gauge,
+  Users,
 } from "lucide-react";
 
 const staffSidebarNavItems: NavItemGroup[] = [
@@ -18,20 +18,20 @@ const staffSidebarNavItems: NavItemGroup[] = [
     ],
   },
   {
-    title: "Operations",
+    title: "Customer & Metering",
+    items: [
+      { title: "Bulk Meters", href: "/staff/bulk-meters", iconName: "Gauge" },
+      { title: "Individual Customers", href: "/staff/individual-customers", iconName: "Users" },
+    ],
+  },
+  {
+    title: "Data & Reports",
     items: [
       { title: "Data Entry", href: "/staff/data-entry", iconName: "FileText" },
       { title: "Meter Readings", href: "/staff/meter-readings", iconName: "ClipboardList" },
       { title: "Reports", href: "/staff/reports", iconName: "BarChart2" }, 
     ],
   },
-  {
-    title: "Management",
-    items: [
-      { title: "Bulk Meters", href: "/staff/bulk-meters", iconName: "Gauge" },
-      { title: "Individual Customers", href: "/staff/individual-customers", iconName: "Users" },
-    ],
-  }
 ];
 
 

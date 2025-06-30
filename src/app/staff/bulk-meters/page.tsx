@@ -43,91 +43,94 @@ export default function StaffBulkMetersPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [selectedBulkMeter, setSelectedBulkMeter] = React.useState<BulkMeter | null>(null);
   const [bulkMeterToDelete, setBulkMeterToDelete] = React.useState<BulkMeter | null>(null);
-  const [staffBranchName, setStaffBranchName] = React.useState<string | undefined | null>(undefined);
+  const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
 
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
-  // Effect to get user info from localStorage. Runs once.
+  // This single, comprehensive effect handles fetching user info, loading data,
+  // filtering data, and setting up subscriptions. It runs only once on mount.
   React.useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      try {
-        const parsedUser: User = JSON.parse(storedUser);
-        if (parsedUser.role === "staff" && parsedUser.branchName) {
-          setStaffBranchName(parsedUser.branchName);
-        } else {
-          setStaffBranchName(null); // Explicitly set to null if no branch
-        }
-      } catch (e) {
-        console.error("Failed to parse user from localStorage", e);
-        setStaffBranchName(null);
-      }
-    } else {
-      setStaffBranchName(null);
-    }
-  }, []);
-  
-  // Effect for data loading and subscriptions, depends on staffBranchName
-  React.useEffect(() => {
-    // Don't do anything until branch name is determined (it's either a string or null)
-    if (staffBranchName === undefined) {
-      setIsLoading(true);
-      return;
-    }
-    
-    // If user has no valid branch, stop loading and show empty state.
-    if (!staffBranchName) {
-      setIsLoading(false);
-      setBranchFilteredBulkMeters([]);
-      setAllBranches([]);
-      setAllBulkMeters([]);
-      return;
-    }
-
     let isMounted = true;
-    setIsLoading(true);
 
-    const handleDataUpdate = () => {
-      if (!isMounted || !staffBranchName) return;
+    const initializeAndFilterData = async () => {
+        // 1. Determine User's Branch
+        const storedUser = localStorage.getItem("user");
+        let localBranchName: string | undefined;
+        if (storedUser) {
+            try {
+                const parsedUser: User = JSON.parse(storedUser);
+                if (parsedUser.role === "staff" && parsedUser.branchName) {
+                    localBranchName = parsedUser.branchName;
+                }
+            } catch (e) {
+                console.error("Failed to parse user from localStorage", e);
+            }
+        }
+        
+        if (isMounted) {
+          setStaffBranchName(localBranchName || null);
+        }
 
-      const currentBranches = getBranches();
-      const currentMeters = getBulkMeters();
-      const staffBranchObject = currentBranches.find(b => b.name === staffBranchName);
+        // 2. If no branch, stop loading and do nothing else.
+        if (!localBranchName) {
+            if (isMounted) setIsLoading(false);
+            return;
+        }
+        
+        // 3. Load all necessary data from the store
+        await Promise.all([initializeBranches(), initializeBulkMeters()]);
+        if (!isMounted) return;
 
-      if (staffBranchObject) {
-        const staffBranchId = staffBranchObject.id;
-        const filteredMeters = currentMeters.filter(bm => bm.branchId === staffBranchId);
-        setBranchFilteredBulkMeters(filteredMeters);
-      } else {
-        setBranchFilteredBulkMeters([]);
-      }
-      
-      setAllBranches(currentBranches);
-      setAllBulkMeters(currentMeters);
+        // 4. Filter data based on the determined branch
+        const currentBranches = getBranches();
+        const currentMeters = getBulkMeters();
+        const staffBranchObject = currentBranches.find(b => b.name === localBranchName);
+
+        if (staffBranchObject) {
+            const staffBranchId = staffBranchObject.id;
+            const filteredMeters = currentMeters.filter(bm => bm.branchId === staffBranchId);
+            setBranchFilteredBulkMeters(filteredMeters);
+        } else {
+            setBranchFilteredBulkMeters([]); // Branch name from login doesn't match any in DB
+        }
+        
+        setAllBranches(currentBranches);
+        setAllBulkMeters(currentMeters);
+        setIsLoading(false); // Done loading
+
+        // 5. Set up subscriptions to keep data fresh
+        const handleDataUpdate = () => {
+            if (!isMounted || !localBranchName) return;
+            const updatedBranches = getBranches();
+            const updatedMeters = getBulkMeters();
+            const updatedStaffBranch = updatedBranches.find(b => b.name === localBranchName);
+            if (updatedStaffBranch) {
+                const filtered = updatedMeters.filter(bm => bm.branchId === updatedStaffBranch.id);
+                setBranchFilteredBulkMeters(filtered);
+            } else {
+                setBranchFilteredBulkMeters([]);
+            }
+            setAllBranches(updatedBranches);
+            setAllBulkMeters(updatedMeters);
+        };
+
+        const unsubBranches = subscribeToBranches(handleDataUpdate);
+        const unsubBM = subscribeToBulkMeters(handleDataUpdate);
+        
+        return () => {
+          unsubBranches();
+          unsubBM();
+        };
     };
 
-    // Initial load
-    Promise.all([
-      initializeBranches(),
-      initializeBulkMeters(),
-    ]).then(() => {
-      if (isMounted) {
-        handleDataUpdate();
-        setIsLoading(false);
-      }
-    });
-
-    // Subscriptions
-    const unsubBranches = subscribeToBranches(handleDataUpdate);
-    const unsubBM = subscribeToBulkMeters(handleDataUpdate);
+    const cleanupPromise = initializeAndFilterData();
 
     return () => {
       isMounted = false;
-      unsubBranches();
-      unsubBM();
+      cleanupPromise.then(cleanup => cleanup && cleanup());
     };
-  }, [staffBranchName]);
+  }, []); // Empty dependency array ensures this runs only once.
 
 
   const handleAddBulkMeter = () => {
@@ -185,6 +188,38 @@ export default function StaffBulkMetersPage() {
     page * rowsPerPage + rowsPerPage
   );
 
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
+          Loading bulk meters...
+        </div>
+      );
+    }
+    if (!staffBranchName) {
+      return (
+        <div className="mt-4 p-4 border rounded-md bg-destructive/10 text-center text-destructive-foreground">
+          Could not determine your branch. Please contact an administrator.
+        </div>
+      );
+    }
+    if (branchFilteredBulkMeters.length === 0 && !searchTerm) {
+      return (
+        <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
+          No bulk meters found for branch: {staffBranchName}. Click "Add New Bulk Meter" to get started. <Gauge className="inline-block ml-2 h-5 w-5" />
+        </div>
+      );
+    }
+    return (
+      <BulkMeterTable
+        data={paginatedBulkMeters}
+        onEdit={handleEditBulkMeter}
+        onDelete={handleDeleteBulkMeter}
+        branches={allBranches}
+      />
+    );
+  };
+
 
   return (
     <div className="space-y-6">
@@ -199,9 +234,10 @@ export default function StaffBulkMetersPage() {
               className="pl-8 w-full md:w-[250px]"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              disabled={!staffBranchName}
             />
           </div>
-          <Button onClick={handleAddBulkMeter}>
+          <Button onClick={handleAddBulkMeter} disabled={!staffBranchName}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Bulk Meter
           </Button>
         </div>
@@ -213,26 +249,7 @@ export default function StaffBulkMetersPage() {
           <CardDescription>View, edit, and manage bulk meter information for your branch.</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-             <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
-                Loading bulk meters...
-             </div>
-          ) : !staffBranchName && !isLoading ? (
-            <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
-                Could not determine your branch. Please contact an administrator.
-            </div>
-          ) : branchFilteredBulkMeters.length === 0 && !searchTerm && staffBranchName ? (
-             <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
-                No bulk meters found for branch: {staffBranchName}. Click "Add New Bulk Meter" to get started. <Gauge className="inline-block ml-2 h-5 w-5" />
-             </div>
-          ) : (
-            <BulkMeterTable
-              data={paginatedBulkMeters}
-              onEdit={handleEditBulkMeter}
-              onDelete={handleDeleteBulkMeter}
-              branches={allBranches}
-            />
-          )}
+          {renderContent()}
         </CardContent>
          {searchedBulkMeters.length > 0 && (
           <TablePagination

@@ -9,11 +9,18 @@ import { Download, FileSpreadsheet, AlertCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { getCustomers, getBulkMeters, initializeCustomers, initializeBulkMeters } from "@/lib/data-store";
+import { 
+  getCustomers, 
+  getBulkMeters, 
+  initializeCustomers, 
+  initializeBulkMeters,
+  getBranches,
+  initializeBranches,
+  getBills,
+  initializeBills
+} from "@/lib/data-store";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
-import { initialCustomers } from "@/app/admin/individual-customers/page";
-import { initialBulkMeters } from "@/app/admin/bulk-meters/page";
 import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
 
 interface User {
@@ -74,7 +81,6 @@ const downloadFile = (content: Blob, fileName: string) => {
 };
 
 // Define reports available to staff
-// Staff reports might be filtered by their branch or have fewer options
 const availableStaffReports: ReportType[] = [
   {
     id: "customer-data-branch-export",
@@ -86,14 +92,25 @@ const availableStaffReports: ReportType[] = [
       "location", "ward", "sewerageConnection", "assignedBulkMeterId", "status", "paymentStatus", "calculatedBill"
     ],
     getData: (branchName?: string) => {
-      const allCustomers = getCustomers();
-      if (!branchName) return allCustomers; // Or return empty array if branch context is strict
-      // This filtering logic assumes bulk meters are associated with a branch indirectly
-      // Or customers have a direct branch field. For simplicity, we'll filter by bulk meter location (as a proxy for branch)
-      // This needs to be adapted based on how branches are actually linked to customers/bulk meters
-      const branchBulkMeters = getBulkMeters().filter(bm => bm.location.includes(branchName) || bm.name.includes(branchName)); // Example filter
-      const branchBulkMeterIds = branchBulkMeters.map(bm => bm.id);
-      return allCustomers.filter(c => c.assignedBulkMeterId && branchBulkMeterIds.includes(c.assignedBulkMeterId));
+        if (!branchName) return [];
+        const allBranches = getBranches();
+        const allCustomers = getCustomers();
+        const allBulkMeters = getBulkMeters();
+
+        const staffBranch = allBranches.find(b => {
+            const normalizedBranchName = b.name.trim().toLowerCase();
+            const normalizedStaffBranchName = branchName.trim().toLowerCase();
+            return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
+        });
+
+        if (!staffBranch) return [];
+        
+        const branchBulkMeterIds = new Set(allBulkMeters.filter(bm => bm.branchId === staffBranch.id).map(bm => bm.id));
+        
+        return allCustomers.filter(c => 
+            c.branchId === staffBranch.id || 
+            (c.assignedBulkMeterId && branchBulkMeterIds.has(c.assignedBulkMeterId))
+        );
     },
   },
   {
@@ -105,15 +122,60 @@ const availableStaffReports: ReportType[] = [
       "previousReading", "currentReading", "month", "specificArea", "location", "ward", "status", "paymentStatus"
     ],
     getData: (branchName?: string) => {
-       const allBulkMeters = getBulkMeters();
-       if (!branchName) return allBulkMeters;
-       return allBulkMeters.filter(bm => bm.location.includes(branchName) || bm.name.includes(branchName)); // Example filter
+       if (!branchName) return [];
+        const allBranches = getBranches();
+        const allBulkMeters = getBulkMeters();
+
+        const staffBranch = allBranches.find(b => {
+            const normalizedBranchName = b.name.trim().toLowerCase();
+            const normalizedStaffBranchName = branchName.trim().toLowerCase();
+            return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
+        });
+
+        if (!staffBranch) return [];
+
+        return allBulkMeters.filter(bm => bm.branchId === staffBranch.id);
     },
   },
   {
     id: "billing-summary-branch",
-    name: "My Branch Billing Summary (Coming Soon)",
+    name: "My Branch Billing Summary (XLSX)",
     description: "Summary of paid and unpaid bills for your branch.",
+    headers: [
+        "id", "individualCustomerId", "bulkMeterId", "billPeriodStartDate", "billPeriodEndDate", 
+        "monthYear", "previousReadingValue", "currentReadingValue", "usageM3", 
+        "baseWaterCharge", "sewerageCharge", "maintenanceFee", "sanitationFee", 
+        "meterRent", "totalAmountDue", "amountPaid", "balanceDue", "dueDate", 
+        "paymentStatus", "billNumber", "notes", "createdAt", "updatedAt"
+    ],
+    getData: (branchName?: string) => {
+        if (!branchName) return [];
+
+        const allBranches = getBranches();
+        const allCustomers = getCustomers();
+        const allBulkMeters = getBulkMeters();
+        const allBills = getBills();
+
+        const staffBranch = allBranches.find(b => {
+            const normalizedBranchName = b.name.trim().toLowerCase();
+            const normalizedStaffBranchName = branchName.trim().toLowerCase();
+            return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
+        });
+
+        if (!staffBranch) return [];
+        
+        const branchBulkMeterIds = new Set(allBulkMeters.filter(bm => bm.branchId === staffBranch.id).map(bm => bm.id));
+        
+        const branchCustomerIds = new Set(allCustomers.filter(c => 
+            c.branchId === staffBranch.id || 
+            (c.assignedBulkMeterId && branchBulkMeterIds.has(c.assignedBulkMeterId))
+        ).map(c => c.id));
+        
+        return allBills.filter(bill => {
+            return (bill.individualCustomerId && branchCustomerIds.has(bill.individualCustomerId)) ||
+                   (bill.bulkMeterId && branchBulkMeterIds.has(bill.bulkMeterId));
+        });
+    },
   },
 ];
 
@@ -124,8 +186,10 @@ export default function StaffReportsPage() {
   const [staffBranchName, setStaffBranchName] = React.useState<string | undefined>(undefined);
 
   React.useEffect(() => {
-    if (getCustomers().length === 0) initializeCustomers(initialCustomers);
-    if (getBulkMeters().length === 0) initializeBulkMeters(initialBulkMeters);
+    initializeCustomers();
+    initializeBulkMeters();
+    initializeBranches();
+    initializeBills();
 
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -164,7 +228,6 @@ export default function StaffReportsPage() {
 
 
     setIsGenerating(true);
-    console.log(`Generating ${selectedReport.name} for branch: ${staffBranchName || 'All (if applicable)'}...`);
 
     try {
       const data = selectedReport.getData(staffBranchName);

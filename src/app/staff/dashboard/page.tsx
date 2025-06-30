@@ -7,10 +7,11 @@ import { BarChart as BarChartIcon, PieChart as PieChartIcon, Gauge, Users, Arrow
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ResponsiveContainer, BarChart, PieChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Bar } from 'recharts';
-import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
-import { getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, getCustomers, subscribeToCustomers, initializeCustomers } from "@/lib/data-store";
+import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
+import { getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, getCustomers, subscribeToCustomers, initializeCustomers, getBranches, initializeBranches, subscribeToBranches } from "@/lib/data-store";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
+import type { Branch } from "@/app/admin/branches/branch-types";
 
 interface User {
   email: string;
@@ -47,23 +48,34 @@ export default function StaffDashboardPage() {
   const updateBranchData = React.useCallback((
     allBulkMeters: BulkMeter[],
     allCustomers: IndividualCustomer[],
+    allBranches: Branch[],
     currentStaffBranch: string | undefined
   ) => {
     if (currentStaffBranch) {
       const simpleBranchName = currentStaffBranch.replace(/ Branch$/i, "").toLowerCase().trim();
+      const staffBranch = allBranches.find(b => b.name.toLowerCase().includes(simpleBranchName));
 
-      const branchFilteredBulkMeters = allBulkMeters.filter(bm =>
-        (bm.location?.toLowerCase() || "").includes(simpleBranchName) ||
-        (bm.name?.toLowerCase() || "").includes(simpleBranchName) ||
-        (bm.ward?.toLowerCase() || "").includes(simpleBranchName)
-      );
+      const branchFilteredBulkMeters = allBulkMeters.filter(bm => {
+        if (staffBranch && bm.branchId) {
+            return bm.branchId === staffBranch.id;
+        }
+        return (bm.location?.toLowerCase() || "").includes(simpleBranchName);
+      });
       setTotalBulkMetersInBranch(branchFilteredBulkMeters.length);
 
       const branchBulkMeterIds = branchFilteredBulkMeters.map(bm => bm.id);
+      
       const branchFilteredCustomers = allCustomers.filter(c => {
-        return c.assignedBulkMeterId && branchBulkMeterIds.includes(c.assignedBulkMeterId);
+        if (staffBranch && c.branchId) {
+            return c.branchId === staffBranch.id;
+        }
+        if (c.assignedBulkMeterId && branchBulkMeterIds.includes(c.assignedBulkMeterId)) {
+            return true;
+        }
+        return (c.location?.toLowerCase() || "").includes(simpleBranchName);
       });
       setTotalCustomersInBranch(branchFilteredCustomers.length);
+
     } else {
       setTotalBulkMetersInBranch(0);
       setTotalCustomersInBranch(0);
@@ -92,10 +104,11 @@ export default function StaffDashboardPage() {
     
     Promise.all([
       initializeBulkMeters(), 
-      initializeCustomers()  
+      initializeCustomers(),
+      initializeBranches(),
     ]).then(() => {
       if (!isMounted) return;
-      updateBranchData(getBulkMeters(), getCustomers(), localStaffBranch);
+      updateBranchData(getBulkMeters(), getCustomers(), getBranches(), localStaffBranch);
       setIsLoading(false);
     }).catch(error => {
       if (!isMounted) return;
@@ -103,20 +116,21 @@ export default function StaffDashboardPage() {
       setIsLoading(false);
     });
 
-    const handleBulkMetersUpdate = (updatedMeters: BulkMeter[]) => {
-        if (isMounted) updateBranchData(updatedMeters, getCustomers(), localStaffBranch);
-    };
-    const handleCustomersUpdate = (updatedCustomers: IndividualCustomer[]) => {
-        if (isMounted) updateBranchData(getBulkMeters(), updatedCustomers, localStaffBranch);
+    const handleStoresUpdate = () => {
+        if (isMounted) {
+            updateBranchData(getBulkMeters(), getCustomers(), getBranches(), localStaffBranch);
+        }
     };
 
-    const unsubscribeBulkMeters = subscribeToBulkMeters(handleBulkMetersUpdate);
-    const unsubscribeCustomers = subscribeToCustomers(handleCustomersUpdate);
+    const unsubscribeBulkMeters = subscribeToBulkMeters(handleStoresUpdate);
+    const unsubscribeCustomers = subscribeToCustomers(handleStoresUpdate);
+    const unsubscribeBranches = subscribeToBranches(handleStoresUpdate);
 
     return () => {
       isMounted = false;
       unsubscribeBulkMeters();
       unsubscribeCustomers();
+      unsubscribeBranches();
     };
   }, [updateBranchData]); 
 
@@ -146,8 +160,8 @@ export default function StaffDashboardPage() {
                                 <Cell key={`cell-${index}`} fill={entry.fill} />
                             ))}
                         </Pie>
-                        <ChartTooltipContent />
-                        <Legend verticalAlign="bottom" height={36} />
+                        <Tooltip content={<ChartTooltipContent hideLabel />} />
+                        <Legend content={<ChartLegendContent />} />
                     </PieChart>
                 </ResponsiveContainer>
                </ChartContainer>
@@ -191,23 +205,23 @@ export default function StaffDashboardPage() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Link href="/staff/bulk-meters" passHref>
-                <Button variant="outline" className="w-full justify-start p-4 h-auto">
-                 <Gauge className="mr-3 h-6 w-6 text-primary" />
+                <Button variant="outline" className="w-full justify-start p-4 h-auto quick-access-btn">
+                 <Gauge className="mr-3 h-6 w-6" />
                     <div>
                         <p className="font-semibold text-base">View Bulk Meters</p>
                         <p className="text-xs text-muted-foreground">Manage bulk water meters in your branch.</p>
                     </div>
-                    <ArrowRight className="ml-auto h-5 w-5 text-muted-foreground" />
+                    <ArrowRight className="ml-auto h-5 w-5" />
                 </Button>
             </Link>
              <Link href="/staff/individual-customers" passHref>
-                <Button variant="outline" className="w-full justify-start p-4 h-auto">
-                    <Users className="mr-3 h-6 w-6 text-primary" />
+                <Button variant="outline" className="w-full justify-start p-4 h-auto quick-access-btn">
+                    <Users className="mr-3 h-6 w-6" />
                     <div>
                         <p className="font-semibold text-base">View Individual Customers</p>
                         <p className="text-xs text-muted-foreground">Manage individual customer accounts in your branch.</p>
                     </div>
-                    <ArrowRight className="ml-auto h-5 w-5 text-muted-foreground" />
+                    <ArrowRight className="ml-auto h-5 w-5" />
                 </Button>
             </Link>
         </CardContent>
@@ -226,8 +240,8 @@ export default function StaffDashboardPage() {
                 <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
                 <Legend />
-                <Bar dataKey="paid" stackId="a" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="unpaid" stackId="a" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="paid" stackId="a" fill="var(--color-paid)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="unpaid" stackId="a" fill="var(--color-unpaid)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </ChartContainer>

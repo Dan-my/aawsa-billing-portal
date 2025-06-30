@@ -26,10 +26,8 @@ import {
   subscribeToBranches
 } from "@/lib/data-store";
 import type { PaymentStatus, CustomerType, SewerageConnection } from "@/lib/billing";
-import type { BulkMeter as AdminBulkMeterType } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { Branch } from "@/app/admin/branches/branch-types";
 import { TablePagination } from "@/components/ui/table-pagination";
-
 
 interface User {
   email: string;
@@ -39,9 +37,9 @@ interface User {
 
 export default function StaffIndividualCustomersPage() {
   const { toast } = useToast();
-  const [branchFilteredCustomers, setBranchFilteredCustomers] = React.useState<IndividualCustomer[]>([]);
+  const [allCustomers, setAllCustomers] = React.useState<IndividualCustomer[]>([]);
+  const [allBulkMeters, setAllBulkMeters] = React.useState<{id: string, name: string}[]>([]);
   const [allBranches, setAllBranches] = React.useState<Branch[]>([]);
-  const [branchBulkMetersList, setBranchBulkMetersList] = React.useState<{id: string, name: string}[]>([]);
   
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -56,78 +54,99 @@ export default function StaffIndividualCustomersPage() {
 
   React.useEffect(() => {
     let isMounted = true;
-    const subscriptions: (() => void)[] = [];
-
-    const loadData = async () => {
-      if (!isMounted) return;
-      setIsLoading(true);
-
-      const storedUser = localStorage.getItem("user");
-      let localBranchName: string | undefined;
-      if (storedUser) {
-        try {
-          const parsedUser: User = JSON.parse(storedUser);
-          if (parsedUser.role === "staff" && parsedUser.branchName) {
-            localBranchName = parsedUser.branchName;
-          }
-        } catch (e) {
-          console.error("Failed to parse user from localStorage", e);
-        }
-      }
-      setStaffBranchName(localBranchName || null);
-
-      if (!localBranchName) {
-        setIsLoading(false);
-        return;
-      }
-
-      await Promise.all([initializeBranches(), initializeBulkMeters(), initializeCustomers()]);
-      if (!isMounted) return;
-      
-      const handleDataUpdate = () => {
-        if (!isMounted || !localBranchName) return;
-
-        const currentBranches = getBranches();
-        const currentMeters = getBulkMeters();
-        const currentCustomers = getCustomers();
-        const staffBranch = currentBranches.find(b => b.name === localBranchName);
-
-        if (staffBranch) {
-          const staffBranchId = staffBranch.id;
-          const branchMeters = currentMeters.filter(bm => bm.branchId === staffBranchId);
-          const branchMeterIds = branchMeters.map(bm => bm.id);
-
-          const filteredCustomers = currentCustomers.filter(customer =>
-            customer.branchId === staffBranchId ||
-            (customer.assignedBulkMeterId && branchMeterIds.includes(customer.assignedBulkMeterId))
-          );
-          setBranchFilteredCustomers(filteredCustomers);
-          setBranchBulkMetersList(branchMeters.map(bm => ({ id: bm.id, name: bm.name })));
+    
+    const user = localStorage.getItem("user");
+    if (user) {
+      try {
+        const parsedUser: User = JSON.parse(user);
+        if (parsedUser.role === 'staff' && parsedUser.branchName) {
+          setStaffBranchName(parsedUser.branchName);
         } else {
-          setBranchFilteredCustomers([]);
-          setBranchBulkMetersList([]);
+          setStaffBranchName(null);
         }
-        
-        setAllBranches(currentBranches);
-      };
-      
-      handleDataUpdate();
-      setIsLoading(false);
+      } catch (e) {
+        console.error("Failed to parse user from localStorage", e);
+        setStaffBranchName(null);
+      }
+    }
 
-      subscriptions.push(subscribeToCustomers(handleDataUpdate));
-      subscriptions.push(subscribeToBulkMeters(handleDataUpdate));
-      subscriptions.push(subscribeToBranches(handleDataUpdate));
-    };
+    const unSubCustomers = subscribeToCustomers((data) => {
+      if (isMounted) setAllCustomers(data);
+    });
+    const unSubBulkMeters = subscribeToBulkMeters((data) => {
+      if (isMounted) setAllBulkMeters(data.map(bm => ({ id: bm.id, name: bm.name })));
+    });
+    const unSubBranches = subscribeToBranches((data) => {
+      if (isMounted) setAllBranches(data);
+    });
 
-    loadData();
+    Promise.all([
+      initializeCustomers(),
+      initializeBulkMeters(),
+      initializeBranches()
+    ]).then(() => {
+      if (isMounted) {
+        setIsLoading(false);
+      }
+    });
 
     return () => {
       isMounted = false;
-      subscriptions.forEach(unsub => unsub());
+      unSubCustomers();
+      unSubBulkMeters();
+      unSubBranches();
     };
   }, []);
 
+  const branchFilteredCustomers = React.useMemo(() => {
+    if (!staffBranchName || allBranches.length === 0 || allCustomers.length === 0) {
+      return [];
+    }
+    const staffBranch = allBranches.find(b => b.name === staffBranchName);
+    if (!staffBranch) {
+      return [];
+    }
+    const branchMeters = getBulkMeters().filter(bm => bm.branchId === staffBranch.id);
+    const branchMeterIds = branchMeters.map(bm => bm.id);
 
+    return allCustomers.filter(customer =>
+      customer.branchId === staffBranch.id ||
+      (customer.assignedBulkMeterId && branchMeterIds.includes(customer.assignedBulkMeterId))
+    );
+  }, [staffBranchName, allBranches, allCustomers]);
+
+  const branchBulkMetersList = React.useMemo(() => {
+     if (!staffBranchName || allBranches.length === 0) {
+      return [];
+    }
+    const staffBranch = allBranches.find(b => b.name === staffBranchName);
+    if (!staffBranch) {
+      return [];
+    }
+    return getBulkMeters()
+      .filter(bm => bm.branchId === staffBranch.id)
+      .map(bm => ({ id: bm.id, name: bm.name }));
+  }, [staffBranchName, allBranches]); // Depends on allBulkMeters implicitly via getBulkMeters
+  
+  const searchedCustomers = React.useMemo(() => {
+    if (!searchTerm) {
+      return branchFilteredCustomers;
+    }
+    return branchFilteredCustomers.filter(customer =>
+      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.meterNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (customer.branchId && allBranches.find(b => b.id === customer.branchId)?.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      customer.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.ward.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (customer.assignedBulkMeterId && allBulkMeters.find(bm => bm.id === customer.assignedBulkMeterId)?.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [searchTerm, branchFilteredCustomers, allBranches, allBulkMeters]);
+
+  const paginatedCustomers = searchedCustomers.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+  
   const handleAddCustomer = () => {
     setSelectedCustomer(null);
     setIsFormOpen(true);
@@ -200,26 +219,6 @@ export default function StaffIndividualCustomersPage() {
     setIsFormOpen(false);
     setSelectedCustomer(null);
   };
-
-  const getBulkMeterNameFromAll = (id?: string) => { 
-    if (!id) return "-";
-    const allMeters = getBulkMeters(); // Get latest list
-    return allMeters.find(bm => bm.id === id)?.name || "Unknown BM";
-  };
-
-  const searchedCustomers = branchFilteredCustomers.filter(customer =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.meterNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (customer.branchId && allBranches.find(b => b.id === customer.branchId)?.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    customer.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.ward.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (customer.assignedBulkMeterId && getBulkMeterNameFromAll(customer.assignedBulkMeterId).toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
-  const paginatedCustomers = searchedCustomers.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
-  );
   
   const renderContent = () => {
     if (isLoading) {
@@ -248,7 +247,7 @@ export default function StaffIndividualCustomersPage() {
         data={paginatedCustomers}
         onEdit={handleEditCustomer}
         onDelete={handleDeleteCustomer}
-        bulkMetersList={branchBulkMetersList} 
+        bulkMetersList={allBulkMeters} 
         branches={allBranches}
       />
     );

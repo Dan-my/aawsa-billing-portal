@@ -79,17 +79,6 @@ export default function StaffBulkMeterDetailsPage() {
     billingHistoryPage * billingHistoryRowsPerPage + billingHistoryRowsPerPage
   );
 
-
-  const checkAuthorization = useCallback((meter: BulkMeter | null, branchName?: string) => {
-    if (!meter || !branchName) return false;
-    const simpleBranchName = branchName.replace(/ Branch$/i, "").toLowerCase().trim();
-    return (
-      (meter.location?.toLowerCase() || "").includes(simpleBranchName) ||
-      (meter.name?.toLowerCase() || "").includes(simpleBranchName) ||
-      (meter.ward?.toLowerCase() || "").includes(simpleBranchName)
-    );
-  }, []);
-
   const memoizedDetails = useMemo(() => {
     if (!bulkMeter) {
       return {
@@ -219,13 +208,19 @@ export default function StaffBulkMeterDetailsPage() {
       const foundBM = currentGlobalMeters.find(bm => bm.id === bulkMeterId);
 
       if (foundBM) {
-        if (checkAuthorization(foundBM, localBranchName)) {
+        const staffBranch = localBranchName ? currentGlobalBranches.find(b => b.name === localBranchName) : undefined;
+        const simpleBranchName = localBranchName ? localBranchName.replace(/ Branch$/i, "").toLowerCase().trim() : '';
+
+        const isAuthorizedByBranchId = staffBranch ? foundBM.branchId === staffBranch.id : false;
+        const isAuthorizedByLocation = simpleBranchName ? (foundBM.location?.toLowerCase() || "").includes(simpleBranchName) : false;
+        const isUserAuthorized = isAuthorizedByBranchId || isAuthorizedByLocation;
+
+        if (isUserAuthorized) {
           setBulkMeter(foundBM);
           setAssociatedCustomers(currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId));
           setIsAuthorized(true);
 
-          const simpleBranch = localBranchName?.replace(/ Branch$/i, "").toLowerCase().trim();
-          const branchMeters = currentGlobalMeters.filter(bm => simpleBranch && ((bm.location?.toLowerCase() || "").includes(simpleBranch) || (bm.name?.toLowerCase() || "").includes(simpleBranch) || (bm.ward?.toLowerCase() || "").includes(simpleBranch))).map(bm => ({id: bm.id, name: bm.name}));
+          const branchMeters = currentGlobalMeters.filter(bm => (bm.branchId && bm.branchId === staffBranch?.id) || ((bm.location?.toLowerCase() || "").includes(simpleBranchName))).map(bm => ({id: bm.id, name: bm.name}));
           setBranchBulkMetersForCustomerForm(branchMeters);
           
           setMeterReadingHistory(getBulkMeterReadings().filter(r => r.bulkMeterId === bulkMeterId).sort((a, b) => {
@@ -270,13 +265,19 @@ export default function StaffBulkMeterDetailsPage() {
       const foundBM = currentGlobalMeters.find(bm => bm.id === bulkMeterId);
 
       if (foundBM) {
-        if (checkAuthorization(foundBM, localBranchName)) { 
+        const staffBranch = localBranchName ? currentGlobalBranches.find(b => b.name === localBranchName) : undefined;
+        const simpleBranchName = localBranchName ? localBranchName.replace(/ Branch$/i, "").toLowerCase().trim() : '';
+
+        const isAuthorizedByBranchId = staffBranch ? foundBM.branchId === staffBranch.id : false;
+        const isAuthorizedByLocation = simpleBranchName ? (foundBM.location?.toLowerCase() || "").includes(simpleBranchName) : false;
+        const isUserAuthorized = isAuthorizedByBranchId || isAuthorizedByLocation;
+
+        if (isUserAuthorized) { 
             setBulkMeter(foundBM);
             setAssociatedCustomers(currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId));
             setIsAuthorized(true);
 
-             const simpleBranch = localBranchName?.replace(/ Branch$/i, "").toLowerCase().trim();
-             const branchMeters = currentGlobalMeters.filter(bm => simpleBranch && ((bm.location?.toLowerCase() || "").includes(simpleBranch) || (bm.name?.toLowerCase() || "").includes(simpleBranch) || (bm.ward?.toLowerCase() || "").includes(simpleBranch))).map(bm => ({id: bm.id, name: bm.name}));
+            const branchMeters = currentGlobalMeters.filter(bm => (bm.branchId && bm.branchId === staffBranch?.id) || ((bm.location?.toLowerCase() || "").includes(simpleBranchName))).map(bm => ({id: bm.id, name: bm.name}));
             setBranchBulkMetersForCustomerForm(branchMeters);
 
             setMeterReadingHistory(getBulkMeterReadings().filter(r => r.bulkMeterId === bulkMeterId).sort((a, b) => {
@@ -316,7 +317,7 @@ export default function StaffBulkMeterDetailsPage() {
     const unsubBills = subscribeToBills(handleStoresUpdate);
 
     return () => { isMounted = false; unsubBM(); unsubCust(); unsubBranches(); unsubMeterReadings(); unsubBills(); };
-  }, [bulkMeterId, router, toast, checkAuthorization, bulkMeter]); 
+  }, [bulkMeterId, router, toast, bulkMeter]); 
 
 
   const handleEditBulkMeter = () => setIsBulkMeterFormOpen(true);

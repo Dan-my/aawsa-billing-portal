@@ -100,8 +100,9 @@ export default function StaffIndividualCustomersPage() {
       const branchBulkMeterIds = localBranchBulkMeters.map(bm => bm.id);
 
       const localFilteredCustomers = currentCustomers.filter(customer => 
-        customer.branchId === branch?.id ||
-        (customer.assignedBulkMeterId && branchBulkMeterIds.includes(customer.assignedBulkMeterId))
+        (customer.branchId && customer.branchId === branch?.id) ||
+        (customer.assignedBulkMeterId && branchBulkMeterIds.includes(customer.assignedBulkMeterId)) ||
+        (customer.location?.toLowerCase() || "").includes(simpleBranchName)
       );
       
       setAllCustomers(currentCustomers);

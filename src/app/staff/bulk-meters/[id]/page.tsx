@@ -181,7 +181,7 @@ export default function StaffBulkMeterDetailsPage() {
     if (storedUser) {
       try {
         const parsedUser: UserAuth = JSON.parse(storedUser);
-        if (parsedUser.role === "staff" && parsedUser.branchName) {
+        if (parsedUser.role.toLowerCase() === "staff" && parsedUser.branchName) {
           if(isMounted) setStaffBranchName(parsedUser.branchName);
           localBranchName = parsedUser.branchName;
         }
@@ -208,7 +208,11 @@ export default function StaffBulkMeterDetailsPage() {
       const foundBM = currentGlobalMeters.find(bm => bm.id === bulkMeterId);
 
       if (foundBM) {
-        const staffBranch = localBranchName ? currentGlobalBranches.find(b => b.name === localBranchName) : undefined;
+        const normalizedStaffBranchName = localBranchName?.trim().toLowerCase();
+        const staffBranch = normalizedStaffBranchName ? currentGlobalBranches.find(b => {
+          const normalizedBranchName = b.name.trim().toLowerCase();
+          return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
+        }) : undefined;
         const isUserAuthorized = staffBranch ? foundBM.branchId === staffBranch.id : false;
 
         if (isUserAuthorized) {
@@ -261,7 +265,11 @@ export default function StaffBulkMeterDetailsPage() {
       const foundBM = currentGlobalMeters.find(bm => bm.id === bulkMeterId);
 
       if (foundBM) {
-        const staffBranch = localBranchName ? currentGlobalBranches.find(b => b.name === localBranchName) : undefined;
+        const normalizedStaffBranchName = localBranchName?.trim().toLowerCase();
+        const staffBranch = normalizedStaffBranchName ? currentGlobalBranches.find(b => {
+          const normalizedBranchName = b.name.trim().toLowerCase();
+          return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
+        }) : undefined;
         const isUserAuthorized = staffBranch ? foundBM.branchId === staffBranch.id : false;
 
         if (isUserAuthorized) { 

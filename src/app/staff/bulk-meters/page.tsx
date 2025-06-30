@@ -34,6 +34,7 @@ interface User {
 export default function StaffBulkMetersPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isAuthLoading, setIsAuthLoading] = React.useState(true);
   const [authError, setAuthError] = React.useState<string | null>(null);
   const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
   
@@ -49,81 +50,63 @@ export default function StaffBulkMetersPage() {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
+  // Effect 1: Determine the user's branch name from localStorage
   React.useEffect(() => {
-    let isMounted = true;
-
-    async function loadAndSubscribe() {
-      // 1. Auth Check
-      let localBranchName: string | null = null;
-      try {
-        const userString = localStorage.getItem("user");
-        if (userString) {
-          const parsedUser: User = JSON.parse(userString);
-          if (parsedUser.role === 'staff' && parsedUser.branchName) {
-            localBranchName = parsedUser.branchName;
-          }
-        }
-      } catch (e) {
-        console.error("Failed to parse user from localStorage", e);
-      }
-      
-      if (!localBranchName) {
-        if (isMounted) {
+    try {
+      const userString = localStorage.getItem("user");
+      if (userString) {
+        const parsedUser: User = JSON.parse(userString);
+        if (parsedUser.role === 'staff' && parsedUser.branchName) {
+          setStaffBranchName(parsedUser.branchName);
+        } else {
           setAuthError("Could not determine your branch. Please contact an administrator.");
-          setIsLoading(false);
         }
-        return; // Stop execution
+      } else {
+        setAuthError("You are not logged in. Please log in to continue.");
       }
+    } catch (e) {
+      console.error("Failed to parse user from localStorage", e);
+      setAuthError("An error occurred while verifying your session.");
+    } finally {
+      setIsAuthLoading(false);
+    }
+  }, []);
 
-      if (isMounted) {
-        setStaffBranchName(localBranchName);
-      }
+  // Effect 2: Load data once authentication check is complete and successful
+  React.useEffect(() => {
+    if (isAuthLoading || authError) {
+      // Don't fetch data if we're still checking auth or if there's an error
+      if (!isAuthLoading) setIsLoading(false); // If auth failed, stop the main loading spinner
+      return;
+    }
 
-      // 2. Initial Data Load
+    let isMounted = true;
+    setIsLoading(true);
+
+    const loadData = async () => {
       await Promise.all([
         initializeBranches(),
         initializeBulkMeters(),
       ]);
 
-      if (!isMounted) return;
-      
-      // 3. Set data to state after loading
-      const branchesData = getBranches();
-      const bulkMetersData = getBulkMeters();
       if (isMounted) {
-        setAllBranches(branchesData);
-        setAllBulkMeters(bulkMetersData);
-      }
-
-      // 4. Finalize loading state
-      if (isMounted) {
+        setAllBranches(getBranches());
+        setAllBulkMeters(getBulkMeters());
         setIsLoading(false);
       }
-
-      // 5. Setup subscriptions
-      const unSubBranches = subscribeToBranches(setAllBranches);
-      const unSubBulkMeters = subscribeToBulkMeters(setAllBulkMeters);
-      
-      return () => {
-        unSubBranches();
-        unSubBulkMeters();
-      };
-    }
-
-    let cleanup: (() => void) | undefined;
-    loadAndSubscribe().then(cleanupFn => {
-      if (cleanupFn) {
-        cleanup = cleanupFn;
-      }
-    });
+    };
+    
+    loadData();
+    
+    const unSubBranches = subscribeToBranches(setAllBranches);
+    const unSubBulkMeters = subscribeToBulkMeters(setAllBulkMeters);
 
     return () => {
       isMounted = false;
-      if (cleanup) {
-        cleanup();
-      }
+      unSubBranches();
+      unSubBulkMeters();
     };
-  }, []);
+  }, [isAuthLoading, authError]);
 
   const branchFilteredBulkMeters = React.useMemo(() => {
     if (isLoading || authError || !staffBranchName) {
@@ -196,7 +179,7 @@ export default function StaffBulkMetersPage() {
   };
   
   const renderContent = () => {
-    if (isLoading) {
+    if (isAuthLoading || isLoading) {
       return (
         <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
           Loading bulk meters...
@@ -244,7 +227,7 @@ export default function StaffBulkMetersPage() {
               disabled={isLoading || !!authError}
             />
           </div>
-          <Button onClick={handleAddBulkMeter} disabled={isLoading || !!authError}>
+          <Button onClick={handleAddBulkMeter} disabled={isAuthLoading || isLoading || !!authError}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Bulk Meter
           </Button>
         </div>

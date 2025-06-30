@@ -38,6 +38,7 @@ interface User {
 export default function StaffIndividualCustomersPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isAuthLoading, setIsAuthLoading] = React.useState(true);
   const [authError, setAuthError] = React.useState<string | null>(null);
   const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
 
@@ -54,83 +55,67 @@ export default function StaffIndividualCustomersPage() {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
+  // Effect 1: Determine the user's branch name from localStorage
   React.useEffect(() => {
-    let isMounted = true;
-
-    async function loadAndSubscribe() {
-      // 1. Auth Check
-      let localBranchName: string | null = null;
-      try {
-        const userString = localStorage.getItem("user");
-        if (userString) {
-          const parsedUser: User = JSON.parse(userString);
-          if (parsedUser.role === 'staff' && parsedUser.branchName) {
-            localBranchName = parsedUser.branchName;
-          }
-        }
-      } catch (e) {
-        console.error("Failed to parse user from localStorage", e);
-      }
-      
-      if (!localBranchName) {
-        if (isMounted) {
+    try {
+      const userString = localStorage.getItem("user");
+      if (userString) {
+        const parsedUser: User = JSON.parse(userString);
+        if (parsedUser.role === 'staff' && parsedUser.branchName) {
+          setStaffBranchName(parsedUser.branchName);
+        } else {
           setAuthError("Could not determine your branch. Please contact an administrator.");
-          setIsLoading(false);
         }
-        return; // Stop execution
+      } else {
+        setAuthError("You are not logged in. Please log in to continue.");
       }
-
-      if (isMounted) {
-        setStaffBranchName(localBranchName);
-      }
-
-      // 2. Initial Data Load
-      await Promise.all([
-        initializeCustomers(),
-        initializeBulkMeters(),
-        initializeBranches(),
-      ]);
-
-      if (!isMounted) return;
-
-      // 3. Set data to state after loading
-      if(isMounted) {
-        setAllCustomers(getCustomers());
-        setAllBulkMeters(getBulkMeters().map(bm => ({ id: bm.id, name: bm.name })));
-        setAllBranches(getBranches());
-      }
-      
-      // 4. Finalize loading
-      if(isMounted) {
-        setIsLoading(false);
-      }
-
-      // 5. Setup subscriptions
-      const unSubCustomers = subscribeToCustomers(setAllCustomers);
-      const unSubBulkMeters = subscribeToBulkMeters((bms) => setAllBulkMeters(bms.map(bm => ({ id: bm.id, name: bm.name }))));
-      const unSubBranches = subscribeToBranches(setAllBranches);
-
-      return () => {
-        unSubCustomers();
-        unSubBulkMeters();
-        unSubBranches();
-      };
+    } catch (e) {
+      console.error("Failed to parse user from localStorage", e);
+      setAuthError("An error occurred while verifying your session.");
+    } finally {
+      setIsAuthLoading(false);
     }
+  }, []);
 
-    let cleanup: (() => void) | undefined;
-    loadAndSubscribe().then(cleanupFn => {
-        if (cleanupFn) {
-            cleanup = cleanupFn;
-        }
-    });
+  // Effect 2: Load data once authentication check is complete and successful
+  React.useEffect(() => {
+    if (isAuthLoading || authError) {
+      if (!isAuthLoading) setIsLoading(false);
+      return;
+    }
     
+    let isMounted = true;
+    setIsLoading(true);
+
+    const loadData = async () => {
+        await Promise.all([
+            initializeCustomers(),
+            initializeBulkMeters(),
+            initializeBranches(),
+        ]);
+        
+        if (isMounted) {
+            setAllCustomers(getCustomers());
+            setAllBulkMeters(getBulkMeters().map(bm => ({ id: bm.id, name: bm.name })));
+            setAllBranches(getBranches());
+            setIsLoading(false);
+        }
+    };
+    
+    loadData();
+
+    const unSubCustomers = subscribeToCustomers(setAllCustomers);
+    const unSubBulkMeters = subscribeToBulkMeters((bms) => setAllBulkMeters(bms.map(bm => ({ id: bm.id, name: bm.name }))));
+    const unSubBranches = subscribeToBranches(setAllBranches);
+
     return () => {
       isMounted = false;
-      if (cleanup) {
-        cleanup();
-      }
+      unSubCustomers();
+      unSubBulkMeters();
+      unSubBranches();
     };
-  }, []);
+  }, [isAuthLoading, authError]);
+
 
   const branchFilteredCustomers = React.useMemo(() => {
     if (isLoading || authError || !staffBranchName) {
@@ -254,7 +239,7 @@ export default function StaffIndividualCustomersPage() {
   };
   
   const renderContent = () => {
-    if (isLoading) {
+    if (isAuthLoading || isLoading) {
       return (
         <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
           Loading customers...
@@ -299,10 +284,10 @@ export default function StaffIndividualCustomersPage() {
               className="pl-8 w-full md:w-[250px]"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              disabled={isLoading || !!authError}
+              disabled={isAuthLoading || isLoading || !!authError}
             />
           </div>
-          <Button onClick={handleAddCustomer} disabled={isLoading || !!authError}>
+          <Button onClick={handleAddCustomer} disabled={isAuthLoading || isLoading || !!authError}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Customer
           </Button>
         </div>

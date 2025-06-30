@@ -15,7 +15,7 @@ import type { Branch } from "@/app/admin/branches/branch-types";
 
 interface User {
   email: string;
-  role: "admin" | "staff";
+  role: "admin" | "staff" | "Admin" | "Staff";
   branchName?: string;
 }
 
@@ -87,7 +87,7 @@ export default function StaffDashboardPage() {
     if (storedUser) {
       try {
         const parsedUser: User = JSON.parse(storedUser);
-        if (parsedUser.role === "staff" && parsedUser.branchName) {
+        if (parsedUser.role.toLowerCase() === "staff" && parsedUser.branchName) {
           if (isMounted) setBranchNameForDisplay(parsedUser.branchName);
           localStaffBranch = parsedUser.branchName;
         }

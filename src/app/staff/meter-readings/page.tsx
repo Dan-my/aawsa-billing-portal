@@ -43,7 +43,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 interface User {
   id?: string;
   email: string;
-  role: "admin" | "staff";
+  role: "admin" | "staff" | "Admin" | "Staff";
   branchName?: string;
 }
 
@@ -136,7 +136,7 @@ export default function StaffMeterReadingsPage() {
         const parsedUser: User = JSON.parse(storedUser);
         if (isMounted) {
             setCurrentUser(parsedUser);
-            if (parsedUser.role === "staff" && parsedUser.branchName) {
+            if (parsedUser.role.toLowerCase() === "staff" && parsedUser.branchName) {
               setBranchName(parsedUser.branchName);
               localBranchName = parsedUser.branchName;
             }

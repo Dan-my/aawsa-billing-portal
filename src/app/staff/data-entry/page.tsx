@@ -29,7 +29,7 @@ const individualCustomerCsvHeaders = ["name", "customerKeyNumber", "contractNumb
 
 interface User {
   email: string;
-  role: "admin" | "staff";
+  role: "admin" | "staff" | "Admin" | "Staff";
   branchName?: string;
 }
 
@@ -45,9 +45,9 @@ export default function StaffDataEntryPage() {
     if (storedUser) {
       try {
         const parsedUser: User = JSON.parse(storedUser);
-        if (parsedUser.role === "staff" && parsedUser.branchName) {
+        if (parsedUser.role.toLowerCase() === "staff" && parsedUser.branchName) {
           setStaffBranchName(parsedUser.branchName);
-        } else if (parsedUser.role === "staff" && !parsedUser.branchName) {
+        } else if (parsedUser.role.toLowerCase() === "staff" && !parsedUser.branchName) {
           setStaffBranchName("Unassigned Branch");
         }
       } catch (e) {

@@ -27,7 +27,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 
 interface User {
   email: string;
-  role: "admin" | "staff";
+  role: "admin" | "staff" | "Admin" | "Staff";
   branchName?: string;
 }
 
@@ -59,7 +59,7 @@ export default function StaffBulkMetersPage() {
         const userString = localStorage.getItem("user");
         if (userString) {
           const parsedUser: User = JSON.parse(userString);
-          if (parsedUser.role === 'staff' && parsedUser.branchName) {
+          if (parsedUser.role.toLowerCase() === 'staff' && parsedUser.branchName) {
             if (isMounted) setStaffBranchName(parsedUser.branchName);
           } else {
             if (isMounted) setError("Your user profile is not configured for a staff role or branch.");

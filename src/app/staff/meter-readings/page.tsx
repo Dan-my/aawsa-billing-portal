@@ -24,6 +24,10 @@ import {
   initializeBulkMeterReadings,
   subscribeToBulkMeterReadings,
   getBranches,
+  initializeBranches,
+  subscribeToBranches,
+  subscribeToCustomers,
+  subscribeToBulkMeters
 } from "@/lib/data-store";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
@@ -69,36 +73,54 @@ export default function StaffMeterReadingsPage() {
   const combineAndSortReadings = React.useCallback((currentBranchName?: string) => {
     const allCustomers = getCustomers();
     const allBulkMeters = getBulkMeters();
+    const allBranches = getBranches();
     const allIndividualReadings = getIndividualCustomerReadings();
     const allBulkReadings = getBulkMeterReadings();
 
-    const simpleBranchName = currentBranchName ? currentBranchName.replace(/ Branch$/i, "").toLowerCase().trim() : undefined;
+    const staffBranch = currentBranchName ? allBranches.find(b => b.name === currentBranchName) : undefined;
+    
+    let branchBulkMeters: BulkMeter[] = [];
+    let branchCustomers: IndividualCustomer[] = [];
 
-    const branchBulkMeters = simpleBranchName ? allBulkMeters.filter(bm => (bm.location?.toLowerCase() || "").includes(simpleBranchName) || (bm.name?.toLowerCase() || "").includes(simpleBranchName) || (bm.branchId && getBranches().find(b => b.id === bm.branchId)?.name.toLowerCase().includes(simpleBranchName))) : [];
-    const branchCustomers = simpleBranchName ? allCustomers.filter(c => (c.location?.toLowerCase() || "").includes(simpleBranchName) || (c.assignedBulkMeterId && branchBulkMeters.some(bm => bm.id === c.assignedBulkMeterId)) || (c.branchId && getBranches().find(b => b.id === c.branchId)?.name.toLowerCase().includes(simpleBranchName))) : [];
-
+    if (staffBranch) {
+        const staffBranchId = staffBranch.id;
+        branchBulkMeters = allBulkMeters.filter(bm => bm.branchId === staffBranchId);
+        
+        const branchBulkMeterIds = branchBulkMeters.map(bm => bm.id);
+        branchCustomers = allCustomers.filter(c => 
+          c.branchId === staffBranchId ||
+          (c.assignedBulkMeterId && branchBulkMeterIds.includes(c.assignedBulkMeterId))
+        );
+    }
+    
     setBulkMetersForForm(branchBulkMeters);
     setCustomersForForm(branchCustomers);
 
     const displayedIndividualReadings: DisplayReading[] = allIndividualReadings
       .filter(r => branchCustomers.some(c => c.id === r.individualCustomerId))
-      .map(r => ({
-        id: r.id,
-        meterId: r.individualCustomerId,
-        meterType: 'individual',
-        meterIdentifier: allCustomers.find(c => c.id === r.individualCustomerId)?.name || `Cust ID ${r.individualCustomerId}`,
-        readingValue: r.readingValue, readingDate: r.readingDate, monthYear: r.monthYear, notes: r.notes
-      })).sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
+      .map(r => {
+          const customer = allCustomers.find(c => c.id === r.individualCustomerId);
+          return {
+            id: r.id,
+            meterId: r.individualCustomerId,
+            meterType: 'individual' as const,
+            meterIdentifier: customer ? `${customer.name} (M: ${customer.meterNumber})` : `Cust ID ${r.individualCustomerId}`,
+            readingValue: r.readingValue, readingDate: r.readingDate, monthYear: r.monthYear, notes: r.notes
+          };
+      }).sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
 
     const displayedBulkReadings: DisplayReading[] = allBulkReadings
       .filter(r => branchBulkMeters.some(bm => bm.id === r.bulkMeterId))
-      .map(r => ({
-        id: r.id,
-        meterId: r.bulkMeterId,
-        meterType: 'bulk',
-        meterIdentifier: allBulkMeters.find(bm => bm.id === r.bulkMeterId)?.name || `BM ID ${r.bulkMeterId}`,
-        readingValue: r.readingValue, readingDate: r.readingDate, monthYear: r.monthYear, notes: r.notes
-      })).sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
+      .map(r => {
+           const bulkMeter = allBulkMeters.find(bm => bm.id === r.bulkMeterId);
+           return {
+                id: r.id,
+                meterId: r.bulkMeterId,
+                meterType: 'bulk' as const,
+                meterIdentifier: bulkMeter ? `${bulkMeter.name} (M: ${bulkMeter.meterNumber})` : `BM ID ${r.bulkMeterId}`,
+                readingValue: r.readingValue, readingDate: r.readingDate, monthYear: r.monthYear, notes: r.notes
+           };
+      }).sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
     
     setIndividualReadings(displayedIndividualReadings);
     setBulkReadings(displayedBulkReadings);
@@ -128,6 +150,7 @@ export default function StaffMeterReadingsPage() {
       initializeBulkMeters(),
       initializeIndividualCustomerReadings(),
       initializeBulkMeterReadings(),
+      initializeBranches(),
     ]).then(() => {
       if (!isMounted) return;
       combineAndSortReadings(localBranchName);
@@ -139,10 +162,22 @@ export default function StaffMeterReadingsPage() {
       setIsLoading(false);
     });
     
-    const unsubIndiReadings = subscribeToIndividualCustomerReadings(() => { if(isMounted) combineAndSortReadings(localBranchName); });
-    const unsubBulkReadings = subscribeToBulkMeterReadings(() => { if(isMounted) combineAndSortReadings(localBranchName); });
-    
-    return () => { isMounted = false; unsubIndiReadings(); unsubBulkReadings(); };
+    const handleDataUpdate = () => { if(isMounted) combineAndSortReadings(localBranchName); };
+
+    const unsubIndiReadings = subscribeToIndividualCustomerReadings(handleDataUpdate);
+    const unsubBulkReadings = subscribeToBulkMeterReadings(handleDataUpdate);
+    const unsubCustomers = subscribeToCustomers(handleDataUpdate);
+    const unsubBulkMeters = subscribeToBulkMeters(handleDataUpdate);
+    const unsubBranches = subscribeToBranches(handleDataUpdate);
+
+    return () => { 
+        isMounted = false; 
+        unsubIndiReadings(); 
+        unsubBulkReadings();
+        unsubCustomers();
+        unsubBulkMeters();
+        unsubBranches();
+    };
   }, [toast, combineAndSortReadings]);
 
 

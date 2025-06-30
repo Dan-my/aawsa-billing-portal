@@ -52,30 +52,24 @@ export default function StaffDashboardPage() {
     currentStaffBranch: string | undefined
   ) => {
     if (currentStaffBranch) {
-      const simpleBranchName = currentStaffBranch.replace(/ Branch$/i, "").toLowerCase().trim();
-      const staffBranch = allBranches.find(b => b.name.toLowerCase().includes(simpleBranchName));
+      const staffBranch = allBranches.find(b => b.name === currentStaffBranch);
 
-      const branchFilteredBulkMeters = allBulkMeters.filter(bm => {
-        if (staffBranch && bm.branchId) {
-            return bm.branchId === staffBranch.id;
-        }
-        return (bm.location?.toLowerCase() || "").includes(simpleBranchName);
-      });
-      setTotalBulkMetersInBranch(branchFilteredBulkMeters.length);
+      if (staffBranch) {
+        const staffBranchId = staffBranch.id;
+        const branchFilteredBulkMeters = allBulkMeters.filter(bm => bm.branchId === staffBranchId);
+        setTotalBulkMetersInBranch(branchFilteredBulkMeters.length);
 
-      const branchBulkMeterIds = branchFilteredBulkMeters.map(bm => bm.id);
-      
-      const branchFilteredCustomers = allCustomers.filter(c => {
-        if (staffBranch && c.branchId) {
-            return c.branchId === staffBranch.id;
-        }
-        if (c.assignedBulkMeterId && branchBulkMeterIds.includes(c.assignedBulkMeterId)) {
-            return true;
-        }
-        return (c.location?.toLowerCase() || "").includes(simpleBranchName);
-      });
-      setTotalCustomersInBranch(branchFilteredCustomers.length);
-
+        const branchBulkMeterIds = branchFilteredBulkMeters.map(bm => bm.id);
+        const branchFilteredCustomers = allCustomers.filter(c => 
+          c.branchId === staffBranchId ||
+          (c.assignedBulkMeterId && branchBulkMeterIds.includes(c.assignedBulkMeterId))
+        );
+        setTotalCustomersInBranch(branchFilteredCustomers.length);
+      } else {
+        // Staff's branch name doesn't exist in DB, show 0
+        setTotalBulkMetersInBranch(0);
+        setTotalCustomersInBranch(0);
+      }
     } else {
       setTotalBulkMetersInBranch(0);
       setTotalCustomersInBranch(0);
@@ -176,7 +170,7 @@ export default function StaffDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalCustomersInBranch}</div>
-            <p className="text-xs text-muted-foreground">Total customers assigned to bulk meters in your branch</p>
+            <p className="text-xs text-muted-foreground">Total customers assigned to your branch</p>
              <div className="h-[120px] mt-4 flex items-center justify-center">
                 <Users className="h-16 w-16 text-primary opacity-50" />
             </div>
@@ -190,7 +184,7 @@ export default function StaffDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalBulkMetersInBranch}</div>
-            <p className="text-xs text-muted-foreground">Bulk meters identified for your branch</p>
+            <p className="text-xs text-muted-foreground">Total bulk meters assigned to your branch</p>
              <div className="h-[120px] mt-4 flex items-center justify-center">
                 <Gauge className="h-16 w-16 text-primary opacity-50" />
             </div>

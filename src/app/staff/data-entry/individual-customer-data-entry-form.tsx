@@ -17,14 +17,24 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { baseIndividualCustomerDataSchema } from "@/app/admin/data-entry/customer-data-entry-types"; 
+import { baseIndividualCustomerDataSchema, meterSizeOptions } from "@/app/admin/data-entry/customer-data-entry-types"; 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { addCustomer as addCustomerToStore, getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, initializeCustomers } from "@/lib/data-store";
-import type { IndividualCustomer, IndividualCustomerStatus } from "@/app/admin/individual-customers/individual-customer-types";
-import { individualCustomerStatuses } from "@/app/admin/individual-customers/individual-customer-types";
+import { 
+    addCustomer as addCustomerToStore, 
+    getBulkMeters, 
+    subscribeToBulkMeters, 
+    initializeBulkMeters, 
+    initializeCustomers,
+    getBranches,
+    subscribeToBranches,
+    initializeBranches as initializeAdminBranches
+} from "@/lib/data-store";
+import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
+import type { Branch } from "../branches/branch-types";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse, isValid } from "date-fns";
-import { customerTypes, sewerageConnections, paymentStatuses, type PaymentStatus, type CustomerType, type SewerageConnection } from "@/lib/billing";
+import { customerTypes, sewerageConnections, paymentStatuses } from "@/lib/billing";
+import { individualCustomerStatuses } from "../individual-customers/individual-customer-types";
 
 
 interface StaffIndividualCustomerEntryFormProps {
@@ -43,6 +53,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
   const { toast } = useToast();
   const [availableBulkMeters, setAvailableBulkMeters] = React.useState<{id: string, name: string}[]>([]);
   const [isLoadingBulkMeters, setIsLoadingBulkMeters] = React.useState(true);
+  const [staffBranchId, setStaffBranchId] = React.useState<string | undefined>(undefined);
 
   const form = useForm<StaffEntryFormValues>({ 
     resolver: zodResolver(StaffEntryFormSchema), 
@@ -60,7 +71,8 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
       currentReading: undefined,
       month: "",
       specificArea: "",
-      location: branchName || "", 
+      location: branchName || "",
+      branchId: staffBranchId,
       ward: "",
       sewerageConnection: undefined,
       status: "Active",
@@ -75,34 +87,40 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
     setIsLoadingBulkMeters(true);
     Promise.all([
         initializeBulkMeters(),
-        initializeCustomers() 
+        initializeCustomers(),
+        initializeAdminBranches()
     ]).then(() => {
-        const fetchedBms = getBulkMeters().map(bm => ({ id: bm.id, name: bm.name }));
-        setAvailableBulkMeters(fetchedBms);
+        const allBranches = getBranches();
+        const staffBranch = allBranches.find(b => b.name === branchName);
+        if (staffBranch) {
+            setStaffBranchId(staffBranch.id);
+            const branchFilteredBms = getBulkMeters().filter(bm => bm.branchId === staffBranch.id);
+            setAvailableBulkMeters(branchFilteredBms.map(bm => ({ id: bm.id, name: bm.name })));
+        }
         setIsLoadingBulkMeters(false);
     });
 
-    const unsubscribe = subscribeToBulkMeters((updatedBulkMeters) => {
-      const newBms = updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name }));
-      setAvailableBulkMeters(newBms);
-      if (assignedBulkMeterIdValue && !newBms.find(bm => bm.id === assignedBulkMeterIdValue)) {
-        form.setValue("assignedBulkMeterId", UNASSIGNED_BULK_METER_VALUE);
-      }
-      setIsLoadingBulkMeters(false); 
+    const unsubscribeBMs = subscribeToBulkMeters((updatedBulkMeters) => {
+        if(staffBranchId) {
+            const branchFilteredBms = updatedBulkMeters.filter(bm => bm.branchId === staffBranchId);
+            setAvailableBulkMeters(branchFilteredBms.map(bm => ({ id: bm.id, name: bm.name })));
+        }
     });
-    return () => unsubscribe();
-  }, [assignedBulkMeterIdValue, form]);
+    
+    return () => {
+        unsubscribeBMs();
+    }
+  }, [branchName, staffBranchId]);
 
   React.useEffect(() => {
-    // Reset location if branchName changes and form is pristine for location
-    if (form.formState.isDirty && form.getFieldState('location').isDirty) return;
-    form.reset({ ...form.getValues(), location: branchName });
-  }, [branchName, form]);
+    form.reset({ ...form.getValues(), location: branchName, branchId: staffBranchId });
+  }, [branchName, staffBranchId, form]);
 
   async function onSubmit(data: StaffEntryFormValues) { 
     const submissionData = {
       ...data,
       assignedBulkMeterId: data.assignedBulkMeterId === UNASSIGNED_BULK_METER_VALUE ? undefined : data.assignedBulkMeterId,
+      branchId: staffBranchId, // Ensure branchId is set from state
     };
     
     const result = await addCustomerToStore(submissionData as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'calculatedBill'>);
@@ -126,6 +144,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
             month: "",
             specificArea: "",
             location: branchName || "",
+            branchId: staffBranchId,
             ward: "",
             sewerageConnection: undefined,
             status: "Active",
@@ -179,7 +198,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                             <SelectItem value={UNASSIGNED_BULK_METER_VALUE}>None</SelectItem>
                             {availableBulkMeters.length === 0 && !isLoadingBulkMeters && (
                                 <SelectItem value="no-bms-available-staff" disabled>
-                                No bulk meters available
+                                No bulk meters available in this branch
                                 </SelectItem>
                             )}
                             {availableBulkMeters.map((bm) => (
@@ -204,7 +223,30 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
             <FormField control={form.control} name="bookNumber" render={({ field }) => (<FormItem><FormLabel>Book No. *</FormLabel><FormControl><Input {...field} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
             <FormField control={form.control} name="ordinal" render={({ field }) => (<FormItem><FormLabel>Ordinal *</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseInt(e.target.value,10))} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
             
-            <FormField control={form.control} name="meterSize" render={({ field }) => (<FormItem><FormLabel>Meter Size (inch) *</FormLabel><FormControl><Input type="number" step="0.1" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseFloat(e.target.value))} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
+            <FormField 
+                control={form.control} 
+                name="meterSize" 
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Meter Size (inch) *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined} disabled={commonFieldDisabled}>
+                    <FormControl>
+                        <SelectTrigger disabled={commonFieldDisabled}>
+                        <SelectValue placeholder="Select a size" />
+                        </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        {meterSizeOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )} 
+            />
             <FormField control={form.control} name="meterNumber" render={({ field }) => (<FormItem><FormLabel>Meter No. *</FormLabel><FormControl><Input {...field} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
             <FormField control={form.control} name="previousReading" render={({ field }) => (<FormItem><FormLabel>Previous Reading *</FormLabel><FormControl><Input type="number" step="0.01" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseFloat(e.target.value))} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
             
@@ -212,7 +254,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
             <FormField control={form.control} name="month" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Reading Month *</FormLabel><DatePicker date={field.value && isValid(parse(field.value, "yyyy-MM", new Date())) ? parse(field.value, "yyyy-MM", new Date()) : undefined} setDate={(date) => field.onChange(date ? format(date, "yyyy-MM") : "")} disabledTrigger={commonFieldDisabled} /><FormMessage /></FormItem>)} />
             <FormField control={form.control} name="specificArea" render={({ field }) => (<FormItem><FormLabel>Specific Area *</FormLabel><FormControl><Input {...field} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
             
-            <FormField control={form.control} name="location" render={({ field }) => (<FormItem><FormLabel>Location / Sub-City *</FormLabel><FormControl><Input {...field} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="location" render={({ field }) => (<FormItem><FormLabel>Location / Sub-City *</FormLabel><FormControl><Input {...field} disabled={commonFieldDisabled || true} readOnly /></FormControl><FormMessage /></FormItem>)} />
             <FormField control={form.control} name="ward" render={({ field }) => (<FormItem><FormLabel>Ward / Woreda *</FormLabel><FormControl><Input {...field} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
             <FormField control={form.control} name="sewerageConnection" render={({ field }) => (<FormItem><FormLabel>Sewerage Conn. *</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={commonFieldDisabled}><FormControl><SelectTrigger disabled={commonFieldDisabled}><SelectValue placeholder="Select connection" /></SelectTrigger></FormControl><SelectContent>{sewerageConnections.map(conn => <SelectItem key={conn} value={conn}>{conn}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
           </div>

@@ -49,69 +49,73 @@ export default function StaffBulkMetersPage() {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
-  // Single effect to handle authentication and data fetching
+  // Robust data loading and authentication effect
   React.useEffect(() => {
-    const initializePage = async () => {
-      let userBranchName: string | null = null;
+    let isMounted = true;
 
+    const initializePage = async () => {
+      // Phase 1: Authentication check
       try {
         const userString = localStorage.getItem("user");
         if (userString) {
           const parsedUser: User = JSON.parse(userString);
           if (parsedUser.role === 'staff' && parsedUser.branchName) {
-            userBranchName = parsedUser.branchName;
+            if (isMounted) setStaffBranchName(parsedUser.branchName);
           } else {
-            setError("Your user profile is not configured for a staff role. Please contact an administrator.");
+            if (isMounted) setError("Your user profile is not configured for a staff role or branch.");
             setIsLoading(false);
-            return;
+            return; // Stop execution
           }
         } else {
-          setError("You are not logged in. Please log in to continue.");
+          if (isMounted) setError("You are not logged in. Please log in to continue.");
           setIsLoading(false);
-          return;
+          return; // Stop execution
         }
       } catch (e) {
-        setError("An error occurred while verifying your session.");
+        if (isMounted) setError("An error occurred while verifying your session.");
         setIsLoading(false);
-        return;
+        return; // Stop execution
       }
 
-      setStaffBranchName(userBranchName);
-
-      // Now fetch data
-      await Promise.all([
-        initializeBranches(),
-        initializeBulkMeters(),
-      ]);
-
-      // Set initial data from the store
-      setAllBranches(getBranches());
-      setAllBulkMeters(getBulkMeters());
-      
-      setIsLoading(false);
+      // Phase 2: Data loading
+      try {
+        await Promise.all([
+          initializeBranches(),
+          initializeBulkMeters(),
+        ]);
+        if (isMounted) {
+          setAllBranches(getBranches());
+          setAllBulkMeters(getBulkMeters());
+        }
+      } catch (dataError) {
+        if (isMounted) setError("Failed to load required data from the server.");
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
     };
 
     initializePage();
-
-    // Subscriptions
+    
+    // Subscriptions are set up once and will update state when data changes
     const unSubBranches = subscribeToBranches(setAllBranches);
     const unSubBulkMeters = subscribeToBulkMeters(setAllBulkMeters);
 
     return () => {
+      isMounted = false;
       unSubBranches();
       unSubBulkMeters();
     };
   }, []);
 
+
   const branchFilteredBulkMeters = React.useMemo(() => {
-    if (!staffBranchName || allBranches.length === 0) {
-      return [];
-    }
+    if (isLoading || error || !staffBranchName) return [];
+    
     const staffBranch = allBranches.find(b => b.name === staffBranchName);
     if (!staffBranch) return [];
     
     return allBulkMeters.filter(bm => bm.branchId === staffBranch.id);
-  }, [staffBranchName, allBranches, allBulkMeters]);
+  }, [isLoading, error, staffBranchName, allBranches, allBulkMeters]);
 
   const searchedBulkMeters = React.useMemo(() => {
      if (!searchTerm) {

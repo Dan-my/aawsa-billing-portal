@@ -54,57 +54,62 @@ export default function StaffIndividualCustomersPage() {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
-  // Single effect to handle authentication and data fetching
+  // Robust data loading and authentication effect
   React.useEffect(() => {
-    const initializePage = async () => {
-      let userBranchName: string | null = null;
+    let isMounted = true;
 
+    const initializePage = async () => {
+      // Phase 1: Authentication check
       try {
         const userString = localStorage.getItem("user");
         if (userString) {
           const parsedUser: User = JSON.parse(userString);
           if (parsedUser.role === 'staff' && parsedUser.branchName) {
-            userBranchName = parsedUser.branchName;
+            if (isMounted) setStaffBranchName(parsedUser.branchName);
           } else {
-            setError("Your user profile is not configured for a staff role. Please contact an administrator.");
+            if (isMounted) setError("Your user profile is not configured for a staff role or branch.");
             setIsLoading(false);
-            return;
+            return; // Stop execution
           }
         } else {
-          setError("You are not logged in. Please log in to continue.");
+          if (isMounted) setError("You are not logged in. Please log in to continue.");
           setIsLoading(false);
-          return;
+          return; // Stop execution
         }
       } catch (e) {
-        setError("An error occurred while verifying your session.");
+        if (isMounted) setError("An error occurred while verifying your session.");
         setIsLoading(false);
-        return;
+        return; // Stop execution
       }
-      
-      setStaffBranchName(userBranchName);
 
-      // Now fetch data
-      await Promise.all([
-        initializeCustomers(),
-        initializeBulkMeters(),
-        initializeBranches(),
-      ]);
-
-      // Set initial data from the store
-      setAllCustomers(getCustomers());
-      setAllBulkMeters(getBulkMeters().map(bm => ({ id: bm.id, name: bm.name })));
-      setAllBranches(getBranches());
-      setIsLoading(false);
+      // Phase 2: Data loading
+      try {
+        await Promise.all([
+          initializeBranches(),
+          initializeBulkMeters(),
+          initializeCustomers(),
+        ]);
+        if (isMounted) {
+          setAllBranches(getBranches());
+          setAllBulkMeters(getBulkMeters().map(bm => ({ id: bm.id, name: bm.name })));
+          setAllCustomers(getCustomers());
+        }
+      } catch (dataError) {
+        if (isMounted) setError("Failed to load required data from the server.");
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
     };
 
     initializePage();
-
+    
     // Subscriptions
     const unSubCustomers = subscribeToCustomers(setAllCustomers);
     const unSubBulkMeters = subscribeToBulkMeters((bms) => setAllBulkMeters(bms.map(bm => ({ id: bm.id, name: bm.name }))));
     const unSubBranches = subscribeToBranches(setAllBranches);
 
     return () => {
+      isMounted = false;
       unSubCustomers();
       unSubBulkMeters();
       unSubBranches();
@@ -112,9 +117,8 @@ export default function StaffIndividualCustomersPage() {
   }, []);
 
   const branchFilteredCustomers = React.useMemo(() => {
-    if (!staffBranchName || allBranches.length === 0) {
-      return [];
-    }
+    if (isLoading || error || !staffBranchName) return [];
+    
     const staffBranch = allBranches.find(b => b.name === staffBranchName);
     if (!staffBranch) return [];
 
@@ -126,10 +130,10 @@ export default function StaffIndividualCustomersPage() {
       customer.branchId === staffBranch.id ||
       (customer.assignedBulkMeterId && branchBulkMeterIds.includes(customer.assignedBulkMeterId))
     );
-  }, [staffBranchName, allBranches, allCustomers]);
+  }, [isLoading, error, staffBranchName, allBranches, allCustomers]);
 
   const branchBulkMetersList = React.useMemo(() => {
-     if (!staffBranchName || allBranches.length === 0) return [];
+    if (isLoading || error || !staffBranchName) return [];
      
     const staffBranch = allBranches.find(b => b.name === staffBranchName);
     if (!staffBranch) return [];
@@ -137,7 +141,7 @@ export default function StaffIndividualCustomersPage() {
     return getBulkMeters()
       .filter(bm => bm.branchId === staffBranch.id)
       .map(bm => ({ id: bm.id, name: bm.name }));
-  }, [staffBranchName, allBranches]);
+  }, [isLoading, error, staffBranchName, allBranches]);
   
   const searchedCustomers = React.useMemo(() => {
     if (!searchTerm) {

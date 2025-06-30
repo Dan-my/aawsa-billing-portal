@@ -82,23 +82,28 @@ export default function StaffIndividualCustomersPage() {
     const currentBulkMeters = getBulkMeters();
     const currentBranches = getBranches();
 
-    const simpleBranchName = staffBranchName.replace(/ Branch$/i, "").toLowerCase().trim();
-    const branch = currentBranches.find(b => b.name.toLowerCase().includes(simpleBranchName));
+    const staffBranchObject = currentBranches.find(b => b.name === staffBranchName);
 
-    const localBranchBulkMeters = currentBulkMeters.filter(bm => (branch && bm.branchId === branch.id) || (bm.location?.toLowerCase() || "").includes(simpleBranchName));
-    const branchBulkMeterIds = localBranchBulkMeters.map(bm => bm.id);
+    if (!staffBranchObject) {
+      setBranchFilteredCustomers([]);
+    } else {
+      const staffBranchId = staffBranchObject.id;
+      
+      const localBranchBulkMeters = currentBulkMeters.filter(bm => bm.branchId === staffBranchId);
+      const branchBulkMeterIds = localBranchBulkMeters.map(bm => bm.id);
 
-    const localFilteredCustomers = currentCustomers.filter(customer => 
-      (branch && customer.branchId && customer.branchId === branch.id) ||
-      (customer.assignedBulkMeterId && branchBulkMeterIds.includes(customer.assignedBulkMeterId)) ||
-      (customer.location?.toLowerCase() || "").includes(simpleBranchName)
-    );
+      const localFilteredCustomers = currentCustomers.filter(customer => 
+        customer.branchId === staffBranchId ||
+        (customer.assignedBulkMeterId && branchBulkMeterIds.includes(customer.assignedBulkMeterId))
+      );
+      
+      setBranchFilteredCustomers(localFilteredCustomers);
+      setBranchBulkMetersList(localBranchBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
+    }
     
     setAllCustomers(currentCustomers);
     setAllBulkMeters(currentBulkMeters);
     setAllBranches(currentBranches);
-    setBranchBulkMetersList(localBranchBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
-    setBranchFilteredCustomers(localFilteredCustomers);
   }, [staffBranchName]);
 
 
@@ -236,7 +241,7 @@ export default function StaffIndividualCustomersPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold">Individual Customers ({staffBranchName || "All Branches"})</h1>
+        <h1 className="text-3xl font-bold">Individual Customers {staffBranchName ? `(${staffBranchName})` : ''}</h1>
         <div className="flex gap-2 w-full md:w-auto">
            <div className="relative flex-grow md:flex-grow-0">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />

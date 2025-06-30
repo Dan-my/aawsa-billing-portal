@@ -70,17 +70,24 @@ export default function StaffBulkMetersPage() {
     }
     const currentMeters = getBulkMeters();
     const currentBranches = getBranches();
-    const simpleBranchName = staffBranchName.replace(/ Branch$/i, "").toLowerCase().trim();
-    const branch = currentBranches.find(b => b.name.toLowerCase().includes(simpleBranchName));
     
-    const filteredMeters = currentMeters.filter(bm => 
-      (branch && bm.branchId === branch.id) ||
-      (bm.location?.toLowerCase() || "").includes(simpleBranchName)
-    );
+    // Find the branch object for the logged-in staff member
+    const staffBranchObject = currentBranches.find(b => b.name === staffBranchName);
+
+    if (!staffBranchObject) {
+      // If the staff's branch name doesn't match any in the DB, show nothing.
+      setBranchFilteredBulkMeters([]);
+    } else {
+      const staffBranchId = staffBranchObject.id;
+      // Filter meters strictly by branchId
+      const filteredMeters = currentMeters.filter(bm => bm.branchId === staffBranchId);
+      setBranchFilteredBulkMeters(filteredMeters);
+    }
     
+    // Set all meters and branches for other parts of the component (e.g., search)
     setAllBulkMeters(currentMeters);
     setAllBranches(currentBranches);
-    setBranchFilteredBulkMeters(filteredMeters);
+
   }, [staffBranchName]);
 
   // Effect to fetch data and subscribe. Runs when staffBranchName is available.
@@ -179,7 +186,7 @@ export default function StaffBulkMetersPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold">Bulk Meters ({staffBranchName || "All Branches"})</h1>
+        <h1 className="text-3xl font-bold">Bulk Meters {staffBranchName ? `(${staffBranchName})` : ''}</h1>
         <div className="flex gap-2 w-full md:w-auto">
            <div className="relative flex-grow md:flex-grow-0">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />

@@ -48,65 +48,73 @@ export default function StaffBulkMetersPage() {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
-  const filterBulkMetersByBranch = React.useCallback((meters: BulkMeter[], branchName?: string, branches?: Branch[]) => {
-    if (!branchName || !branches) {
-      return []; 
-    }
-    const simpleBranchName = branchName.replace(/ Branch$/i, "").toLowerCase().trim();
-    const branch = branches.find(b => b.name.toLowerCase().includes(simpleBranchName));
-    
-    return meters.filter(bm =>
-      bm.branchId === branch?.id ||
-      (bm.location?.toLowerCase() || "").includes(simpleBranchName)
-    );
-  }, []);
-
+  // Effect to get user info from localStorage. Runs once.
   React.useEffect(() => {
-    let isMounted = true;
     const storedUser = localStorage.getItem("user");
-    let localBranchName: string | undefined;
-
-    if (storedUser && isMounted) {
+    if (storedUser) {
       try {
         const parsedUser: User = JSON.parse(storedUser);
         if (parsedUser.role === "staff" && parsedUser.branchName) {
           setStaffBranchName(parsedUser.branchName);
-          localBranchName = parsedUser.branchName;
+        } else {
+            setIsLoading(false); // No branch, stop loading
         }
       } catch (e) {
         console.error("Failed to parse user from localStorage", e);
+        setIsLoading(false);
       }
+    } else {
+        setIsLoading(false); // No user, stop loading
+    }
+  }, []);
+
+  // Effect to fetch data and subscribe. Runs when staffBranchName is available.
+  React.useEffect(() => {
+    // If branch name is not yet determined, don't fetch data. The UI will show a loading/error state.
+    if (staffBranchName === undefined) {
+      return;
     }
 
+    let isMounted = true;
     setIsLoading(true);
 
-    const handleDataUpdate = () => {
+    const filterAndSetData = () => {
       if (!isMounted) return;
       const currentMeters = getBulkMeters();
       const currentBranches = getBranches();
+      const simpleBranchName = staffBranchName.replace(/ Branch$/i, "").toLowerCase().trim();
+      const branch = currentBranches.find(b => b.name.toLowerCase().includes(simpleBranchName));
+      
+      const filteredMeters = currentMeters.filter(bm => 
+        bm.branchId === branch?.id ||
+        (bm.location?.toLowerCase() || "").includes(simpleBranchName)
+      );
+      
       setAllBulkMeters(currentMeters);
       setAllBranches(currentBranches);
-      setBranchFilteredBulkMeters(filterBulkMetersByBranch(currentMeters, localBranchName, currentBranches));
+      setBranchFilteredBulkMeters(filteredMeters);
     };
-    
+
     Promise.all([
-        initializeBulkMeters(),
-        initializeBranches()
+      initializeBulkMeters(),
+      initializeBranches()
     ]).then(() => {
-      if (!isMounted) return;
-      handleDataUpdate();
-      setIsLoading(false);
+      if (isMounted) {
+        filterAndSetData();
+        setIsLoading(false);
+      }
     });
-    
-    const unsubscribeBM = subscribeToBulkMeters(handleDataUpdate);
-    const unsubscribeBranches = subscribeToBranches(handleDataUpdate);
+
+    const unsubscribeBM = subscribeToBulkMeters(filterAndSetData);
+    const unsubscribeBranches = subscribeToBranches(filterAndSetData);
 
     return () => {
       isMounted = false;
       unsubscribeBM();
       unsubscribeBranches();
     };
-  }, [filterBulkMetersByBranch]);
+  }, [staffBranchName]);
+
 
   const handleAddBulkMeter = () => {
     setSelectedBulkMeter(null);
@@ -199,7 +207,7 @@ export default function StaffBulkMetersPage() {
              <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
                 No bulk meters found for branch: {staffBranchName}. Click "Add New Bulk Meter" to get started. <Gauge className="inline-block ml-2 h-5 w-5" />
              </div>
-          ) : branchFilteredBulkMeters.length === 0 && !staffBranchName ? (
+          ) : !staffBranchName && !isLoading ? (
             <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
                 Could not determine your branch. Please contact an administrator.
             </div>

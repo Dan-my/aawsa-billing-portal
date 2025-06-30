@@ -79,37 +79,34 @@ export default function StaffBulkMetersPage() {
     }
 
     setIsLoading(true);
-    Promise.all([
-        initializeBulkMeters(),
-        initializeBranches()
-    ]).then(() => {
+
+    const handleDataUpdate = () => {
       if (!isMounted) return;
       const currentMeters = getBulkMeters();
       const currentBranches = getBranches();
       setAllBulkMeters(currentMeters);
       setAllBranches(currentBranches);
       setBranchFilteredBulkMeters(filterBulkMetersByBranch(currentMeters, localBranchName, currentBranches));
+    };
+    
+    Promise.all([
+        initializeBulkMeters(),
+        initializeBranches()
+    ]).then(() => {
+      if (!isMounted) return;
+      handleDataUpdate();
       setIsLoading(false);
     });
     
-    const unsubscribeBM = subscribeToBulkMeters((updatedBulkMeters) => {
-      if (!isMounted) return;
-       setAllBulkMeters(updatedBulkMeters);
-       setBranchFilteredBulkMeters(filterBulkMetersByBranch(updatedBulkMeters, localBranchName, allBranches));
-    });
-
-    const unsubscribeBranches = subscribeToBranches((updatedBranches) => {
-        if(!isMounted) return;
-        setAllBranches(updatedBranches);
-        setBranchFilteredBulkMeters(filterBulkMetersByBranch(allBulkMeters, localBranchName, updatedBranches));
-    });
+    const unsubscribeBM = subscribeToBulkMeters(handleDataUpdate);
+    const unsubscribeBranches = subscribeToBranches(handleDataUpdate);
 
     return () => {
       isMounted = false;
       unsubscribeBM();
       unsubscribeBranches();
     };
-  }, [filterBulkMetersByBranch, allBulkMeters, allBranches]);
+  }, [filterBulkMetersByBranch]);
 
   const handleAddBulkMeter = () => {
     setSelectedBulkMeter(null);

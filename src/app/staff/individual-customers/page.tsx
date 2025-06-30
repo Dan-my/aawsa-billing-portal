@@ -41,34 +41,39 @@ export default function StaffIndividualCustomersPage() {
   const [allBulkMeters, setAllBulkMeters] = React.useState<{id: string, name: string}[]>([]);
   const [allBranches, setAllBranches] = React.useState<Branch[]>([]);
   
-  const [isLoading, setIsLoading] = React.useState(true);
+  const [isDataLoading, setIsDataLoading] = React.useState(true);
+  const [isAuthLoading, setIsAuthLoading] = React.useState(true);
+  const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
+
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [selectedCustomer, setSelectedCustomer] = React.useState<IndividualCustomer | null>(null);
   const [customerToDelete, setCustomerToDelete] = React.useState<IndividualCustomer | null>(null);
-  const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
-
+  
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
+  // Effect for checking user auth state from localStorage
   React.useEffect(() => {
-    let isMounted = true;
-    
     const user = localStorage.getItem("user");
     if (user) {
       try {
         const parsedUser: User = JSON.parse(user);
         if (parsedUser.role === 'staff' && parsedUser.branchName) {
           setStaffBranchName(parsedUser.branchName);
-        } else {
-          setStaffBranchName(null);
         }
       } catch (e) {
         console.error("Failed to parse user from localStorage", e);
-        setStaffBranchName(null);
       }
     }
+    setIsAuthLoading(false);
+  }, []);
+
+  // Effect for fetching and subscribing to data
+  React.useEffect(() => {
+    let isMounted = true;
+    setIsDataLoading(true);
 
     const unSubCustomers = subscribeToCustomers((data) => {
       if (isMounted) setAllCustomers(data);
@@ -86,7 +91,7 @@ export default function StaffIndividualCustomersPage() {
       initializeBranches()
     ]).then(() => {
       if (isMounted) {
-        setIsLoading(false);
+        setIsDataLoading(false);
       }
     });
 
@@ -220,6 +225,8 @@ export default function StaffIndividualCustomersPage() {
     setSelectedCustomer(null);
   };
   
+  const isLoading = isAuthLoading || isDataLoading;
+
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -266,10 +273,10 @@ export default function StaffIndividualCustomersPage() {
               className="pl-8 w-full md:w-[250px]"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              disabled={!staffBranchName}
+              disabled={isLoading || !staffBranchName}
             />
           </div>
-          <Button onClick={handleAddCustomer} disabled={!staffBranchName}>
+          <Button onClick={handleAddCustomer} disabled={isLoading || !staffBranchName}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Customer
           </Button>
         </div>
@@ -283,7 +290,7 @@ export default function StaffIndividualCustomersPage() {
         <CardContent>
           {renderContent()}
         </CardContent>
-        {searchedCustomers.length > 0 && (
+        {searchedCustomers.length > 0 && !isLoading && (
           <TablePagination
             count={searchedCustomers.length}
             page={page}

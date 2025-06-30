@@ -35,34 +35,40 @@ export default function StaffBulkMetersPage() {
   const { toast } = useToast();
   const [allBulkMeters, setAllBulkMeters] = React.useState<BulkMeter[]>([]);
   const [allBranches, setAllBranches] = React.useState<Branch[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
+  
+  const [isDataLoading, setIsDataLoading] = React.useState(true);
+  const [isAuthLoading, setIsAuthLoading] = React.useState(true);
+  const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
+
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [selectedBulkMeter, setSelectedBulkMeter] = React.useState<BulkMeter | null>(null);
   const [bulkMeterToDelete, setBulkMeterToDelete] = React.useState<BulkMeter | null>(null);
-  const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
 
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
+  // Effect for checking user auth state from localStorage
   React.useEffect(() => {
-    let isMounted = true;
-    
     const user = localStorage.getItem("user");
     if (user) {
       try {
         const parsedUser: User = JSON.parse(user);
         if (parsedUser.role === 'staff' && parsedUser.branchName) {
           setStaffBranchName(parsedUser.branchName);
-        } else {
-          setStaffBranchName(null); 
         }
       } catch (e) {
         console.error("Failed to parse user from localStorage", e);
-        setStaffBranchName(null);
       }
     }
+    setIsAuthLoading(false); // Mark auth check as complete
+  }, []);
+
+  // Effect for fetching and subscribing to data
+  React.useEffect(() => {
+    let isMounted = true;
+    setIsDataLoading(true);
 
     const unSubBranches = subscribeToBranches((data) => {
       if (isMounted) setAllBranches(data);
@@ -76,7 +82,7 @@ export default function StaffBulkMetersPage() {
       initializeBulkMeters()
     ]).then(() => {
       if (isMounted) {
-        setIsLoading(false);
+        setIsDataLoading(false);
       }
     });
 
@@ -158,6 +164,8 @@ export default function StaffBulkMetersPage() {
     setSelectedBulkMeter(null);
   };
   
+  const isLoading = isAuthLoading || isDataLoading;
+
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -204,10 +212,10 @@ export default function StaffBulkMetersPage() {
               className="pl-8 w-full md:w-[250px]"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              disabled={!staffBranchName}
+              disabled={isLoading || !staffBranchName}
             />
           </div>
-          <Button onClick={handleAddBulkMeter} disabled={!staffBranchName}>
+          <Button onClick={handleAddBulkMeter} disabled={isLoading || !staffBranchName}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Bulk Meter
           </Button>
         </div>
@@ -221,7 +229,7 @@ export default function StaffBulkMetersPage() {
         <CardContent>
           {renderContent()}
         </CardContent>
-         {searchedBulkMeters.length > 0 && (
+         {searchedBulkMeters.length > 0 && !isLoading && (
           <TablePagination
             count={searchedBulkMeters.length}
             page={page}

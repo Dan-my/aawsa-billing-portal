@@ -43,7 +43,7 @@ export default function StaffBulkMetersPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [selectedBulkMeter, setSelectedBulkMeter] = React.useState<BulkMeter | null>(null);
   const [bulkMeterToDelete, setBulkMeterToDelete] = React.useState<BulkMeter | null>(null);
-  const [staffBranchName, setStaffBranchName] = React.useState<string | undefined>(undefined);
+  const [staffBranchName, setStaffBranchName] = React.useState<string | undefined | null>(undefined);
 
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
@@ -56,75 +56,78 @@ export default function StaffBulkMetersPage() {
         const parsedUser: User = JSON.parse(storedUser);
         if (parsedUser.role === "staff" && parsedUser.branchName) {
           setStaffBranchName(parsedUser.branchName);
+        } else {
+          setStaffBranchName(null); // Explicitly set to null if no branch
         }
       } catch (e) {
         console.error("Failed to parse user from localStorage", e);
+        setStaffBranchName(null);
       }
+    } else {
+      setStaffBranchName(null);
     }
   }, []);
-
-  const filterAndSetData = React.useCallback(() => {
-    if (!staffBranchName) {
-      setBranchFilteredBulkMeters([]);
-      return;
-    }
-    const currentMeters = getBulkMeters();
-    const currentBranches = getBranches();
-    
-    // Find the branch object for the logged-in staff member
-    const staffBranchObject = currentBranches.find(b => b.name === staffBranchName);
-
-    if (!staffBranchObject) {
-      // If the staff's branch name doesn't match any in the DB, show nothing.
-      setBranchFilteredBulkMeters([]);
-    } else {
-      const staffBranchId = staffBranchObject.id;
-      // Filter meters strictly by branchId
-      const filteredMeters = currentMeters.filter(bm => bm.branchId === staffBranchId);
-      setBranchFilteredBulkMeters(filteredMeters);
-    }
-    
-    // Set all meters and branches for other parts of the component (e.g., search)
-    setAllBulkMeters(currentMeters);
-    setAllBranches(currentBranches);
-
-  }, [staffBranchName]);
-
-  // Effect to fetch data and subscribe. Runs when staffBranchName is available.
+  
+  // Effect for data loading and subscriptions, depends on staffBranchName
   React.useEffect(() => {
-    let isMounted = true;
-    
+    // Don't do anything until branch name is determined (it's either a string or null)
     if (staffBranchName === undefined) {
-      setIsLoading(true); // Still loading if branch name isn't determined
+      setIsLoading(true);
       return;
     }
     
-    if (staffBranchName === null) { // User has no branch
-        setIsLoading(false);
-        return;
+    // If user has no valid branch, stop loading and show empty state.
+    if (!staffBranchName) {
+      setIsLoading(false);
+      setBranchFilteredBulkMeters([]);
+      setAllBranches([]);
+      setAllBulkMeters([]);
+      return;
     }
 
+    let isMounted = true;
     setIsLoading(true);
 
+    const handleDataUpdate = () => {
+      if (!isMounted || !staffBranchName) return;
+
+      const currentBranches = getBranches();
+      const currentMeters = getBulkMeters();
+      const staffBranchObject = currentBranches.find(b => b.name === staffBranchName);
+
+      if (staffBranchObject) {
+        const staffBranchId = staffBranchObject.id;
+        const filteredMeters = currentMeters.filter(bm => bm.branchId === staffBranchId);
+        setBranchFilteredBulkMeters(filteredMeters);
+      } else {
+        setBranchFilteredBulkMeters([]);
+      }
+      
+      setAllBranches(currentBranches);
+      setAllBulkMeters(currentMeters);
+    };
+
+    // Initial load
     Promise.all([
+      initializeBranches(),
       initializeBulkMeters(),
-      initializeBranches()
     ]).then(() => {
       if (isMounted) {
-        filterAndSetData();
+        handleDataUpdate();
         setIsLoading(false);
       }
     });
 
-    const unsubscribeBM = subscribeToBulkMeters(filterAndSetData);
-    const unsubscribeBranches = subscribeToBranches(filterAndSetData);
+    // Subscriptions
+    const unsubBranches = subscribeToBranches(handleDataUpdate);
+    const unsubBM = subscribeToBulkMeters(handleDataUpdate);
 
     return () => {
       isMounted = false;
-      unsubscribeBM();
-      unsubscribeBranches();
+      unsubBranches();
+      unsubBM();
     };
-  }, [staffBranchName, filterAndSetData]);
+  }, [staffBranchName]);
 
 
   const handleAddBulkMeter = () => {

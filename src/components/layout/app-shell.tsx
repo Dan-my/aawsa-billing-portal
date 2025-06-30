@@ -36,6 +36,7 @@ interface UserProfile {
   id: string; 
   email: string;
   role: 'Admin' | 'Staff';
+  branchId: string;
   branchName?: string;
   name?: string;
 }

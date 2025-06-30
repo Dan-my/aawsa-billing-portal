@@ -17,12 +17,17 @@ import {
   updateStaffMember as updateStaffMemberInStore,
   deleteStaffMember as deleteStaffMemberFromStore,
   subscribeToStaffMembers,
-  initializeStaffMembers
+  initializeStaffMembers,
+  getBranches,
+  initializeBranches,
+  subscribeToBranches
 } from "@/lib/data-store";
+import type { Branch } from "../branches/branch-types";
 
 export default function StaffManagementPage() {
   const { toast } = useToast();
   const [staffMembers, setStaffMembers] = React.useState<StaffMember[]>([]);
+  const [branches, setBranches] = React.useState<Branch[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
@@ -32,16 +37,26 @@ export default function StaffManagementPage() {
 
   React.useEffect(() => {
     setIsLoading(true);
-    initializeStaffMembers().then(() => {
+    Promise.all([
+      initializeStaffMembers(),
+      initializeBranches()
+    ]).then(() => {
       setStaffMembers(getStaffMembers());
+      setBranches(getBranches());
       setIsLoading(false);
     });
 
-    const unsubscribe = subscribeToStaffMembers((updatedStaff) => {
+    const unsubscribeStaff = subscribeToStaffMembers((updatedStaff) => {
       setStaffMembers(updatedStaff);
-      setIsLoading(false); // Also set loading to false on updates
     });
-    return () => unsubscribe();
+    const unsubscribeBranches = subscribeToBranches((updatedBranches) => {
+      setBranches(updatedBranches);
+    });
+
+    return () => {
+      unsubscribeStaff();
+      unsubscribeBranches();
+    };
   }, []);
 
 
@@ -74,15 +89,25 @@ export default function StaffManagementPage() {
   };
 
   const handleSubmitStaff = async (data: StaffFormValues) => {
+    const staffDataPayload: Omit<StaffMember, 'id'> = {
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        role: data.role,
+        branchId: data.branchId,
+        status: data.status,
+        phone: data.phone,
+    };
+
     if (selectedStaff) {
-      const result = await updateStaffMemberInStore(selectedStaff.id, data);
+      const result = await updateStaffMemberInStore(selectedStaff.id, staffDataPayload);
       if (result.success) {
         toast({ title: "Staff Updated", description: `${data.name} has been updated.` });
       } else {
         toast({ variant: "destructive", title: "Update Failed", description: result.message });
       }
     } else {
-      const result = await addStaffMemberToStore(data);
+      const result = await addStaffMemberToStore(staffDataPayload);
       if (result.success) {
         toast({ title: "Staff Added", description: `${data.name} has been added.` });
       } else {
@@ -92,11 +117,15 @@ export default function StaffManagementPage() {
     setIsFormOpen(false);
     setSelectedStaff(null);
   };
+  
+  const getBranchNameFromId = (branchId: string) => {
+    return branches.find(b => b.id === branchId)?.name || "";
+  };
 
   const filteredStaff = staffMembers.filter(staff =>
     staff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     staff.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    staff.branch.toLowerCase().includes(searchTerm.toLowerCase())
+    getBranchNameFromId(staff.branchId).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -137,6 +166,7 @@ export default function StaffManagementPage() {
           ) : (
             <StaffTable
               data={filteredStaff}
+              branches={branches}
               onEdit={handleEditStaff}
               onDelete={handleDeleteStaff}
             />

@@ -25,7 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { LogIn } from "lucide-react";
-import { getStaffMembers, initializeStaffMembers } from "@/lib/data-store";
+import { getStaffMembers, initializeStaffMembers, getBranches, initializeBranches } from "@/lib/data-store";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -48,15 +48,14 @@ export function AuthForm() {
   });
   
   React.useEffect(() => {
-    // Pre-load staff members on component mount to ensure they are available for login check
+    // Pre-load data on component mount
     initializeStaffMembers();
+    initializeBranches();
   }, []);
 
   const onSubmit = (values: LoginFormValues) => {
     setIsLoading(true);
     
-    // This is a simplified, non-production-ready authentication check.
-    // It directly queries the client-side data store.
     const staffList = getStaffMembers();
     const user = staffList.find(staff => staff.email.toLowerCase() === values.email.toLowerCase());
 
@@ -76,17 +75,19 @@ export function AuthForm() {
         description: "Welcome back! Redirecting...",
       });
       
-      // Store user info in localStorage for session persistence
+      const allBranches = getBranches();
+      const userBranch = allBranches.find(b => b.id === user.branchId);
+
       const sessionUser = {
         id: user.id,
         email: user.email,
         role: user.role,
-        branchName: user.branch,
+        branchId: user.branchId,
+        branchName: userBranch?.name || "Unknown Branch",
         name: user.name,
       };
       localStorage.setItem("user", JSON.stringify(sessionUser));
 
-      // Set session expiration for idle timeout
       const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes
       localStorage.setItem('session_expires_at', String(Date.now() + INACTIVITY_TIMEOUT));
 

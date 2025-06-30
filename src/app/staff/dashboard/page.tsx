@@ -16,6 +16,7 @@ import type { Branch } from "@/app/admin/branches/branch-types";
 interface User {
   email: string;
   role: "admin" | "staff" | "Admin" | "Staff";
+  branchId?: string;
   branchName?: string;
 }
 
@@ -48,14 +49,9 @@ export default function StaffDashboardPage() {
   const updateBranchData = React.useCallback((
     allBulkMeters: BulkMeter[],
     allCustomers: IndividualCustomer[],
-    allBranches: Branch[],
-    currentStaffBranch: string | undefined
+    staffBranchId: string | undefined
   ) => {
-    if (currentStaffBranch) {
-      const staffBranch = allBranches.find(b => b.name.trim().toLowerCase() === currentStaffBranch.trim().toLowerCase());
-
-      if (staffBranch) {
-        const staffBranchId = staffBranch.id;
+    if (staffBranchId) {
         const branchFilteredBulkMeters = allBulkMeters.filter(bm => bm.branchId === staffBranchId);
         setTotalBulkMetersInBranch(branchFilteredBulkMeters.length);
 
@@ -65,11 +61,6 @@ export default function StaffDashboardPage() {
           (c.assignedBulkMeterId && branchBulkMeterIds.includes(c.assignedBulkMeterId))
         );
         setTotalCustomersInBranch(branchFilteredCustomers.length);
-      } else {
-        // Staff's branch name doesn't exist in DB, show 0
-        setTotalBulkMetersInBranch(0);
-        setTotalCustomersInBranch(0);
-      }
     } else {
       setTotalBulkMetersInBranch(0);
       setTotalCustomersInBranch(0);
@@ -79,7 +70,7 @@ export default function StaffDashboardPage() {
 
   React.useEffect(() => {
     let isMounted = true;
-    let localStaffBranch: string | undefined;
+    let localStaffBranchId: string | undefined;
     
     setIsLoading(true);
 
@@ -87,9 +78,11 @@ export default function StaffDashboardPage() {
     if (storedUser) {
       try {
         const parsedUser: User = JSON.parse(storedUser);
-        if (parsedUser.role.toLowerCase() === "staff" && parsedUser.branchName) {
-          if (isMounted) setBranchNameForDisplay(parsedUser.branchName);
-          localStaffBranch = parsedUser.branchName;
+        if (parsedUser.role.toLowerCase() === "staff" && parsedUser.branchId) {
+          if (isMounted) {
+            setBranchNameForDisplay(parsedUser.branchName || "Your Branch");
+            localStaffBranchId = parsedUser.branchId;
+          }
         }
       } catch (e) {
         console.error("Failed to parse user from localStorage", e);
@@ -102,7 +95,7 @@ export default function StaffDashboardPage() {
       initializeBranches(),
     ]).then(() => {
       if (!isMounted) return;
-      updateBranchData(getBulkMeters(), getCustomers(), getBranches(), localStaffBranch);
+      updateBranchData(getBulkMeters(), getCustomers(), localStaffBranchId);
       setIsLoading(false);
     }).catch(error => {
       if (!isMounted) return;
@@ -112,7 +105,7 @@ export default function StaffDashboardPage() {
 
     const handleStoresUpdate = () => {
         if (isMounted) {
-            updateBranchData(getBulkMeters(), getCustomers(), getBranches(), localStaffBranch);
+            updateBranchData(getBulkMeters(), getCustomers(), localStaffBranchId);
         }
     };
 

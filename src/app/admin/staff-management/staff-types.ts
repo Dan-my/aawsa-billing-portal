@@ -8,7 +8,8 @@ export interface StaffMember {
   email: string; // This will be the login identifier, e.g., kality@aawsa.com
   password?: string; // Password for the staff member
   role: 'Admin' | 'Staff';
-  branch: string; // Branch name, e.g., "Kality Branch"
+  branchId: string; // Changed from branch: string
+  branchName?: string; // Optional: for display purposes, can be looked up
   status: StaffStatus;
   phone?: string; // Optional
   hireDate?: string; // Optional, ISO date string

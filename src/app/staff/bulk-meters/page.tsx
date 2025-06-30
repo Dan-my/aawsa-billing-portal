@@ -28,13 +28,16 @@ import { TablePagination } from "@/components/ui/table-pagination";
 interface User {
   email: string;
   role: "admin" | "staff" | "Admin" | "Staff";
+  branchId?: string;
   branchName?: string;
 }
 
 export default function StaffBulkMetersPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(true);
-  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+  const [authStatus, setAuthStatus] = React.useState<'loading' | 'unauthorized' | 'authorized'>('loading');
+  
+  const [staffBranchId, setStaffBranchId] = React.useState<string | null>(null);
   const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
   
   const [allBulkMeters, setAllBulkMeters] = React.useState<BulkMeter[]>([]);
@@ -53,21 +56,26 @@ export default function StaffBulkMetersPage() {
     const userString = localStorage.getItem("user");
     if (userString) {
       const parsedUser: User = JSON.parse(userString);
-      if (parsedUser.role.toLowerCase() === 'staff' && parsedUser.branchName) {
-        setStaffBranchName(parsedUser.branchName);
-        setIsAuthenticated(true);
+      if (parsedUser.role.toLowerCase() === 'staff' && parsedUser.branchId) {
+        setStaffBranchId(parsedUser.branchId);
+        setStaffBranchName(parsedUser.branchName || 'Your Branch');
+        setAuthStatus('authorized');
       } else {
-        setIsLoading(false);
+        setAuthStatus('unauthorized');
       }
     } else {
-      setIsLoading(false);
+      setAuthStatus('unauthorized');
     }
   }, []);
   
   React.useEffect(() => {
-    if (!isAuthenticated) return;
+    if (authStatus !== 'authorized') {
+      setIsLoading(false);
+      return;
+    }
 
     let isMounted = true;
+    setIsLoading(true);
     const initializeData = async () => {
       try {
         await Promise.all([
@@ -95,22 +103,13 @@ export default function StaffBulkMetersPage() {
       unSubBranches();
       unSubBulkMeters();
     };
-  }, [isAuthenticated]);
+  }, [authStatus]);
 
 
   const branchFilteredBulkMeters = React.useMemo(() => {
-    if (isLoading || !staffBranchName) return [];
-    
-    const staffBranch = allBranches.find(
-      (b) => b.name.trim().toLowerCase() === staffBranchName.trim().toLowerCase()
-    );
-
-    if (!staffBranch) {
-      return [];
-    }
-    
-    return allBulkMeters.filter(bm => bm.branchId === staffBranch.id);
-  }, [isLoading, staffBranchName, allBranches, allBulkMeters]);
+    if (authStatus !== 'authorized' || !staffBranchId) return [];
+    return allBulkMeters.filter(bm => bm.branchId === staffBranchId);
+  }, [authStatus, staffBranchId, allBulkMeters]);
 
   const searchedBulkMeters = React.useMemo(() => {
      if (!searchTerm) {
@@ -154,12 +153,14 @@ export default function StaffBulkMetersPage() {
   };
 
   const handleSubmitBulkMeter = async (data: BulkMeterFormValues) => {
+    const dataWithBranchId = { ...data, branchId: staffBranchId || data.branchId };
+    
     if (selectedBulkMeter) {
-      await updateBulkMeterInStore(selectedBulkMeter.id, data);
+      await updateBulkMeterInStore(selectedBulkMeter.id, dataWithBranchId);
       toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
     } else {
       const newBulkMeterData: Omit<BulkMeter, 'id'> = {
-        ...data,
+        ...dataWithBranchId,
         status: data.status || "Active", 
         paymentStatus: data.paymentStatus || "Unpaid",
         outStandingbill: 0,
@@ -172,14 +173,14 @@ export default function StaffBulkMetersPage() {
   };
   
   const renderContent = () => {
-    if (isLoading) {
+    if (isLoading || authStatus === 'loading') {
       return (
         <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
           Loading...
         </div>
       );
     }
-    if (!staffBranchName) {
+    if (authStatus === 'unauthorized') {
       return (
         <div className="mt-4 p-4 border rounded-md bg-destructive/10 text-center text-destructive">
           Your user profile is not configured for a staff role or branch.
@@ -217,10 +218,10 @@ export default function StaffBulkMetersPage() {
               className="pl-8 w-full md:w-[250px]"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              disabled={isLoading || !staffBranchName}
+              disabled={authStatus !== 'authorized'}
             />
           </div>
-          <Button onClick={handleAddBulkMeter} disabled={isLoading || !staffBranchName}>
+          <Button onClick={handleAddBulkMeter} disabled={authStatus !== 'authorized'}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Bulk Meter
           </Button>
         </div>
@@ -234,7 +235,7 @@ export default function StaffBulkMetersPage() {
         <CardContent>
           {renderContent()}
         </CardContent>
-         {searchedBulkMeters.length > 0 && !isLoading && staffBranchName && (
+         {searchedBulkMeters.length > 0 && authStatus === 'authorized' && (
           <TablePagination
             count={searchedBulkMeters.length}
             page={page}

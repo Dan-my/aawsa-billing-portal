@@ -10,7 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from "@/hooks/use-toast";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import { BulkMeterFormDialog, type BulkMeterFormValues } from "@/app/admin/bulk-meters/bulk-meter-form-dialog"; 
-import { BulkMeterTable } from "@/app/admin/bulk-meters/bulk-meter-table";
+import { BulkMeterTable } from "./bulk-meter-table"; 
 import { 
   getBulkMeters, 
   addBulkMeter as addBulkMeterToStore, 

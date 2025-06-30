@@ -38,6 +38,7 @@ interface User {
 export default function StaffIndividualCustomersPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(true);
+  const [authError, setAuthError] = React.useState<string | null>(null);
   const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
 
   const [allCustomers, setAllCustomers] = React.useState<IndividualCustomer[]>([]);
@@ -56,18 +57,31 @@ export default function StaffIndividualCustomersPage() {
   React.useEffect(() => {
     let isMounted = true;
 
-    async function initialize() {
+    async function loadAndSubscribe() {
       // 1. Auth Check
-      const userString = localStorage.getItem("user");
-      if (userString) {
-        try {
+      let localBranchName: string | null = null;
+      try {
+        const userString = localStorage.getItem("user");
+        if (userString) {
           const parsedUser: User = JSON.parse(userString);
-          if (parsedUser.role === 'staff' && parsedUser.branchName && isMounted) {
-            setStaffBranchName(parsedUser.branchName);
+          if (parsedUser.role === 'staff' && parsedUser.branchName) {
+            localBranchName = parsedUser.branchName;
           }
-        } catch (e) {
-          console.error("Failed to parse user from localStorage", e);
         }
+      } catch (e) {
+        console.error("Failed to parse user from localStorage", e);
+      }
+      
+      if (!localBranchName) {
+        if (isMounted) {
+          setAuthError("Could not determine your branch. Please contact an administrator.");
+          setIsLoading(false);
+        }
+        return; // Stop execution
+      }
+
+      if (isMounted) {
+        setStaffBranchName(localBranchName);
       }
 
       // 2. Initial Data Load
@@ -79,39 +93,47 @@ export default function StaffIndividualCustomersPage() {
 
       if (!isMounted) return;
 
-      // 3. Initial state hydration from store
-      setAllCustomers(getCustomers());
-      setAllBulkMeters(getBulkMeters().map(bm => ({ id: bm.id, name: bm.name })));
-      setAllBranches(getBranches());
+      // 3. Set data to state after loading
+      if(isMounted) {
+        setAllCustomers(getCustomers());
+        setAllBulkMeters(getBulkMeters().map(bm => ({ id: bm.id, name: bm.name })));
+        setAllBranches(getBranches());
+      }
       
-      // 4. Setup subscriptions to live updates
+      // 4. Finalize loading
+      if(isMounted) {
+        setIsLoading(false);
+      }
+
+      // 5. Setup subscriptions
       const unSubCustomers = subscribeToCustomers(setAllCustomers);
       const unSubBulkMeters = subscribeToBulkMeters((bms) => setAllBulkMeters(bms.map(bm => ({ id: bm.id, name: bm.name }))));
       const unSubBranches = subscribeToBranches(setAllBranches);
 
-      // 5. Finalize loading
-      setIsLoading(false);
-
-      // 6. Cleanup
       return () => {
-        isMounted = false;
         unSubCustomers();
         unSubBulkMeters();
         unSubBranches();
       };
     }
 
-    const cleanupPromise = initialize();
+    let cleanup: (() => void) | undefined;
+    loadAndSubscribe().then(cleanupFn => {
+        if (cleanupFn) {
+            cleanup = cleanupFn;
+        }
+    });
     
     return () => {
-      cleanupPromise.then(cleanup => {
-        if (cleanup) cleanup();
-      });
+      isMounted = false;
+      if (cleanup) {
+        cleanup();
+      }
     };
   }, []);
 
   const branchFilteredCustomers = React.useMemo(() => {
-    if (isLoading || !staffBranchName) {
+    if (isLoading || authError || !staffBranchName) {
       return [];
     }
     const staffBranch = allBranches.find(b => b.name === staffBranchName);
@@ -125,7 +147,7 @@ export default function StaffIndividualCustomersPage() {
       customer.branchId === staffBranch.id ||
       (customer.assignedBulkMeterId && branchMeterIds.includes(customer.assignedBulkMeterId))
     );
-  }, [isLoading, staffBranchName, allBranches, allCustomers]);
+  }, [isLoading, authError, staffBranchName, allBranches, allCustomers]);
 
   const branchBulkMetersList = React.useMemo(() => {
      if (!staffBranchName || allBranches.length === 0) {
@@ -147,12 +169,11 @@ export default function StaffIndividualCustomersPage() {
     return branchFilteredCustomers.filter(customer =>
       customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.meterNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (customer.branchId && allBranches.find(b => b.id === customer.branchId)?.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
       customer.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.ward.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (customer.assignedBulkMeterId && allBulkMeters.find(bm => bm.id === customer.assignedBulkMeterId)?.name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-  }, [searchTerm, branchFilteredCustomers, allBranches, allBulkMeters]);
+  }, [searchTerm, branchFilteredCustomers, allBulkMeters]);
 
   const paginatedCustomers = searchedCustomers.slice(
     page * rowsPerPage,
@@ -240,10 +261,10 @@ export default function StaffIndividualCustomersPage() {
         </div>
       );
     }
-    if (!staffBranchName) {
+    if (authError) {
       return (
         <div className="mt-4 p-4 border rounded-md bg-destructive/10 text-center text-destructive">
-          Could not determine your branch. Please contact an administrator.
+          {authError}
         </div>
       );
     }
@@ -278,10 +299,10 @@ export default function StaffIndividualCustomersPage() {
               className="pl-8 w-full md:w-[250px]"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              disabled={isLoading}
+              disabled={isLoading || !!authError}
             />
           </div>
-          <Button onClick={handleAddCustomer} disabled={isLoading || !staffBranchName}>
+          <Button onClick={handleAddCustomer} disabled={isLoading || !!authError}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Customer
           </Button>
         </div>
@@ -295,7 +316,7 @@ export default function StaffIndividualCustomersPage() {
         <CardContent>
           {renderContent()}
         </CardContent>
-        {searchedCustomers.length > 0 && !isLoading && (
+        {searchedCustomers.length > 0 && !isLoading && !authError && (
           <TablePagination
             count={searchedCustomers.length}
             page={page}

@@ -34,6 +34,7 @@ interface User {
 export default function StaffBulkMetersPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(true);
+  const [authError, setAuthError] = React.useState<string | null>(null);
   const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
   
   const [allBulkMeters, setAllBulkMeters] = React.useState<BulkMeter[]>([]);
@@ -51,18 +52,31 @@ export default function StaffBulkMetersPage() {
   React.useEffect(() => {
     let isMounted = true;
 
-    async function initialize() {
+    async function loadAndSubscribe() {
       // 1. Auth Check
-      const userString = localStorage.getItem("user");
-      if (userString) {
-        try {
+      let localBranchName: string | null = null;
+      try {
+        const userString = localStorage.getItem("user");
+        if (userString) {
           const parsedUser: User = JSON.parse(userString);
-          if (parsedUser.role === 'staff' && parsedUser.branchName && isMounted) {
-            setStaffBranchName(parsedUser.branchName);
+          if (parsedUser.role === 'staff' && parsedUser.branchName) {
+            localBranchName = parsedUser.branchName;
           }
-        } catch (e) {
-          console.error("Failed to parse user from localStorage", e);
         }
+      } catch (e) {
+        console.error("Failed to parse user from localStorage", e);
+      }
+      
+      if (!localBranchName) {
+        if (isMounted) {
+          setAuthError("Could not determine your branch. Please contact an administrator.");
+          setIsLoading(false);
+        }
+        return; // Stop execution
+      }
+
+      if (isMounted) {
+        setStaffBranchName(localBranchName);
       }
 
       // 2. Initial Data Load
@@ -73,36 +87,46 @@ export default function StaffBulkMetersPage() {
 
       if (!isMounted) return;
       
-      // 3. Initial state hydration from store
-      setAllBranches(getBranches());
-      setAllBulkMeters(getBulkMeters());
+      // 3. Set data to state after loading
+      const branchesData = getBranches();
+      const bulkMetersData = getBulkMeters();
+      if (isMounted) {
+        setAllBranches(branchesData);
+        setAllBulkMeters(bulkMetersData);
+      }
 
-      // 4. Setup subscriptions to live updates
+      // 4. Finalize loading state
+      if (isMounted) {
+        setIsLoading(false);
+      }
+
+      // 5. Setup subscriptions
       const unSubBranches = subscribeToBranches(setAllBranches);
       const unSubBulkMeters = subscribeToBulkMeters(setAllBulkMeters);
-
-      // 5. Finalize loading
-      setIsLoading(false);
-
-      // 6. Cleanup
+      
       return () => {
-        isMounted = false;
         unSubBranches();
         unSubBulkMeters();
       };
     }
 
-    const cleanupPromise = initialize();
-    
+    let cleanup: (() => void) | undefined;
+    loadAndSubscribe().then(cleanupFn => {
+      if (cleanupFn) {
+        cleanup = cleanupFn;
+      }
+    });
+
     return () => {
-      cleanupPromise.then(cleanup => {
-        if (cleanup) cleanup();
-      });
+      isMounted = false;
+      if (cleanup) {
+        cleanup();
+      }
     };
   }, []);
 
   const branchFilteredBulkMeters = React.useMemo(() => {
-    if (isLoading || !staffBranchName) {
+    if (isLoading || authError || !staffBranchName) {
       return [];
     }
     const staffBranch = allBranches.find(b => b.name === staffBranchName);
@@ -110,7 +134,7 @@ export default function StaffBulkMetersPage() {
       return [];
     }
     return allBulkMeters.filter(bm => bm.branchId === staffBranch.id);
-  }, [isLoading, staffBranchName, allBranches, allBulkMeters]);
+  }, [isLoading, authError, staffBranchName, allBranches, allBulkMeters]);
 
   const searchedBulkMeters = React.useMemo(() => {
      if (!searchTerm) {
@@ -119,11 +143,10 @@ export default function StaffBulkMetersPage() {
     return branchFilteredBulkMeters.filter(bm =>
       bm.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       bm.meterNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (bm.branchId && allBranches.find(b => b.id === bm.branchId)?.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
       bm.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
       bm.ward.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [searchTerm, branchFilteredBulkMeters, allBranches]);
+  }, [searchTerm, branchFilteredBulkMeters]);
   
   const paginatedBulkMeters = searchedBulkMeters.slice(
     page * rowsPerPage,
@@ -180,10 +203,10 @@ export default function StaffBulkMetersPage() {
         </div>
       );
     }
-    if (!staffBranchName) {
+    if (authError) {
       return (
         <div className="mt-4 p-4 border rounded-md bg-destructive/10 text-center text-destructive">
-          Could not determine your branch. Please contact an administrator.
+          {authError}
         </div>
       );
     }
@@ -218,10 +241,10 @@ export default function StaffBulkMetersPage() {
               className="pl-8 w-full md:w-[250px]"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              disabled={isLoading}
+              disabled={isLoading || !!authError}
             />
           </div>
-          <Button onClick={handleAddBulkMeter} disabled={isLoading || !staffBranchName}>
+          <Button onClick={handleAddBulkMeter} disabled={isLoading || !!authError}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Bulk Meter
           </Button>
         </div>
@@ -235,7 +258,7 @@ export default function StaffBulkMetersPage() {
         <CardContent>
           {renderContent()}
         </CardContent>
-         {searchedBulkMeters.length > 0 && !isLoading && (
+         {searchedBulkMeters.length > 0 && !isLoading && !authError && (
           <TablePagination
             count={searchedBulkMeters.length}
             page={page}

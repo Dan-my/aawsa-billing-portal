@@ -22,6 +22,7 @@ import {
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
+import { calculateBill } from "@/lib/billing";
 
 interface User {
   email: string;
@@ -140,7 +141,7 @@ const availableStaffReports: ReportType[] = [
   {
     id: "billing-summary-branch",
     name: "My Branch Billing Summary (XLSX)",
-    description: "Summary of paid and unpaid bills for your branch.",
+    description: "Summary of generated bills for all customers and bulk meters in your branch.",
     headers: [
         "id", "individualCustomerId", "bulkMeterId", "billPeriodStartDate", "billPeriodEndDate", 
         "monthYear", "previousReadingValue", "currentReadingValue", "usageM3", 
@@ -154,7 +155,7 @@ const availableStaffReports: ReportType[] = [
         const allBranches = getBranches();
         const allCustomers = getCustomers();
         const allBulkMeters = getBulkMeters();
-        const allBills = getBills();
+        const allBillsFromStore = getBills();
 
         const staffBranch = allBranches.find(b => {
             const normalizedBranchName = b.name.trim().toLowerCase();
@@ -165,16 +166,51 @@ const availableStaffReports: ReportType[] = [
         if (!staffBranch) return [];
         
         const branchBulkMeterIds = new Set(allBulkMeters.filter(bm => bm.branchId === staffBranch.id).map(bm => bm.id));
+        const bulkMeterBills = allBillsFromStore.filter(bill => bill.bulkMeterId && branchBulkMeterIds.has(bill.bulkMeterId));
         
-        const branchCustomerIds = new Set(allCustomers.filter(c => 
+        const branchCustomers = allCustomers.filter(c => 
             c.branchId === staffBranch.id || 
             (c.assignedBulkMeterId && branchBulkMeterIds.has(c.assignedBulkMeterId))
-        ).map(c => c.id));
+        );
         
-        return allBills.filter(bill => {
-            return (bill.individualCustomerId && branchCustomerIds.has(bill.individualCustomerId)) ||
-                   (bill.bulkMeterId && branchBulkMeterIds.has(bill.bulkMeterId));
+        const individualCustomerBills = branchCustomers.map(customer => {
+            const usage = customer.currentReading - customer.previousReading;
+            const { baseWaterCharge, sewerageCharge, maintenanceFee, sanitationFee, meterRent } = calculateBill(
+                usage,
+                customer.customerType,
+                customer.sewerageConnection,
+                customer.meterSize
+            );
+            
+            return {
+                id: `cust-bill-${customer.id}`,
+                individualCustomerId: customer.id,
+                bulkMeterId: null,
+                billPeriodStartDate: 'N/A',
+                billPeriodEndDate: 'N/A',
+                monthYear: customer.month,
+                previousReadingValue: customer.previousReading,
+                currentReadingValue: customer.currentReading,
+                usageM3: usage,
+                baseWaterCharge: baseWaterCharge,
+                sewerageCharge: sewerageCharge,
+                maintenanceFee: maintenanceFee,
+                sanitationFee: sanitationFee,
+                meterRent: meterRent,
+                balanceCarriedForward: customer.arrears || 0,
+                totalAmountDue: customer.calculatedBill,
+                amountPaid: 0,
+                balanceDue: customer.calculatedBill + (customer.arrears || 0),
+                dueDate: 'N/A',
+                paymentStatus: customer.paymentStatus,
+                billNumber: `CUST-${customer.customerKeyNumber}`,
+                notes: `Bill for ${customer.name}`,
+                createdAt: customer.created_at,
+                updatedAt: customer.updated_at,
+            };
         });
+
+        return [...bulkMeterBills, ...individualCustomerBills];
     },
   },
 ];

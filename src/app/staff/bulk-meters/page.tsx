@@ -49,8 +49,7 @@ export default function StaffBulkMetersPage() {
 
   React.useEffect(() => {
     let isMounted = true;
-    let unsubBranches = () => {};
-    let unsubBM = () => {};
+    const subscriptions: (() => void)[] = [];
 
     const loadData = async () => {
       if (!isMounted) return;
@@ -68,16 +67,15 @@ export default function StaffBulkMetersPage() {
           console.error("Failed to parse user from localStorage", e);
         }
       }
-
       setStaffBranchName(localBranchName || null);
 
       if (!localBranchName) {
         setIsLoading(false);
-        return; // Stop if no branch
+        return; 
       }
 
-      // Initialize all necessary data stores
       await Promise.all([initializeBranches(), initializeBulkMeters()]);
+
       if (!isMounted) return;
 
       const handleDataUpdate = () => {
@@ -96,23 +94,20 @@ export default function StaffBulkMetersPage() {
         setAllBulkMeters(currentMeters);
       };
 
-      // Perform the initial data filter and set state
       handleDataUpdate();
       setIsLoading(false);
 
-      // Set up the subscriptions
-      unsubBranches = subscribeToBranches(handleDataUpdate);
-      unsubBM = subscribeToBulkMeters(handleDataUpdate);
+      subscriptions.push(subscribeToBranches(handleDataUpdate));
+      subscriptions.push(subscribeToBulkMeters(handleDataUpdate));
     };
 
     loadData();
 
     return () => {
       isMounted = false;
-      unsubBranches();
-      unsubBM();
+      subscriptions.forEach(unsub => unsub());
     };
-  }, []); // Empty array ensures this runs only once on mount
+  }, []);
 
 
   const handleAddBulkMeter = () => {

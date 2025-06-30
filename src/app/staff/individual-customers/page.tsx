@@ -39,9 +39,7 @@ interface User {
 
 export default function StaffIndividualCustomersPage() {
   const { toast } = useToast();
-  const [allCustomers, setAllCustomers] = React.useState<IndividualCustomer[]>([]);
   const [branchFilteredCustomers, setBranchFilteredCustomers] = React.useState<IndividualCustomer[]>([]);
-  const [allBulkMeters, setAllBulkMeters] = React.useState<AdminBulkMeterType[]>([]);
   const [allBranches, setAllBranches] = React.useState<Branch[]>([]);
   const [branchBulkMetersList, setBranchBulkMetersList] = React.useState<{id: string, name: string}[]>([]);
   
@@ -58,9 +56,7 @@ export default function StaffIndividualCustomersPage() {
 
   React.useEffect(() => {
     let isMounted = true;
-    let unsubCustomers = () => {};
-    let unsubBulkMeters = () => {};
-    let unsubBranches = () => {};
+    const subscriptions: (() => void)[] = [];
 
     const loadData = async () => {
       if (!isMounted) return;
@@ -78,12 +74,11 @@ export default function StaffIndividualCustomersPage() {
           console.error("Failed to parse user from localStorage", e);
         }
       }
-
       setStaffBranchName(localBranchName || null);
 
       if (!localBranchName) {
         setIsLoading(false);
-        return; // Stop if no branch
+        return;
       }
 
       await Promise.all([initializeBranches(), initializeBulkMeters(), initializeCustomers()]);
@@ -114,27 +109,23 @@ export default function StaffIndividualCustomersPage() {
         }
         
         setAllBranches(currentBranches);
-        setAllBulkMeters(currentMeters);
-        setAllCustomers(currentCustomers);
       };
       
       handleDataUpdate();
       setIsLoading(false);
 
-      unsubCustomers = subscribeToCustomers(handleDataUpdate);
-      unsubBulkMeters = subscribeToBulkMeters(handleDataUpdate);
-      unsubBranches = subscribeToBranches(handleDataUpdate);
+      subscriptions.push(subscribeToCustomers(handleDataUpdate));
+      subscriptions.push(subscribeToBulkMeters(handleDataUpdate));
+      subscriptions.push(subscribeToBranches(handleDataUpdate));
     };
 
     loadData();
 
     return () => {
       isMounted = false;
-      unsubCustomers();
-      unsubBulkMeters();
-      unsubBranches();
+      subscriptions.forEach(unsub => unsub());
     };
-  }, []); // Empty dependency array ensures this runs only once.
+  }, []);
 
 
   const handleAddCustomer = () => {
@@ -212,7 +203,8 @@ export default function StaffIndividualCustomersPage() {
 
   const getBulkMeterNameFromAll = (id?: string) => { 
     if (!id) return "-";
-    return allBulkMeters.find(bm => bm.id === id)?.name || "Unknown BM";
+    const allMeters = getBulkMeters(); // Get latest list
+    return allMeters.find(bm => bm.id === id)?.name || "Unknown BM";
   };
 
   const searchedCustomers = branchFilteredCustomers.filter(customer =>

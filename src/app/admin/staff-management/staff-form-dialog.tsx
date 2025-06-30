@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -25,10 +24,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { StaffMember, StaffStatus } from "./staff-types";
-import { Label } from "@/components/ui/label";
+import { getBranches, initializeBranches, subscribeToBranches } from "@/lib/data-store";
+import type { Branch } from "@/app/admin/branches/branch-types";
 
 const staffStatuses: StaffStatus[] = ['Active', 'Inactive', 'On Leave'];
-const availableBranches = ["Kality Branch", "Central Branch", "North Branch", "South Branch", "East Branch", "West Branch", "Bole Branch", "Piassa Branch", "Megenagna Branch"];
 const staffRoles = ['Admin', 'Staff'] as const;
 
 const formSchema = z.object({
@@ -40,9 +39,6 @@ const formSchema = z.object({
   phone: z.string().optional(),
   role: z.enum(staffRoles, { required_error: "Role is required." }),
 }).refine(data => {
-    // This refine is to make password conditionally required.
-    // However, since we handle this in the submit logic, we can simplify.
-    // For this example, we'll keep it simple. A more complex check could go here.
     return true;
 });
 
@@ -57,6 +53,23 @@ interface StaffFormDialogProps {
 }
 
 export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }: StaffFormDialogProps) {
+  const [availableBranches, setAvailableBranches] = React.useState<Branch[]>([]);
+  const [isLoadingBranches, setIsLoadingBranches] = React.useState(true);
+
+  React.useEffect(() => {
+    if (open) {
+      setIsLoadingBranches(true);
+      initializeBranches().then(() => {
+        setAvailableBranches(getBranches());
+        setIsLoadingBranches(false);
+      });
+      const unsubscribe = subscribeToBranches((updatedBranches) => {
+        setAvailableBranches(updatedBranches);
+      });
+      return () => unsubscribe();
+    }
+  }, [open]);
+  
   const form = useForm<StaffFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -176,15 +189,15 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Branch</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isLoadingBranches}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a branch" />
+                        <SelectValue placeholder={isLoadingBranches ? "Loading branches..." : "Select a branch"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {availableBranches.map(branch => (
-                        <SelectItem key={branch} value={branch}>{branch}</SelectItem>
+                        <SelectItem key={branch.id} value={branch.name}>{branch.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

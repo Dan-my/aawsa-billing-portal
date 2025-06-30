@@ -111,7 +111,10 @@ export default function StaffBulkMetersPage() {
     if (authStatus !== 'authorized' || !staffBranchName || allBranches.length === 0) {
       return [];
     }
-    const staffBranch = allBranches.find(b => b.name.trim().toLowerCase() === staffBranchName.trim().toLowerCase());
+    // Make the matching more robust to handle partial names like "Megenagna" vs "Megenagna Branch"
+    const normalizedStaffBranchName = staffBranchName.trim().toLowerCase();
+    const staffBranch = allBranches.find(b => b.name.trim().toLowerCase().includes(normalizedStaffBranchName));
+
     if (!staffBranch) {
       return [];
     }

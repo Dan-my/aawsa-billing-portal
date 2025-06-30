@@ -555,52 +555,52 @@ export const supabase: SupabaseClient<ResolvedDatabase> = createClient<ResolvedD
 export const getAllBranches = async () => supabase.from('branches').select('*');
 export const createBranch = async (branch: BranchInsert) => supabase.from('branches').insert(branch).select().single();
 export const updateBranch = async (id: string, branch: BranchUpdate) => supabase.from('branches').update(branch).eq('id', id).select().single();
-export const deleteBranch = async (id: string) => supabase.from('branches').delete().eq('id', id).select().single();
+export const deleteBranch = async (id: string) => supabase.from('branches').delete().eq('id', id);
 
 // CRUD for Bulk Meters
 export const getAllBulkMeters = async () => supabase.from('bulk_meters').select('*');
 export const createBulkMeter = async (bulkMeter: BulkMeterInsert) => supabase.from('bulk_meters').insert(bulkMeter).select().single();
 export const updateBulkMeter = async (id: string, bulkMeter: BulkMeterUpdate) => supabase.from('bulk_meters').update(bulkMeter).eq('id', id).select().single();
-export const deleteBulkMeter = async (id: string) => supabase.from('bulk_meters').delete().eq('id', id).select().single();
+export const deleteBulkMeter = async (id: string) => supabase.from('bulk_meters').delete().eq('id', id);
 
 // CRUD for Individual Customers
 export const getAllCustomers = async () => supabase.from('individual_customers').select('*');
 export const createCustomer = async (customer: IndividualCustomerInsert) => supabase.from('individual_customers').insert(customer).select().single();
 export const updateCustomer = async (id: string, customer: IndividualCustomerUpdate) => supabase.from('individual_customers').update(customer).eq('id', id).select().single();
-export const deleteCustomer = async (id: string) => supabase.from('individual_customers').delete().eq('id', id).select().single();
+export const deleteCustomer = async (id: string) => supabase.from('individual_customers').delete().eq('id', id);
 
 // CRUD for Staff Members
 export const getAllStaffMembers = async () => supabase.from('staff_members').select('*');
 export const createStaffMember = async (staffMember: StaffMemberInsert) => supabase.from('staff_members').insert(staffMember).select().single();
 export const updateStaffMember = async (id: string, staffMember: StaffMemberUpdate) => supabase.from('staff_members').update(staffMember).eq('id', id).select().single();
-export const deleteStaffMember = async (id: string) => supabase.from('staff_members').delete().eq('id', id).select().single();
+export const deleteStaffMember = async (id: string) => supabase.from('staff_members').delete().eq('id', id);
 
 // CRUD for Bills
 export const getAllBills = async () => supabase.from('bills').select('*');
 export const createBill = async (bill: BillInsert) => supabase.from('bills').insert(bill).select().single();
 export const updateBill = async (id: string, bill: BillUpdate) => supabase.from('bills').update(bill).eq('id', id).select().single();
-export const deleteBill = async (id: string) => supabase.from('bills').delete().eq('id', id).select().single();
+export const deleteBill = async (id: string) => supabase.from('bills').delete().eq('id', id);
 
 // CRUD for Individual Customer Readings
 export const getAllIndividualCustomerReadings = async () => supabase.from('individual_customer_readings').select('*');
 export const createIndividualCustomerReading = async (reading: IndividualCustomerReadingInsert) => supabase.from('individual_customer_readings').insert(reading).select().single();
 export const updateIndividualCustomerReading = async (id: string, reading: IndividualCustomerReadingUpdate) => supabase.from('individual_customer_readings').update(reading).eq('id', id).select().single();
-export const deleteIndividualCustomerReading = async (id: string) => supabase.from('individual_customer_readings').delete().eq('id', id).select().single();
+export const deleteIndividualCustomerReading = async (id: string) => supabase.from('individual_customer_readings').delete().eq('id', id);
 
 // CRUD for Bulk Meter Readings
 export const getAllBulkMeterReadings = async () => supabase.from('bulk_meter_readings').select('*');
 export const createBulkMeterReading = async (reading: BulkMeterReadingInsert) => supabase.from('bulk_meter_readings').insert(reading).select().single();
 export const updateBulkMeterReading = async (id: string, reading: BulkMeterReadingUpdate) => supabase.from('bulk_meter_readings').update(reading).eq('id', id).select().single();
-export const deleteBulkMeterReading = async (id: string) => supabase.from('bulk_meter_readings').delete().eq('id', id).select().single();
+export const deleteBulkMeterReading = async (id: string) => supabase.from('bulk_meter_readings').delete().eq('id', id);
 
 // CRUD for Payments
 export const getAllPayments = async () => supabase.from('payments').select('*');
 export const createPayment = async (payment: PaymentInsert) => supabase.from('payments').insert(payment).select().single();
 export const updatePayment = async (id: string, payment: PaymentUpdate) => supabase.from('payments').update(payment).eq('id', id).select().single();
-export const deletePayment = async (id: string) => supabase.from('payments').delete().eq('id', id).select().single();
+export const deletePayment = async (id: string) => supabase.from('payments').delete().eq('id', id);
 
 // CRUD for Report Logs (Table: 'reports')
 export const getAllReportLogs = async () => supabase.from('reports').select('*');
 export const createReportLog = async (reportLog: ReportLogInsert) => supabase.from('reports').insert(reportLog).select().single();
 export const updateReportLog = async (id: string, reportLog: ReportLogUpdate) => supabase.from('reports').update(reportLog).eq('id', id).select().single();
-export const deleteReportLog = async (id: string) => supabase.from('reports').delete().eq('id', id).select().single();
+export const deleteReportLog = async (id: string) => supabase.from('reports').delete().eq('id', id);

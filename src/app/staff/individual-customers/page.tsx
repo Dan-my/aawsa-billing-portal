@@ -65,52 +65,57 @@ export default function StaffIndividualCustomersPage() {
         const parsedUser: User = JSON.parse(storedUser);
         if (parsedUser.role === "staff" && parsedUser.branchName) {
           setStaffBranchName(parsedUser.branchName);
-        } else {
-          setIsLoading(false); // No branch, stop loading
         }
       } catch (e) {
         console.error("Failed to parse user from localStorage", e);
-        setIsLoading(false);
       }
-    } else {
-        setIsLoading(false); // No user, stop loading
     }
   }, []);
 
-  // Effect to fetch data and subscribe. Runs when staffBranchName is available.
-  React.useEffect(() => {
-    if (staffBranchName === undefined) {
+  const filterAndSetData = React.useCallback(() => {
+    if (!staffBranchName) {
+      setBranchFilteredCustomers([]);
       return;
     }
 
+    const currentCustomers = getCustomers();
+    const currentBulkMeters = getBulkMeters();
+    const currentBranches = getBranches();
+
+    const simpleBranchName = staffBranchName.replace(/ Branch$/i, "").toLowerCase().trim();
+    const branch = currentBranches.find(b => b.name.toLowerCase().includes(simpleBranchName));
+
+    const localBranchBulkMeters = currentBulkMeters.filter(bm => (branch && bm.branchId === branch.id) || (bm.location?.toLowerCase() || "").includes(simpleBranchName));
+    const branchBulkMeterIds = localBranchBulkMeters.map(bm => bm.id);
+
+    const localFilteredCustomers = currentCustomers.filter(customer => 
+      (branch && customer.branchId && customer.branchId === branch.id) ||
+      (customer.assignedBulkMeterId && branchBulkMeterIds.includes(customer.assignedBulkMeterId)) ||
+      (customer.location?.toLowerCase() || "").includes(simpleBranchName)
+    );
+    
+    setAllCustomers(currentCustomers);
+    setAllBulkMeters(currentBulkMeters);
+    setAllBranches(currentBranches);
+    setBranchBulkMetersList(localBranchBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
+    setBranchFilteredCustomers(localFilteredCustomers);
+  }, [staffBranchName]);
+
+
+  // Effect to fetch data and subscribe. Runs when staffBranchName is available.
+  React.useEffect(() => {
     let isMounted = true;
+    
+    if (staffBranchName === undefined) {
+      setIsLoading(true);
+      return;
+    }
+    if (staffBranchName === null) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
-
-    const filterAndSetData = () => {
-      if (!isMounted) return;
-
-      const currentCustomers = getCustomers();
-      const currentBulkMeters = getBulkMeters();
-      const currentBranches = getBranches();
-
-      const simpleBranchName = staffBranchName.replace(/ Branch$/i, "").toLowerCase().trim();
-      const branch = currentBranches.find(b => b.name.toLowerCase().includes(simpleBranchName));
-
-      const localBranchBulkMeters = currentBulkMeters.filter(bm => bm.branchId === branch?.id || (bm.location?.toLowerCase() || "").includes(simpleBranchName));
-      const branchBulkMeterIds = localBranchBulkMeters.map(bm => bm.id);
-
-      const localFilteredCustomers = currentCustomers.filter(customer => 
-        (customer.branchId && customer.branchId === branch?.id) ||
-        (customer.assignedBulkMeterId && branchBulkMeterIds.includes(customer.assignedBulkMeterId)) ||
-        (customer.location?.toLowerCase() || "").includes(simpleBranchName)
-      );
-      
-      setAllCustomers(currentCustomers);
-      setAllBulkMeters(currentBulkMeters);
-      setAllBranches(currentBranches);
-      setBranchBulkMetersList(localBranchBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
-      setBranchFilteredCustomers(localFilteredCustomers);
-    };
 
     Promise.all([
       initializeBulkMeters(),
@@ -133,7 +138,7 @@ export default function StaffIndividualCustomersPage() {
       unsubscribeBulkMeters();
       unsubscribeBranches();
     };
-  }, [staffBranchName]);
+  }, [staffBranchName, filterAndSetData]);
 
 
   const handleAddCustomer = () => {
@@ -259,13 +264,13 @@ export default function StaffIndividualCustomersPage() {
              <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
                 Loading customers...
              </div>
-           ) : branchFilteredCustomers.length === 0 && !searchTerm && staffBranchName ? (
-             <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
-                No customers found for branch: {staffBranchName}. Click "Add New Customer" to get started. <User className="inline-block ml-2 h-5 w-5" />
-             </div>
            ) : !staffBranchName && !isLoading ? (
              <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
                 Could not determine your branch. Please contact an administrator.
+             </div>
+           ) : branchFilteredCustomers.length === 0 && !searchTerm && staffBranchName ? (
+             <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
+                No customers found for branch: {staffBranchName}. Click "Add New Customer" to get started. <User className="inline-block ml-2 h-5 w-5" />
              </div>
           ) : (
             <IndividualCustomerTable

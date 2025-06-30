@@ -56,44 +56,48 @@ export default function StaffBulkMetersPage() {
         const parsedUser: User = JSON.parse(storedUser);
         if (parsedUser.role === "staff" && parsedUser.branchName) {
           setStaffBranchName(parsedUser.branchName);
-        } else {
-            setIsLoading(false); // No branch, stop loading
         }
       } catch (e) {
         console.error("Failed to parse user from localStorage", e);
-        setIsLoading(false);
       }
-    } else {
-        setIsLoading(false); // No user, stop loading
     }
   }, []);
 
-  // Effect to fetch data and subscribe. Runs when staffBranchName is available.
-  React.useEffect(() => {
-    // If branch name is not yet determined, don't fetch data. The UI will show a loading/error state.
-    if (staffBranchName === undefined) {
+  const filterAndSetData = React.useCallback(() => {
+    if (!staffBranchName) {
+      setBranchFilteredBulkMeters([]);
       return;
     }
+    const currentMeters = getBulkMeters();
+    const currentBranches = getBranches();
+    const simpleBranchName = staffBranchName.replace(/ Branch$/i, "").toLowerCase().trim();
+    const branch = currentBranches.find(b => b.name.toLowerCase().includes(simpleBranchName));
+    
+    const filteredMeters = currentMeters.filter(bm => 
+      (branch && bm.branchId === branch.id) ||
+      (bm.location?.toLowerCase() || "").includes(simpleBranchName)
+    );
+    
+    setAllBulkMeters(currentMeters);
+    setAllBranches(currentBranches);
+    setBranchFilteredBulkMeters(filteredMeters);
+  }, [staffBranchName]);
 
+  // Effect to fetch data and subscribe. Runs when staffBranchName is available.
+  React.useEffect(() => {
     let isMounted = true;
-    setIsLoading(true);
+    
+    if (staffBranchName === undefined) {
+      setIsLoading(true); // Still loading if branch name isn't determined
+      return;
+    }
+    
+    if (staffBranchName === null) { // User has no branch
+        setIsLoading(false);
+        return;
+    }
 
-    const filterAndSetData = () => {
-      if (!isMounted) return;
-      const currentMeters = getBulkMeters();
-      const currentBranches = getBranches();
-      const simpleBranchName = staffBranchName.replace(/ Branch$/i, "").toLowerCase().trim();
-      const branch = currentBranches.find(b => b.name.toLowerCase().includes(simpleBranchName));
-      
-      const filteredMeters = currentMeters.filter(bm => 
-        bm.branchId === branch?.id ||
-        (bm.location?.toLowerCase() || "").includes(simpleBranchName)
-      );
-      
-      setAllBulkMeters(currentMeters);
-      setAllBranches(currentBranches);
-      setBranchFilteredBulkMeters(filteredMeters);
-    };
+    setIsLoading(true);
 
     Promise.all([
       initializeBulkMeters(),
@@ -113,7 +117,7 @@ export default function StaffBulkMetersPage() {
       unsubscribeBM();
       unsubscribeBranches();
     };
-  }, [staffBranchName]);
+  }, [staffBranchName, filterAndSetData]);
 
 
   const handleAddBulkMeter = () => {
@@ -203,14 +207,14 @@ export default function StaffBulkMetersPage() {
              <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
                 Loading bulk meters...
              </div>
-          ) : branchFilteredBulkMeters.length === 0 && !searchTerm && staffBranchName ? (
-             <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
-                No bulk meters found for branch: {staffBranchName}. Click "Add New Bulk Meter" to get started. <Gauge className="inline-block ml-2 h-5 w-5" />
-             </div>
           ) : !staffBranchName && !isLoading ? (
             <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
                 Could not determine your branch. Please contact an administrator.
             </div>
+          ) : branchFilteredBulkMeters.length === 0 && !searchTerm && staffBranchName ? (
+             <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
+                No bulk meters found for branch: {staffBranchName}. Click "Add New Bulk Meter" to get started. <Gauge className="inline-block ml-2 h-5 w-5" />
+             </div>
           ) : (
             <BulkMeterTable
               data={paginatedBulkMeters}

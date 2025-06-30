@@ -33,13 +33,12 @@ interface User {
 
 export default function StaffBulkMetersPage() {
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
+  
   const [allBulkMeters, setAllBulkMeters] = React.useState<BulkMeter[]>([]);
   const [allBranches, setAllBranches] = React.useState<Branch[]>([]);
   
-  const [isDataLoading, setIsDataLoading] = React.useState(true);
-  const [isAuthLoading, setIsAuthLoading] = React.useState(true);
-  const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
-
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
@@ -49,52 +48,61 @@ export default function StaffBulkMetersPage() {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
-  // Effect for checking user auth state from localStorage
-  React.useEffect(() => {
-    const user = localStorage.getItem("user");
-    if (user) {
-      try {
-        const parsedUser: User = JSON.parse(user);
-        if (parsedUser.role === 'staff' && parsedUser.branchName) {
-          setStaffBranchName(parsedUser.branchName);
-        }
-      } catch (e) {
-        console.error("Failed to parse user from localStorage", e);
-      }
-    }
-    setIsAuthLoading(false); // Mark auth check as complete
-  }, []);
-
-  // Effect for fetching and subscribing to data
   React.useEffect(() => {
     let isMounted = true;
-    setIsDataLoading(true);
 
-    const unSubBranches = subscribeToBranches((data) => {
-      if (isMounted) setAllBranches(data);
-    });
-    const unSubBulkMeters = subscribeToBulkMeters((data) => {
-      if (isMounted) setAllBulkMeters(data);
-    });
-
-    Promise.all([
-      initializeBranches(),
-      initializeBulkMeters()
-    ]).then(() => {
-      if (isMounted) {
-        setIsDataLoading(false);
+    async function initialize() {
+      // 1. Auth Check
+      const userString = localStorage.getItem("user");
+      if (userString) {
+        try {
+          const parsedUser: User = JSON.parse(userString);
+          if (parsedUser.role === 'staff' && parsedUser.branchName && isMounted) {
+            setStaffBranchName(parsedUser.branchName);
+          }
+        } catch (e) {
+          console.error("Failed to parse user from localStorage", e);
+        }
       }
-    });
 
+      // 2. Initial Data Load
+      await Promise.all([
+        initializeBranches(),
+        initializeBulkMeters(),
+      ]);
+
+      if (!isMounted) return;
+      
+      // 3. Initial state hydration from store
+      setAllBranches(getBranches());
+      setAllBulkMeters(getBulkMeters());
+
+      // 4. Setup subscriptions to live updates
+      const unSubBranches = subscribeToBranches(setAllBranches);
+      const unSubBulkMeters = subscribeToBulkMeters(setAllBulkMeters);
+
+      // 5. Finalize loading
+      setIsLoading(false);
+
+      // 6. Cleanup
+      return () => {
+        isMounted = false;
+        unSubBranches();
+        unSubBulkMeters();
+      };
+    }
+
+    const cleanupPromise = initialize();
+    
     return () => {
-      isMounted = false;
-      unSubBranches();
-      unSubBulkMeters();
+      cleanupPromise.then(cleanup => {
+        if (cleanup) cleanup();
+      });
     };
   }, []);
 
   const branchFilteredBulkMeters = React.useMemo(() => {
-    if (!staffBranchName || allBranches.length === 0 || allBulkMeters.length === 0) {
+    if (isLoading || !staffBranchName) {
       return [];
     }
     const staffBranch = allBranches.find(b => b.name === staffBranchName);
@@ -102,7 +110,7 @@ export default function StaffBulkMetersPage() {
       return [];
     }
     return allBulkMeters.filter(bm => bm.branchId === staffBranch.id);
-  }, [staffBranchName, allBranches, allBulkMeters]);
+  }, [isLoading, staffBranchName, allBranches, allBulkMeters]);
 
   const searchedBulkMeters = React.useMemo(() => {
      if (!searchTerm) {
@@ -164,8 +172,6 @@ export default function StaffBulkMetersPage() {
     setSelectedBulkMeter(null);
   };
   
-  const isLoading = isAuthLoading || isDataLoading;
-
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -176,7 +182,7 @@ export default function StaffBulkMetersPage() {
     }
     if (!staffBranchName) {
       return (
-        <div className="mt-4 p-4 border rounded-md bg-destructive/10 text-center text-destructive-foreground">
+        <div className="mt-4 p-4 border rounded-md bg-destructive/10 text-center text-destructive">
           Could not determine your branch. Please contact an administrator.
         </div>
       );
@@ -212,7 +218,7 @@ export default function StaffBulkMetersPage() {
               className="pl-8 w-full md:w-[250px]"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              disabled={isLoading || !staffBranchName}
+              disabled={isLoading}
             />
           </div>
           <Button onClick={handleAddBulkMeter} disabled={isLoading || !staffBranchName}>

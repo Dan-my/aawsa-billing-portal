@@ -37,14 +37,13 @@ interface User {
 
 export default function StaffIndividualCustomersPage() {
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
+
   const [allCustomers, setAllCustomers] = React.useState<IndividualCustomer[]>([]);
   const [allBulkMeters, setAllBulkMeters] = React.useState<{id: string, name: string}[]>([]);
   const [allBranches, setAllBranches] = React.useState<Branch[]>([]);
   
-  const [isDataLoading, setIsDataLoading] = React.useState(true);
-  const [isAuthLoading, setIsAuthLoading] = React.useState(true);
-  const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
-
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
@@ -54,71 +53,79 @@ export default function StaffIndividualCustomersPage() {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
-  // Effect for checking user auth state from localStorage
-  React.useEffect(() => {
-    const user = localStorage.getItem("user");
-    if (user) {
-      try {
-        const parsedUser: User = JSON.parse(user);
-        if (parsedUser.role === 'staff' && parsedUser.branchName) {
-          setStaffBranchName(parsedUser.branchName);
-        }
-      } catch (e) {
-        console.error("Failed to parse user from localStorage", e);
-      }
-    }
-    setIsAuthLoading(false);
-  }, []);
-
-  // Effect for fetching and subscribing to data
   React.useEffect(() => {
     let isMounted = true;
-    setIsDataLoading(true);
 
-    const unSubCustomers = subscribeToCustomers((data) => {
-      if (isMounted) setAllCustomers(data);
-    });
-    const unSubBulkMeters = subscribeToBulkMeters((data) => {
-      if (isMounted) setAllBulkMeters(data.map(bm => ({ id: bm.id, name: bm.name })));
-    });
-    const unSubBranches = subscribeToBranches((data) => {
-      if (isMounted) setAllBranches(data);
-    });
-
-    Promise.all([
-      initializeCustomers(),
-      initializeBulkMeters(),
-      initializeBranches()
-    ]).then(() => {
-      if (isMounted) {
-        setIsDataLoading(false);
+    async function initialize() {
+      // 1. Auth Check
+      const userString = localStorage.getItem("user");
+      if (userString) {
+        try {
+          const parsedUser: User = JSON.parse(userString);
+          if (parsedUser.role === 'staff' && parsedUser.branchName && isMounted) {
+            setStaffBranchName(parsedUser.branchName);
+          }
+        } catch (e) {
+          console.error("Failed to parse user from localStorage", e);
+        }
       }
-    });
 
+      // 2. Initial Data Load
+      await Promise.all([
+        initializeCustomers(),
+        initializeBulkMeters(),
+        initializeBranches(),
+      ]);
+
+      if (!isMounted) return;
+
+      // 3. Initial state hydration from store
+      setAllCustomers(getCustomers());
+      setAllBulkMeters(getBulkMeters().map(bm => ({ id: bm.id, name: bm.name })));
+      setAllBranches(getBranches());
+      
+      // 4. Setup subscriptions to live updates
+      const unSubCustomers = subscribeToCustomers(setAllCustomers);
+      const unSubBulkMeters = subscribeToBulkMeters((bms) => setAllBulkMeters(bms.map(bm => ({ id: bm.id, name: bm.name }))));
+      const unSubBranches = subscribeToBranches(setAllBranches);
+
+      // 5. Finalize loading
+      setIsLoading(false);
+
+      // 6. Cleanup
+      return () => {
+        isMounted = false;
+        unSubCustomers();
+        unSubBulkMeters();
+        unSubBranches();
+      };
+    }
+
+    const cleanupPromise = initialize();
+    
     return () => {
-      isMounted = false;
-      unSubCustomers();
-      unSubBulkMeters();
-      unSubBranches();
+      cleanupPromise.then(cleanup => {
+        if (cleanup) cleanup();
+      });
     };
   }, []);
 
   const branchFilteredCustomers = React.useMemo(() => {
-    if (!staffBranchName || allBranches.length === 0 || allCustomers.length === 0) {
+    if (isLoading || !staffBranchName) {
       return [];
     }
     const staffBranch = allBranches.find(b => b.name === staffBranchName);
     if (!staffBranch) {
       return [];
     }
-    const branchMeters = getBulkMeters().filter(bm => bm.branchId === staffBranch.id);
-    const branchMeterIds = branchMeters.map(bm => bm.id);
+    const branchMetersForFiltering = getBulkMeters().filter(bm => bm.branchId === staffBranch.id);
+    const branchMeterIds = branchMetersForFiltering.map(bm => bm.id);
 
     return allCustomers.filter(customer =>
       customer.branchId === staffBranch.id ||
       (customer.assignedBulkMeterId && branchMeterIds.includes(customer.assignedBulkMeterId))
     );
-  }, [staffBranchName, allBranches, allCustomers]);
+  }, [isLoading, staffBranchName, allBranches, allCustomers]);
 
   const branchBulkMetersList = React.useMemo(() => {
      if (!staffBranchName || allBranches.length === 0) {
@@ -131,7 +138,7 @@ export default function StaffIndividualCustomersPage() {
     return getBulkMeters()
       .filter(bm => bm.branchId === staffBranch.id)
       .map(bm => ({ id: bm.id, name: bm.name }));
-  }, [staffBranchName, allBranches]); // Depends on allBulkMeters implicitly via getBulkMeters
+  }, [staffBranchName, allBranches]);
   
   const searchedCustomers = React.useMemo(() => {
     if (!searchTerm) {
@@ -225,8 +232,6 @@ export default function StaffIndividualCustomersPage() {
     setSelectedCustomer(null);
   };
   
-  const isLoading = isAuthLoading || isDataLoading;
-
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -237,7 +242,7 @@ export default function StaffIndividualCustomersPage() {
     }
     if (!staffBranchName) {
       return (
-        <div className="mt-4 p-4 border rounded-md bg-destructive/10 text-center text-destructive-foreground">
+        <div className="mt-4 p-4 border rounded-md bg-destructive/10 text-center text-destructive">
           Could not determine your branch. Please contact an administrator.
         </div>
       );
@@ -273,7 +278,7 @@ export default function StaffIndividualCustomersPage() {
               className="pl-8 w-full md:w-[250px]"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              disabled={isLoading || !staffBranchName}
+              disabled={isLoading}
             />
           </div>
           <Button onClick={handleAddCustomer} disabled={isLoading || !staffBranchName}>

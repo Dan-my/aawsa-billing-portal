@@ -16,7 +16,6 @@ import type { Branch } from "@/app/admin/branches/branch-types";
 interface User {
   email: string;
   role: "admin" | "staff" | "Admin" | "Staff";
-  branchId?: string;
   branchName?: string;
 }
 
@@ -47,20 +46,28 @@ export default function StaffDashboardPage() {
 
 
   const updateBranchData = React.useCallback((
+    allBranches: Branch[],
     allBulkMeters: BulkMeter[],
     allCustomers: IndividualCustomer[],
-    staffBranchId: string | undefined
+    staffBranchName: string | undefined
   ) => {
-    if (staffBranchId) {
-        const branchFilteredBulkMeters = allBulkMeters.filter(bm => bm.branchId === staffBranchId);
-        setTotalBulkMetersInBranch(branchFilteredBulkMeters.length);
+    if (staffBranchName) {
+        const staffBranch = allBranches.find(b => b.name.trim().toLowerCase() === staffBranchName.trim().toLowerCase());
+        if (staffBranch) {
+            const staffBranchId = staffBranch.id;
+            const branchFilteredBulkMeters = allBulkMeters.filter(bm => bm.branchId === staffBranchId);
+            setTotalBulkMetersInBranch(branchFilteredBulkMeters.length);
 
-        const branchBulkMeterIds = branchFilteredBulkMeters.map(bm => bm.id);
-        const branchFilteredCustomers = allCustomers.filter(c => 
-          c.branchId === staffBranchId ||
-          (c.assignedBulkMeterId && branchBulkMeterIds.includes(c.assignedBulkMeterId))
-        );
-        setTotalCustomersInBranch(branchFilteredCustomers.length);
+            const branchBulkMeterIds = branchFilteredBulkMeters.map(bm => bm.id);
+            const branchFilteredCustomers = allCustomers.filter(c => 
+                c.branchId === staffBranchId ||
+                (c.assignedBulkMeterId && branchBulkMeterIds.includes(c.assignedBulkMeterId))
+            );
+            setTotalCustomersInBranch(branchFilteredCustomers.length);
+        } else {
+             setTotalBulkMetersInBranch(0);
+             setTotalCustomersInBranch(0);
+        }
     } else {
       setTotalBulkMetersInBranch(0);
       setTotalCustomersInBranch(0);
@@ -70,7 +77,7 @@ export default function StaffDashboardPage() {
 
   React.useEffect(() => {
     let isMounted = true;
-    let localStaffBranchId: string | undefined;
+    let localStaffBranchName: string | undefined;
     
     setIsLoading(true);
 
@@ -78,10 +85,10 @@ export default function StaffDashboardPage() {
     if (storedUser) {
       try {
         const parsedUser: User = JSON.parse(storedUser);
-        if (parsedUser.role.toLowerCase() === "staff" && parsedUser.branchId) {
+        if (parsedUser.role.toLowerCase() === "staff" && parsedUser.branchName) {
           if (isMounted) {
-            setBranchNameForDisplay(parsedUser.branchName || "Your Branch");
-            localStaffBranchId = parsedUser.branchId;
+            setBranchNameForDisplay(parsedUser.branchName);
+            localStaffBranchName = parsedUser.branchName;
           }
         }
       } catch (e) {
@@ -95,7 +102,7 @@ export default function StaffDashboardPage() {
       initializeBranches(),
     ]).then(() => {
       if (!isMounted) return;
-      updateBranchData(getBulkMeters(), getCustomers(), localStaffBranchId);
+      updateBranchData(getBranches(), getBulkMeters(), getCustomers(), localStaffBranchName);
       setIsLoading(false);
     }).catch(error => {
       if (!isMounted) return;
@@ -105,7 +112,7 @@ export default function StaffDashboardPage() {
 
     const handleStoresUpdate = () => {
         if (isMounted) {
-            updateBranchData(getBulkMeters(), getCustomers(), localStaffBranchId);
+            updateBranchData(getBranches(), getBulkMeters(), getCustomers(), localStaffBranchName);
         }
     };
 

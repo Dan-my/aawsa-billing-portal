@@ -22,20 +22,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import type { StaffMember } from "./staff-types";
-import type { Branch } from "../branches/branch-types";
 
 interface StaffTableProps {
   data: StaffMember[];
-  branches: Branch[];
   onEdit: (staff: StaffMember) => void;
   onDelete: (staff: StaffMember) => void;
 }
 
-export function StaffTable({ data, branches, onEdit, onDelete }: StaffTableProps) {
-  const getBranchName = (branchId: string) => {
-    return branches.find(b => b.id === branchId)?.name || "Unknown Branch";
-  };
-  
+export function StaffTable({ data, onEdit, onDelete }: StaffTableProps) {
   if (data.length === 0) {
     return (
       <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
@@ -60,7 +54,7 @@ export function StaffTable({ data, branches, onEdit, onDelete }: StaffTableProps
             <TableRow key={staff.id}>
               <TableCell className="font-medium">{staff.name}</TableCell>
               <TableCell>{staff.email}</TableCell>
-              <TableCell>{getBranchName(staff.branchId)}</TableCell>
+              <TableCell>{staff.branch}</TableCell>
               <TableCell>
                 <Badge variant={staff.status === 'Active' ? 'default' : staff.status === 'Inactive' ? 'destructive' : 'secondary'}>
                   {staff.status}

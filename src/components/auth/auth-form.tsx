@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -25,7 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { LogIn } from "lucide-react";
-import { getStaffMembers, initializeStaffMembers, getBranches, initializeBranches } from "@/lib/data-store";
+import { getStaffMembers, initializeStaffMembers } from "@/lib/data-store";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -50,7 +51,6 @@ export function AuthForm() {
   React.useEffect(() => {
     // Pre-load data on component mount
     initializeStaffMembers();
-    initializeBranches();
   }, []);
 
   const onSubmit = (values: LoginFormValues) => {
@@ -75,15 +75,11 @@ export function AuthForm() {
         description: "Welcome back! Redirecting...",
       });
       
-      const allBranches = getBranches();
-      const userBranch = allBranches.find(b => b.id === user.branchId);
-
       const sessionUser = {
         id: user.id,
         email: user.email,
         role: user.role,
-        branchId: user.branchId,
-        branchName: userBranch?.name || "Unknown Branch",
+        branchName: user.branch,
         name: user.name,
       };
       localStorage.setItem("user", JSON.stringify(sessionUser));

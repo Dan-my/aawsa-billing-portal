@@ -32,7 +32,6 @@ import { TablePagination } from "@/components/ui/table-pagination";
 interface User {
   email: string;
   role: "admin" | "staff" | "Admin" | "Staff";
-  branchId?: string;
   branchName?: string;
 }
 
@@ -41,7 +40,6 @@ export default function StaffIndividualCustomersPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [authStatus, setAuthStatus] = React.useState<'loading' | 'unauthorized' | 'authorized'>('loading');
 
-  const [staffBranchId, setStaffBranchId] = React.useState<string | null>(null);
   const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
 
   const [allCustomers, setAllCustomers] = React.useState<IndividualCustomer[]>([]);
@@ -61,9 +59,8 @@ export default function StaffIndividualCustomersPage() {
     const userString = localStorage.getItem("user");
     if (userString) {
       const parsedUser: User = JSON.parse(userString);
-      if (parsedUser.role.toLowerCase() === 'staff' && parsedUser.branchId) {
-        setStaffBranchId(parsedUser.branchId);
-        setStaffBranchName(parsedUser.branchName || "Your Branch");
+      if (parsedUser.role.toLowerCase() === 'staff' && parsedUser.branchName) {
+        setStaffBranchName(parsedUser.branchName);
         setAuthStatus('authorized');
       } else {
         setAuthStatus('unauthorized');
@@ -116,7 +113,12 @@ export default function StaffIndividualCustomersPage() {
   }, [authStatus]);
 
   const branchFilteredCustomers = React.useMemo(() => {
-    if (authStatus !== 'authorized' || !staffBranchId) return [];
+    if (authStatus !== 'authorized' || !staffBranchName) return [];
+    
+    const staffBranch = allBranches.find(b => b.name.trim().toLowerCase() === staffBranchName.trim().toLowerCase());
+    if (!staffBranch) return [];
+
+    const staffBranchId = staffBranch.id;
     
     const branchBulkMeterIds = allBulkMeters
       .filter(bm => bm.branchId === staffBranchId)
@@ -126,14 +128,17 @@ export default function StaffIndividualCustomersPage() {
       customer.branchId === staffBranchId ||
       (customer.assignedBulkMeterId && branchBulkMeterIds.includes(customer.assignedBulkMeterId))
     );
-  }, [authStatus, staffBranchId, allCustomers, allBulkMeters]);
+  }, [authStatus, staffBranchName, allCustomers, allBulkMeters, allBranches]);
 
   const branchBulkMetersList = React.useMemo(() => {
-    if (authStatus !== 'authorized' || !staffBranchId) return [];
+    if (authStatus !== 'authorized' || !staffBranchName) return [];
+    const staffBranch = allBranches.find(b => b.name.trim().toLowerCase() === staffBranchName.trim().toLowerCase());
+    if (!staffBranch) return [];
+    
     return allBulkMeters
-      .filter(bm => bm.branchId === staffBranchId)
+      .filter(bm => bm.branchId === staffBranch.id)
       .map(bm => ({ id: bm.id, name: bm.name }));
-  }, [authStatus, staffBranchId, allBulkMeters]);
+  }, [authStatus, staffBranchName, allBulkMeters, allBranches]);
   
   const searchedCustomers = React.useMemo(() => {
     if (!searchTerm) {
@@ -182,7 +187,8 @@ export default function StaffIndividualCustomersPage() {
   };
 
   const handleSubmitCustomer = async (data: IndividualCustomerFormValues) => {
-    const dataWithBranchId = { ...data, branchId: staffBranchId || data.branchId };
+    const staffBranch = allBranches.find(b => b.name.trim().toLowerCase() === staffBranchName?.trim().toLowerCase());
+    const dataWithBranchId = { ...data, branchId: staffBranch?.id || data.branchId };
 
     if (selectedCustomer) {
       const updatedCustomerData: Partial<Omit<IndividualCustomer, 'id'>> = {

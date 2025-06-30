@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -34,7 +35,7 @@ const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(6, "Password must be at least 6 characters.").optional().or(z.literal('')),
-  branchId: z.string().min(1, { message: "Branch is required." }),
+  branch: z.string().min(1, { message: "Branch is required." }),
   status: z.enum(staffStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
   phone: z.string().optional(),
   role: z.enum(staffRoles, { required_error: "Role is required." }),
@@ -76,7 +77,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
       name: "",
       email: "",
       password: "",
-      branchId: "",
+      branch: "",
       status: undefined,
       phone: "",
       role: undefined,
@@ -91,7 +92,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
         name: defaultValues.name,
         email: defaultValues.email,
         password: "", // Always clear password field for security
-        branchId: defaultValues.branchId,
+        branch: defaultValues.branch,
         status: defaultValues.status,
         phone: defaultValues.phone || "",
         role: defaultValues.role,
@@ -101,7 +102,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
         name: "",
         email: "",
         password: "",
-        branchId: "",
+        branch: "",
         status: "Active",
         phone: "",
         role: "Staff",
@@ -185,7 +186,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
             />
              <FormField
               control={form.control}
-              name="branchId"
+              name="branch"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Branch</FormLabel>
@@ -197,7 +198,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
                     </FormControl>
                     <SelectContent>
                       {availableBranches.map(branch => (
-                        <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
+                        <SelectItem key={branch.id} value={branch.name}>{branch.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

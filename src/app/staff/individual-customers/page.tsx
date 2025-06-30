@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from "react";
@@ -57,111 +56,83 @@ export default function StaffIndividualCustomersPage() {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
-  // This single, comprehensive effect handles fetching user info, loading data,
-  // filtering data, and setting up subscriptions. It runs only once on mount.
   React.useEffect(() => {
     let isMounted = true;
-    
-    const initializeAndFilterData = async () => {
-        // 1. Determine User's Branch
-        const storedUser = localStorage.getItem("user");
-        let localBranchName: string | undefined;
-        if (storedUser) {
-            try {
-                const parsedUser: User = JSON.parse(storedUser);
-                if (parsedUser.role === "staff" && parsedUser.branchName) {
-                    localBranchName = parsedUser.branchName;
-                }
-            } catch (e) {
-                console.error("Failed to parse user from localStorage", e);
-            }
-        }
-        
-        if (isMounted) {
-            setStaffBranchName(localBranchName || null);
-        }
+    let unsubCustomers = () => {};
+    let unsubBulkMeters = () => {};
+    let unsubBranches = () => {};
 
-        // 2. If no branch, stop loading.
-        if (!localBranchName) {
-            if (isMounted) setIsLoading(false);
-            return;
-        }
+    const loadData = async () => {
+      if (!isMounted) return;
+      setIsLoading(true);
 
-        // 3. Load all necessary data from the store
-        await Promise.all([initializeBranches(), initializeBulkMeters(), initializeCustomers()]);
-        if (!isMounted) return;
-        
-        // 4. Filter data based on the determined branch
+      const storedUser = localStorage.getItem("user");
+      let localBranchName: string | undefined;
+      if (storedUser) {
+        try {
+          const parsedUser: User = JSON.parse(storedUser);
+          if (parsedUser.role === "staff" && parsedUser.branchName) {
+            localBranchName = parsedUser.branchName;
+          }
+        } catch (e) {
+          console.error("Failed to parse user from localStorage", e);
+        }
+      }
+
+      setStaffBranchName(localBranchName || null);
+
+      if (!localBranchName) {
+        setIsLoading(false);
+        return; // Stop if no branch
+      }
+
+      await Promise.all([initializeBranches(), initializeBulkMeters(), initializeCustomers()]);
+      if (!isMounted) return;
+      
+      const handleDataUpdate = () => {
+        if (!isMounted || !localBranchName) return;
+
         const currentBranches = getBranches();
         const currentMeters = getBulkMeters();
         const currentCustomers = getCustomers();
-        const staffBranchObject = currentBranches.find(b => b.name === localBranchName);
+        const staffBranch = currentBranches.find(b => b.name === localBranchName);
 
-        if (staffBranchObject) {
-            const staffBranchId = staffBranchObject.id;
-            const branchMeters = currentMeters.filter(bm => bm.branchId === staffBranchId);
-            const branchMeterIds = branchMeters.map(bm => bm.id);
+        if (staffBranch) {
+          const staffBranchId = staffBranch.id;
+          const branchMeters = currentMeters.filter(bm => bm.branchId === staffBranchId);
+          const branchMeterIds = branchMeters.map(bm => bm.id);
 
-            const filteredCustomers = currentCustomers.filter(customer =>
-                customer.branchId === staffBranchId ||
-                (customer.assignedBulkMeterId && branchMeterIds.includes(customer.assignedBulkMeterId))
-            );
-            setBranchFilteredCustomers(filteredCustomers);
-            setBranchBulkMetersList(branchMeters.map(bm => ({ id: bm.id, name: bm.name })));
+          const filteredCustomers = currentCustomers.filter(customer =>
+            customer.branchId === staffBranchId ||
+            (customer.assignedBulkMeterId && branchMeterIds.includes(customer.assignedBulkMeterId))
+          );
+          setBranchFilteredCustomers(filteredCustomers);
+          setBranchBulkMetersList(branchMeters.map(bm => ({ id: bm.id, name: bm.name })));
         } else {
-            setBranchFilteredCustomers([]);
-            setBranchBulkMetersList([]);
+          setBranchFilteredCustomers([]);
+          setBranchBulkMetersList([]);
         }
         
         setAllBranches(currentBranches);
         setAllBulkMeters(currentMeters);
         setAllCustomers(currentCustomers);
-        setIsLoading(false);
+      };
+      
+      handleDataUpdate();
+      setIsLoading(false);
 
-        // 5. Set up subscriptions
-        const handleDataUpdate = () => {
-            if (!isMounted || !localBranchName) return;
-            const updatedBranches = getBranches();
-            const updatedMeters = getBulkMeters();
-            const updatedCustomers = getCustomers();
-            const updatedStaffBranch = updatedBranches.find(b => b.name === localBranchName);
-
-            if (updatedStaffBranch) {
-                const staffBranchId = updatedStaffBranch.id;
-                const branchMeters = updatedMeters.filter(bm => bm.branchId === staffBranchId);
-                const branchMeterIds = branchMeters.map(bm => bm.id);
-
-                const filteredCustomers = updatedCustomers.filter(customer =>
-                    customer.branchId === staffBranchId ||
-                    (customer.assignedBulkMeterId && branchMeterIds.includes(customer.assignedBulkMeterId))
-                );
-                setBranchFilteredCustomers(filteredCustomers);
-                setBranchBulkMetersList(branchMeters.map(bm => ({ id: bm.id, name: bm.name })));
-            } else {
-                setBranchFilteredCustomers([]);
-                setBranchBulkMetersList([]);
-            }
-            setAllBranches(updatedBranches);
-            setAllBulkMeters(updatedMeters);
-            setAllCustomers(updatedCustomers);
-        };
-
-        const unsubCustomers = subscribeToCustomers(handleDataUpdate);
-        const unsubBulkMeters = subscribeToBulkMeters(handleDataUpdate);
-        const unsubBranches = subscribeToBranches(handleDataUpdate);
-        
-        return () => {
-            unsubCustomers();
-            unsubBulkMeters();
-            unsubBranches();
-        };
+      unsubCustomers = subscribeToCustomers(handleDataUpdate);
+      unsubBulkMeters = subscribeToBulkMeters(handleDataUpdate);
+      unsubBranches = subscribeToBranches(handleDataUpdate);
     };
 
-    const cleanupPromise = initializeAndFilterData();
+    loadData();
 
     return () => {
       isMounted = false;
-      cleanupPromise.then(cleanup => cleanup && cleanup());
+      unsubCustomers();
+      unsubBulkMeters();
+      unsubBranches();
     };
   }, []); // Empty dependency array ensures this runs only once.
 

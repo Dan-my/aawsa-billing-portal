@@ -28,6 +28,7 @@ import {
 import type { PaymentStatus, CustomerType, SewerageConnection } from "@/lib/billing";
 import type { Branch } from "@/app/admin/branches/branch-types";
 import { TablePagination } from "@/components/ui/table-pagination";
+import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 
 interface User {
   email: string;
@@ -37,14 +38,13 @@ interface User {
 
 export default function StaffIndividualCustomersPage() {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = React.useState(true);
   const [authStatus, setAuthStatus] = React.useState<'loading' | 'unauthorized' | 'authorized'>('loading');
-
   const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
   
-  const [branchFilteredCustomers, setBranchFilteredCustomers] = React.useState<IndividualCustomer[]>([]);
-  const [allBranchesForTable, setAllBranchesForTable] = React.useState<Branch[]>([]);
-  const [branchBulkMetersList, setBranchBulkMetersList] = React.useState<{id: string, name: string}[]>([]);
+  const [allCustomers, setAllCustomers] = React.useState<IndividualCustomer[]>([]);
+  const [allBulkMeters, setAllBulkMeters] = React.useState<BulkMeter[]>([]);
+  const [allBranches, setAllBranches] = React.useState<Branch[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
 
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
@@ -55,6 +55,7 @@ export default function StaffIndividualCustomersPage() {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
+  // First useEffect for authentication check
   React.useEffect(() => {
     const userString = localStorage.getItem("user");
     if (userString) {
@@ -74,94 +75,77 @@ export default function StaffIndividualCustomersPage() {
     }
   }, []);
 
-  const filterAndSetData = React.useCallback(() => {
-    if (!staffBranchName) {
-      setBranchFilteredCustomers([]);
-      setAllBranchesForTable(getBranches());
-      setBranchBulkMetersList([]);
-      return;
-    }
-
-    const branches = getBranches();
-    const bulkMeters = getBulkMeters();
-    const customers = getCustomers();
-
-    setAllBranchesForTable(branches);
-
-    const staffBranch = branches.find(b => b.name.trim().toLowerCase() === staffBranchName.trim().toLowerCase());
-    
-    if (staffBranch) {
-      const staffBranchId = staffBranch.id;
-      const branchBMs = bulkMeters.filter(bm => bm.branchId === staffBranchId);
-      const branchBMIds = branchBMs.map(bm => bm.id);
-
-      setBranchBulkMetersList(branchBMs.map(bm => ({id: bm.id, name: bm.name})));
-
-      const filteredCustomers = customers.filter(customer =>
-        customer.branchId === staffBranchId ||
-        (customer.assignedBulkMeterId && branchBMIds.includes(customer.assignedBulkMeterId))
-      );
-      setBranchFilteredCustomers(filteredCustomers);
-    } else {
-      setBranchFilteredCustomers([]);
-      setBranchBulkMetersList([]);
-    }
-    setIsLoading(false);
-  }, [staffBranchName]);
-
-
+  // Second useEffect for data loading, dependent on auth status
   React.useEffect(() => {
     if (authStatus !== 'authorized') {
-      setIsLoading(false);
+      if (authStatus !== 'loading') setIsLoading(false);
       return;
     }
-    
+
     let isMounted = true;
     setIsLoading(true);
-    
-    const initializeAndFilter = async () => {
+
+    const initializeAndSubscribe = async () => {
         try {
-            await Promise.all([
-            initializeBranches(),
-            initializeBulkMeters(),
-            initializeCustomers(),
-            ]);
-        } catch(err) {
+          await Promise.all([initializeBranches(), initializeBulkMeters(), initializeCustomers()]);
+          if (isMounted) {
+            setAllBranches(getBranches());
+            setAllBulkMeters(getBulkMeters());
+            setAllCustomers(getCustomers());
+          }
+        } catch (err) {
             console.error("Failed to initialize data:", err);
         } finally {
-            if (isMounted) {
-                filterAndSetData();
-            }
+            if (isMounted) setIsLoading(false);
         }
     };
-
-    initializeAndFilter();
     
-    const unSubCustomers = subscribeToCustomers(filterAndSetData);
-    const unSubBulkMeters = subscribeToBulkMeters(filterAndSetData);
-    const unSubBranches = subscribeToBranches(filterAndSetData);
+    initializeAndSubscribe();
+    
+    const unSubBranches = subscribeToBranches((data) => isMounted && setAllBranches(data));
+    const unSubBulkMeters = subscribeToBulkMeters((data) => isMounted && setAllBulkMeters(data));
+    const unSubCustomers = subscribeToCustomers((data) => isMounted && setAllCustomers(data));
 
     return () => {
       isMounted = false;
-      unSubCustomers();
-      unSubBulkMeters();
       unSubBranches();
+      unSubBulkMeters();
+      unSubCustomers();
     };
-  }, [authStatus, filterAndSetData]);
+  }, [authStatus]);
 
+  // Declarative filtering with useMemo
+  const branchFilteredData = React.useMemo(() => {
+    if (authStatus !== 'authorized' || !staffBranchName || allBranches.length === 0) {
+      return { customers: [], bulkMeters: [] };
+    }
+    const staffBranch = allBranches.find(b => b.name.trim().toLowerCase() === staffBranchName.trim().toLowerCase());
+    if (!staffBranch) {
+      return { customers: [], bulkMeters: [] };
+    }
+    const branchBMs = allBulkMeters.filter(bm => bm.branchId === staffBranch.id);
+    const branchBMIds = new Set(branchBMs.map(bm => bm.id));
+    
+    const branchCustomers = allCustomers.filter(customer =>
+      customer.branchId === staffBranch.id ||
+      (customer.assignedBulkMeterId && branchBMIds.has(customer.assignedBulkMeterId))
+    );
+    
+    return { customers: branchCustomers, bulkMeters: branchBMs.map(bm => ({ id: bm.id, name: bm.name })) };
+  }, [authStatus, staffBranchName, allCustomers, allBulkMeters, allBranches]);
   
   const searchedCustomers = React.useMemo(() => {
     if (!searchTerm) {
-      return branchFilteredCustomers;
+      return branchFilteredData.customers;
     }
-    return branchFilteredCustomers.filter(customer =>
+    return branchFilteredData.customers.filter(customer =>
       customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.meterNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.ward.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (customer.assignedBulkMeterId && getBulkMeters().find(bm => bm.id === customer.assignedBulkMeterId)?.name.toLowerCase().includes(searchTerm.toLowerCase()))
+      (customer.assignedBulkMeterId && allBulkMeters.find(bm => bm.id === customer.assignedBulkMeterId)?.name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-  }, [searchTerm, branchFilteredCustomers]);
+  }, [searchTerm, branchFilteredData.customers, allBulkMeters]);
 
   const paginatedCustomers = searchedCustomers.slice(
     page * rowsPerPage,
@@ -197,7 +181,7 @@ export default function StaffIndividualCustomersPage() {
   };
 
   const handleSubmitCustomer = async (data: IndividualCustomerFormValues) => {
-    const staffBranch = getBranches().find(b => b.name.trim().toLowerCase() === staffBranchName?.trim().toLowerCase());
+    const staffBranch = allBranches.find(b => b.name.trim().toLowerCase() === staffBranchName?.trim().toLowerCase());
     const dataWithBranchId = { ...data, branchId: staffBranch?.id || data.branchId };
 
     if (selectedCustomer) {
@@ -245,7 +229,7 @@ export default function StaffIndividualCustomersPage() {
   };
   
   const renderContent = () => {
-    if (isLoading || authStatus === 'loading') {
+    if (isLoading) {
       return (
         <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
           Loading...
@@ -259,7 +243,7 @@ export default function StaffIndividualCustomersPage() {
         </div>
       );
     }
-    if (branchFilteredCustomers.length === 0 && !searchTerm) {
+    if (branchFilteredData.customers.length === 0 && !searchTerm) {
       return (
         <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
           No customers found for branch: {staffBranchName}. Click "Add New Customer" to get started. <User className="inline-block ml-2 h-5 w-5" />
@@ -271,8 +255,8 @@ export default function StaffIndividualCustomersPage() {
         data={paginatedCustomers}
         onEdit={handleEditCustomer}
         onDelete={handleDeleteCustomer}
-        bulkMetersList={getBulkMeters().map(bm => ({ id: bm.id, name: bm.name }))}
-        branches={allBranchesForTable}
+        bulkMetersList={allBulkMeters.map(bm => ({ id: bm.id, name: bm.name }))}
+        branches={allBranches}
       />
     );
   };
@@ -327,7 +311,7 @@ export default function StaffIndividualCustomersPage() {
         onOpenChange={setIsFormOpen}
         onSubmit={handleSubmitCustomer}
         defaultValues={selectedCustomer}
-        bulkMeters={branchBulkMetersList} 
+        bulkMeters={branchFilteredData.bulkMeters} 
       />
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

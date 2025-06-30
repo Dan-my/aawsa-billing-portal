@@ -33,12 +33,12 @@ interface User {
 
 export default function StaffBulkMetersPage() {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = React.useState(true);
   const [authStatus, setAuthStatus] = React.useState<'loading' | 'unauthorized' | 'authorized'>('loading');
   const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
   
-  const [branchFilteredBulkMeters, setBranchFilteredBulkMeters] = React.useState<BulkMeter[]>([]);
-  const [allBranchesForTable, setAllBranchesForTable] = React.useState<Branch[]>([]);
+  const [allBulkMeters, setAllBulkMeters] = React.useState<BulkMeter[]>([]);
+  const [allBranches, setAllBranches] = React.useState<Branch[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
 
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
@@ -49,6 +49,7 @@ export default function StaffBulkMetersPage() {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
+  // First useEffect for authentication check
   React.useEffect(() => {
     const userString = localStorage.getItem("user");
     if (userString) {
@@ -68,64 +69,54 @@ export default function StaffBulkMetersPage() {
     }
   }, []);
 
-  const filterAndSetData = React.useCallback(() => {
-    if (!staffBranchName) {
-      setBranchFilteredBulkMeters([]);
-      setAllBranchesForTable(getBranches());
-      return;
-    }
-    
-    const branches = getBranches();
-    const bulkMeters = getBulkMeters();
-    setAllBranchesForTable(branches);
-
-    const staffBranch = branches.find(b => b.name.trim().toLowerCase() === staffBranchName.trim().toLowerCase());
-    
-    if (staffBranch) {
-      const filtered = bulkMeters.filter(bm => bm.branchId === staffBranch.id);
-      setBranchFilteredBulkMeters(filtered);
-    } else {
-      setBranchFilteredBulkMeters([]);
-    }
-    setIsLoading(false);
-  }, [staffBranchName]);
-
-
+  // Second useEffect for data loading, dependent on auth status
   React.useEffect(() => {
     if (authStatus !== 'authorized') {
-      setIsLoading(false);
+      if (authStatus !== 'loading') setIsLoading(false);
       return;
     }
 
     let isMounted = true;
     setIsLoading(true);
 
-    const initializeAndFilter = async () => {
+    const initializeAndSubscribe = async () => {
         try {
-          await Promise.all([
-            initializeBranches(),
-            initializeBulkMeters(),
-          ]);
+          await Promise.all([initializeBranches(), initializeBulkMeters()]);
+          if (isMounted) {
+            setAllBranches(getBranches());
+            setAllBulkMeters(getBulkMeters());
+          }
         } catch (err) {
             console.error("Failed to initialize data:", err);
         } finally {
-            if (isMounted) {
-              filterAndSetData();
-            }
+            if (isMounted) setIsLoading(false);
         }
     };
     
-    initializeAndFilter();
+    initializeAndSubscribe();
     
-    const unSubBranches = subscribeToBranches(filterAndSetData);
-    const unSubBulkMeters = subscribeToBulkMeters(filterAndSetData);
+    const unSubBranches = subscribeToBranches((data) => isMounted && setAllBranches(data));
+    const unSubBulkMeters = subscribeToBulkMeters((data) => isMounted && setAllBulkMeters(data));
 
     return () => {
       isMounted = false;
       unSubBranches();
       unSubBulkMeters();
     };
-  }, [authStatus, filterAndSetData]);
+  }, [authStatus]);
+
+
+  // Declarative filtering with useMemo
+  const branchFilteredBulkMeters = React.useMemo(() => {
+    if (authStatus !== 'authorized' || !staffBranchName || allBranches.length === 0) {
+      return [];
+    }
+    const staffBranch = allBranches.find(b => b.name.trim().toLowerCase() === staffBranchName.trim().toLowerCase());
+    if (!staffBranch) {
+      return [];
+    }
+    return allBulkMeters.filter(bm => bm.branchId === staffBranch.id);
+  }, [authStatus, staffBranchName, allBulkMeters, allBranches]);
 
 
   const searchedBulkMeters = React.useMemo(() => {
@@ -170,7 +161,7 @@ export default function StaffBulkMetersPage() {
   };
 
   const handleSubmitBulkMeter = async (data: BulkMeterFormValues) => {
-    const staffBranch = getBranches().find(b => b.name.trim().toLowerCase() === staffBranchName?.trim().toLowerCase());
+    const staffBranch = allBranches.find(b => b.name.trim().toLowerCase() === staffBranchName?.trim().toLowerCase());
     const dataWithBranchId = { ...data, branchId: staffBranch?.id || data.branchId };
     
     if (selectedBulkMeter) {
@@ -191,7 +182,7 @@ export default function StaffBulkMetersPage() {
   };
   
   const renderContent = () => {
-    if (isLoading || authStatus === 'loading') {
+    if (isLoading) {
       return (
         <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
           Loading...
@@ -217,7 +208,7 @@ export default function StaffBulkMetersPage() {
         data={paginatedBulkMeters}
         onEdit={handleEditBulkMeter}
         onDelete={handleDeleteBulkMeter}
-        branches={allBranchesForTable}
+        branches={allBranches}
       />
     );
   };

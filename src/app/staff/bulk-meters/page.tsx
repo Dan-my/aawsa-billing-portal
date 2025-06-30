@@ -111,9 +111,11 @@ export default function StaffBulkMetersPage() {
     if (authStatus !== 'authorized' || !staffBranchName || allBranches.length === 0) {
       return [];
     }
-    // Make the matching more robust to handle partial names like "Megenagna" vs "Megenagna Branch"
     const normalizedStaffBranchName = staffBranchName.trim().toLowerCase();
-    const staffBranch = allBranches.find(b => b.name.trim().toLowerCase().includes(normalizedStaffBranchName));
+    const staffBranch = allBranches.find(b => {
+      const normalizedBranchName = b.name.trim().toLowerCase();
+      return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
+    });
 
     if (!staffBranch) {
       return [];
@@ -164,7 +166,11 @@ export default function StaffBulkMetersPage() {
   };
 
   const handleSubmitBulkMeter = async (data: BulkMeterFormValues) => {
-    const staffBranch = allBranches.find(b => b.name.trim().toLowerCase() === staffBranchName?.trim().toLowerCase());
+    const staffBranch = allBranches.find(b => {
+        const normalizedStaffBranchName = (staffBranchName || '').trim().toLowerCase();
+        const normalizedBranchName = b.name.trim().toLowerCase();
+        return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
+    });
     const dataWithBranchId = { ...data, branchId: staffBranch?.id || data.branchId };
     
     if (selectedBulkMeter) {

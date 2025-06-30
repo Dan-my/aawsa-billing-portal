@@ -34,8 +34,8 @@ interface User {
 export default function StaffBulkMetersPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
   
   const [allBulkMeters, setAllBulkMeters] = React.useState<BulkMeter[]>([]);
   const [allBranches, setAllBranches] = React.useState<Branch[]>([]);
@@ -49,35 +49,26 @@ export default function StaffBulkMetersPage() {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
-  // Robust data loading and authentication effect
   React.useEffect(() => {
-    let isMounted = true;
-
-    const initializePage = async () => {
-      // Phase 1: Authentication check
-      try {
-        const userString = localStorage.getItem("user");
-        if (userString) {
-          const parsedUser: User = JSON.parse(userString);
-          if (parsedUser.role.toLowerCase() === 'staff' && parsedUser.branchName) {
-            if (isMounted) setStaffBranchName(parsedUser.branchName);
-          } else {
-            if (isMounted) setError("Your user profile is not configured for a staff role or branch.");
-            setIsLoading(false);
-            return; // Stop execution
-          }
-        } else {
-          if (isMounted) setError("You are not logged in. Please log in to continue.");
-          setIsLoading(false);
-          return; // Stop execution
-        }
-      } catch (e) {
-        if (isMounted) setError("An error occurred while verifying your session.");
+    const userString = localStorage.getItem("user");
+    if (userString) {
+      const parsedUser: User = JSON.parse(userString);
+      if (parsedUser.role.toLowerCase() === 'staff' && parsedUser.branchName) {
+        setStaffBranchName(parsedUser.branchName);
+        setIsAuthenticated(true);
+      } else {
         setIsLoading(false);
-        return; // Stop execution
       }
+    } else {
+      setIsLoading(false);
+    }
+  }, []);
+  
+  React.useEffect(() => {
+    if (!isAuthenticated) return;
 
-      // Phase 2: Data loading
+    let isMounted = true;
+    const initializeData = async () => {
       try {
         await Promise.all([
           initializeBranches(),
@@ -87,16 +78,15 @@ export default function StaffBulkMetersPage() {
           setAllBranches(getBranches());
           setAllBulkMeters(getBulkMeters());
         }
-      } catch (dataError) {
-        if (isMounted) setError("Failed to load required data from the server.");
+      } catch (err) {
+        console.error("Failed to load data for staff bulk meters page:", err);
       } finally {
         if (isMounted) setIsLoading(false);
       }
     };
-
-    initializePage();
     
-    // Subscriptions are set up once and will update state when data changes
+    initializeData();
+    
     const unSubBranches = subscribeToBranches(setAllBranches);
     const unSubBulkMeters = subscribeToBulkMeters(setAllBulkMeters);
 
@@ -105,17 +95,22 @@ export default function StaffBulkMetersPage() {
       unSubBranches();
       unSubBulkMeters();
     };
-  }, []);
+  }, [isAuthenticated]);
 
 
   const branchFilteredBulkMeters = React.useMemo(() => {
-    if (isLoading || error || !staffBranchName) return [];
+    if (isLoading || !staffBranchName) return [];
     
-    const staffBranch = allBranches.find(b => b.name === staffBranchName);
-    if (!staffBranch) return [];
+    const staffBranch = allBranches.find(
+      (b) => b.name.trim().toLowerCase() === staffBranchName.trim().toLowerCase()
+    );
+
+    if (!staffBranch) {
+      return [];
+    }
     
     return allBulkMeters.filter(bm => bm.branchId === staffBranch.id);
-  }, [isLoading, error, staffBranchName, allBranches, allBulkMeters]);
+  }, [isLoading, staffBranchName, allBranches, allBulkMeters]);
 
   const searchedBulkMeters = React.useMemo(() => {
      if (!searchTerm) {
@@ -184,10 +179,10 @@ export default function StaffBulkMetersPage() {
         </div>
       );
     }
-    if (error) {
+    if (!staffBranchName) {
       return (
         <div className="mt-4 p-4 border rounded-md bg-destructive/10 text-center text-destructive">
-          {error}
+          Your user profile is not configured for a staff role or branch.
         </div>
       );
     }
@@ -222,10 +217,10 @@ export default function StaffBulkMetersPage() {
               className="pl-8 w-full md:w-[250px]"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              disabled={isLoading || !!error}
+              disabled={isLoading || !staffBranchName}
             />
           </div>
-          <Button onClick={handleAddBulkMeter} disabled={isLoading || !!error}>
+          <Button onClick={handleAddBulkMeter} disabled={isLoading || !staffBranchName}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Bulk Meter
           </Button>
         </div>
@@ -239,7 +234,7 @@ export default function StaffBulkMetersPage() {
         <CardContent>
           {renderContent()}
         </CardContent>
-         {searchedBulkMeters.length > 0 && !isLoading && !error && (
+         {searchedBulkMeters.length > 0 && !isLoading && staffBranchName && (
           <TablePagination
             count={searchedBulkMeters.length}
             page={page}

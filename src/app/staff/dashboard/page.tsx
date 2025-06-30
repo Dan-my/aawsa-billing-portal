@@ -52,7 +52,7 @@ export default function StaffDashboardPage() {
     currentStaffBranch: string | undefined
   ) => {
     if (currentStaffBranch) {
-      const staffBranch = allBranches.find(b => b.name === currentStaffBranch);
+      const staffBranch = allBranches.find(b => b.name.trim().toLowerCase() === currentStaffBranch.trim().toLowerCase());
 
       if (staffBranch) {
         const staffBranchId = staffBranch.id;

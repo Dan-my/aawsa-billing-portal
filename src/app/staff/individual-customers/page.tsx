@@ -38,8 +38,8 @@ interface User {
 export default function StaffIndividualCustomersPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
 
   const [allCustomers, setAllCustomers] = React.useState<IndividualCustomer[]>([]);
   const [allBulkMeters, setAllBulkMeters] = React.useState<{id: string, name: string}[]>([]);
@@ -54,56 +54,46 @@ export default function StaffIndividualCustomersPage() {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
-  // Robust data loading and authentication effect
   React.useEffect(() => {
-    let isMounted = true;
-
-    const initializePage = async () => {
-      // Phase 1: Authentication check
-      try {
-        const userString = localStorage.getItem("user");
-        if (userString) {
-          const parsedUser: User = JSON.parse(userString);
-          if (parsedUser.role.toLowerCase() === 'staff' && parsedUser.branchName) {
-            if (isMounted) setStaffBranchName(parsedUser.branchName);
-          } else {
-            if (isMounted) setError("Your user profile is not configured for a staff role or branch.");
-            setIsLoading(false);
-            return; // Stop execution
-          }
-        } else {
-          if (isMounted) setError("You are not logged in. Please log in to continue.");
-          setIsLoading(false);
-          return; // Stop execution
-        }
-      } catch (e) {
-        if (isMounted) setError("An error occurred while verifying your session.");
+    const userString = localStorage.getItem("user");
+    if (userString) {
+      const parsedUser: User = JSON.parse(userString);
+      if (parsedUser.role.toLowerCase() === 'staff' && parsedUser.branchName) {
+        setStaffBranchName(parsedUser.branchName);
+        setIsAuthenticated(true);
+      } else {
         setIsLoading(false);
-        return; // Stop execution
       }
+    } else {
+      setIsLoading(false);
+    }
+  }, []);
 
-      // Phase 2: Data loading
-      try {
-        await Promise.all([
-          initializeBranches(),
-          initializeBulkMeters(),
-          initializeCustomers(),
-        ]);
-        if (isMounted) {
-          setAllBranches(getBranches());
-          setAllBulkMeters(getBulkMeters().map(bm => ({ id: bm.id, name: bm.name })));
-          setAllCustomers(getCustomers());
+  React.useEffect(() => {
+    if (!isAuthenticated) return;
+    let isMounted = true;
+    
+    const initializeData = async () => {
+        try {
+            await Promise.all([
+            initializeBranches(),
+            initializeBulkMeters(),
+            initializeCustomers(),
+            ]);
+            if (isMounted) {
+            setAllBranches(getBranches());
+            setAllBulkMeters(getBulkMeters().map(bm => ({ id: bm.id, name: bm.name })));
+            setAllCustomers(getCustomers());
+            }
+        } catch (dataError) {
+            console.error("Failed to load data for staff customers page:", dataError);
+        } finally {
+            if (isMounted) setIsLoading(false);
         }
-      } catch (dataError) {
-        if (isMounted) setError("Failed to load required data from the server.");
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
     };
 
-    initializePage();
+    initializeData();
     
-    // Subscriptions
     const unSubCustomers = subscribeToCustomers(setAllCustomers);
     const unSubBulkMeters = subscribeToBulkMeters((bms) => setAllBulkMeters(bms.map(bm => ({ id: bm.id, name: bm.name }))));
     const unSubBranches = subscribeToBranches(setAllBranches);
@@ -114,15 +104,20 @@ export default function StaffIndividualCustomersPage() {
       unSubBulkMeters();
       unSubBranches();
     };
-  }, []);
+  }, [isAuthenticated]);
 
   const branchFilteredCustomers = React.useMemo(() => {
-    if (isLoading || error || !staffBranchName) return [];
+    if (isLoading || !staffBranchName) return [];
     
-    const staffBranch = allBranches.find(b => b.name === staffBranchName);
-    if (!staffBranch) return [];
+    const staffBranch = allBranches.find(
+      (b) => b.name.trim().toLowerCase() === staffBranchName.trim().toLowerCase()
+    );
 
-    const branchBulkMeterIds = getBulkMeters()
+    if (!staffBranch) {
+      return [];
+    }
+
+    const branchBulkMeterIds = allBulkMeters
       .filter(bm => bm.branchId === staffBranch.id)
       .map(bm => bm.id);
 
@@ -130,18 +125,21 @@ export default function StaffIndividualCustomersPage() {
       customer.branchId === staffBranch.id ||
       (customer.assignedBulkMeterId && branchBulkMeterIds.includes(customer.assignedBulkMeterId))
     );
-  }, [isLoading, error, staffBranchName, allBranches, allCustomers]);
+  }, [isLoading, staffBranchName, allBranches, allCustomers, allBulkMeters]);
 
   const branchBulkMetersList = React.useMemo(() => {
-    if (isLoading || error || !staffBranchName) return [];
+    if (isLoading || !staffBranchName) return [];
      
-    const staffBranch = allBranches.find(b => b.name === staffBranchName);
+    const staffBranch = allBranches.find(
+        (b) => b.name.trim().toLowerCase() === staffBranchName.trim().toLowerCase()
+    );
+
     if (!staffBranch) return [];
 
     return getBulkMeters()
       .filter(bm => bm.branchId === staffBranch.id)
       .map(bm => ({ id: bm.id, name: bm.name }));
-  }, [isLoading, error, staffBranchName, allBranches]);
+  }, [isLoading, staffBranchName, allBranches]);
   
   const searchedCustomers = React.useMemo(() => {
     if (!searchTerm) {
@@ -242,10 +240,10 @@ export default function StaffIndividualCustomersPage() {
         </div>
       );
     }
-    if (error) {
+    if (!staffBranchName) {
       return (
         <div className="mt-4 p-4 border rounded-md bg-destructive/10 text-center text-destructive">
-          {error}
+          Your user profile is not configured for a staff role or branch.
         </div>
       );
     }
@@ -280,10 +278,10 @@ export default function StaffIndividualCustomersPage() {
               className="pl-8 w-full md:w-[250px]"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              disabled={isLoading || !!error}
+              disabled={isLoading || !staffBranchName}
             />
           </div>
-          <Button onClick={handleAddCustomer} disabled={isLoading || !!error}>
+          <Button onClick={handleAddCustomer} disabled={isLoading || !staffBranchName}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Customer
           </Button>
         </div>
@@ -297,7 +295,7 @@ export default function StaffIndividualCustomersPage() {
         <CardContent>
           {renderContent()}
         </CardContent>
-        {searchedCustomers.length > 0 && !isLoading && !error && (
+        {searchedCustomers.length > 0 && !isLoading && staffBranchName && (
           <TablePagination
             count={searchedCustomers.length}
             page={page}

@@ -78,15 +78,8 @@ export default function BranchesPage() {
 
   const handleSubmitBranch = async (data: BranchFormValues) => {
     if (selectedBranch) {
-      const updatedBranchData: Branch = {
-        id: selectedBranch.id,
-        name: data.name,
-        location: data.location,
-        contactPerson: data.contactPerson,
-        contactPhone: data.contactPhone,
-        status: data.status,
-      };
-      await updateBranchInStore(updatedBranchData);
+      // Pass the ID and the form data as separate arguments as expected by the update function
+      await updateBranchInStore(selectedBranch.id, data);
       toast({ title: "Branch Updated", description: `${data.name} has been updated.` });
     } else {
       await addBranchToStore(data); 

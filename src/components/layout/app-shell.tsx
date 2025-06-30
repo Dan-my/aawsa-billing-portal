@@ -108,8 +108,10 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
   const currentYear = new Date().getFullYear();
 
   const handleLogout = React.useCallback(async () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("session_expires_at");
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.removeItem("user");
+      window.localStorage.removeItem("session_expires_at");
+    }
     setUser(null);
     router.push("/");
   }, [router]);
@@ -117,35 +119,33 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
   useIdleTimeout(handleLogout);
 
   React.useEffect(() => {
-    // General Setup
-    const storedAppName = localStorage.getItem("aawsa-app-name");
-    if (storedAppName) {
-      setAppName(storedAppName);
-      if (typeof document !== 'undefined') document.title = storedAppName;
+    if (typeof window === 'undefined' || !window.localStorage) {
+      setAuthChecked(true);
+      return;
     }
     
-    if (typeof document !== 'undefined') {
-      const storedDarkMode = localStorage.getItem("aawsa-dark-mode-default");
-      document.documentElement.classList.toggle('dark', storedDarkMode === "true");
+    const storedAppName = window.localStorage.getItem("aawsa-app-name");
+    if (storedAppName) {
+      setAppName(storedAppName);
+      document.title = storedAppName;
     }
+    
+    const storedDarkMode = window.localStorage.getItem("aawsa-dark-mode-default");
+    document.documentElement.classList.toggle('dark', storedDarkMode === "true");
 
-    // Check for user session in localStorage
-    const storedUser = localStorage.getItem('user');
+    const storedUser = window.localStorage.getItem('user');
     if (storedUser) {
         try {
             const parsedUser: UserProfile = JSON.parse(storedUser);
             if (parsedUser.role.toLowerCase() === userRole) {
                 setUser(parsedUser);
             } else {
-                // Wrong role for this layout, log out and redirect
                 handleLogout();
             }
         } catch (e) {
-            // Invalid JSON, clear it and redirect
             handleLogout();
         }
     } else if (pathname !== '/') {
-        // No user and not on login page, redirect
         router.replace('/');
     }
     setAuthChecked(true);
@@ -165,17 +165,14 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
     );
   }
   
-  // Allow AuthForm to render on the home page
   if (pathname === '/') {
       return <>{children}</>;
   }
   
-  // If not on home page, and no user, show nothing until redirect kicks in
   if (!user) {
     return null;
   }
 
-  // If user role does not match the layout role, show nothing
   if (user && user.role.toLowerCase() !== userRole) {
     return null;
   }

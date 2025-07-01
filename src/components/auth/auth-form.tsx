@@ -54,7 +54,7 @@ export function AuthForm() {
     const { data: user, success, message } = await authenticateStaffMember(values.email, values.password);
 
     if (success && user) {
-      if(user.status !== "Active") {
+      if (user.status.toLowerCase() !== "active") {
           toast({
             variant: "destructive",
             title: "Login Failed",

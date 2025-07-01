@@ -1,9 +1,6 @@
 
 "use client";
 
-// IMPORTANT: After the DB change, you must rename this page's parent folder
-// from [id] to [customerKeyNumber] for routing to work correctly.
-
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image"; 
@@ -39,7 +36,7 @@ export default function BulkMeterDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
-  const bulkMeterKey = params.customerKeyNumber as string; // This is now customerKeyNumber
+  const bulkMeterKey = params.id as string; // Use 'id' from the route folder name [id]
 
   const [bulkMeter, setBulkMeter] = useState<BulkMeter | null>(null);
   const [associatedCustomers, setAssociatedCustomers] = useState<IndividualCustomer[]>([]);

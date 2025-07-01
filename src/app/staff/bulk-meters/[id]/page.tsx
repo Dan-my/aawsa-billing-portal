@@ -43,7 +43,7 @@ export default function StaffBulkMeterDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
-  const bulkMeterKey = params.customerKeyNumber as string;
+  const bulkMeterKey = params.id as string;
 
   const [bulkMeter, setBulkMeter] = useState<BulkMeter | null>(null);
   const [associatedCustomers, setAssociatedCustomers] = useState<IndividualCustomer[]>([]);

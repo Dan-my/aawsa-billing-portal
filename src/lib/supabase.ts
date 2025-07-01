@@ -560,14 +560,14 @@ export const deleteBranch = async (id: string) => supabase.from('branches').dele
 // CRUD for Bulk Meters
 export const getAllBulkMeters = async () => supabase.from('bulk_meters').select('*');
 export const createBulkMeter = async (bulkMeter: BulkMeterInsert) => supabase.from('bulk_meters').insert(bulkMeter).select().single();
-export const updateBulkMeter = async (id: string, bulkMeter: BulkMeterUpdate) => supabase.from('bulk_meters').update(bulkMeter).eq('id', id).select().single();
-export const deleteBulkMeter = async (id: string) => supabase.from('bulk_meters').delete().eq('id', id);
+export const updateBulkMeter = async (customerKeyNumber: string, bulkMeter: BulkMeterUpdate) => supabase.from('bulk_meters').update(bulkMeter).eq('customerKeyNumber', customerKeyNumber).select().single();
+export const deleteBulkMeter = async (customerKeyNumber: string) => supabase.from('bulk_meters').delete().eq('customerKeyNumber', customerKeyNumber);
 
 // CRUD for Individual Customers
 export const getAllCustomers = async () => supabase.from('individual_customers').select('*');
 export const createCustomer = async (customer: IndividualCustomerInsert) => supabase.from('individual_customers').insert(customer).select().single();
-export const updateCustomer = async (id: string, customer: IndividualCustomerUpdate) => supabase.from('individual_customers').update(customer).eq('id', id).select().single();
-export const deleteCustomer = async (id: string) => supabase.from('individual_customers').delete().eq('id', id);
+export const updateCustomer = async (customerKeyNumber: string, customer: IndividualCustomerUpdate) => supabase.from('individual_customers').update(customer).eq('customerKeyNumber', customerKeyNumber).select().single();
+export const deleteCustomer = async (customerKeyNumber: string) => supabase.from('individual_customers').delete().eq('customerKeyNumber', customerKeyNumber);
 
 // CRUD for Staff Members
 export const getAllStaffMembers = async () => supabase.from('staff_members').select('*');

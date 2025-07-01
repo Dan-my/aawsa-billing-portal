@@ -106,8 +106,8 @@ export default function BulkMeterDetailsPage() {
     const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + (cust.currentReading - cust.previousReading), 0);
     const totalIndividualBill = associatedCustomers.reduce((sum, cust) => sum + cust.calculatedBill, 0);
 
-    const differenceUsage = bulkMeter.differenceUsage ?? (bulkUsage - totalIndividualUsage);
-    const differenceBill = bulkMeter.differenceBill ?? (totalBulkBillForPeriod - totalIndividualBill);
+    const differenceUsage = bulkUsage - totalIndividualUsage;
+    const differenceBill = totalBulkBillForPeriod - totalIndividualBill;
     
     const displayBranchName = bulkMeter.branchId ? branches.find(b => b.id === bulkMeter.branchId)?.name : bulkMeter.location;
     const displayCardLocation = bulkMeter.specificArea || bulkMeter.ward || "N/A";
@@ -407,7 +407,7 @@ export default function BulkMeterDetailsPage() {
       const balanceFromPreviousPeriods = currentBulkMeterState.outStandingbill || 0;
       const totalPayableThisCycle = billForCurrentPeriod + balanceFromPreviousPeriods;
 
-      const billToSave: Omit<DomainBill, 'id'> = {
+      const billToSave: Omit<DomainBill, 'id' | 'createdAt' | 'updatedAt'> = {
         bulkMeterId: currentBulkMeterState.customerKeyNumber,
         billPeriodStartDate: `${currentBulkMeterState.month}-01`,
         billPeriodEndDate: format(periodEndDate, 'yyyy-MM-dd'),

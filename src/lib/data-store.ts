@@ -391,6 +391,11 @@ const mapDomainBulkMeterToInsert = (bm: Omit<BulkMeter, 'customerKeyNumber'> & {
   const calculatedBulkUsage = (bm.currentReading ?? 0) - (bm.previousReading ?? 0);
   const { totalBill: calculatedTotalBulkBill } = calculateBill(calculatedBulkUsage, "Non-domestic", "No", Number(bm.meterSize));
 
+  const allIndividualCustomers = getCustomers();
+  const associatedCustomers = allIndividualCustomers.filter(c => c.assignedBulkMeterId === bm.customerKeyNumber);
+  const sumIndividualUsage = associatedCustomers.reduce((acc, cust) => acc + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
+  const sumIndividualBill = associatedCustomers.reduce((acc, cust) => acc + (cust.calculatedBill ?? 0), 0);
+
   return {
     name: bm.name,
     customerKeyNumber: bm.customerKeyNumber,
@@ -408,8 +413,8 @@ const mapDomainBulkMeterToInsert = (bm: Omit<BulkMeter, 'customerKeyNumber'> & {
     paymentStatus: bm.paymentStatus || 'Unpaid',
     bulk_usage: calculatedBulkUsage,
     total_bulk_bill: calculatedTotalBulkBill,
-    difference_usage: calculatedBulkUsage,
-    difference_bill: calculatedTotalBulkBill,
+    difference_usage: calculatedBulkUsage - sumIndividualUsage,
+    difference_bill: calculatedTotalBulkBill - sumIndividualBill,
     outStandingbill: bm.outStandingbill ? Number(bm.outStandingbill) : 0, 
   };
 };

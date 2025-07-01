@@ -39,7 +39,7 @@ export default function BulkMeterDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
-  const bulkMeterKey = params.id as string; // This is now customerKeyNumber
+  const bulkMeterKey = params.customerKeyNumber as string; // This is now customerKeyNumber
 
   const [bulkMeter, setBulkMeter] = useState<BulkMeter | null>(null);
   const [associatedCustomers, setAssociatedCustomers] = useState<IndividualCustomer[]>([]);
@@ -103,8 +103,8 @@ export default function BulkMeterDetailsPage() {
     const totalPayable = totalBulkBillForPeriod + outStandingBillValue;
 
 
-    const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + (cust.currentReading - cust.previousReading), 0);
-    const totalIndividualBill = associatedCustomers.reduce((sum, cust) => sum + cust.calculatedBill, 0);
+    const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
+    const totalIndividualBill = associatedCustomers.reduce((sum, cust) => sum + (cust.calculatedBill ?? 0), 0);
 
     const differenceUsage = bulkUsage - totalIndividualUsage;
     const differenceBill = totalBulkBillForPeriod - totalIndividualBill;
@@ -128,7 +128,7 @@ export default function BulkMeterDetailsPage() {
               meterRent: billToRender.meterRent ?? 0,
               vatAmount: calculateBill(billToRender.usageM3 ?? 0, 'Non-domestic', 'No', bulkMeter.meterSize).vatAmount,
               totalDifferenceBill: differenceBill,
-              differenceUsage: differenceUsage,
+              differenceUsage: billToRender.differenceUsage ?? 0,
               outstandingBill: billToRender.balanceCarriedForward ?? 0,
               totalPayable: (billToRender.balanceCarriedForward ?? 0) + billToRender.totalAmountDue,
               paymentStatus: billToRender.paymentStatus,
@@ -393,6 +393,12 @@ export default function BulkMeterDetailsPage() {
       const bmPreviousReading = currentBulkMeterState.previousReading ?? 0;
       const bmCurrentReading = currentBulkMeterState.currentReading ?? 0;
       const bulkUsage = bmCurrentReading - bmPreviousReading;
+
+      const allCustomers = getCustomers();
+      const associatedCustomersForCycle = allCustomers.filter(c => c.assignedBulkMeterId === currentBulkMeterState.customerKeyNumber);
+      const totalIndividualUsageForCycle = associatedCustomersForCycle.reduce((sum, cust) => sum + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
+      const differenceUsageForCycle = bulkUsage - totalIndividualUsageForCycle;
+      
       const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
       const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
 
@@ -415,6 +421,7 @@ export default function BulkMeterDetailsPage() {
         previousReadingValue: bmPreviousReading,
         currentReadingValue: bmCurrentReading,
         usageM3: bulkUsage,
+        differenceUsage: differenceUsageForCycle,
         ...billBreakdown,
         balanceCarriedForward: balanceFromPreviousPeriods,
         totalAmountDue: billForCurrentPeriod,
@@ -504,6 +511,7 @@ export default function BulkMeterDetailsPage() {
           </div>
           <div className="space-y-1">
              <p className="text-lg"><strong className="font-semibold">Bulk Usage:</strong> {bulkUsage.toFixed(2)} m³</p>
+             <p className="text-lg"><strong className="font-semibold">Total Individual Usage:</strong> {totalIndividualUsage.toFixed(2)} m³</p>
              <p className="text-xl text-primary"><strong className="font-semibold">Total Bulk Bill:</strong> ETB {totalBulkBillForPeriod.toFixed(2)}</p>
              <p className={cn("text-sm", differenceUsage >= 0 ? "text-green-600" : "text-amber-600")}><strong className="font-semibold">Difference Usage:</strong> {differenceUsage.toFixed(2)} m³</p>
              <p className={cn("text-sm", differenceBill >= 0 ? "text-green-600" : "text-amber-600")}><strong className="font-semibold">Difference Bill:</strong> ETB {differenceBill.toFixed(2)}</p>
@@ -547,7 +555,7 @@ export default function BulkMeterDetailsPage() {
       <Card className="shadow-lg">
         <CardHeader><CardTitle className="flex items-center gap-2"><ListCollapse className="h-5 w-5 text-primary" />Billing History</CardTitle><CardDescription>Historical bills generated for this meter.</CardDescription></CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">{billingHistory.length > 0 ? (<Table><TableHeader><TableRow><TableHead>Month</TableHead><TableHead>Date Billed</TableHead><TableHead className="text-right">Prev. Reading</TableHead><TableHead className="text-right">Curr. Reading</TableHead><TableHead>Usage (m³)</TableHead><TableHead className="text-right">Outstanding (ETB)</TableHead><TableHead className="text-right">Current Bill (ETB)</TableHead><TableHead className="text-right">Total Payable (ETB)</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader><TableBody>{paginatedBillingHistory.map(bill => (<TableRow key={bill.id}><TableCell>{bill.monthYear}</TableCell><TableCell>{format(parseISO(bill.billPeriodEndDate), "PP")}</TableCell><TableCell className="text-right">{bill.previousReadingValue.toFixed(2)}</TableCell><TableCell className="text-right">{bill.currentReadingValue.toFixed(2)}</TableCell><TableCell>{bill.usageM3?.toFixed(2) ?? 'N/A'}</TableCell><TableCell className="text-right">{bill.balanceCarriedForward?.toFixed(2) ?? '0.00'}</TableCell><TableCell className="text-right font-medium">{bill.totalAmountDue.toFixed(2)}</TableCell><TableCell className="text-right font-bold">{((bill.balanceCarriedForward ?? 0) + bill.totalAmountDue).toFixed(2)}</TableCell><TableCell><Badge variant={bill.paymentStatus === 'Paid' ? 'default' : 'destructive'}>{bill.paymentStatus}</Badge></TableCell><TableCell className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuLabel>Actions</DropdownMenuLabel><DropdownMenuItem onClick={() => handlePrint(bill)}><Printer className="mr-2 h-4 w-4" />Print/Export Bill</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => handleDeleteBillingRecord(bill)} className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" />Delete Record</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell></TableRow>))}</TableBody></Table>) : (<p className="text-muted-foreground text-sm text-center py-4">No billing history found.</p>)}</div>
+          <div className="overflow-x-auto">{billingHistory.length > 0 ? (<Table><TableHeader><TableRow><TableHead>Month</TableHead><TableHead>Date Billed</TableHead><TableHead className="text-right">Prev. Reading</TableHead><TableHead className="text-right">Curr. Reading</TableHead><TableHead>Usage (m³)</TableHead><TableHead>Diff. Usage (m³)</TableHead><TableHead className="text-right">Outstanding (ETB)</TableHead><TableHead className="text-right">Current Bill (ETB)</TableHead><TableHead className="text-right">Total Payable (ETB)</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader><TableBody>{paginatedBillingHistory.map(bill => (<TableRow key={bill.id}><TableCell>{bill.monthYear}</TableCell><TableCell>{format(parseISO(bill.billPeriodEndDate), "PP")}</TableCell><TableCell className="text-right">{bill.previousReadingValue.toFixed(2)}</TableCell><TableCell className="text-right">{bill.currentReadingValue.toFixed(2)}</TableCell><TableCell>{bill.usageM3?.toFixed(2) ?? 'N/A'}</TableCell><TableCell className={cn("text-right", bill.differenceUsage && bill.differenceUsage < 0 ? "text-amber-600" : "text-green-600")}>{bill.differenceUsage?.toFixed(2) ?? 'N/A'}</TableCell><TableCell className="text-right">{bill.balanceCarriedForward?.toFixed(2) ?? '0.00'}</TableCell><TableCell className="text-right font-medium">{bill.totalAmountDue.toFixed(2)}</TableCell><TableCell className="text-right font-bold">{((bill.balanceCarriedForward ?? 0) + bill.totalAmountDue).toFixed(2)}</TableCell><TableCell><Badge variant={bill.paymentStatus === 'Paid' ? 'default' : 'destructive'}>{bill.paymentStatus}</Badge></TableCell><TableCell className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuLabel>Actions</DropdownMenuLabel><DropdownMenuItem onClick={() => handlePrint(bill)}><Printer className="mr-2 h-4 w-4" />Print/Export Bill</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => handleDeleteBillingRecord(bill)} className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" />Delete Record</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell></TableRow>))}</TableBody></Table>) : (<p className="text-muted-foreground text-sm text-center py-4">No billing history found.</p>)}</div>
         </CardContent>
         {billingHistory.length > 0 && (
           <TablePagination

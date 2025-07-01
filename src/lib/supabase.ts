@@ -48,7 +48,6 @@ export interface Database {
       };
       bulk_meters: {
         Row: {
-          id: string;
           name: string;
           customerKeyNumber: string;
           contractNumber: string;
@@ -72,7 +71,6 @@ export interface Database {
           updatedAt?: string | null;
         };
         Insert: {
-          id?: string;
           name: string;
           customerKeyNumber: string;
           contractNumber: string;
@@ -96,7 +94,6 @@ export interface Database {
           updatedAt?: string | null;
         };
         Update: {
-          id?: string;
           name?: string;
           customerKeyNumber?: string;
           contractNumber?: string;
@@ -122,7 +119,6 @@ export interface Database {
       };
       individual_customers: {
         Row: {
-          id: string;
           name: string;
           customerKeyNumber: string;
           contractNumber: string;
@@ -148,7 +144,6 @@ export interface Database {
           updated_at?: string | null;
         };
         Insert: {
-          id?: string;
           name: string;
           customerKeyNumber: string;
           contractNumber: string;
@@ -174,7 +169,6 @@ export interface Database {
           updated_at?: string | null;
         };
         Update: {
-          id?: string;
           name?: string;
           customerKeyNumber?: string;
           contractNumber?: string;
@@ -252,6 +246,7 @@ export interface Database {
           previous_reading_value: number;
           current_reading_value: number;
           usage_m3?: number | null;
+          difference_usage?: number | null;
           base_water_charge: number;
           sewerage_charge?: number | null;
           maintenance_fee?: number | null;
@@ -278,6 +273,7 @@ export interface Database {
           previous_reading_value: number;
           current_reading_value: number;
           usage_m3?: number | null;
+          difference_usage?: number | null;
           base_water_charge: number;
           sewerage_charge?: number | null;
           maintenance_fee?: number | null;
@@ -303,6 +299,7 @@ export interface Database {
           previous_reading_value?: number;
           current_reading_value?: number;
           usage_m3?: number | null;
+          difference_usage?: number | null;
           base_water_charge?: number;
           sewerage_charge?: number | null;
           maintenance_fee?: number | null;

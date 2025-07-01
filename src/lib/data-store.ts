@@ -81,6 +81,7 @@ export interface DomainBill {
   previousReadingValue: number;
   currentReadingValue: number;
   usageM3?: number | null;
+  differenceUsage?: number | null;
   baseWaterCharge: number;
   sewerageCharge?: number | null;
   maintenanceFee?: number | null;
@@ -521,6 +522,7 @@ const mapSupabaseBillToDomain = (sb: SupabaseBillRow): DomainBill => ({
   previousReadingValue: Number(sb.previous_reading_value),
   currentReadingValue: Number(sb.current_reading_value),
   usageM3: sb.usage_m3 ? Number(sb.usage_m3) : null,
+  differenceUsage: sb.difference_usage ? Number(sb.difference_usage) : null,
   baseWaterCharge: Number(sb.base_water_charge),
   sewerageCharge: sb.sewerage_charge ? Number(sb.sewerage_charge) : null,
   maintenanceFee: sb.maintenance_fee ? Number(sb.maintenance_fee) : null,
@@ -548,6 +550,7 @@ const mapDomainBillToSupabase = (bill: Partial<DomainBill>): Partial<BillInsert 
     if (bill.previousReadingValue !== undefined) payload.previous_reading_value = bill.previousReadingValue;
     if (bill.currentReadingValue !== undefined) payload.current_reading_value = bill.currentReadingValue;
     if (bill.usageM3 !== undefined) payload.usage_m3 = bill.usageM3;
+    if (bill.differenceUsage !== undefined) payload.difference_usage = bill.differenceUsage;
     if (bill.baseWaterCharge !== undefined) payload.base_water_charge = bill.baseWaterCharge;
     if (bill.sewerageCharge !== undefined) payload.sewerage_charge = bill.sewerageCharge;
     if (bill.maintenanceFee !== undefined) payload.maintenance_fee = bill.maintenanceFee;

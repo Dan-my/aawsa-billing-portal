@@ -1355,6 +1355,29 @@ export const subscribeToReportLogs = (listener: Listener<DomainReportLog>): (() 
     return () => reportLogListeners.delete(listener);
 };
 
+export const authenticateStaffMember = async (email: string, password: string): Promise<StoreOperationResult<StaffMember>> => {
+  const { data, error } = await supabase
+    .from('staff_members')
+    .select('*')
+    .eq('email', email.toLowerCase())
+    .eq('password', password)
+    .single();
+
+  if (error) {
+    if (error.code !== 'PGRST116') {
+      console.error("DataStore: Authentication error", error);
+    }
+    return { success: false, message: "Invalid email or password.", isNotFoundError: true, error };
+  }
+
+  if (data) {
+    const user = mapSupabaseStaffToDomain(data);
+    return { success: true, data: user };
+  }
+  
+  return { success: false, message: "Invalid email or password.", isNotFoundError: true };
+};
+
 export async function loadInitialData() {
   await initializeCustomers();
   await Promise.all([

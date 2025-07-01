@@ -26,7 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { LogIn } from "lucide-react";
-import { getStaffMembers, initializeStaffMembers } from "@/lib/data-store";
+import { authenticateStaffMember } from "@/lib/data-store";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -47,19 +47,13 @@ export function AuthForm() {
       password: "",
     },
   });
-  
-  React.useEffect(() => {
-    // Pre-load data on component mount
-    initializeStaffMembers();
-  }, []);
 
-  const onSubmit = (values: LoginFormValues) => {
+  const onSubmit = async (values: LoginFormValues) => {
     setIsLoading(true);
     
-    const staffList = getStaffMembers();
-    const user = staffList.find(staff => staff.email.toLowerCase() === values.email.toLowerCase());
+    const { data: user, success, message } = await authenticateStaffMember(values.email, values.password);
 
-    if (user && user.password === values.password) {
+    if (success && user) {
       if(user.status !== "Active") {
           toast({
             variant: "destructive",
@@ -96,7 +90,7 @@ export function AuthForm() {
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: "Invalid email or password.",
+        description: message || "Invalid email or password.",
       });
     }
 

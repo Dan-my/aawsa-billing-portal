@@ -366,7 +366,18 @@ export default function BulkMeterDetailsPage() {
   const handleGeneratePaySlip = () => {
     if (!bulkMeter) return;
 
-    const temporaryBillForPrint: DomainBill = {
+    const recentBill = billingHistory.length > 0 ? billingHistory[0] : null;
+
+    if (recentBill) {
+      // Use the most recent historical bill for printing
+      setBillForPrintView(recentBill);
+    } else {
+      // Fallback: If no history, generate a temporary payslip from live data
+      toast({
+        title: "Generating Live Payslip",
+        description: "No historical bill found. A payslip is being generated from the current meter data.",
+      });
+      const temporaryBillForPrint: DomainBill = {
         id: `payslip-${bulkMeter.customerKeyNumber}-${Date.now()}`,
         bulkMeterId: bulkMeter.customerKeyNumber,
         monthYear: bulkMeter.month || 'N/A',
@@ -385,10 +396,11 @@ export default function BulkMeterDetailsPage() {
         totalAmountDue: memoizedDetails.differenceBill,
         dueDate: 'N/A',
         paymentStatus: memoizedDetails.billCardDetails.paymentStatus,
-        notes: "Current Pay Slip Generation",
-    };
-
-    setBillForPrintView(temporaryBillForPrint);
+        notes: "Current Live Pay Slip Generation (No History Available)",
+      };
+      setBillForPrintView(temporaryBillForPrint);
+    }
+    
     setTimeout(() => {
         window.print();
         setTimeout(() => setBillForPrintView(null), 1000);

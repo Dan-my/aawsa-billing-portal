@@ -80,7 +80,8 @@ export default function BulkMeterDetailsPage() {
           vatAmount: 0, totalDifferenceBill: 0, differenceUsage: 0,
           outstandingBill: 0, totalPayable: 0, paymentStatus: 'Unpaid' as PaymentStatus,
           month: 'N/A',
-        }
+        },
+        totalIndividualUsage: 0,
       };
     }
 
@@ -148,7 +149,7 @@ export default function BulkMeterDetailsPage() {
     return {
       bmPreviousReading, bmCurrentReading, bulkUsage, totalBulkBillForPeriod,
       totalPayable, differenceUsage, differenceBill, displayBranchName,
-      displayCardLocation, billCardDetails: finalBillCardDetails,
+      displayCardLocation, billCardDetails: finalBillCardDetails, totalIndividualUsage,
     };
   }, [bulkMeter, associatedCustomers, branches, billingHistory, billForPrintView]);
 
@@ -163,6 +164,7 @@ export default function BulkMeterDetailsPage() {
     displayBranchName,
     displayCardLocation,
     billCardDetails,
+    totalIndividualUsage,
   } = memoizedDetails;
 
   useEffect(() => {
@@ -579,6 +581,7 @@ export default function BulkMeterDetailsPage() {
             
             <p><strong className="font-semibold w-60 inline-block">Previous and current reading:</strong> {billCardDetails.prevReading.toFixed(2)} / {billCardDetails.currReading.toFixed(2)} m³</p>
             <p><strong className="font-semibold w-60 inline-block">Bulk usage:</strong> {billCardDetails.usage.toFixed(2)} m³</p>
+            <p><strong className="font-semibold w-60 inline-block">Total Individual Usage:</strong> {totalIndividualUsage.toFixed(2)} m³</p>
             <p><strong className="font-semibold w-60 inline-block">Base Water Charge:</strong> ETB {billCardDetails.baseWaterCharge.toFixed(2)}</p>
             <p><strong className="font-semibold w-60 inline-block">Maintenance Fee:</strong> ETB {billCardDetails.maintenanceFee.toFixed(2)}</p>
             <p><strong className="font-semibold w-60 inline-block">Sanitation Fee:</strong> ETB {billCardDetails.sanitationFee.toFixed(2)}</p>

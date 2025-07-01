@@ -363,13 +363,51 @@ export default function BulkMeterDetailsPage() {
     }, 100);
   };
 
+  const handleGeneratePaySlip = () => {
+    if (!bulkMeter) return;
+
+    const temporaryBillForPrint: DomainBill = {
+        id: `payslip-${bulkMeter.customerKeyNumber}-${Date.now()}`,
+        bulkMeterId: bulkMeter.customerKeyNumber,
+        monthYear: bulkMeter.month || 'N/A',
+        billPeriodStartDate: bulkMeter.month ? `${bulkMeter.month}-01` : 'N/A',
+        billPeriodEndDate: bulkMeter.month ? format(lastDayOfMonth(parseISO(`${bulkMeter.month}-01`)), 'yyyy-MM-dd') : 'N/A',
+        previousReadingValue: memoizedDetails.bmPreviousReading,
+        currentReadingValue: memoizedDetails.bmCurrentReading,
+        usageM3: memoizedDetails.bulkUsage,
+        differenceUsage: memoizedDetails.differenceUsage,
+        baseWaterCharge: memoizedDetails.differenceBillBreakdown.baseWaterCharge,
+        maintenanceFee: memoizedDetails.differenceBillBreakdown.maintenanceFee,
+        sanitationFee: memoizedDetails.differenceBillBreakdown.sanitationFee,
+        sewerageCharge: memoizedDetails.differenceBillBreakdown.sewerageCharge,
+        meterRent: memoizedDetails.differenceBillBreakdown.meterRent,
+        balanceCarriedForward: bulkMeter.outStandingbill,
+        totalAmountDue: memoizedDetails.differenceBill,
+        dueDate: 'N/A',
+        paymentStatus: memoizedDetails.billCardDetails.paymentStatus,
+        notes: "Current Pay Slip Generation",
+    };
+
+    setBillForPrintView(temporaryBillForPrint);
+    setTimeout(() => {
+        window.print();
+        setTimeout(() => setBillForPrintView(null), 1000);
+    }, 100);
+  };
+
   const handleEndOfCycle = async (carryBalance: boolean) => {
     if (!bulkMeter || isProcessingCycle) return;
     setIsProcessingCycle(true);
     
     try {
-      const currentBulkMeterState = bulkMeter; 
-      const parsedMonth = currentBulkMeterState.month;
+      const currentBulkMeterState = await getBulkMeterByCustomerKey(bulkMeter.customerKeyNumber);
+      if(!currentBulkMeterState.success || !currentBulkMeterState.data) {
+        toast({ variant: "destructive", title: "Error", description: "Could not fetch latest meter data before closing cycle." });
+        setIsProcessingCycle(false);
+        return;
+      }
+      
+      const parsedMonth = currentBulkMeterState.data.month;
 
       if (!parsedMonth) {
           toast({ variant: "destructive", title: "Billing Month Missing", description: "The meter does not have a billing month set." });
@@ -389,37 +427,33 @@ export default function BulkMeterDetailsPage() {
       }
       
       const { 
-        bmPreviousReading, 
-        bmCurrentReading, 
-        bulkUsage: bulkUsageForRecord, 
-        differenceUsage: differenceUsageForCycle, 
-        differenceBill: billForDifferenceUsage,
-        differenceBillBreakdown,
-        totalPayable: totalPayableFromDisplay
+        differenceUsage: differenceUsageForCycle,
       } = memoizedDetails;
+
+      const {totalBill: billForDifferenceUsage, ...differenceBillBreakdownForCycle} = calculateBill(differenceUsageForCycle, 'Non-domestic', 'No', currentBulkMeterState.data.meterSize);
       
       const billDate = new Date();
       const periodEndDate = lastDayOfMonth(parsedDate);
       const dueDateObject = new Date(periodEndDate);
       dueDateObject.setDate(dueDateObject.getDate() + 15);
       
-      const balanceFromPreviousPeriods = currentBulkMeterState.outStandingbill || 0;
+      const balanceFromPreviousPeriods = currentBulkMeterState.data.outStandingbill || 0;
 
       const billToSave: Omit<DomainBill, 'id' | 'createdAt' | 'updatedAt'> = {
-        bulkMeterId: currentBulkMeterState.customerKeyNumber,
+        bulkMeterId: currentBulkMeterState.data.customerKeyNumber,
         billPeriodStartDate: `${parsedMonth}-01`,
         billPeriodEndDate: format(periodEndDate, 'yyyy-MM-dd'),
         monthYear: parsedMonth,
-        previousReadingValue: bmPreviousReading,
-        currentReadingValue: bmCurrentReading,
-        usageM3: bulkUsageForRecord,
+        previousReadingValue: currentBulkMeterState.data.previousReading,
+        currentReadingValue: currentBulkMeterState.data.currentReading,
+        usageM3: (currentBulkMeterState.data.currentReading ?? 0) - (currentBulkMeterState.data.previousReading ?? 0),
         differenceUsage: differenceUsageForCycle,
-        ...differenceBillBreakdown,
+        ...differenceBillBreakdownForCycle,
         balanceCarriedForward: balanceFromPreviousPeriods,
         totalAmountDue: billForDifferenceUsage,
         dueDate: format(dueDateObject, 'yyyy-MM-dd'),
         paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
-        notes: `Bill generated on ${format(billDate, 'PP')}. Total payable was ${totalPayableFromDisplay.toFixed(2)}.`,
+        notes: `Bill generated on ${format(billDate, 'PP')}. Total payable was ${(balanceFromPreviousPeriods + billForDifferenceUsage).toFixed(2)}.`,
       };
       
       const addBillResult = await addBill(billToSave);
@@ -429,19 +463,19 @@ export default function BulkMeterDetailsPage() {
           return;
       }
 
-      const newOutstandingBalance = carryBalance ? totalPayableFromDisplay : 0;
+      const newOutstandingBalance = carryBalance ? (balanceFromPreviousPeriods + billForDifferenceUsage) : 0;
       
       const updatePayload: Partial<Omit<BulkMeter, 'customerKeyNumber'>> = {
-          previousReading: currentBulkMeterState.currentReading,
+          previousReading: currentBulkMeterState.data.currentReading,
           outStandingbill: newOutstandingBalance,
       };
 
-      const updateResult = await updateBulkMeterInStore(currentBulkMeterState.customerKeyNumber, updatePayload);
+      const updateResult = await updateBulkMeterInStore(currentBulkMeterState.data.customerKeyNumber, updatePayload);
       if (updateResult.success && updateResult.data) {
         toast({ 
             title: "Billing Cycle Closed", 
             description: carryBalance 
-                ? `Total of ETB ${totalPayableFromDisplay.toFixed(2)} carried forward as new outstanding balance.` 
+                ? `Total of ETB ${(balanceFromPreviousPeriods + billForDifferenceUsage).toFixed(2)} carried forward as new outstanding balance.` 
                 : "Bill marked as paid and new cycle started." 
         });
       } else {
@@ -482,8 +516,9 @@ export default function BulkMeterDetailsPage() {
             <Gauge className="h-6 w-6 text-primary" />
             <CardTitle className="text-2xl">Bulk Meter: {bulkMeter.name}</CardTitle>
           </div>
-          <div>
-            <Button variant="outline" size="sm" onClick={handleEditBulkMeter} className="mr-2"><FileEdit className="mr-2 h-4 w-4" /> Edit Bulk Meter</Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleGeneratePaySlip}><Printer className="mr-2 h-4 w-4" /> Generate Pay Slip</Button>
+            <Button variant="outline" size="sm" onClick={handleEditBulkMeter}><FileEdit className="mr-2 h-4 w-4" /> Edit Bulk Meter</Button>
             <Button variant="destructive" size="sm" onClick={handleDeleteBulkMeter}><Trash2 className="mr-2 h-4 w-4" /> Delete Bulk Meter</Button>
           </div>
         </CardHeader>

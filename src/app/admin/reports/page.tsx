@@ -17,7 +17,8 @@ import {
   getBills,
   initializeBills,
   getMeterReadings,
-  initializeMeterReadings,
+  initializeIndividualCustomerReadings,
+  initializeBulkMeterReadings,
   getPayments,
   initializePayments,
   getStaffMembers, 
@@ -222,7 +223,8 @@ export default function AdminReportsPage() {
         await initializeCustomers();
         await initializeBulkMeters();
         await initializeBills();
-        await initializeMeterReadings();
+        await initializeIndividualCustomerReadings();
+        await initializeBulkMeterReadings();
         await initializePayments();
         await initializeStaffMembers();
         await initializeBranches(); // Ensure branches are loaded

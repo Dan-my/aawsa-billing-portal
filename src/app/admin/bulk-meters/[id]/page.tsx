@@ -96,15 +96,19 @@ export default function BulkMeterDetailsPage() {
     const totalBulkBillForPeriod = billDetails.totalBill;
     
     const outStandingBillValue = bulkMeter.outStandingbill ?? 0;
-    const paymentStatus = outStandingBillValue > 0 ? 'Unpaid' : 'Paid';
-    const totalPayable = totalBulkBillForPeriod + outStandingBillValue;
-
 
     const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
-    const totalIndividualBill = associatedCustomers.reduce((sum, cust) => sum + (cust.calculatedBill ?? 0), 0);
+    const totalIndividualBill = associatedCustomers.reduce((sum, cust) => {
+        const usage = (cust.currentReading ?? 0) - (cust.previousReading ?? 0);
+        const { totalBill } = calculateBill(usage, cust.customerType, cust.sewerageConnection, cust.meterSize);
+        return sum + totalBill;
+    }, 0);
 
     const differenceUsage = bulkUsage - totalIndividualUsage;
     const differenceBill = totalBulkBillForPeriod - totalIndividualBill;
+    
+    const totalPayable = differenceBill + outStandingBillValue;
+    const paymentStatus = totalPayable > 0.01 ? 'Unpaid' : 'Paid';
     
     const displayBranchName = bulkMeter.branchId ? branches.find(b => b.id === bulkMeter.branchId)?.name : bulkMeter.location;
     const displayCardLocation = bulkMeter.specificArea || bulkMeter.ward || "N/A";
@@ -391,15 +395,21 @@ export default function BulkMeterDetailsPage() {
       const bmCurrentReading = currentBulkMeterState.currentReading ?? 0;
       const bulkUsage = bmCurrentReading - bmPreviousReading;
 
-      const allCustomers = getCustomers();
-      const associatedCustomersForCycle = allCustomers.filter(c => c.assignedBulkMeterId === currentBulkMeterState.customerKeyNumber);
+      const associatedCustomersForCycle = getCustomers().filter(c => c.assignedBulkMeterId === currentBulkMeterState.customerKeyNumber);
       const totalIndividualUsageForCycle = associatedCustomersForCycle.reduce((sum, cust) => sum + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
+      const totalIndividualBillForCycle = associatedCustomersForCycle.reduce((sum, cust) => {
+        const usage = (cust.currentReading ?? 0) - (cust.previousReading ?? 0);
+        const { totalBill } = calculateBill(usage, cust.customerType, cust.sewerageConnection, cust.meterSize);
+        return sum + totalBill;
+      }, 0);
+
       const differenceUsageForCycle = bulkUsage - totalIndividualUsageForCycle;
       
       const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
       const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
 
       const { totalBill: billForCurrentPeriod, ...billBreakdown } = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, currentBulkMeterState.meterSize);
+      const differenceBillForCycle = billForCurrentPeriod - totalIndividualBillForCycle;
       
       const billDate = new Date();
       const periodEndDate = lastDayOfMonth(parsedDate);
@@ -408,7 +418,7 @@ export default function BulkMeterDetailsPage() {
       dueDateObject.setDate(dueDateObject.getDate() + 15);
       
       const balanceFromPreviousPeriods = currentBulkMeterState.outStandingbill || 0;
-      const totalPayableThisCycle = billForCurrentPeriod + balanceFromPreviousPeriods;
+      const totalPayableThisCycle = differenceBillForCycle + balanceFromPreviousPeriods;
 
       const billToSave: Omit<DomainBill, 'id' | 'createdAt' | 'updatedAt'> = {
         bulkMeterId: currentBulkMeterState.customerKeyNumber,
@@ -421,7 +431,7 @@ export default function BulkMeterDetailsPage() {
         differenceUsage: differenceUsageForCycle,
         ...billBreakdown,
         balanceCarriedForward: balanceFromPreviousPeriods,
-        totalAmountDue: billForCurrentPeriod,
+        totalAmountDue: differenceBillForCycle,
         dueDate: format(dueDateObject, 'yyyy-MM-dd'),
         paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
         notes: `Bill generated on ${format(billDate, 'PP')}. Total payable was ${totalPayableThisCycle.toFixed(2)}.`,

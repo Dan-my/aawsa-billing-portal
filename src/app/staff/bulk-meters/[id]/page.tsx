@@ -84,7 +84,8 @@ export default function StaffBulkMeterDetailsPage() {
       return {
         bmPreviousReading: 0, bmCurrentReading: 0, bulkUsage: 0,
         totalBulkBillForPeriod: 0, totalPayable: 0, differenceUsage: 0,
-        differenceBill: 0, displayBranchName: "N/A", displayCardLocation: "N/A",
+        differenceBill: 0, differenceBillBreakdown: {} as BillCalculationResult,
+        displayBranchName: "N/A", displayCardLocation: "N/A",
         billCardDetails: {
           prevReading: 0, currReading: 0, usage: 0, baseWaterCharge: 0,
           maintenanceFee: 0, sanitationFee: 0, sewerageCharge: 0, meterRent: 0,
@@ -158,8 +159,8 @@ export default function StaffBulkMeterDetailsPage() {
 
     return {
       bmPreviousReading, bmCurrentReading, bulkUsage, totalBulkBillForPeriod,
-      totalPayable, differenceUsage, differenceBill, displayBranchName,
-      displayCardLocation, billCardDetails: finalBillCardDetails, totalIndividualUsage,
+      totalPayable, differenceUsage, differenceBill, differenceBillBreakdown,
+      displayBranchName, displayCardLocation, billCardDetails: finalBillCardDetails, totalIndividualUsage,
     };
   }, [bulkMeter, associatedCustomers, branches, billingHistory, billForPrintView]);
 
@@ -171,6 +172,7 @@ export default function StaffBulkMeterDetailsPage() {
     totalPayable,
     differenceUsage,
     differenceBill,
+    differenceBillBreakdown,
     displayBranchName,
     displayCardLocation,
     billCardDetails,
@@ -408,7 +410,6 @@ export default function StaffBulkMeterDetailsPage() {
     setIsProcessingCycle(true);
 
     try {
-      // Use values from component state and memoized calculations. This ensures consistency with the UI.
       const currentBulkMeterState = bulkMeter;
       const parsedMonth = currentBulkMeterState.month;
 
@@ -429,26 +430,18 @@ export default function StaffBulkMeterDetailsPage() {
         return;
       }
       
-      // Use the memoized values directly for consistency with the display.
       const { 
         bmPreviousReading, 
         bmCurrentReading, 
         bulkUsage: bulkUsageForRecord, 
         differenceUsage: differenceUsageForCycle, 
-        differenceBill: billForDifferenceUsage, // This is the bill for the difference
-        totalPayable: totalPayableFromDisplay // This is the final amount to be carried over
+        differenceBill: billForDifferenceUsage,
+        differenceBillBreakdown,
+        totalPayable: totalPayableFromDisplay
       } = memoizedDetails;
-
-      const { totalBill, ...billBreakdown } = calculateBill(
-        differenceUsageForCycle, 
-        "Non-domestic", 
-        "No", 
-        currentBulkMeterState.meterSize
-      );
 
       const billDate = new Date();
       const periodEndDate = lastDayOfMonth(parsedDate);
-
       const dueDateObject = new Date(periodEndDate);
       dueDateObject.setDate(dueDateObject.getDate() + 15);
 
@@ -463,7 +456,7 @@ export default function StaffBulkMeterDetailsPage() {
         currentReadingValue: bmCurrentReading,
         usageM3: bulkUsageForRecord,
         differenceUsage: differenceUsageForCycle,
-        ...billBreakdown,
+        ...differenceBillBreakdown,
         balanceCarriedForward: balanceFromPreviousPeriods,
         totalAmountDue: billForDifferenceUsage,
         dueDate: format(dueDateObject, 'yyyy-MM-dd'),
@@ -478,7 +471,6 @@ export default function StaffBulkMeterDetailsPage() {
         return;
       }
 
-      // The new outstanding balance IS the totalPayable from the screen if carrying over.
       const newOutstandingBalance = carryBalance ? totalPayableFromDisplay : 0;
 
       const updatePayload: Partial<Omit<BulkMeter, 'customerKeyNumber'>> = {
@@ -495,7 +487,6 @@ export default function StaffBulkMeterDetailsPage() {
                 : "Bill marked as paid and new cycle started." 
         });
       } else {
-        // Attempt to roll back the bill creation if the meter update fails
         await removeBill(addBillResult.data.id);
         toast({ variant: "destructive", title: "Update Failed", description: "Could not update the meter. The new bill has been rolled back." });
       }

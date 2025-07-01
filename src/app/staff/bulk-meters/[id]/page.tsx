@@ -440,7 +440,12 @@ export default function StaffBulkMeterDetailsPage() {
       const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
       const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
 
-      const { totalBill: billForCurrentPeriod, ...billBreakdown } = calculateBill(differenceUsageForCycle, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, currentBulkMeterState.meterSize);
+      const { totalBill: billForDifferenceUsage, ...billBreakdown } = calculateBill(
+        differenceUsageForCycle, 
+        effectiveBulkMeterCustomerType, 
+        effectiveBulkMeterSewerageConnection, 
+        currentBulkMeterState.meterSize
+      );
 
       const billDate = new Date();
       const periodEndDate = lastDayOfMonth(parsedDate);
@@ -449,7 +454,7 @@ export default function StaffBulkMeterDetailsPage() {
       dueDateObject.setDate(dueDateObject.getDate() + 15);
 
       const balanceFromPreviousPeriods = currentBulkMeterState.outStandingbill || 0;
-      const totalPayableThisCycle = billForCurrentPeriod + balanceFromPreviousPeriods;
+      const totalPayableThisCycle = billForDifferenceUsage + balanceFromPreviousPeriods;
 
       const billToSave: Omit<DomainBill, 'id' | 'createdAt' | 'updatedAt'> = {
         bulkMeterId: currentBulkMeterState.customerKeyNumber,
@@ -462,7 +467,7 @@ export default function StaffBulkMeterDetailsPage() {
         differenceUsage: differenceUsageForCycle,
         ...billBreakdown,
         balanceCarriedForward: balanceFromPreviousPeriods,
-        totalAmountDue: billForCurrentPeriod,
+        totalAmountDue: billForDifferenceUsage,
         dueDate: format(dueDateObject, 'yyyy-MM-dd'),
         paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
         notes: `Bill generated on ${format(billDate, 'PP')}. Total payable was ${totalPayableThisCycle.toFixed(2)}.`,
@@ -594,9 +599,9 @@ export default function StaffBulkMeterDetailsPage() {
         <CardHeader><CardTitle className="flex items-center gap-2"><ListCollapse className="h-5 w-5 text-primary" />Billing History</CardTitle><CardDescription>Historical bills generated for this meter.</CardDescription></CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">{billingHistory.length > 0 ? (<Table><TableHeader><TableRow><TableHead>Month</TableHead><TableHead>Date Billed</TableHead><TableHead className="text-right">Prev. Reading</TableHead><TableHead className="text-right">Curr. Reading</TableHead><TableHead>Usage (m³)</TableHead><TableHead>Diff. Usage (m³)</TableHead><TableHead className="text-right">Outstanding (ETB)</TableHead><TableHead className="text-right">Current Bill (ETB)</TableHead><TableHead className="text-right">Total Payable (ETB)</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader><TableBody>{paginatedBillingHistory.map(bill => {
-            const usageForBill = bill.currentReadingValue - bill.previousReadingValue;
+            const usageForBill = bill.usageM3 ?? (bill.currentReadingValue - bill.previousReadingValue);
             const displayUsage = !isNaN(usageForBill) ? usageForBill.toFixed(2) : "N/A";
-            const diffUsageValue = bill.differenceUsage ?? (usageForBill - totalIndividualUsage);
+            const diffUsageValue = bill.differenceUsage ?? (usageForBill - (associatedCustomers.reduce((sum, cust) => sum + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0)));
             const displayDiffUsage = !isNaN(diffUsageValue) ? diffUsageValue.toFixed(2) : 'N/A';
             return (
             <TableRow key={bill.id}>

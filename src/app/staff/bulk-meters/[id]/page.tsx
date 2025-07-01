@@ -133,7 +133,7 @@ export default function StaffBulkMeterDetailsPage() {
               meterRent: billToRender.meterRent ?? 0,
               vatAmount: calculateBill(billToRender.usageM3 ?? 0, 'Non-domestic', 'No', bulkMeter.meterSize).vatAmount,
               totalDifferenceBill: differenceBill,
-              differenceUsage: billToRender.differenceUsage ?? 0,
+              differenceUsage: billToRender.differenceUsage ?? (billToRender.usageM3 ?? 0) - totalIndividualUsage,
               outstandingBill: billToRender.balanceCarriedForward ?? 0,
               totalPayable: (billToRender.balanceCarriedForward ?? 0) + billToRender.totalAmountDue,
               paymentStatus: billToRender.paymentStatus,
@@ -594,7 +594,8 @@ export default function StaffBulkMeterDetailsPage() {
           <div className="overflow-x-auto">{billingHistory.length > 0 ? (<Table><TableHeader><TableRow><TableHead>Month</TableHead><TableHead>Date Billed</TableHead><TableHead className="text-right">Prev. Reading</TableHead><TableHead className="text-right">Curr. Reading</TableHead><TableHead>Usage (m³)</TableHead><TableHead>Diff. Usage (m³)</TableHead><TableHead className="text-right">Outstanding (ETB)</TableHead><TableHead className="text-right">Current Bill (ETB)</TableHead><TableHead className="text-right">Total Payable (ETB)</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader><TableBody>{paginatedBillingHistory.map(bill => {
             const usageForBill = bill.currentReadingValue - bill.previousReadingValue;
             const displayUsage = !isNaN(usageForBill) ? usageForBill.toFixed(2) : "N/A";
-            const displayDiffUsage = bill.differenceUsage !== null && bill.differenceUsage !== undefined ? bill.differenceUsage.toFixed(2) : 'N/A';
+            const diffUsageValue = bill.differenceUsage ?? (usageForBill - totalIndividualUsage);
+            const displayDiffUsage = !isNaN(diffUsageValue) ? diffUsageValue.toFixed(2) : 'N/A';
             return (
             <TableRow key={bill.id}>
               <TableCell>{bill.monthYear}</TableCell>
@@ -602,7 +603,7 @@ export default function StaffBulkMeterDetailsPage() {
               <TableCell className="text-right">{bill.previousReadingValue.toFixed(2)}</TableCell>
               <TableCell className="text-right">{bill.currentReadingValue.toFixed(2)}</TableCell>
               <TableCell>{displayUsage}</TableCell>
-              <TableCell className={cn("text-right", bill.differenceUsage && bill.differenceUsage < 0 ? "text-amber-600" : "text-green-600")}>{displayDiffUsage}</TableCell>
+              <TableCell className={cn("text-right", diffUsageValue < 0 ? "text-amber-600" : "text-green-600")}>{displayDiffUsage}</TableCell>
               <TableCell className="text-right">{bill.balanceCarriedForward?.toFixed(2) ?? '0.00'}</TableCell>
               <TableCell className="text-right font-medium">{bill.totalAmountDue.toFixed(2)}</TableCell>
               <TableCell className="text-right font-bold">{((bill.balanceCarriedForward ?? 0) + bill.totalAmountDue).toFixed(2)}</TableCell>
@@ -702,5 +703,3 @@ export default function StaffBulkMeterDetailsPage() {
     </div>
   );
 }
-
-    

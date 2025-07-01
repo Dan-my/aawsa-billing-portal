@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -554,15 +553,17 @@ export default function BulkMeterDetailsPage() {
         <CardHeader><CardTitle className="flex items-center gap-2"><ListCollapse className="h-5 w-5 text-primary" />Billing History</CardTitle><CardDescription>Historical bills generated for this meter.</CardDescription></CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">{billingHistory.length > 0 ? (<Table><TableHeader><TableRow><TableHead>Month</TableHead><TableHead>Date Billed</TableHead><TableHead className="text-right">Prev. Reading</TableHead><TableHead className="text-right">Curr. Reading</TableHead><TableHead>Usage (m³)</TableHead><TableHead>Diff. Usage (m³)</TableHead><TableHead className="text-right">Outstanding (ETB)</TableHead><TableHead className="text-right">Current Bill (ETB)</TableHead><TableHead className="text-right">Total Payable (ETB)</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader><TableBody>{paginatedBillingHistory.map(bill => {
-            const usageForBill = bill.usageM3 ?? (bill.currentReadingValue - bill.previousReadingValue);
+            const usageForBill = bill.currentReadingValue - bill.previousReadingValue;
+            const displayUsage = !isNaN(usageForBill) ? usageForBill.toFixed(2) : "N/A";
+            const displayDiffUsage = bill.differenceUsage !== null && bill.differenceUsage !== undefined ? bill.differenceUsage.toFixed(2) : 'N/A';
             return (
             <TableRow key={bill.id}>
               <TableCell>{bill.monthYear}</TableCell>
               <TableCell>{format(parseISO(bill.billPeriodEndDate), "PP")}</TableCell>
               <TableCell className="text-right">{bill.previousReadingValue.toFixed(2)}</TableCell>
               <TableCell className="text-right">{bill.currentReadingValue.toFixed(2)}</TableCell>
-              <TableCell>{usageForBill.toFixed(2)}</TableCell>
-              <TableCell className={cn("text-right", bill.differenceUsage && bill.differenceUsage < 0 ? "text-amber-600" : "text-green-600")}>{bill.differenceUsage?.toFixed(2) ?? 'N/A'}</TableCell>
+              <TableCell>{displayUsage}</TableCell>
+              <TableCell className={cn("text-right", bill.differenceUsage && bill.differenceUsage < 0 ? "text-amber-600" : "text-green-600")}>{displayDiffUsage}</TableCell>
               <TableCell className="text-right">{bill.balanceCarriedForward?.toFixed(2) ?? '0.00'}</TableCell>
               <TableCell className="text-right font-medium">{bill.totalAmountDue.toFixed(2)}</TableCell>
               <TableCell className="text-right font-bold">{((bill.balanceCarriedForward ?? 0) + bill.totalAmountDue).toFixed(2)}</TableCell>
@@ -665,3 +666,5 @@ export default function BulkMeterDetailsPage() {
     </div>
   );
 }
+
+    

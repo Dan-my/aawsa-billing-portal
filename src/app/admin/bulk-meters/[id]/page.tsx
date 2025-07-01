@@ -362,34 +362,48 @@ export default function BulkMeterDetailsPage() {
   };
 
   const handleEndOfCycle = async (carryBalance: boolean) => {
-    if (!bulkMeter || !bulkMeter.month || isProcessingCycle) return;
+    if (!bulkMeter || isProcessingCycle) return;
     setIsProcessingCycle(true);
     
     try {
-      const parsedDate = parseISO(`${bulkMeter.month}-01`);
+      const { data: currentBulkMeterFromDB, success } = await getBulkMeterByCustomerKey(bulkMeter.customerKeyNumber);
+      if (!success || !currentBulkMeterFromDB) {
+          toast({ variant: "destructive", title: "Meter Not Found", description: "Could not refetch meter data before closing cycle." });
+          setIsProcessingCycle(false);
+          return;
+      }
+      
+      const currentBulkMeterState = currentBulkMeterFromDB;
+      const parsedMonth = currentBulkMeterState.month;
+
+      if (!parsedMonth) {
+          toast({ variant: "destructive", title: "Billing Month Missing", description: "The meter does not have a billing month set." });
+          setIsProcessingCycle(false);
+          return;
+      }
+
+      const parsedDate = parseISO(`${parsedMonth}-01`);
       if (isNaN(parsedDate.getTime())) {
           toast({
               variant: "destructive",
               title: "Invalid Month Format",
-              description: `The billing month for this meter ("${bulkMeter.month}") is not a valid YYYY-MM format.`,
+              description: `The billing month for this meter ("${parsedMonth}") is not a valid YYYY-MM format.`,
           });
           setIsProcessingCycle(false);
           return;
       }
       
-      const currentBulkMeterState = bulkMeter;
-
       const bmPreviousReading = currentBulkMeterState.previousReading ?? 0;
       const bmCurrentReading = currentBulkMeterState.currentReading ?? 0;
       const bulkUsageForRecord = bmCurrentReading - bmPreviousReading;
 
-      // Use the exact 'differenceUsage' value calculated for the UI display to ensure consistency.
-      const differenceUsageForCycle = differenceUsage;
+      const currentAssociatedCustomers = getCustomers().filter(c => c.assignedBulkMeterId === currentBulkMeterState.customerKeyNumber);
+      const totalIndividualUsageForCycle = currentAssociatedCustomers.reduce((sum, cust) => sum + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
+      const differenceUsageForCycle = bulkUsageForRecord - totalIndividualUsageForCycle;
 
       const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
       const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
 
-      // Recalculate the bill details based *only* on the consistent difference usage value.
       const { totalBill: billForDifferenceUsage, ...billBreakdown } = calculateBill(
         differenceUsageForCycle, 
         effectiveBulkMeterCustomerType, 
@@ -408,9 +422,9 @@ export default function BulkMeterDetailsPage() {
 
       const billToSave: Omit<DomainBill, 'id' | 'createdAt' | 'updatedAt'> = {
         bulkMeterId: currentBulkMeterState.customerKeyNumber,
-        billPeriodStartDate: `${currentBulkMeterState.month}-01`,
+        billPeriodStartDate: `${parsedMonth}-01`,
         billPeriodEndDate: format(periodEndDate, 'yyyy-MM-dd'),
-        monthYear: currentBulkMeterState.month,
+        monthYear: parsedMonth,
         previousReadingValue: bmPreviousReading,
         currentReadingValue: bmCurrentReading,
         usageM3: bulkUsageForRecord,

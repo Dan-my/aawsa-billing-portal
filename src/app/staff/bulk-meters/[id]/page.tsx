@@ -408,14 +408,8 @@ export default function StaffBulkMeterDetailsPage() {
     setIsProcessingCycle(true);
 
     try {
-      const { data: currentBulkMeterFromDB, success } = await getBulkMeterByCustomerKey(bulkMeter.customerKeyNumber);
-      if (!success || !currentBulkMeterFromDB) {
-          toast({ variant: "destructive", title: "Meter Not Found", description: "Could not refetch meter data before closing cycle." });
-          setIsProcessingCycle(false);
-          return;
-      }
-      
-      const currentBulkMeterState = currentBulkMeterFromDB;
+      // Use values from component state and memoized calculations. This ensures consistency with the UI.
+      const currentBulkMeterState = bulkMeter;
       const parsedMonth = currentBulkMeterState.month;
 
       if (!parsedMonth) {
@@ -435,21 +429,20 @@ export default function StaffBulkMeterDetailsPage() {
         return;
       }
       
-      const bmPreviousReading = currentBulkMeterState.previousReading ?? 0;
-      const bmCurrentReading = currentBulkMeterState.currentReading ?? 0;
-      const bulkUsageForRecord = bmCurrentReading - bmPreviousReading;
+      // Use the memoized values directly for consistency with the display.
+      const { 
+        bmPreviousReading, 
+        bmCurrentReading, 
+        bulkUsage: bulkUsageForRecord, 
+        differenceUsage: differenceUsageForCycle, 
+        differenceBill: billForDifferenceUsage, // This is the bill for the difference
+        totalPayable: totalPayableFromDisplay // This is the final amount to be carried over
+      } = memoizedDetails;
 
-      const currentAssociatedCustomers = getCustomers().filter(c => c.assignedBulkMeterId === currentBulkMeterState.customerKeyNumber);
-      const totalIndividualUsageForCycle = currentAssociatedCustomers.reduce((sum, cust) => sum + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
-      const differenceUsageForCycle = bulkUsageForRecord - totalIndividualUsageForCycle;
-      
-      const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
-      const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
-
-      const { totalBill: billForDifferenceUsage, ...billBreakdown } = calculateBill(
+      const { totalBill, ...billBreakdown } = calculateBill(
         differenceUsageForCycle, 
-        effectiveBulkMeterCustomerType, 
-        effectiveBulkMeterSewerageConnection, 
+        "Non-domestic", 
+        "No", 
         currentBulkMeterState.meterSize
       );
 
@@ -460,7 +453,6 @@ export default function StaffBulkMeterDetailsPage() {
       dueDateObject.setDate(dueDateObject.getDate() + 15);
 
       const balanceFromPreviousPeriods = currentBulkMeterState.outStandingbill || 0;
-      const totalPayableThisCycle = billForDifferenceUsage + balanceFromPreviousPeriods;
 
       const billToSave: Omit<DomainBill, 'id' | 'createdAt' | 'updatedAt'> = {
         bulkMeterId: currentBulkMeterState.customerKeyNumber,
@@ -476,17 +468,18 @@ export default function StaffBulkMeterDetailsPage() {
         totalAmountDue: billForDifferenceUsage,
         dueDate: format(dueDateObject, 'yyyy-MM-dd'),
         paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
-        notes: `Bill generated on ${format(billDate, 'PP')}. Total payable was ${totalPayableThisCycle.toFixed(2)}.`,
+        notes: `Bill generated on ${format(billDate, 'PP')}. Total payable was ${totalPayableFromDisplay.toFixed(2)}.`,
       };
       
       const addBillResult = await addBill(billToSave);
-      if (!addBillResult.success) {
+      if (!addBillResult.success || !addBillResult.data) {
         toast({ variant: "destructive", title: "Failed to Save Bill", description: addBillResult.message });
         setIsProcessingCycle(false);
         return;
       }
 
-      const newOutstandingBalance = carryBalance ? totalPayableThisCycle : 0;
+      // The new outstanding balance IS the totalPayable from the screen if carrying over.
+      const newOutstandingBalance = carryBalance ? totalPayableFromDisplay : 0;
 
       const updatePayload: Partial<Omit<BulkMeter, 'customerKeyNumber'>> = {
           previousReading: currentBulkMeterState.currentReading,
@@ -495,15 +488,16 @@ export default function StaffBulkMeterDetailsPage() {
 
       const updateResult = await updateBulkMeterInStore(currentBulkMeterState.customerKeyNumber, updatePayload);
       if (updateResult.success && updateResult.data) {
-        setBulkMeter(updateResult.data);
          toast({ 
             title: "Billing Cycle Closed", 
             description: carryBalance 
-                ? `Total of ETB ${totalPayableThisCycle.toFixed(2)} carried forward as new outstanding balance.` 
+                ? `Total of ETB ${totalPayableFromDisplay.toFixed(2)} carried forward as new outstanding balance.` 
                 : "Bill marked as paid and new cycle started." 
         });
       } else {
-        toast({ variant: "destructive", title: "Update Failed", description: "Could not update the meter after creating the bill record." });
+        // Attempt to roll back the bill creation if the meter update fails
+        await removeBill(addBillResult.data.id);
+        toast({ variant: "destructive", title: "Update Failed", description: "Could not update the meter. The new bill has been rolled back." });
       }
 
     } catch(error) {

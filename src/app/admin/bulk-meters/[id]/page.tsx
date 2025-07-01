@@ -388,16 +388,15 @@ export default function BulkMeterDetailsPage() {
 
       const bmPreviousReading = currentBulkMeterState.previousReading ?? 0;
       const bmCurrentReading = currentBulkMeterState.currentReading ?? 0;
-      const bulkUsage = bmCurrentReading - bmPreviousReading;
+      const bulkUsageForRecord = bmCurrentReading - bmPreviousReading;
 
-      const associatedCustomersForCycle = getCustomers().filter(c => c.assignedBulkMeterId === currentBulkMeterState.customerKeyNumber);
-      const totalIndividualUsageForCycle = associatedCustomersForCycle.reduce((sum, cust) => sum + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
-      
-      const differenceUsageForCycle = bulkUsage - totalIndividualUsageForCycle;
-      
+      // Use the exact 'differenceUsage' value calculated for the UI display to ensure consistency.
+      const differenceUsageForCycle = differenceUsage;
+
       const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
       const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
 
+      // Recalculate the bill details based *only* on the consistent difference usage value.
       const { totalBill: billForDifferenceUsage, ...billBreakdown } = calculateBill(
         differenceUsageForCycle, 
         effectiveBulkMeterCustomerType, 
@@ -421,7 +420,7 @@ export default function BulkMeterDetailsPage() {
         monthYear: currentBulkMeterState.month,
         previousReadingValue: bmPreviousReading,
         currentReadingValue: bmCurrentReading,
-        usageM3: bulkUsage,
+        usageM3: bulkUsageForRecord,
         differenceUsage: differenceUsageForCycle,
         ...billBreakdown,
         balanceCarriedForward: balanceFromPreviousPeriods,

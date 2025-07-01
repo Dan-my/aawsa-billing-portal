@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart as BarChartIcon, PieChart as PieChartIcon, Gauge, Users, ArrowRight } from 'lucide-react'; 
+import { BarChart as BarChartIcon, PieChart as PieChartIcon, Gauge, Users, ArrowRight, FileText, TrendingUp } from 'lucide-react'; 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ResponsiveContainer, BarChart, PieChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Bar } from 'recharts';
@@ -19,33 +19,24 @@ interface User {
   branchName?: string;
 }
 
-const billsData = [
-  { name: 'Paid Bills', value: 85, fill: 'hsl(var(--chart-1))' }, 
-  { name: 'Unpaid Bills', value: 15, fill: 'hsl(var(--chart-2))' }, 
-];
-
-const monthlyPerformanceData = [
-  { month: 'Jan', paid: 70, unpaid: 10 },
-  { month: 'Feb', paid: 65, unpaid: 12 },
-  { month: 'Mar', paid: 80, unpaid: 5 },
-  { month: 'Apr', paid: 75, unpaid: 8 },
-];
-
 const chartConfig = {
   paid: { label: "Paid", color: "hsl(var(--chart-1))" }, 
-  unpaid: { label: "Unpaid", color: "hsl(var(--chart-2))" }, 
-  customers: { label: "Customers", color: "hsl(var(--chart-1))"}, 
-  bulkMeters: { label: "Bulk Meters", color: "hsl(var(--primary))"},
+  unpaid: { label: "Unpaid", color: "hsl(var(--chart-3))" }, 
 } satisfies import("@/components/ui/chart").ChartConfig;
 
 export default function StaffDashboardPage() {
   const [authStatus, setAuthStatus] = React.useState<'loading' | 'unauthorized' | 'authorized'>('loading');
   const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
+  const [isClient, setIsClient] = React.useState(false);
 
   const [allBranches, setAllBranches] = React.useState<Branch[]>([]);
   const [allBulkMeters, setAllBulkMeters] = React.useState<BulkMeter[]>([]);
   const [allCustomers, setAllCustomers] = React.useState<IndividualCustomer[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
   
   // Auth check
   React.useEffect(() => {
@@ -109,31 +100,71 @@ export default function StaffDashboardPage() {
   // Derived state with useMemo
   const branchStats = React.useMemo(() => {
     if (authStatus !== 'authorized' || !staffBranchName || allBranches.length === 0) {
-      return { totalBulkMeters: 0, totalCustomers: 0 };
+      return { totalBulkMeters: 0, totalCustomers: 0, totalBills: 0, paidBills: 0, unpaidBills: 0, billsData: [], monthlyPerformance: [], paidPercentage: "0%" };
     }
 
     const normalizedStaffBranchName = staffBranchName.trim().toLowerCase();
     const staffBranch = allBranches.find(b => {
       const normalizedBranchName = b.name.trim().toLowerCase();
-      // Check if one name contains the other, to handle "Megenagna" vs "Megenagna Branch"
       return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
     });
     
     if (!staffBranch) {
-      return { totalBulkMeters: 0, totalCustomers: 0 };
+      return { totalBulkMeters: 0, totalCustomers: 0, totalBills: 0, paidBills: 0, unpaidBills: 0, billsData: [], monthlyPerformance: [], paidPercentage: "0%" };
     }
     
     const branchBMs = allBulkMeters.filter(bm => bm.branchId === staffBranch.id);
-    const branchBMIds = new Set(branchBMs.map(bm => bm.id));
+    const branchBMKeys = new Set(branchBMs.map(bm => bm.customerKeyNumber));
 
     const branchCustomers = allCustomers.filter(customer =>
       customer.branchId === staffBranch.id ||
-      (customer.assignedBulkMeterId && branchBMIds.has(customer.assignedBulkMeterId))
+      (customer.assignedBulkMeterId && branchBMKeys.has(customer.assignedBulkMeterId))
     );
       
+    // Calculate Bills Status
+    const paidCount = branchBMs.filter(bm => bm.paymentStatus === 'Paid').length + branchCustomers.filter(c => c.paymentStatus === 'Paid').length;
+    const unpaidCount = branchBMs.filter(bm => bm.paymentStatus !== 'Paid').length + branchCustomers.filter(c => c.paymentStatus !== 'Paid').length;
+    const totalBillsCount = paidCount + unpaidCount;
+    
+    const billsData = [
+        { name: 'Paid', value: paidCount, fill: 'hsl(var(--chart-1))' },
+        { name: 'Unpaid', value: unpaidCount, fill: 'hsl(var(--chart-3))' },
+    ];
+
+    // Calculate Monthly Performance
+    const monthlyMap = new Map<string, { paid: number; unpaid: number }>();
+    
+    branchBMs.forEach(bm => {
+        if (!bm.month) return;
+        const entry = monthlyMap.get(bm.month) || { paid: 0, unpaid: 0 };
+        if (bm.paymentStatus === 'Paid') entry.paid++;
+        else entry.unpaid++;
+        monthlyMap.set(bm.month, entry);
+    });
+
+    branchCustomers.forEach(c => {
+        if (!c.month) return;
+        const entry = monthlyMap.get(c.month) || { paid: 0, unpaid: 0 };
+        if (c.paymentStatus === 'Paid') entry.paid++;
+        else entry.unpaid++;
+        monthlyMap.set(c.month, entry);
+    });
+
+    const monthlyPerformance = Array.from(monthlyMap.entries())
+        .map(([month, data]) => ({ month, ...data }))
+        .sort((a,b) => new Date(a.month).getTime() - new Date(b.month).getTime());
+    
+    const paidPercentage = totalBillsCount > 0 ? `${((paidCount / totalBillsCount) * 100).toFixed(0)}%` : "0%";
+
     return {
       totalBulkMeters: branchBMs.length,
       totalCustomers: branchCustomers.length,
+      totalBills: totalBillsCount,
+      paidBills: paidCount,
+      unpaidBills: unpaidCount,
+      billsData,
+      monthlyPerformance,
+      paidPercentage,
     };
   }, [authStatus, staffBranchName, allBranches, allBulkMeters, allCustomers]);
 
@@ -163,25 +194,27 @@ export default function StaffDashboardPage() {
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Bills Status (Current Cycle)</CardTitle>
-            <PieChartIcon className="h-5 w-5 text-muted-foreground" />
+            <FileText className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">100 Bills</div>
-            <p className="text-xs text-muted-foreground">85% paid rate (Sample Data)</p>
+            <div className="text-2xl font-bold">{branchStats.totalBills.toLocaleString()} Bills</div>
+            <p className="text-xs text-muted-foreground">{branchStats.paidBills} Paid / {branchStats.unpaidBills} Unpaid</p>
             <div className="h-[120px] mt-4">
-               <ChartContainer config={chartConfig} className="w-full h-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                        <Pie data={billsData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={50} label>
-                            {billsData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.fill} />
-                            ))}
-                        </Pie>
-                        <Tooltip content={<ChartTooltipContent hideLabel />} />
-                        <Legend content={<ChartLegendContent />} />
-                    </PieChart>
-                </ResponsiveContainer>
-               </ChartContainer>
+               {isClient && (
+                 <ChartContainer config={chartConfig} className="w-full h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                          <Pie data={branchStats.billsData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={50} label>
+                              {branchStats.billsData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                              ))}
+                          </Pie>
+                          <Tooltip content={<ChartTooltipContent hideLabel />} />
+                          <Legend content={<ChartLegendContent />} />
+                      </PieChart>
+                  </ResponsiveContainer>
+                 </ChartContainer>
+               )}
             </div>
           </CardContent>
         </Card>
@@ -192,7 +225,7 @@ export default function StaffDashboardPage() {
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{branchStats.totalCustomers}</div>
+            <div className="text-2xl font-bold">{branchStats.totalCustomers.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Total customers assigned to your branch</p>
              <div className="h-[120px] mt-4 flex items-center justify-center">
                 <Users className="h-16 w-16 text-primary opacity-50" />
@@ -206,7 +239,7 @@ export default function StaffDashboardPage() {
             <Gauge className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{branchStats.totalBulkMeters}</div>
+            <div className="text-2xl font-bold">{branchStats.totalBulkMeters.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Total bulk meters assigned to your branch</p>
              <div className="h-[120px] mt-4 flex items-center justify-center">
                 <Gauge className="h-16 w-16 text-primary opacity-50" />
@@ -247,23 +280,31 @@ export default function StaffDashboardPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Monthly Billing Performance ({staffBranchName})</CardTitle>
-          <CardDescription>Paid vs. Unpaid bills over the last few months in your branch. (Sample Data)</CardDescription>
+          <CardDescription>Paid vs. Unpaid bills over the last few months in your branch.</CardDescription>
         </CardHeader>
         <CardContent className="h-[300px]">
-          <ChartContainer config={chartConfig} className="w-full h-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyPerformanceData}>
-                <XAxis dataKey="month" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
-                <Legend />
-                <Bar dataKey="paid" stackId="a" fill="var(--color-paid)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="unpaid" stackId="a" fill="var(--color-unpaid)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
+          {isClient && branchStats.monthlyPerformance.length > 0 ? (
+            <ChartContainer config={chartConfig} className="w-full h-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={branchStats.monthlyPerformance}>
+                  <XAxis dataKey="month" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                  <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
+                  <Legend />
+                  <Bar dataKey="paid" stackId="a" fill="var(--color-paid)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="unpaid" stackId="a" fill="var(--color-unpaid)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          ) : (
+             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                No monthly performance data available to display.
+             </div>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 }
+
+    

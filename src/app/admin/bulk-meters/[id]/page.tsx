@@ -92,20 +92,15 @@ export default function BulkMeterDetailsPage() {
     const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
     const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
     
-    const billDetails: BillCalculationResult = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
-    const totalBulkBillForPeriod = billDetails.totalBill;
+    const { totalBill: totalBulkBillForPeriod } = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
     
     const outStandingBillValue = bulkMeter.outStandingbill ?? 0;
 
     const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
-    const totalIndividualBill = associatedCustomers.reduce((sum, cust) => {
-        const usage = (cust.currentReading ?? 0) - (cust.previousReading ?? 0);
-        const { totalBill } = calculateBill(usage, cust.customerType, cust.sewerageConnection, cust.meterSize);
-        return sum + totalBill;
-    }, 0);
 
     const differenceUsage = bulkUsage - totalIndividualUsage;
-    const differenceBill = totalBulkBillForPeriod - totalIndividualBill;
+    
+    const { totalBill: differenceBill, ...differenceBillBreakdown } = calculateBill(differenceUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
     
     const totalPayable = differenceBill + outStandingBillValue;
     const paymentStatus = totalPayable > 0.01 ? 'Unpaid' : 'Paid';
@@ -117,19 +112,19 @@ export default function BulkMeterDetailsPage() {
 
     const finalBillCardDetails = (() => {
       if (billToRender) {
-          const historicalBillDetails = calculateBill(billToRender.usageM3 ?? 0, 'Non-domestic', 'No', bulkMeter.meterSize);
+          const historicalBillDetails = calculateBill(billToRender.differenceUsage ?? 0, 'Non-domestic', 'No', bulkMeter.meterSize);
           return {
               prevReading: billToRender.previousReadingValue,
               currReading: billToRender.currentReadingValue,
               usage: billToRender.usageM3 ?? 0,
-              baseWaterCharge: billToRender.baseWaterCharge,
-              maintenanceFee: billToRender.maintenanceFee ?? 0,
-              sanitationFee: billToRender.sanitationFee ?? 0,
-              sewerageCharge: billToRender.sewerageCharge ?? 0,
-              meterRent: billToRender.meterRent ?? 0,
-              vatAmount: calculateBill(billToRender.usageM3 ?? 0, 'Non-domestic', 'No', bulkMeter.meterSize).vatAmount,
-              totalDifferenceBill: differenceBill,
-              differenceUsage: billToRender.differenceUsage ?? (billToRender.usageM3 ?? 0) - totalIndividualUsage,
+              baseWaterCharge: historicalBillDetails.baseWaterCharge,
+              maintenanceFee: historicalBillDetails.maintenanceFee,
+              sanitationFee: historicalBillDetails.sanitationFee,
+              sewerageCharge: historicalBillDetails.sewerageCharge,
+              meterRent: historicalBillDetails.meterRent,
+              vatAmount: historicalBillDetails.vatAmount,
+              totalDifferenceBill: billToRender.totalAmountDue,
+              differenceUsage: billToRender.differenceUsage ?? 0,
               outstandingBill: billToRender.balanceCarriedForward ?? 0,
               totalPayable: (billToRender.balanceCarriedForward ?? 0) + billToRender.totalAmountDue,
               paymentStatus: billToRender.paymentStatus,
@@ -140,7 +135,7 @@ export default function BulkMeterDetailsPage() {
           prevReading: bmPreviousReading,
           currReading: bmCurrentReading,
           usage: bulkUsage,
-          ...billDetails,
+          ...differenceBillBreakdown,
           totalDifferenceBill: differenceBill,
           differenceUsage: differenceUsage,
           outstandingBill: outStandingBillValue,
@@ -397,19 +392,13 @@ export default function BulkMeterDetailsPage() {
 
       const associatedCustomersForCycle = getCustomers().filter(c => c.assignedBulkMeterId === currentBulkMeterState.customerKeyNumber);
       const totalIndividualUsageForCycle = associatedCustomersForCycle.reduce((sum, cust) => sum + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
-      const totalIndividualBillForCycle = associatedCustomersForCycle.reduce((sum, cust) => {
-        const usage = (cust.currentReading ?? 0) - (cust.previousReading ?? 0);
-        const { totalBill } = calculateBill(usage, cust.customerType, cust.sewerageConnection, cust.meterSize);
-        return sum + totalBill;
-      }, 0);
-
+      
       const differenceUsageForCycle = bulkUsage - totalIndividualUsageForCycle;
       
       const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
       const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
 
-      const { totalBill: billForCurrentPeriod, ...billBreakdown } = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, currentBulkMeterState.meterSize);
-      const differenceBillForCycle = billForCurrentPeriod - totalIndividualBillForCycle;
+      const { totalBill: billForCurrentPeriod, ...billBreakdown } = calculateBill(differenceUsageForCycle, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, currentBulkMeterState.meterSize);
       
       const billDate = new Date();
       const periodEndDate = lastDayOfMonth(parsedDate);
@@ -418,7 +407,7 @@ export default function BulkMeterDetailsPage() {
       dueDateObject.setDate(dueDateObject.getDate() + 15);
       
       const balanceFromPreviousPeriods = currentBulkMeterState.outStandingbill || 0;
-      const totalPayableThisCycle = differenceBillForCycle + balanceFromPreviousPeriods;
+      const totalPayableThisCycle = billForCurrentPeriod + balanceFromPreviousPeriods;
 
       const billToSave: Omit<DomainBill, 'id' | 'createdAt' | 'updatedAt'> = {
         bulkMeterId: currentBulkMeterState.customerKeyNumber,
@@ -431,7 +420,7 @@ export default function BulkMeterDetailsPage() {
         differenceUsage: differenceUsageForCycle,
         ...billBreakdown,
         balanceCarriedForward: balanceFromPreviousPeriods,
-        totalAmountDue: differenceBillForCycle,
+        totalAmountDue: billForCurrentPeriod,
         dueDate: format(dueDateObject, 'yyyy-MM-dd'),
         paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
         notes: `Bill generated on ${format(billDate, 'PP')}. Total payable was ${totalPayableThisCycle.toFixed(2)}.`,

@@ -53,7 +53,7 @@ const UNASSIGNED_BULK_METER_VALUE = "_SELECT_NONE_BULK_METER_";
 
 export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividualCustomerEntryFormProps) {
   const { toast } = useToast();
-  const [availableBulkMeters, setAvailableBulkMeters] = React.useState<{id: string, name: string}[]>([]);
+  const [availableBulkMeters, setAvailableBulkMeters] = React.useState<{customerKeyNumber: string, name: string}[]>([]);
   const [isLoadingBulkMeters, setIsLoadingBulkMeters] = React.useState(true);
   const [staffBranchId, setStaffBranchId] = React.useState<string | undefined>(undefined);
 
@@ -97,7 +97,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
         if (staffBranch) {
             setStaffBranchId(staffBranch.id);
             const branchFilteredBms = getBulkMeters().filter(bm => bm.branchId === staffBranch.id);
-            setAvailableBulkMeters(branchFilteredBms.map(bm => ({ id: bm.id, name: bm.name })));
+            setAvailableBulkMeters(branchFilteredBms.map(bm => ({ customerKeyNumber: bm.customerKeyNumber, name: bm.name })));
         }
         setIsLoadingBulkMeters(false);
     });
@@ -105,7 +105,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
     const unsubscribeBMs = subscribeToBulkMeters((updatedBulkMeters) => {
         if(staffBranchId) {
             const branchFilteredBms = updatedBulkMeters.filter(bm => bm.branchId === staffBranchId);
-            setAvailableBulkMeters(branchFilteredBms.map(bm => ({ id: bm.id, name: bm.name })));
+            setAvailableBulkMeters(branchFilteredBms.map(bm => ({ customerKeyNumber: bm.customerKeyNumber, name: bm.name })));
         }
     });
     
@@ -125,7 +125,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
       branchId: staffBranchId, // Ensure branchId is set from state
     };
     
-    const result = await addCustomerToStore(submissionData as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'calculatedBill' | 'arrears'>);
+    const result = await addCustomerToStore(submissionData as Omit<IndividualCustomer, 'created_at' | 'updated_at' | 'calculatedBill' | 'arrears'>);
     if (result.success && result.data) {
         toast({
         title: "Data Entry Submitted",
@@ -204,7 +204,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                                 </SelectItem>
                             )}
                             {availableBulkMeters.map((bm) => (
-                                <SelectItem key={bm.id} value={bm.id}>
+                                <SelectItem key={bm.customerKeyNumber} value={bm.customerKeyNumber}>
                                 {bm.name}
                                 </SelectItem>
                             ))}

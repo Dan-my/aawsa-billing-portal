@@ -51,7 +51,7 @@ const BRANCH_UNASSIGNED_VALUE = "_SELECT_BRANCH_INDIVIDUAL_";
 
 export function IndividualCustomerDataEntryForm() {
   const { toast } = useToast();
-  const [availableBulkMeters, setAvailableBulkMeters] = React.useState<{id: string, name: string}[]>([]);
+  const [availableBulkMeters, setAvailableBulkMeters] = React.useState<{customerKeyNumber: string, name: string}[]>([]);
   const [isLoadingBulkMeters, setIsLoadingBulkMeters] = React.useState(true);
   const [availableBranches, setAvailableBranches] = React.useState<Branch[]>([]);
   const [isLoadingBranches, setIsLoadingBranches] = React.useState(true);
@@ -63,7 +63,7 @@ export function IndividualCustomerDataEntryForm() {
         initializeCustomers(),
         initializeAdminBranches()
     ]).then(() => {
-        const fetchedBms = getBulkMeters().map(bm => ({ id: bm.id, name: bm.name }));
+        const fetchedBms = getBulkMeters().map(bm => ({ customerKeyNumber: bm.customerKeyNumber, name: bm.name }));
         setAvailableBulkMeters(fetchedBms);
         setIsLoadingBulkMeters(false);
         
@@ -72,7 +72,7 @@ export function IndividualCustomerDataEntryForm() {
     });
 
     const unsubscribeBMs = subscribeToBulkMeters((updatedBulkMeters) => {
-      const newBms = updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name }));
+      const newBms = updatedBulkMeters.map(bm => ({ customerKeyNumber: bm.customerKeyNumber, name: bm.name }));
       setAvailableBulkMeters(newBms);
       setIsLoadingBulkMeters(false);
     });
@@ -118,7 +118,7 @@ export function IndividualCustomerDataEntryForm() {
       branchId: data.branchId === BRANCH_UNASSIGNED_VALUE ? undefined : data.branchId,
     };
     
-    const result = await addCustomerToStore(submissionData as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'calculatedBill'>);
+    const result = await addCustomerToStore(submissionData as Omit<IndividualCustomer, 'created_at' | 'updated_at' | 'calculatedBill' | 'arrears'>);
     if (result.success && result.data) {
         toast({
         title: "Data Entry Submitted",
@@ -210,7 +210,7 @@ export function IndividualCustomerDataEntryForm() {
                                 </SelectItem>
                             )}
                             {availableBulkMeters.map((bm) => (
-                                <SelectItem key={bm.id} value={bm.id}>
+                                <SelectItem key={bm.customerKeyNumber} value={bm.customerKeyNumber}>
                                 {bm.name}
                                 </SelectItem>
                             ))}

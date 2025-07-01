@@ -7,9 +7,10 @@ export const bulkMeterStatuses = ['Active', 'Maintenance', 'Decommissioned'] as 
 export type BulkMeterStatus = (typeof bulkMeterStatuses)[number];
 
 // This type represents the data structure for a bulk meter entity.
-// It combines the fields from the data entry schema with an ID and a specific status.
+// It combines the fields from the data entry schema with a specific status.
+// customerKeyNumber is now the primary identifier.
 export type BulkMeter = z.infer<typeof baseBulkMeterDataSchema> & {
-  id: string;
+  // id: string; // Removed, customerKeyNumber is the PK
   status: BulkMeterStatus;
   paymentStatus: PaymentStatus; 
   outStandingbill: number; 

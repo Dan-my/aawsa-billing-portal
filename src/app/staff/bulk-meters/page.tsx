@@ -158,7 +158,7 @@ export default function StaffBulkMetersPage() {
 
   const confirmDelete = async () => {
     if (bulkMeterToDelete) {
-      await deleteBulkMeterFromStore(bulkMeterToDelete.id);
+      await deleteBulkMeterFromStore(bulkMeterToDelete.customerKeyNumber);
       toast({ title: "Bulk Meter Deleted", description: `${bulkMeterToDelete.name} has been removed.` });
       setBulkMeterToDelete(null);
     }
@@ -174,10 +174,10 @@ export default function StaffBulkMetersPage() {
     const dataWithBranchId = { ...data, branchId: staffBranch?.id || data.branchId };
     
     if (selectedBulkMeter) {
-      await updateBulkMeterInStore(selectedBulkMeter.id, dataWithBranchId);
+      await updateBulkMeterInStore(selectedBulkMeter.customerKeyNumber, dataWithBranchId);
       toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
     } else {
-      const newBulkMeterData: Omit<BulkMeter, 'id'> = {
+      const newBulkMeterData: Omit<BulkMeter, 'customerKeyNumber'> & {customerKeyNumber: string} = {
         ...dataWithBranchId,
         status: data.status || "Active", 
         paymentStatus: data.paymentStatus || "Unpaid",

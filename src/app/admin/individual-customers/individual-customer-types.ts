@@ -7,9 +7,10 @@ export const individualCustomerStatuses = ['Active', 'Inactive', 'Suspended'] as
 export type IndividualCustomerStatus = (typeof individualCustomerStatuses)[number];
 
 // This type represents the data structure for an individual customer entity.
-// It combines the fields from the data entry schema with an ID and operational/billing fields.
+// It combines the fields from the data entry schema with operational/billing fields.
+// customerKeyNumber is now the primary identifier.
 export type IndividualCustomer = z.infer<typeof individualCustomerDataEntrySchema> & {
-  id: string;
+  // id: string; // Removed, customerKeyNumber is the PK
   status: IndividualCustomerStatus;
   paymentStatus: PaymentStatus; 
   calculatedBill: number; 

@@ -1,6 +1,9 @@
 
 "use client";
 
+// IMPORTANT: After the DB change, you must rename this page's parent folder
+// from [id] to [customerKeyNumber] for routing to work correctly.
+
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image"; 
@@ -17,7 +20,7 @@ import {
   updateCustomer as updateCustomerInStore, deleteCustomer as deleteCustomerFromStore, subscribeToBulkMeters, subscribeToCustomers,
   initializeBulkMeters, initializeCustomers, getBranches, initializeBranches, subscribeToBranches,
   getBulkMeterReadings, initializeBulkMeterReadings, subscribeToBulkMeterReadings,
-  addBill, addBulkMeterReading, removeBill, getBulkMeterDirectly
+  addBill, addBulkMeterReading, removeBill, getBulkMeterByCustomerKey
 } from "@/lib/data-store";
 import { getBills, initializeBills, subscribeToBills } from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meter-types";
@@ -36,7 +39,7 @@ export default function BulkMeterDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
-  const bulkMeterId = params.id as string;
+  const bulkMeterKey = params.id as string; // This is now customerKeyNumber
 
   const [bulkMeter, setBulkMeter] = useState<BulkMeter | null>(null);
   const [associatedCustomers, setAssociatedCustomers] = useState<IndividualCustomer[]>([]);
@@ -170,10 +173,10 @@ export default function BulkMeterDetailsPage() {
   useEffect(() => {
     let isMounted = true;
 
-    if (!bulkMeterId) {
+    if (!bulkMeterKey) {
       setIsLoading(false);
       setBulkMeter(null);
-      toast({ title: "Invalid Bulk Meter ID", description: "The ID for the bulk meter is missing in the URL.", variant: "destructive" });
+      toast({ title: "Invalid Bulk Meter Key", description: "The key for the bulk meter is missing in the URL.", variant: "destructive" });
       router.push("/admin/bulk-meters");
       return;
     }
@@ -190,12 +193,12 @@ export default function BulkMeterDetailsPage() {
       const currentGlobalBranches = getBranches(); 
       setBranches(currentGlobalBranches); 
 
-      const foundBM = currentGlobalMeters.find(bm => bm.id === bulkMeterId);
+      const foundBM = currentGlobalMeters.find(bm => bm.customerKeyNumber === bulkMeterKey);
 
       if (foundBM) {
         setBulkMeter(foundBM);
-        setAssociatedCustomers(currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId));
-        setMeterReadingHistory(getBulkMeterReadings().filter(r => r.bulkMeterId === bulkMeterId).sort((a, b) => {
+        setAssociatedCustomers(currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterKey));
+        setMeterReadingHistory(getBulkMeterReadings().filter(r => r.bulkMeterId === foundBM.customerKeyNumber).sort((a, b) => {
             const dateA = new Date(a.readingDate).getTime();
             const dateB = new Date(b.readingDate).getTime();
             if (dateB !== dateA) {
@@ -205,7 +208,7 @@ export default function BulkMeterDetailsPage() {
             const creationB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
             return creationB - creationA;
         }));
-        setBillingHistory(getBills().filter(b => b.bulkMeterId === bulkMeterId).sort((a, b) => {
+        setBillingHistory(getBills().filter(b => b.bulkMeterId === foundBM.customerKeyNumber).sort((a, b) => {
             const dateA = new Date(a.billPeriodEndDate);
             const dateB = new Date(b.billPeriodEndDate);
             if (dateB.getTime() !== dateA.getTime()) {
@@ -236,12 +239,12 @@ export default function BulkMeterDetailsPage() {
 
       setBranches(currentGlobalBranches); 
 
-      const foundBM = currentGlobalMeters.find(bm => bm.id === bulkMeterId);
+      const foundBM = currentGlobalMeters.find(bm => bm.customerKeyNumber === bulkMeterKey);
 
       if (foundBM) {
         setBulkMeter(foundBM);
-        setAssociatedCustomers(currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterId));
-        setMeterReadingHistory(getBulkMeterReadings().filter(r => r.bulkMeterId === bulkMeterId).sort((a, b) => {
+        setAssociatedCustomers(currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterKey));
+        setMeterReadingHistory(getBulkMeterReadings().filter(r => r.bulkMeterId === foundBM.customerKeyNumber).sort((a, b) => {
             const dateA = new Date(a.readingDate).getTime();
             const dateB = new Date(b.readingDate).getTime();
             if (dateB !== dateA) {
@@ -251,7 +254,7 @@ export default function BulkMeterDetailsPage() {
             const creationB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
             return creationB - creationA;
         }));
-        setBillingHistory(getBills().filter(b => b.bulkMeterId === bulkMeterId).sort((a, b) => {
+        setBillingHistory(getBills().filter(b => b.bulkMeterId === foundBM.customerKeyNumber).sort((a, b) => {
             const dateA = new Date(a.billPeriodEndDate);
             const dateB = new Date(b.billPeriodEndDate);
             if (dateB.getTime() !== dateA.getTime()) {
@@ -281,13 +284,13 @@ export default function BulkMeterDetailsPage() {
       unsubMeterReadings();
       unsubBills();
     };
-  }, [bulkMeterId, router, toast, bulkMeter]);
+  }, [bulkMeterKey, router, toast, bulkMeter]);
   
   const handleEditBulkMeter = () => setIsBulkMeterFormOpen(true);
   const handleDeleteBulkMeter = () => setIsBulkMeterDeleteDialogOpen(true);
   const confirmDeleteBulkMeter = async () => {
     if (bulkMeter) {
-      await deleteBulkMeterFromStore(bulkMeter.id);
+      await deleteBulkMeterFromStore(bulkMeter.customerKeyNumber);
       toast({ title: "Bulk Meter Deleted", description: `${bulkMeter.name} has been removed.` });
       router.push("/admin/bulk-meters");
     }
@@ -296,7 +299,7 @@ export default function BulkMeterDetailsPage() {
 
   const handleSubmitBulkMeterForm = async (data: BulkMeterFormValues) => {
     if (bulkMeter) {
-        await updateBulkMeterInStore(bulkMeter.id, data);
+        await updateBulkMeterInStore(bulkMeter.customerKeyNumber, data);
         toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
     }
     setIsBulkMeterFormOpen(false);
@@ -308,7 +311,7 @@ export default function BulkMeterDetailsPage() {
     const readingDate = new Date();
 
     const result = await addBulkMeterReading({
-      bulkMeterId: bulkMeter.id,
+      bulkMeterId: bulkMeter.customerKeyNumber,
       readingValue: readingValue,
       readingDate: format(readingDate, "yyyy-MM-dd"),
       monthYear: format(readingDate, "yyyy-MM"),
@@ -332,7 +335,7 @@ export default function BulkMeterDetailsPage() {
   };
   const confirmDeleteCustomer = async () => {
     if (customerToDelete) {
-      await deleteCustomerFromStore(customerToDelete.id);
+      await deleteCustomerFromStore(customerToDelete.customerKeyNumber);
       toast({ title: "Customer Deleted", description: `${customerToDelete.name} has been removed.` });
     }
     setCustomerToDelete(null);
@@ -341,14 +344,14 @@ export default function BulkMeterDetailsPage() {
 
   const handleSubmitCustomerForm = async (data: IndividualCustomerFormValues) => {
     if (selectedCustomer) {
-      const updatedCustomerData: Partial<Omit<IndividualCustomer, 'id'>> = {
+      const updatedCustomerData: Partial<Omit<IndividualCustomer, 'customerKeyNumber'>> = {
           ...data, ordinal: Number(data.ordinal), meterSize: Number(data.meterSize),
           previousReading: Number(data.previousReading), currentReading: Number(data.currentReading), 
           status: data.status as IndividualCustomerStatus, paymentStatus: data.paymentStatus as PaymentStatus,
           customerType: data.customerType as CustomerType, sewerageConnection: data.sewerageConnection as SewerageConnection,
           assignedBulkMeterId: data.assignedBulkMeterId || undefined,
       };
-      await updateCustomerInStore(selectedCustomer.id, updatedCustomerData);
+      await updateCustomerInStore(selectedCustomer.customerKeyNumber, updatedCustomerData);
       toast({ title: "Customer Updated", description: `${data.name} has been updated.` });
     }
     setIsCustomerFormOpen(false); setSelectedCustomer(null);
@@ -378,7 +381,7 @@ export default function BulkMeterDetailsPage() {
           return;
       }
       
-      const directFetchResult = await getBulkMeterDirectly(bulkMeter.id);
+      const directFetchResult = await getBulkMeterByCustomerKey(bulkMeter.customerKeyNumber);
 
       if (!directFetchResult.success || !directFetchResult.data) {
           toast({ variant: "destructive", title: "Meter Not Found", description: "Could not find the current state of the meter in the database." });
@@ -405,7 +408,7 @@ export default function BulkMeterDetailsPage() {
       const totalPayableThisCycle = billForCurrentPeriod + balanceFromPreviousPeriods;
 
       const billToSave: Omit<DomainBill, 'id'> = {
-        bulkMeterId: currentBulkMeterState.id,
+        bulkMeterId: currentBulkMeterState.customerKeyNumber,
         billPeriodStartDate: `${currentBulkMeterState.month}-01`,
         billPeriodEndDate: format(periodEndDate, 'yyyy-MM-dd'),
         monthYear: currentBulkMeterState.month,
@@ -429,12 +432,12 @@ export default function BulkMeterDetailsPage() {
 
       const newOutstandingBalance = carryBalance ? totalPayableThisCycle : 0;
       
-      const updatePayload: Partial<Omit<BulkMeter, 'id'>> = {
+      const updatePayload: Partial<Omit<BulkMeter, 'customerKeyNumber'>> = {
           previousReading: currentBulkMeterState.currentReading,
           outStandingbill: newOutstandingBalance,
       };
 
-      const updateResult = await updateBulkMeterInStore(currentBulkMeterState.id, updatePayload);
+      const updateResult = await updateBulkMeterInStore(currentBulkMeterState.customerKeyNumber, updatePayload);
       if (updateResult.success && updateResult.data) {
         setBulkMeter(updateResult.data);
         toast({ 
@@ -563,7 +566,7 @@ export default function BulkMeterDetailsPage() {
 
       <Card className="shadow-lg">
         <CardHeader><CardTitle className="flex items-center gap-2"><UsersIcon className="h-5 w-5 text-primary" />Associated Individual Customers</CardTitle><CardDescription>List of individual customers connected to this bulk meter ({associatedCustomers.length} found).</CardDescription></CardHeader>
-        <CardContent>{associatedCustomers.length === 0 ? (<div className="text-center text-muted-foreground py-4">No individual customers are currently associated with this bulk meter.</div>) : (<div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Customer Name</TableHead><TableHead>Meter No.</TableHead><TableHead>Usage (m³)</TableHead><TableHead>Bill (ETB)</TableHead><TableHead>Pay Status</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader><TableBody>{associatedCustomers.map((customer) => { const usage = customer.currentReading - customer.previousReading; return (<TableRow key={customer.id}><TableCell className="font-medium">{customer.name}</TableCell><TableCell>{customer.meterNumber}</TableCell><TableCell>{usage.toFixed(2)}</TableCell><TableCell>{customer.calculatedBill.toFixed(2)}</TableCell><TableCell><Badge variant={customer.paymentStatus === 'Paid' ? 'default' : customer.paymentStatus === 'Unpaid' ? 'destructive' : 'secondary'} className={cn(customer.paymentStatus === 'Paid' && "bg-green-500 hover:bg-green-600", customer.paymentStatus === 'Pending' && "bg-yellow-500 hover:bg-yellow-600")}>{customer.paymentStatus === 'Paid' ? <CheckCircle className="mr-1 h-3.5 w-3.5"/> : customer.paymentStatus === 'Unpaid' ? <XCircle className="mr-1 h-3.5 w-3.5"/> : <Clock className="mr-1 h-3.5 w-3.5"/>}{customer.paymentStatus}</Badge></TableCell><TableCell><Badge variant={customer.status === 'Active' ? 'default' : 'destructive'}>{customer.status}</Badge></TableCell><TableCell className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuLabel>Actions</DropdownMenuLabel><DropdownMenuItem onClick={() => handleEditCustomer(customer)}><Edit className="mr-2 h-4 w-4" />Edit Customer</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => handleDeleteCustomer(customer)} className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" />Delete Customer</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell></TableRow>);})}</TableBody></Table></div>)}</CardContent>
+        <CardContent>{associatedCustomers.length === 0 ? (<div className="text-center text-muted-foreground py-4">No individual customers are currently associated with this bulk meter.</div>) : (<div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Customer Name</TableHead><TableHead>Meter No.</TableHead><TableHead>Usage (m³)</TableHead><TableHead>Bill (ETB)</TableHead><TableHead>Pay Status</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader><TableBody>{associatedCustomers.map((customer) => { const usage = customer.currentReading - customer.previousReading; return (<TableRow key={customer.customerKeyNumber}><TableCell className="font-medium">{customer.name}</TableCell><TableCell>{customer.meterNumber}</TableCell><TableCell>{usage.toFixed(2)}</TableCell><TableCell>{customer.calculatedBill.toFixed(2)}</TableCell><TableCell><Badge variant={customer.paymentStatus === 'Paid' ? 'default' : customer.paymentStatus === 'Unpaid' ? 'destructive' : 'secondary'} className={cn(customer.paymentStatus === 'Paid' && "bg-green-500 hover:bg-green-600", customer.paymentStatus === 'Pending' && "bg-yellow-500 hover:bg-yellow-600")}>{customer.paymentStatus === 'Paid' ? <CheckCircle className="mr-1 h-3.5 w-3.5"/> : customer.paymentStatus === 'Unpaid' ? <XCircle className="mr-1 h-3.5 w-3.5"/> : <Clock className="mr-1 h-3.5 w-3.5"/>}{customer.paymentStatus}</Badge></TableCell><TableCell><Badge variant={customer.status === 'Active' ? 'default' : 'destructive'}>{customer.status}</Badge></TableCell><TableCell className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuLabel>Actions</DropdownMenuLabel><DropdownMenuItem onClick={() => handleEditCustomer(customer)}><Edit className="mr-2 h-4 w-4" />Edit Customer</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => handleDeleteCustomer(customer)} className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" />Delete Customer</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell></TableRow>);})}</TableBody></Table></div>)}</CardContent>
       </Card>
 
       <Card className="shadow-lg printable-bill-card">
@@ -615,7 +618,7 @@ export default function BulkMeterDetailsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {selectedCustomer && bulkMeter && (<IndividualCustomerFormDialog open={isCustomerFormOpen} onOpenChange={setIsCustomerFormOpen} onSubmit={handleSubmitCustomerForm} defaultValues={selectedCustomer} bulkMeters={[{id: bulkMeter.id, name: bulkMeter.name}]}/>)}
+      {selectedCustomer && bulkMeter && (<IndividualCustomerFormDialog open={isCustomerFormOpen} onOpenChange={setIsCustomerFormOpen} onSubmit={handleSubmitCustomerForm} defaultValues={selectedCustomer} bulkMeters={[{customerKeyNumber: bulkMeter.customerKeyNumber, name: bulkMeter.name}]}/>)}
       <AlertDialog open={isCustomerDeleteDialogOpen} onOpenChange={setIsCustomerDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader><AlertDialogTitle>Are you sure you want to delete this customer?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the customer: {customerToDelete?.name}.</AlertDialogDescription></AlertDialogHeader>

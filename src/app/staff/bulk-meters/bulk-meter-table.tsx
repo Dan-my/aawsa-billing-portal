@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -63,7 +64,7 @@ export function BulkMeterTable({ data, onEdit, onDelete, branches }: BulkMeterTa
         </TableHeader>
         <TableBody>
           {data.map((bulkMeter) => (
-            <TableRow key={bulkMeter.id}>
+            <TableRow key={bulkMeter.customerKeyNumber}>
               <TableCell className="font-medium">{bulkMeter.name}</TableCell>
               <TableCell>{bulkMeter.meterNumber}</TableCell>
               <TableCell>{getBranchName(bulkMeter.branchId, bulkMeter.location)}</TableCell> 
@@ -89,7 +90,7 @@ export function BulkMeterTable({ data, onEdit, onDelete, branches }: BulkMeterTa
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                     <Link href={`/staff/bulk-meters/${bulkMeter.id}`} passHref>
+                     <Link href={`/staff/bulk-meters/${bulkMeter.customerKeyNumber}`} passHref>
                        <DropdownMenuItem>
                          <Eye className="mr-2 h-4 w-4" />
                          View Details

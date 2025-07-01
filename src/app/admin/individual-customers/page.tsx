@@ -31,16 +31,16 @@ import type { Branch } from "../branches/branch-types"; // Added
 import { TablePagination } from "@/components/ui/table-pagination";
 
 // Fallback initial data, actual data comes from Supabase via data-store
-export const initialCustomers: IndividualCustomer[] = [
-  { id: "cust001", name: "Abebe Bikila", customerKeyNumber: "ICK001", contractNumber: "ICC001", customerType: "Domestic", bookNumber: "B001", ordinal: 1, meterSize: 0.75, meterNumber: "IMTR001", previousReading: 100, currentReading: 120, month: "2023-11", specificArea: "Kebele 17", location: "Bole", ward: "Woreda 3", sewerageConnection: "Yes", status: "Active", paymentStatus: "Paid", calculatedBill: 150.50, arrears: 0, assignedBulkMeterId: "bm001", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "cust002", name: "Fatuma Roba", customerKeyNumber: "ICK002", contractNumber: "ICC002", customerType: "Non-domestic", bookNumber: "B002", ordinal: 1, meterSize: 1, meterNumber: "IMTR002", previousReading: 500, currentReading: 550, month: "2023-11", specificArea: "Industrial Zone", location: "Kality", ward: "Woreda 5", sewerageConnection: "No", status: "Active", paymentStatus: "Unpaid", calculatedBill: 750.00, arrears: 0, assignedBulkMeterId: "bm002", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+export const initialCustomers: Omit<IndividualCustomer, 'status' | 'paymentStatus' | 'calculatedBill' | 'arrears' | 'created_at' | 'updated_at'>[] = [
+  { customerKeyNumber: "ICK001", name: "Abebe Bikila", contractNumber: "ICC001", customerType: "Domestic", bookNumber: "B001", ordinal: 1, meterSize: 0.75, meterNumber: "IMTR001", previousReading: 100, currentReading: 120, month: "2023-11", specificArea: "Kebele 17", location: "Bole", ward: "Woreda 3", sewerageConnection: "Yes", assignedBulkMeterId: "bm001" },
+  { customerKeyNumber: "ICK002", name: "Fatuma Roba", contractNumber: "ICC002", customerType: "Non-domestic", bookNumber: "B002", ordinal: 1, meterSize: 1, meterNumber: "IMTR002", previousReading: 500, currentReading: 550, month: "2023-11", specificArea: "Industrial Zone", location: "Kality", ward: "Woreda 5", sewerageConnection: "No", assignedBulkMeterId: "bm002" },
 ];
 
 
 export default function IndividualCustomersPage() {
   const { toast } = useToast();
   const [customers, setCustomers] = React.useState<IndividualCustomer[]>([]);
-  const [bulkMetersList, setBulkMetersList] = React.useState<{id: string, name: string}[]>([]);
+  const [bulkMetersList, setBulkMetersList] = React.useState<{customerKeyNumber: string, name: string}[]>([]);
   const [branches, setBranches] = React.useState<Branch[]>([]); // Added
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -59,14 +59,14 @@ export default function IndividualCustomersPage() {
       initializeCustomers(),
       initializeBranches() // Added
     ]).then(() => {
-      setBulkMetersList(getBulkMeters().map(bm => ({id: bm.id, name: bm.name })));
+      setBulkMetersList(getBulkMeters().map(bm => ({customerKeyNumber: bm.customerKeyNumber, name: bm.name })));
       setCustomers(getCustomers());
       setBranches(getBranches()); // Added
       setIsLoading(false);
     });
 
     const unsubscribeBulkMeters = subscribeToBulkMeters((updatedBulkMeters) => {
-      setBulkMetersList(updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
+      setBulkMetersList(updatedBulkMeters.map(bm => ({ customerKeyNumber: bm.customerKeyNumber, name: bm.name })));
     });
     const unsubscribeCustomers = subscribeToCustomers((updatedCustomers) => {
        setCustomers(updatedCustomers);
@@ -100,7 +100,7 @@ export default function IndividualCustomersPage() {
 
   const confirmDelete = async () => {
     if (customerToDelete) {
-      const result = await deleteCustomerFromStore(customerToDelete.id);
+      const result = await deleteCustomerFromStore(customerToDelete.customerKeyNumber);
       if (result.success) {
         toast({ title: "Customer Deleted", description: `${customerToDelete.name} has been removed.` });
       } else {
@@ -113,7 +113,7 @@ export default function IndividualCustomersPage() {
 
   const handleSubmitCustomer = async (data: IndividualCustomerFormValues) => {
     if (selectedCustomer) {
-      const updatedCustomerData: Partial<Omit<IndividualCustomer, 'id'>> = {
+      const updatedCustomerData: Partial<Omit<IndividualCustomer, 'customerKeyNumber'>> = {
         ...data, 
         ordinal: Number(data.ordinal),
         meterSize: Number(data.meterSize),
@@ -125,7 +125,7 @@ export default function IndividualCustomersPage() {
         sewerageConnection: data.sewerageConnection as SewerageConnection,
         assignedBulkMeterId: data.assignedBulkMeterId || undefined,
       };
-      const result = await updateCustomerInStore(selectedCustomer.id, updatedCustomerData);
+      const result = await updateCustomerInStore(selectedCustomer.customerKeyNumber, updatedCustomerData);
       if (result.success) {
         toast({ title: "Customer Updated", description: `${data.name} has been updated.` });
       } else {
@@ -142,7 +142,7 @@ export default function IndividualCustomersPage() {
         meterSize: Number(data.meterSize),
         previousReading: Number(data.previousReading),
         currentReading: Number(data.currentReading),
-      } as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'calculatedBill'>;
+      } as Omit<IndividualCustomer, 'created_at' | 'updated_at' | 'calculatedBill'>;
 
       const result = await addCustomerToStore(newCustomerData);
       if (result.success && result.data) {
@@ -170,7 +170,7 @@ export default function IndividualCustomersPage() {
         customer.meterNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         branchName.toLowerCase().includes(searchTerm.toLowerCase()) || // Search by derived/actual branch name
         customer.ward.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (customer.assignedBulkMeterId && bulkMetersList.find(bm => bm.id === customer.assignedBulkMeterId)?.name.toLowerCase().includes(searchTerm.toLowerCase()))
+        (customer.assignedBulkMeterId && bulkMetersList.find(bm => bm.customerKeyNumber === customer.assignedBulkMeterId)?.name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   });
   

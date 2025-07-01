@@ -47,14 +47,14 @@ interface IndividualCustomerFormDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: IndividualCustomerFormValues) => void;
   defaultValues?: IndividualCustomer | null;
-  bulkMeters?: { id: string; name: string }[]; 
+  bulkMeters?: { customerKeyNumber: string; name: string }[]; 
 }
 
 const UNASSIGNED_BULK_METER_VALUE = "_SELECT_NONE_BULK_METER_";
 const BRANCH_UNASSIGNED_VALUE = "_SELECT_BRANCH_INDIVIDUAL_DIALOG_";
 
 export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, defaultValues, bulkMeters: propBulkMeters }: IndividualCustomerFormDialogProps) {
-  const [dynamicBulkMeters, setDynamicBulkMeters] = React.useState<{ id: string; name: string }[]>(propBulkMeters || []);
+  const [dynamicBulkMeters, setDynamicBulkMeters] = React.useState<{ customerKeyNumber: string; name: string }[]>(propBulkMeters || []);
   const [availableBranches, setAvailableBranches] = React.useState<Branch[]>([]);
   const [isLoadingBranches, setIsLoadingBranches] = React.useState(true);
   
@@ -97,7 +97,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
 
     if (!propBulkMeters || propBulkMeters.length === 0) {
       initializeBulkMeters().then(() => {
-        const fetchedBms = getBulkMeters().map(bm => ({ id: bm.id, name: bm.name }));
+        const fetchedBms = getBulkMeters().map(bm => ({ customerKeyNumber: bm.customerKeyNumber, name: bm.name }));
         setDynamicBulkMeters(fetchedBms);
       });
     } else {
@@ -107,7 +107,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
     let unsubscribeBMs = () => {};
     if (!propBulkMeters || propBulkMeters.length === 0) {
       unsubscribeBMs = subscribeToBulkMeters((updatedBulkMeters) => {
-        setDynamicBulkMeters(updatedBulkMeters.map(bm => ({ id: bm.id, name: bm.name })));
+        setDynamicBulkMeters(updatedBulkMeters.map(bm => ({ customerKeyNumber: bm.customerKeyNumber, name: bm.name })));
       });
     }
     return () => {
@@ -255,7 +255,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                             </SelectItem>
                         )}
                         {dynamicBulkMeters.map((bm) => (
-                            <SelectItem key={bm.id} value={bm.id}>
+                            <SelectItem key={bm.customerKeyNumber} value={bm.customerKeyNumber}>
                             {bm.name}
                             </SelectItem>
                         ))}
@@ -269,7 +269,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Name *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={form.control} name="customerKeyNumber" render={({ field }) => (<FormItem><FormLabel>Cust. Key No. *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="customerKeyNumber" render={({ field }) => (<FormItem><FormLabel>Cust. Key No. *</FormLabel><FormControl><Input {...field} disabled={!!defaultValues} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={form.control} name="contractNumber" render={({ field }) => (<FormItem><FormLabel>Contract No. *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
               
               <FormField control={form.control} name="customerType" render={({ field }) => (<FormItem><FormLabel>Customer Type *</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger></FormControl><SelectContent>{customerTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />

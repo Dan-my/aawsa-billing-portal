@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -40,7 +41,7 @@ const formSchemaBase = z.object({
   meterType: z.enum(['individual_customer_meter', 'bulk_meter'], {
     required_error: "Please select a meter type.",
   }),
-  entityId: z.string().min(1, "Please select a meter."),
+  entityId: z.string().min(1, "Please select a meter."), // This will now hold the customerKeyNumber
   reading: z.coerce.number().min(0, "Reading must be a non-negative number."),
   date: z.date({
     required_error: "A date is required.",
@@ -51,7 +52,6 @@ export type AddMeterReadingFormValues = z.infer<typeof formSchemaBase>;
 
 interface AddMeterReadingFormProps {
   onSubmit: (values: AddMeterReadingFormValues) => void;
-  // We now need the full objects to access currentReading for validation.
   customers: IndividualCustomer[];
   bulkMeters: BulkMeter[];
   isLoading?: boolean;
@@ -65,22 +65,21 @@ export function AddMeterReadingForm({ onSubmit, customers, bulkMeters, isLoading
       (data) => {
         let lastReading = -1; // Use -1 to indicate not found, as 0 is a valid reading.
         if (data.meterType === 'individual_customer_meter') {
-          const customer = customers.find(c => c.id === data.entityId);
+          const customer = customers.find(c => c.customerKeyNumber === data.entityId);
           if (customer) lastReading = customer.currentReading;
         } else if (data.meterType === 'bulk_meter') {
-          const bulkMeter = bulkMeters.find(bm => bm.id === data.entityId);
+          const bulkMeter = bulkMeters.find(bm => bm.customerKeyNumber === data.entityId);
           if (bulkMeter) lastReading = bulkMeter.currentReading;
         }
-        // If we haven't found the entity yet, don't block validation. Backend will catch it.
         if (lastReading === -1) return true;
         return data.reading >= lastReading;
       },
       (data) => {
         let lastReading = 0;
         if (data.meterType === 'individual_customer_meter') {
-          lastReading = customers.find(c => c.id === data.entityId)?.currentReading ?? 0;
+          lastReading = customers.find(c => c.customerKeyNumber === data.entityId)?.currentReading ?? 0;
         } else {
-          lastReading = bulkMeters.find(bm => bm.id === data.entityId)?.currentReading ?? 0;
+          lastReading = bulkMeters.find(bm => bm.customerKeyNumber === data.entityId)?.currentReading ?? 0;
         }
         return {
            message: `Reading cannot be lower than the last reading (${lastReading.toFixed(2)}).`,
@@ -106,13 +105,13 @@ export function AddMeterReadingForm({ onSubmit, customers, bulkMeters, isLoading
   const availableMeters = React.useMemo(() => {
     if (selectedMeterType === 'individual_customer_meter') {
       return customers.map(c => ({
-        value: c.id,
+        value: c.customerKeyNumber,
         label: `${c.name} (Meter: ${c.meterNumber})`,
       }));
     }
     if (selectedMeterType === 'bulk_meter') {
       return bulkMeters.map(bm => ({
-        value: bm.id,
+        value: bm.customerKeyNumber,
         label: `${bm.name} (Meter: ${bm.meterNumber})`,
       }));
     }

@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 
 // A generic meter type that covers both Individual and Bulk meters for props
 interface GenericMeter {
-  id: string;
+  customerKeyNumber: string;
   name: string;
   currentReading: number;
 }

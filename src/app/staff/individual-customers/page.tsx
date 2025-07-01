@@ -130,14 +130,14 @@ export default function StaffIndividualCustomersPage() {
       return { customers: [], bulkMeters: [] };
     }
     const branchBMs = allBulkMeters.filter(bm => bm.branchId === staffBranch.id);
-    const branchBMIds = new Set(branchBMs.map(bm => bm.id));
+    const branchBMKeys = new Set(branchBMs.map(bm => bm.customerKeyNumber));
     
     const branchCustomers = allCustomers.filter(customer =>
       customer.branchId === staffBranch.id ||
-      (customer.assignedBulkMeterId && branchBMIds.has(customer.assignedBulkMeterId))
+      (customer.assignedBulkMeterId && branchBMKeys.has(customer.assignedBulkMeterId))
     );
     
-    return { customers: branchCustomers, bulkMeters: branchBMs.map(bm => ({ id: bm.id, name: bm.name })) };
+    return { customers: branchCustomers, bulkMeters: branchBMs.map(bm => ({ customerKeyNumber: bm.customerKeyNumber, name: bm.name })) };
   }, [authStatus, staffBranchName, allCustomers, allBulkMeters, allBranches]);
   
   const searchedCustomers = React.useMemo(() => {
@@ -149,7 +149,7 @@ export default function StaffIndividualCustomersPage() {
       customer.meterNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.ward.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (customer.assignedBulkMeterId && allBulkMeters.find(bm => bm.id === customer.assignedBulkMeterId)?.name.toLowerCase().includes(searchTerm.toLowerCase()))
+      (customer.assignedBulkMeterId && allBulkMeters.find(bm => bm.customerKeyNumber === customer.assignedBulkMeterId)?.name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [searchTerm, branchFilteredData.customers, allBulkMeters]);
 
@@ -175,7 +175,7 @@ export default function StaffIndividualCustomersPage() {
 
   const confirmDelete = async () => {
     if (customerToDelete) {
-      const result = await deleteCustomerFromStore(customerToDelete.id);
+      const result = await deleteCustomerFromStore(customerToDelete.customerKeyNumber);
       if (result.success) {
         toast({ title: "Customer Deleted", description: `${customerToDelete.name} has been removed.` });
       } else {
@@ -195,7 +195,7 @@ export default function StaffIndividualCustomersPage() {
     const dataWithBranchId = { ...data, branchId: staffBranch?.id || data.branchId };
 
     if (selectedCustomer) {
-      const updatedCustomerData: Partial<Omit<IndividualCustomer, 'id'>> = {
+      const updatedCustomerData: Partial<Omit<IndividualCustomer, 'customerKeyNumber'>> = {
         ...dataWithBranchId,
         ordinal: Number(data.ordinal),
         meterSize: Number(data.meterSize),
@@ -207,7 +207,7 @@ export default function StaffIndividualCustomersPage() {
         sewerageConnection: data.sewerageConnection as SewerageConnection,
         assignedBulkMeterId: data.assignedBulkMeterId || undefined,
       };
-      const result = await updateCustomerInStore(selectedCustomer.id, updatedCustomerData);
+      const result = await updateCustomerInStore(selectedCustomer.customerKeyNumber, updatedCustomerData);
       if (result.success) {
         toast({ title: "Customer Updated", description: `${data.name} has been updated.` });
       } else {
@@ -225,7 +225,7 @@ export default function StaffIndividualCustomersPage() {
         customerType: data.customerType as CustomerType,
         sewerageConnection: data.sewerageConnection as SewerageConnection,
         assignedBulkMeterId: data.assignedBulkMeterId || undefined,
-      } as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'calculatedBill'>;
+      } as Omit<IndividualCustomer, 'created_at' | 'updated_at' | 'calculatedBill'>;
 
       const result = await addCustomerToStore(newCustomerData);
       if (result.success && result.data) {
@@ -265,7 +265,7 @@ export default function StaffIndividualCustomersPage() {
         data={paginatedCustomers}
         onEdit={handleEditCustomer}
         onDelete={handleDeleteCustomer}
-        bulkMetersList={allBulkMeters.map(bm => ({ id: bm.id, name: bm.name }))}
+        bulkMetersList={allBulkMeters.map(bm => ({ customerKeyNumber: bm.customerKeyNumber, name: bm.name }))}
         branches={allBranches}
       />
     );

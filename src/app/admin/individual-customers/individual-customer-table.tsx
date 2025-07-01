@@ -29,16 +29,16 @@ interface IndividualCustomerTableProps {
   data: IndividualCustomer[];
   onEdit: (customer: IndividualCustomer) => void;
   onDelete: (customer: IndividualCustomer) => void;
-  bulkMetersList?: { id: string; name: string }[];
+  bulkMetersList?: { customerKeyNumber: string; name: string }[];
   branches: Branch[];
   currency?: string;
 }
 
 export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList = [], branches, currency = "ETB" }: IndividualCustomerTableProps) {
 
-  const getBulkMeterName = (id?: string) => {
-    if (!id) return "-";
-    return bulkMetersList.find(bm => bm.id === id)?.name || "Unknown BM";
+  const getBulkMeterName = (key?: string) => {
+    if (!key) return "-";
+    return bulkMetersList.find(bm => bm.customerKeyNumber === key)?.name || "Unknown BM";
   };
 
   const getCustomerBranchName = (branchId?: string) => {
@@ -77,7 +77,7 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
           {data.map((customer) => {
             const usage = customer.currentReading - customer.previousReading;
             return (
-              <TableRow key={customer.id}>
+              <TableRow key={customer.customerKeyNumber}>
                 <TableCell className="font-medium">{customer.name}</TableCell>
                 <TableCell>{customer.meterNumber}</TableCell>
                 <TableCell>
@@ -144,4 +144,3 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
     </div>
   );
 }
-

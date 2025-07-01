@@ -1,4 +1,3 @@
-
 # Firebase Studio
 
 This is a NextJS starter in Firebase Studio.
@@ -27,7 +26,7 @@ For CSV uploads, go to Admin Panel -> Data Entry and select the "CSV Upload" tab
 - `customerKeyNumber` must be a **unique identifier** for the record.
 - `branchId` must correspond to an **existing Branch ID** in the system. This field can be left blank if not assigning to a specific branch.
 - For Individual Customers:
-    - `assignedBulkMeterId` must correspond to an **existing Bulk Meter's `customerKeyNumber`** in the system. You may need to upload bulk meters first. This field can be left blank if the customer is not assigned to a bulk meter.
+    - `assignedBulkMeterId`: **This is a critical field.** The value in this column **must** be the `customerKeyNumber` of an existing bulk meter in the system. You may need to upload your bulk meters first to get their `customerKeyNumber` values. This field can be left blank if the customer is not assigned to a bulk meter.
     - `customerType` must be one of "Domestic" or "Non-domestic".
     - `sewerageConnection` must be one of "Yes" or "No".
 
@@ -66,7 +65,7 @@ The CSV file for individual customer data entry must have the following columns 
 13. `location` (Text, e.g., Bole Sub-City)
 14. `ward` (Text, e.g., Woreda 03)
 15. `sewerageConnection` (Text, "Yes" or "No")
-16. `assignedBulkMeterId` (Text, `customerKeyNumber` of an existing bulk meter, e.g., BMK001, or blank if not assigned)
+16. `assignedBulkMeterId` (Text, **Important:** Use the 'customerKeyNumber' of an existing bulk meter here. e.g., BMK001. Leave blank if not assigned.)
 17. `branchId` (Text, ID of an existing branch, or blank)
 
 **Example Individual Customer CSV Row (after header):**

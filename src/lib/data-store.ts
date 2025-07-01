@@ -395,7 +395,9 @@ const mapDomainBulkMeterToInsert = (bm: Omit<BulkMeter, 'customerKeyNumber'> & {
   const allIndividualCustomers = getCustomers();
   const associatedCustomers = allIndividualCustomers.filter(c => c.assignedBulkMeterId === bm.customerKeyNumber);
   const sumIndividualUsage = associatedCustomers.reduce((acc, cust) => acc + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
-  const sumIndividualBill = associatedCustomers.reduce((acc, cust) => acc + (cust.calculatedBill ?? 0), 0);
+
+  const differenceUsage = calculatedBulkUsage - sumIndividualUsage;
+  const { totalBill: differenceBill } = calculateBill(differenceUsage, "Non-domestic", "No", Number(bm.meterSize));
 
   return {
     name: bm.name,
@@ -414,8 +416,8 @@ const mapDomainBulkMeterToInsert = (bm: Omit<BulkMeter, 'customerKeyNumber'> & {
     paymentStatus: bm.paymentStatus || 'Unpaid',
     bulk_usage: calculatedBulkUsage,
     total_bulk_bill: calculatedTotalBulkBill,
-    difference_usage: calculatedBulkUsage - sumIndividualUsage,
-    difference_bill: calculatedTotalBulkBill - sumIndividualBill,
+    difference_usage: differenceUsage,
+    difference_bill: differenceBill,
     outStandingbill: bm.outStandingbill ? Number(bm.outStandingbill) : 0, 
   };
 };
@@ -459,12 +461,11 @@ const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { customerKeyNumber
             return acc + usage;
         }, 0);
         
-        const sumIndividualBill = associatedCustomers.reduce((acc, cust) => {
-            return acc + (cust.calculatedBill ?? 0);
-        }, 0);
-
-        updatePayload.difference_usage = newBulkUsage - sumIndividualUsage;
-        updatePayload.difference_bill = newTotalBulkBill - sumIndividualBill;
+        const newDifferenceUsage = newBulkUsage - sumIndividualUsage;
+        updatePayload.difference_usage = newDifferenceUsage;
+        
+        const { totalBill: newDifferenceBill } = calculateBill(newDifferenceUsage, "Non-domestic", "No", Number(meterSize));
+        updatePayload.difference_bill = newDifferenceBill;
     }
     return updatePayload;
 };
@@ -735,10 +736,10 @@ async function fetchAllBulkMeters() {
 
       const associatedCustomersData = getCustomers().filter(c => c.assignedBulkMeterId === sbm.customerKeyNumber);
       const sumIndividualUsage = associatedCustomersData.reduce((acc, cust) => acc + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
-      const sumIndividualBill = associatedCustomersData.reduce((acc, cust) => acc + (cust.calculatedBill ?? 0), 0);
-
+      
       const calculatedDifferenceUsage = calculatedBulkUsage - sumIndividualUsage;
-      const calculatedDifferenceBill = calculatedTotalBulkBill - sumIndividualBill;
+      const { totalBill: calculatedDifferenceBill } = calculateBill(calculatedDifferenceUsage, "Non-domestic", "No", Number(sbm.meterSize));
+
 
       const updatePayload: BulkMeterUpdate = {
         bulk_usage: calculatedBulkUsage,

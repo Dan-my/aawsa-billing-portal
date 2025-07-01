@@ -96,7 +96,7 @@ const availableReports: ReportType[] = [
     name: "Customer Data Export (XLSX)",
     description: "Download a comprehensive list of all individual customers with their details.",
     headers: [
-      "id", "name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal",
+      "customerKeyNumber", "name", "contractNumber", "customerType", "bookNumber", "ordinal",
       "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea",
       "location", "ward", "sewerageConnection", "assignedBulkMeterId", "status", "paymentStatus", "calculatedBill",
       "Assigned Branch Name", "created_at", "updated_at"
@@ -118,7 +118,7 @@ const availableReports: ReportType[] = [
     name: "Bulk Meter Data Export (XLSX)",
     description: "Download a comprehensive list of all bulk meters, including their details and readings.",
     headers: [
-      "id", "name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber",
+      "customerKeyNumber", "name", "contractNumber", "meterSize", "meterNumber",
       "previousReading", "currentReading", "month", "specificArea", "location", "ward", "status", "paymentStatus",
       "Assigned Branch Name", "bulkUsage", "totalBulkBill", "differenceUsage", "differenceBill"
     ],
@@ -186,10 +186,10 @@ const availableReports: ReportType[] = [
       return readings.map(r => {
         let meterIdentifier = "N/A";
         if (r.meterType === 'individual_customer_meter' && r.individualCustomerId) {
-          const cust = customers.find(c => c.id === r.individualCustomerId);
+          const cust = customers.find(c => c.customerKeyNumber === r.individualCustomerId);
           meterIdentifier = cust ? `${cust.name} (M: ${cust.meterNumber || 'N/A'})` : `Cust ID: ${r.individualCustomerId}`;
         } else if (r.meterType === 'bulk_meter' && r.bulkMeterId) {
-          const bm = bulkMeters.find(b => b.id === r.bulkMeterId);
+          const bm = bulkMeters.find(b => b.customerKeyNumber === r.bulkMeterId);
           meterIdentifier = bm ? `${bm.name} (M: ${bm.meterNumber || 'N/A'})` : `BM ID: ${r.bulkMeterId}`;
         }
 

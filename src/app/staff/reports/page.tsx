@@ -88,7 +88,7 @@ const availableStaffReports: ReportType[] = [
     name: "My Branch Customer Data (XLSX)",
     description: "Download a list of individual customers assigned to your branch.",
     headers: [
-      "id", "name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal",
+      "customerKeyNumber", "name", "contractNumber", "customerType", "bookNumber", "ordinal",
       "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea",
       "location", "ward", "sewerageConnection", "assignedBulkMeterId", "status", "paymentStatus", "calculatedBill"
     ],
@@ -106,7 +106,7 @@ const availableStaffReports: ReportType[] = [
 
         if (!staffBranch) return [];
         
-        const branchBulkMeterIds = new Set(allBulkMeters.filter(bm => bm.branchId === staffBranch.id).map(bm => bm.id));
+        const branchBulkMeterIds = new Set(allBulkMeters.filter(bm => bm.branchId === staffBranch.id).map(bm => bm.customerKeyNumber));
         
         return allCustomers.filter(c => 
             c.branchId === staffBranch.id || 
@@ -119,7 +119,7 @@ const availableStaffReports: ReportType[] = [
     name: "My Branch Bulk Meter Data (XLSX)",
     description: "Download a list of bulk meters relevant to your branch.",
     headers: [
-      "id", "name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber",
+      "customerKeyNumber", "name", "contractNumber", "meterSize", "meterNumber",
       "previousReading", "currentReading", "month", "specificArea", "location", "ward", "status", "paymentStatus"
     ],
     getData: (branchName?: string) => {
@@ -165,12 +165,12 @@ const availableStaffReports: ReportType[] = [
 
         if (!staffBranch) return [];
         
-        const branchBulkMeterIds = new Set(allBulkMeters.filter(bm => bm.branchId === staffBranch.id).map(bm => bm.id));
-        const bulkMeterBills = allBillsFromStore.filter(bill => bill.bulkMeterId && branchBulkMeterIds.has(bill.bulkMeterId));
+        const branchBulkMeterKeys = new Set(allBulkMeters.filter(bm => bm.branchId === staffBranch.id).map(bm => bm.customerKeyNumber));
+        const bulkMeterBills = allBillsFromStore.filter(bill => bill.bulkMeterId && branchBulkMeterKeys.has(bill.bulkMeterId));
         
         const branchCustomers = allCustomers.filter(c => 
             c.branchId === staffBranch.id || 
-            (c.assignedBulkMeterId && branchBulkMeterIds.has(c.assignedBulkMeterId))
+            (c.assignedBulkMeterId && branchBulkMeterKeys.has(c.assignedBulkMeterId))
         );
         
         const individualCustomerBills = branchCustomers.map(customer => {
@@ -183,8 +183,8 @@ const availableStaffReports: ReportType[] = [
             );
             
             return {
-                id: `cust-bill-${customer.id}`,
-                individualCustomerId: customer.id,
+                id: `cust-bill-${customer.customerKeyNumber}`,
+                individualCustomerId: customer.customerKeyNumber,
                 bulkMeterId: null,
                 billPeriodStartDate: 'N/A',
                 billPeriodEndDate: 'N/A',

@@ -31,19 +31,16 @@ export default function AdminDataEntryPage() {
   }, []);
 
   const handleBulkMeterCsvUpload = async (data: BulkMeterDataEntryFormValues) => {
-    const bulkMeterDataForStore: Omit<BulkMeter, 'id'> = {
+    const bulkMeterDataForStore: Omit<BulkMeter, 'status' | 'paymentStatus' | 'outStandingbill'> = {
       ...data,
-      status: "Active",
-      paymentStatus: "Unpaid",
     };
-    await addBulkMeter(bulkMeterDataForStore);
+    await addBulkMeter(bulkMeterDataForStore as BulkMeter);
   };
 
   const handleIndividualCustomerCsvUpload = async (data: IndividualCustomerDataEntryFormValues) => {
      const customerDataForStore = {
         ...data,
-        // status, paymentStatus, calculatedBill are handled by addCustomer in data-store or DB
-    } as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill'>;
+    } as Omit<IndividualCustomer, 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill' | 'arrears'>;
     await addCustomer(customerDataForStore);
   };
 
@@ -127,8 +124,8 @@ export default function AdminDataEntryPage() {
                             Download Template
                         </Button>
                     </div>
-                    <CardDescription className="mt-2">
-                        {/* Removed descriptive text as requested */}
+                    <CardDescription className="pt-2">
+                       Upload multiple bulk meters at once. Ensure the CSV file structure, headers, and column order match the template exactly.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -154,8 +151,8 @@ export default function AdminDataEntryPage() {
                             Download Template
                         </Button>
                     </div>
-                    <CardDescription className="mt-2">
-                         {/* Removed descriptive text as requested */}
+                    <CardDescription className="pt-2">
+                       Upload multiple individual customers. Ensure the `customerKeyNumber` is unique and `assignedBulkMeterId` (if used) exists.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>

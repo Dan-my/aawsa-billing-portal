@@ -24,9 +24,10 @@ For CSV uploads, go to Admin Panel -> Data Entry and select the "CSV Upload" tab
 - Values should not be enclosed in quotes unless they contain a comma. If values are quoted, ensure they are standard double quotes.
 - Dates (e.g., `month`) should be in `YYYY-MM` format (e.g., `2023-12`).
 - Numerical fields (e.g., `meterSize`, `previousReading`, `currentReading`, `ordinal`) should contain valid numbers without currency symbols or thousands separators.
+- `customerKeyNumber` must be a **unique identifier** for the record.
 - `branchId` must correspond to an **existing Branch ID** in the system. This field can be left blank if not assigning to a specific branch.
 - For Individual Customers:
-    - `assignedBulkMeterId` must correspond to an **existing Bulk Meter ID** in the system. You may need to upload bulk meters first. This field can be left blank if the customer is not assigned to a bulk meter.
+    - `assignedBulkMeterId` must correspond to an **existing Bulk Meter's `customerKeyNumber`** in the system. You may need to upload bulk meters first. This field can be left blank if the customer is not assigned to a bulk meter.
     - `customerType` must be one of "Domestic" or "Non-domestic".
     - `sewerageConnection` must be one of "Yes" or "No".
 
@@ -46,7 +47,7 @@ The CSV file for bulk meter data entry must have the following columns in this s
 12. `branchId` (Text, ID of an existing branch, or blank)
 
 **Example Bulk Meter CSV Row (after header):**
-`Kality Main Feeder,BMK001,BMCK001,3,MTR-BM-K001,10000,10500,2023-11,Industrial Zone A,Kality,Woreda 5,1`
+`Kality Main Feeder,BMK001,BMCK001,3,MTR-BM-K001,10000,10500,2023-11,"Industrial Zone A",Kality,"Woreda 5",1`
 
 #### Individual Customer CSV Columns (Template)
 The CSV file for individual customer data entry must have the following columns in this specific order:
@@ -65,11 +66,11 @@ The CSV file for individual customer data entry must have the following columns 
 13. `location` (Text, e.g., Bole Sub-City)
 14. `ward` (Text, e.g., Woreda 03)
 15. `sewerageConnection` (Text, "Yes" or "No")
-16. `assignedBulkMeterId` (Text, ID of an existing bulk meter, e.g., bm001, or blank if not assigned)
+16. `assignedBulkMeterId` (Text, `customerKeyNumber` of an existing bulk meter, e.g., BMK001, or blank if not assigned)
 17. `branchId` (Text, ID of an existing branch, or blank)
 
 **Example Individual Customer CSV Row (after header):**
-`Jane Smith,CUST002,CONTR002,Domestic,B002,1,0.75,MTR002,120,150,2023-11,Kebele 02,Arada,Woreda 1,No,bm002,2`
+`Jane Smith,CUST002,CONTR002,Domestic,B002,1,0.75,MTR002,120,150,2023-11,"Kebele 02",Arada,"Woreda 1",No,BMK001,2`
 
 Processing feedback, including any errors per row, will be displayed after attempting to upload the CSV file.
 

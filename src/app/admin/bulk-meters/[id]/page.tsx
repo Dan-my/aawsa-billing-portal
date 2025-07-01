@@ -377,14 +377,7 @@ export default function BulkMeterDetailsPage() {
           return;
       }
       
-      const directFetchResult = await getBulkMeterByCustomerKey(bulkMeter.customerKeyNumber);
-
-      if (!directFetchResult.success || !directFetchResult.data) {
-          toast({ variant: "destructive", title: "Meter Not Found", description: "Could not find the current state of the meter in the database." });
-          setIsProcessingCycle(false);
-          return;
-      }
-      const currentBulkMeterState = directFetchResult.data;
+      const currentBulkMeterState = bulkMeter;
 
       const bmPreviousReading = currentBulkMeterState.previousReading ?? 0;
       const bmCurrentReading = currentBulkMeterState.currentReading ?? 0;

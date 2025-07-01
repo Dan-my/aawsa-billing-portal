@@ -277,6 +277,7 @@ export interface Database {
           month_year: string;
           previous_reading_value: number;
           current_reading_value: number;
+          usage_m3?: number | null;
           base_water_charge: number;
           sewerage_charge?: number | null;
           maintenance_fee?: number | null;
@@ -301,6 +302,7 @@ export interface Database {
           month_year?: string;
           previous_reading_value?: number;
           current_reading_value?: number;
+          usage_m3?: number | null;
           base_water_charge?: number;
           sewerage_charge?: number | null;
           maintenance_fee?: number | null;

@@ -542,6 +542,7 @@ const mapDomainBillToSupabase = (bill: Partial<DomainBill>): Partial<BillInsert 
     if (bill.monthYear !== undefined) payload.month_year = bill.monthYear;
     if (bill.previousReadingValue !== undefined) payload.previous_reading_value = bill.previousReadingValue;
     if (bill.currentReadingValue !== undefined) payload.current_reading_value = bill.currentReadingValue;
+    if (bill.usageM3 !== undefined) payload.usage_m3 = bill.usageM3;
     if (bill.baseWaterCharge !== undefined) payload.base_water_charge = bill.baseWaterCharge;
     if (bill.sewerageCharge !== undefined) payload.sewerage_charge = bill.sewerageCharge;
     if (bill.maintenanceFee !== undefined) payload.maintenance_fee = bill.maintenanceFee;

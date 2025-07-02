@@ -153,18 +153,37 @@ export function calculateBill(
   const sanitationFee = tariffConfig.sanitationPercentage ? baseWaterCharge * tariffConfig.sanitationPercentage : 0;
   
   // --- VAT Calculation ---
-  // Updated based on clarification: VAT is 15% of the base water charge only, not service fees.
   let vatAmount = 0;
-  const vatBase = baseWaterCharge; // VAT base is now ONLY the water charge.
-
   if (customerType === 'Domestic') {
-    const VAT_THRESHOLD = 16; // VAT applies if consumption is 16m³ or more.
-    if (usageM3 >= VAT_THRESHOLD) {
-      vatAmount = vatBase * VAT_RATE;
+    const VAT_EXEMPTION_LIMIT = 15;
+    if (usageM3 > VAT_EXEMPTION_LIMIT) {
+      let taxableWaterCharge = 0;
+      let cumulativeUsage = 0;
+
+      // Recalculate water charge on the taxable portion only
+      for (const tier of tiers) {
+        const tierUpperLimit = tier.limit === Infinity ? usageM3 : tier.limit;
+        const consumptionInTier = Math.min(usageM3, tierUpperLimit) - cumulativeUsage;
+
+        if (consumptionInTier <= 0) break;
+        
+        // The portion of usage in *this* tier that is above the 15m³ exemption
+        const taxableStartPoint = Math.max(0, VAT_EXEMPTION_LIMIT - cumulativeUsage);
+        const taxableUsageInTier = consumptionInTier - taxableStartPoint;
+
+        if (taxableUsageInTier > 0) {
+          taxableWaterCharge += taxableUsageInTier * tier.rate;
+        }
+        
+        cumulativeUsage += consumptionInTier;
+        if (cumulativeUsage >= usageM3) break;
+      }
+
+      vatAmount = taxableWaterCharge * VAT_RATE;
     }
   } else {
-    // For Non-domestic, VAT is always applied on the water charge.
-    vatAmount = vatBase * VAT_RATE;
+    // For Non-domestic, VAT is always applied on the base water charge.
+    vatAmount = baseWaterCharge * VAT_RATE;
   }
 
   // --- Other Charges ---

@@ -141,16 +141,21 @@ export function calculateBill(
             break;
         }
     }
+    // If usage exceeds the highest defined limit, use the last tier's rate
+    if (applicableRate === 0 && tiers.length > 0) {
+        applicableRate = tiers[tiers.length - 1].rate;
+    }
     baseWaterCharge = usageM3 * applicableRate;
   }
 
   // --- Service Fees Calculation (based on total water charge) ---
   const maintenanceFee = (tariffConfig.maintenancePercentage ?? 0) * baseWaterCharge;
   const sanitationFee = tariffConfig.sanitationPercentage ? baseWaterCharge * tariffConfig.sanitationPercentage : 0;
-
+  
   // --- VAT Calculation ---
+  // Updated based on clarification: VAT is 15% of the base water charge only, not service fees.
   let vatAmount = 0;
-  const vatBase = baseWaterCharge + maintenanceFee + sanitationFee;
+  const vatBase = baseWaterCharge; // VAT base is now ONLY the water charge.
 
   if (customerType === 'Domestic') {
     const VAT_THRESHOLD = 16; // VAT applies if consumption is 16m³ or more.
@@ -158,7 +163,7 @@ export function calculateBill(
       vatAmount = vatBase * VAT_RATE;
     }
   } else {
-    // For Non-domestic, VAT is always applied on the total of base charge and service fees.
+    // For Non-domestic, VAT is always applied on the water charge.
     vatAmount = vatBase * VAT_RATE;
   }
 

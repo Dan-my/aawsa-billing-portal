@@ -615,12 +615,13 @@ export default function StaffBulkMeterDetailsPage() {
                 <div className="print-row"><span className="print-label">Customer key number:</span> {bulkMeter.customerKeyNumber}</div>
                 <div className="print-row"><span className="print-label">Contract No:</span> {bulkMeter.contractNumber ?? 'N/A'}</div>
                 <div className="print-row"><span className="print-label">Branch:</span> {displayBranchName ?? 'N/A'}</div>
-                <div className="print-row"><span className="print-label">Location:</span> {displayCardLocation}</div>
+                <div className="print-row"><span className="print-label">Location:</span> {bulkMeter.specificArea ?? displayCardLocation}</div>
                 <div className="print-row mt-4"><span className="print-label">Bulk Meter Category:</span> Non-domestic</div>
                 <div className="print-row"><span className="print-label">Number of Assigned Individual Customers:</span> {associatedCustomers.length}</div>
                 <div className="print-row"><span className="print-label">Previous and current reading:</span> {billCardDetails.prevReading.toFixed(2)} / {billCardDetails.currReading.toFixed(2)} m³</div>
                 <div className="print-row"><span className="print-label">Bulk usage:</span> {billCardDetails.usage.toFixed(2)} m³</div>
                 <div className="print-row"><span className="print-label">Total Individual Usage:</span> {totalIndividualUsage.toFixed(2)} m³</div>
+                
                 <div className="print-row mt-4"><span className="print-label">Base Water Charge:</span> ETB {billCardDetails.baseWaterCharge.toFixed(2)}</div>
                 <div className="print-row"><span className="print-label">Maintenance Fee:</span> ETB {billCardDetails.maintenanceFee.toFixed(2)}</div>
                 <div className="print-row"><span className="print-label">Sanitation Fee:</span> ETB {billCardDetails.sanitationFee.toFixed(2)}</div>
@@ -628,6 +629,7 @@ export default function StaffBulkMeterDetailsPage() {
                 <div className="print-row"><span className="print-label">Meter Rent:</span> ETB {billCardDetails.meterRent.toFixed(2)}</div>
                 <div className="print-row"><span className="print-label">VAT (15%):</span> ETB {billCardDetails.vatAmount.toFixed(2)}</div>
                 <div className="print-row"><span className="print-label">Difference usage:</span> {billCardDetails.differenceUsage.toFixed(2)} m³</div>
+                
                 <hr className="my-1" />
                 <div className="print-row"><span className="print-label">Total Difference bill:</span> ETB {billCardDetails.totalDifferenceBill.toFixed(2)}</div>
                 <hr className="my-1" />
@@ -635,8 +637,10 @@ export default function StaffBulkMeterDetailsPage() {
                 <hr className="my-1" />
                 <div className="print-row font-bold text-lg"><span className="print-label">Total Amount Payable:</span> ETB {billCardDetails.totalPayable.toFixed(2)}</div>
                 <hr className="my-1" />
+
                 <div className="print-row mt-2"><span className="print-label">Paid/Unpaid:</span> {billCardDetails.paymentStatus}</div>
                 <div className="print-row"><span className="print-label">Month:</span> {billCardDetails.month}</div>
+                
                 <div className="print-signature-section">
                   <div className="print-signature-item"><span>Requested by</span><span>...................................</span></div>
                   <div className="print-signature-item"><span>Checked by</span><span>...................................</span></div>

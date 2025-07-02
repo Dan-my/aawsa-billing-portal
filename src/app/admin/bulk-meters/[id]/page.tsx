@@ -358,39 +358,43 @@ export default function BulkMeterDetailsPage() {
     setIsCustomerFormOpen(false); setSelectedCustomer(null);
   };
 
-  const prepareSlipData = () => {
+  const prepareSlipData = (bill?: DomainBill | null) => {
     if (!bulkMeter) return false;
-    const recentBill = billingHistory.length > 0 ? billingHistory[0] : null;
 
-    if (recentBill) {
-      setBillForPrintView(recentBill);
+    if (bill) {
+        setBillForPrintView(bill);
     } else {
-      toast({
-        title: "Generating Live Payslip",
-        description: "No historical bill found. A payslip is being generated from the current meter data.",
-      });
-      const temporaryBillForPrint: DomainBill = {
-        id: `payslip-${bulkMeter.customerKeyNumber}-${Date.now()}`,
-        bulkMeterId: bulkMeter.customerKeyNumber,
-        monthYear: bulkMeter.month || 'N/A',
-        billPeriodStartDate: bulkMeter.month ? `${bulkMeter.month}-01` : 'N/A',
-        billPeriodEndDate: bulkMeter.month ? format(lastDayOfMonth(parseISO(`${bulkMeter.month}-01`)), 'yyyy-MM-dd') : 'N/A',
-        previousReadingValue: memoizedDetails.bmPreviousReading,
-        currentReadingValue: memoizedDetails.bmCurrentReading,
-        usageM3: memoizedDetails.bulkUsage,
-        differenceUsage: memoizedDetails.differenceUsage,
-        baseWaterCharge: memoizedDetails.differenceBillBreakdown.baseWaterCharge,
-        maintenanceFee: memoizedDetails.differenceBillBreakdown.maintenanceFee,
-        sanitationFee: memoizedDetails.differenceBillBreakdown.sanitationFee,
-        sewerageCharge: memoizedDetails.differenceBillBreakdown.sewerageCharge,
-        meterRent: memoizedDetails.differenceBillBreakdown.meterRent,
-        balanceCarriedForward: bulkMeter.outStandingbill,
-        totalAmountDue: memoizedDetails.differenceBill,
-        dueDate: 'N/A',
-        paymentStatus: memoizedDetails.billCardDetails.paymentStatus,
-        notes: "Current Live Pay Slip Generation (No History Available)",
-      };
-      setBillForPrintView(temporaryBillForPrint);
+        const recentBill = billingHistory.length > 0 ? billingHistory[0] : null;
+        if (recentBill) {
+            setBillForPrintView(recentBill);
+        } else {
+            toast({
+                title: "Generating Live Payslip",
+                description: "No historical bill found. A payslip is being generated from the current meter data.",
+            });
+            const temporaryBillForPrint: DomainBill = {
+                id: `payslip-${bulkMeter.customerKeyNumber}-${Date.now()}`,
+                bulkMeterId: bulkMeter.customerKeyNumber,
+                monthYear: bulkMeter.month || 'N/A',
+                billPeriodStartDate: bulkMeter.month ? `${bulkMeter.month}-01` : 'N/A',
+                billPeriodEndDate: bulkMeter.month ? format(lastDayOfMonth(parseISO(`${bulkMeter.month}-01`)), 'yyyy-MM-dd') : 'N/A',
+                previousReadingValue: memoizedDetails.bmPreviousReading,
+                currentReadingValue: memoizedDetails.bmCurrentReading,
+                usageM3: memoizedDetails.bulkUsage,
+                differenceUsage: memoizedDetails.differenceUsage,
+                baseWaterCharge: memoizedDetails.differenceBillBreakdown.baseWaterCharge,
+                maintenanceFee: memoizedDetails.differenceBillBreakdown.maintenanceFee,
+                sanitationFee: memoizedDetails.differenceBillBreakdown.sanitationFee,
+                sewerageCharge: memoizedDetails.differenceBillBreakdown.sewerageCharge,
+                meterRent: memoizedDetails.differenceBillBreakdown.meterRent,
+                balanceCarriedForward: bulkMeter.outStandingbill,
+                totalAmountDue: memoizedDetails.differenceBill,
+                dueDate: 'N/A',
+                paymentStatus: memoizedDetails.billCardDetails.paymentStatus,
+                notes: "Current Live Pay Slip Generation (No History Available)",
+            };
+            setBillForPrintView(temporaryBillForPrint);
+        }
     }
     return true;
   };
@@ -401,8 +405,8 @@ export default function BulkMeterDetailsPage() {
     }
   };
 
-  const handlePrintSlip = () => {
-    if (prepareSlipData()) {
+  const handlePrintSlip = (bill?: DomainBill | null) => {
+    if (prepareSlipData(bill)) {
       setShowSlip(true);
       setIsPrinting(true);
     }
@@ -559,12 +563,13 @@ export default function BulkMeterDetailsPage() {
                 <div className="print-row"><span className="print-label">Customer key number:</span> {bulkMeter.customerKeyNumber}</div>
                 <div className="print-row"><span className="print-label">Contract No:</span> {bulkMeter.contractNumber ?? 'N/A'}</div>
                 <div className="print-row"><span className="print-label">Branch:</span> {displayBranchName ?? 'N/A'}</div>
-                <div className="print-row"><span className="print-label">Location:</span> {displayCardLocation}</div>
+                <div className="print-row"><span className="print-label">Location:</span> {bulkMeter.specificArea ?? displayCardLocation}</div>
                 <div className="print-row mt-4"><span className="print-label">Bulk Meter Category:</span> Non-domestic</div>
                 <div className="print-row"><span className="print-label">Number of Assigned Individual Customers:</span> {associatedCustomers.length}</div>
                 <div className="print-row"><span className="print-label">Previous and current reading:</span> {billCardDetails.prevReading.toFixed(2)} / {billCardDetails.currReading.toFixed(2)} m³</div>
                 <div className="print-row"><span className="print-label">Bulk usage:</span> {billCardDetails.usage.toFixed(2)} m³</div>
                 <div className="print-row"><span className="print-label">Total Individual Usage:</span> {totalIndividualUsage.toFixed(2)} m³</div>
+                
                 <div className="print-row mt-4"><span className="print-label">Base Water Charge:</span> ETB {billCardDetails.baseWaterCharge.toFixed(2)}</div>
                 <div className="print-row"><span className="print-label">Maintenance Fee:</span> ETB {billCardDetails.maintenanceFee.toFixed(2)}</div>
                 <div className="print-row"><span className="print-label">Sanitation Fee:</span> ETB {billCardDetails.sanitationFee.toFixed(2)}</div>
@@ -572,6 +577,7 @@ export default function BulkMeterDetailsPage() {
                 <div className="print-row"><span className="print-label">Meter Rent:</span> ETB {billCardDetails.meterRent.toFixed(2)}</div>
                 <div className="print-row"><span className="print-label">VAT (15%):</span> ETB {billCardDetails.vatAmount.toFixed(2)}</div>
                 <div className="print-row"><span className="print-label">Difference usage:</span> {billCardDetails.differenceUsage.toFixed(2)} m³</div>
+                
                 <hr className="my-1" />
                 <div className="print-row"><span className="print-label">Total Difference bill:</span> ETB {billCardDetails.totalDifferenceBill.toFixed(2)}</div>
                 <hr className="my-1" />
@@ -579,8 +585,10 @@ export default function BulkMeterDetailsPage() {
                 <hr className="my-1" />
                 <div className="print-row font-bold text-lg"><span className="print-label">Total Amount Payable:</span> ETB {billCardDetails.totalPayable.toFixed(2)}</div>
                 <hr className="my-1" />
+
                 <div className="print-row mt-2"><span className="print-label">Paid/Unpaid:</span> {billCardDetails.paymentStatus}</div>
                 <div className="print-row"><span className="print-label">Month:</span> {billCardDetails.month}</div>
+                
                 <div className="print-signature-section">
                   <div className="print-signature-item"><span>Requested by</span><span>...................................</span></div>
                   <div className="print-signature-item"><span>Checked by</span><span>...................................</span></div>
@@ -612,7 +620,7 @@ export default function BulkMeterDetailsPage() {
                     <Eye className="mr-2 h-4 w-4" />
                     <span>View Slip</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handlePrintSlip}>
+                  <DropdownMenuItem onClick={() => handlePrintSlip()}>
                     <Printer className="mr-2 h-4 w-4" />
                     <span>Print Slip</span>
                   </DropdownMenuItem>

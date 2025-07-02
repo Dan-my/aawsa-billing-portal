@@ -148,7 +148,7 @@ body {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 1.5cm 1cm;
+    margin: 1cm;
   }
 
   body {
@@ -156,10 +156,10 @@ body {
     print-color-adjust: exact !important;
     background: #fff !important;
     font-size: 10pt;
-    font-family: Arial, sans-serif;
+    font-family: 'Times New Roman', Times, serif;
   }
   
-  header, nav, aside, .non-printable {
+  header, nav, aside, footer, .non-printable {
     display: none !important;
   }
 
@@ -176,7 +176,7 @@ body {
     height: auto !important;
     margin: 0 !important;
     padding: 0 !important;
-    border: none !important;
+    border: 2px solid #000 !important;
     box-shadow: none !important;
     color: #000 !important;
     background: #fff !important;
@@ -198,11 +198,14 @@ body {
       font-size: 9pt;
       color: #333 !important;
       margin-bottom: 0rem;
+      padding: 0 0.5rem;
   }
   
   .print-header-main {
       text-align: center;
       margin-bottom: 1rem;
+      padding: 0.5rem;
+      border-bottom: 1px solid #000;
   }
 
   .print-header-main h1 {
@@ -224,18 +227,13 @@ body {
   .print-body {
       margin: 0 auto;
       max-width: 100%;
-      padding-left: 0;
+      padding: 0.5rem 1rem;
   }
 
   .print-row {
-    padding-top: 0.1rem;
-    padding-bottom: 0.1rem;
-    line-height: 1.4;
-  }
-
-  .print-label {
-    font-weight: bold;
-    padding-right: 8px;
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+    line-height: 1.5;
   }
 
   .print-body .font-bold {
@@ -246,7 +244,26 @@ body {
       font-size: 1.1em !important;
   }
 
-  .print-value {
-    display: inline-block;
+  .print-body .print-label {
+    font-weight: bold;
+    padding-right: 8px;
+    text-decoration: none;
+  }
+
+  .print-signature-section {
+      margin-top: 2.5rem;
+      padding-top: 1rem;
+      border-top: 1px dashed #999;
+  }
+  
+  .print-signature-item {
+      margin-top: 1.5rem;
+      font-size: 11pt;
+  }
+
+  .print-signature-item span:first-child {
+      display: inline-block;
+      width: 120px;
+      font-weight: bold;
   }
 }

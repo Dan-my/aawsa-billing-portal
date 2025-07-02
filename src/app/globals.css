@@ -146,106 +146,53 @@ body {
 /* Print specific styles */
 @media print {
   @page {
-    margin: 1cm;
     size: A4 portrait;
+    margin: 1cm;
   }
 
   body {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-    background-color: white !important;
+    background: #fff !important;
+    font-size: 10pt;
   }
   
-  /* Hide all major layout components and non-printable elements */
+  /* Hide all non-printable elements */
   header, nav, aside, footer, main > div > *:not(.printable-bill-card) {
     display: none !important;
   }
 
-  /* Reset padding/margin on the containers so the card can take up the full space */
+  /* Reset layout containers */
   main, main > div {
     padding: 0 !important;
     margin: 0 !important;
     background: none !important;
   }
 
-  /* Style the printable card to look like a document */
   .printable-bill-card {
     display: block !important;
     position: static !important;
     width: 100% !important;
+    height: 100% !important;
     margin: 0 !important;
-    padding: 25px !important;
+    padding: 0 !important;
     border: none !important;
     box-shadow: none !important;
-    font-size: 11pt !important;
-    line-height: 1.6 !important;
     color: #000 !important;
-    background-color: white !important;
+    background: #fff !important;
   }
   
-  /* Ensure all children of the printable card have correct print styles */
+  /* Ensure all children of the printable card have correct basic print styles */
   .printable-bill-card * {
     color: #000 !important;
     background-color: transparent !important;
-    font-size: inherit !important;
-    line-height: inherit !important;
     box-shadow: none !important;
-    border-color: #ccc !important;
-    transform: none !important;
-    filter: none !important;
+    border-color: #000 !important;
   }
-  
-  /* Specific formatting for the content within the printable card */
-  .printable-bill-card .CardHeader-title,
-  .printable-bill-card h1, .printable-bill-card h2, .printable-bill-card h3 {
-    text-align: center !important;
+
+  .printable-bill-card .text-primary, 
+  .printable-bill-card .text-destructive,
+  .printable-bill-card .text-muted-foreground {
     color: #000 !important;
-  }
-
-  .printable-bill-card .flex.flex-row.items-center.justify-center {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    border-bottom: 1px solid #ccc !important;
-    padding-bottom: 0.75rem !important;
-    margin-bottom: 1rem !important;
-  }
-  
-  .printable-bill-card .flex.flex-row.items-center.justify-center img {
-    margin-right: 1rem !important;
-    width: 60px !important;
-    height: auto !important;
-  }
-
-  .printable-bill-card .space-y-1\.5 > p {
-    margin-bottom: 0.4rem !important;
-    display: flex !important;
-    justify-content: flex-start !important;
-    align-items: baseline;
-  }
-
-  .printable-bill-card .space-y-1\.5 > p > strong.font-semibold {
-    display: inline-block !important;
-    width: 220px !important;
-    min-width: 220px !important;
-    margin-right: 1em !important;
-    font-weight: 600 !important;
-    vertical-align: top;
-  }
-  
-  .printable-bill-card .pt-10.space-y-6.text-sm p {
-    margin-bottom: 1.2rem !important;
-    border-bottom: 1px dashed #555 !important;
-    padding-bottom: 0.4rem !important;
-  }
-
-  .printable-bill-card .pt-10.space-y-6.text-sm p:last-child {
-    border-bottom-style: none !important;
-  }
-
-  .printable-bill-card .border-t.pt-4.text-center.mt-4 {
-    border-top: 1px solid #aaa !important;
-    padding-top: 1rem !important;
-    margin-top: 1rem !important;
   }
 }

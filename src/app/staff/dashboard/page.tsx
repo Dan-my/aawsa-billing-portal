@@ -123,7 +123,7 @@ export default function StaffDashboardPage() {
       
     // Calculate Bills Status
     const paidCount = branchBMs.filter(bm => bm.paymentStatus === 'Paid').length + branchCustomers.filter(c => c.paymentStatus === 'Paid').length;
-    const unpaidCount = branchBMs.filter(bm => bm.paymentStatus !== 'Paid').length + branchCustomers.filter(c => c.paymentStatus !== 'Paid').length;
+    const unpaidCount = branchBMs.filter(bm => bm.paymentStatus === 'Unpaid').length + branchCustomers.filter(c => c.paymentStatus === 'Unpaid' || c.paymentStatus === 'Pending').length;
     const totalBillsCount = paidCount + unpaidCount;
     
     const billsData = [
@@ -138,7 +138,7 @@ export default function StaffDashboardPage() {
         if (!bm.month) return;
         const entry = monthlyMap.get(bm.month) || { paid: 0, unpaid: 0 };
         if (bm.paymentStatus === 'Paid') entry.paid++;
-        else entry.unpaid++;
+        else if (bm.paymentStatus === 'Unpaid') entry.unpaid++;
         monthlyMap.set(bm.month, entry);
     });
 
@@ -146,7 +146,7 @@ export default function StaffDashboardPage() {
         if (!c.month) return;
         const entry = monthlyMap.get(c.month) || { paid: 0, unpaid: 0 };
         if (c.paymentStatus === 'Paid') entry.paid++;
-        else entry.unpaid++;
+        else if (c.paymentStatus === 'Unpaid' || c.paymentStatus === 'Pending') entry.unpaid++;
         monthlyMap.set(c.month, entry);
     });
 
@@ -306,5 +306,3 @@ export default function StaffDashboardPage() {
     </div>
   );
 }
-
-    

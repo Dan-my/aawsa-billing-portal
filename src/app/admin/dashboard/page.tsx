@@ -79,10 +79,10 @@ export default function AdminDashboardPage() {
 
     // 1. Total Bills Status (Bulk Meters + Individual Customers)
     const paidBMs = currentBulkMeters.filter(bm => bm.paymentStatus === 'Paid').length;
-    const unpaidBMs = currentBulkMeters.length - paidBMs;
+    const unpaidBMs = currentBulkMeters.filter(bm => bm.paymentStatus === 'Unpaid').length;
 
     const paidCustomers = currentCustomers.filter(c => c.paymentStatus === 'Paid').length;
-    const unpaidCustomers = currentCustomers.length - paidCustomers;
+    const unpaidCustomers = currentCustomers.filter(c => c.paymentStatus === 'Unpaid' || c.paymentStatus === 'Pending').length;
 
     const totalPaid = paidBMs + paidCustomers;
     const totalUnpaid = unpaidBMs + unpaidCustomers;
@@ -110,7 +110,7 @@ export default function AdminDashboardPage() {
       if (bm.branchId && performanceMap.has(bm.branchId)) {
         const entry = performanceMap.get(bm.branchId)!;
         if (bm.paymentStatus === 'Paid') entry.paid++;
-        else entry.unpaid++;
+        else if (bm.paymentStatus === 'Unpaid') entry.unpaid++;
         performanceMap.set(bm.branchId, entry);
       }
     });
@@ -119,7 +119,7 @@ export default function AdminDashboardPage() {
         if (c.branchId && performanceMap.has(c.branchId)) {
             const entry = performanceMap.get(c.branchId)!;
             if (c.paymentStatus === 'Paid') entry.paid++;
-            else entry.unpaid++;
+            else if (c.paymentStatus === 'Unpaid' || c.paymentStatus === 'Pending') entry.unpaid++;
             performanceMap.set(c.branchId, entry);
         }
     });
@@ -429,5 +429,3 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
-
-    

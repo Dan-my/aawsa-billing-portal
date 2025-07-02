@@ -440,9 +440,11 @@ export default function BulkMeterDetailsPage() {
       
       const { 
         differenceUsage: differenceUsageForCycle,
+        differenceBill: billForDifferenceUsage,
+        totalPayable: totalPayableForCycle
       } = memoizedDetails;
 
-      const {totalBill: billForDifferenceUsage, ...differenceBillBreakdownForCycle} = calculateBill(differenceUsageForCycle, 'Non-domestic', 'No', currentBulkMeterState.data.meterSize);
+      const { ...differenceBillBreakdownForCycle } = calculateBill(differenceUsageForCycle, 'Non-domestic', 'No', currentBulkMeterState.data.meterSize);
       
       const billDate = new Date();
       const periodEndDate = lastDayOfMonth(parsedDate);
@@ -465,7 +467,7 @@ export default function BulkMeterDetailsPage() {
         totalAmountDue: billForDifferenceUsage,
         dueDate: format(dueDateObject, 'yyyy-MM-dd'),
         paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
-        notes: `Bill generated on ${format(billDate, 'PP')}. Total payable was ${(balanceFromPreviousPeriods + billForDifferenceUsage).toFixed(2)}.`,
+        notes: `Bill generated on ${format(billDate, 'PP')}. Total payable was ${totalPayableForCycle.toFixed(2)}.`,
       };
       
       const addBillResult = await addBill(billToSave);
@@ -475,11 +477,12 @@ export default function BulkMeterDetailsPage() {
           return;
       }
 
-      const newOutstandingBalance = carryBalance ? (balanceFromPreviousPeriods + billForDifferenceUsage) : 0;
+      const newOutstandingBalance = carryBalance ? totalPayableForCycle : 0;
       
       const updatePayload: Partial<Omit<BulkMeter, 'customerKeyNumber'>> = {
           previousReading: currentBulkMeterState.data.currentReading,
           outStandingbill: newOutstandingBalance,
+          paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
       };
 
       const updateResult = await updateBulkMeterInStore(currentBulkMeterState.data.customerKeyNumber, updatePayload);
@@ -487,7 +490,7 @@ export default function BulkMeterDetailsPage() {
         toast({ 
             title: "Billing Cycle Closed", 
             description: carryBalance 
-                ? `Total of ETB ${(balanceFromPreviousPeriods + billForDifferenceUsage).toFixed(2)} carried forward as new outstanding balance.` 
+                ? `Total of ETB ${totalPayableForCycle.toFixed(2)} carried forward as new outstanding balance.` 
                 : "Bill marked as paid and new cycle started." 
         });
       } else {

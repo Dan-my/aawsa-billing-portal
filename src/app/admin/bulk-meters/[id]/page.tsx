@@ -659,43 +659,37 @@ export default function BulkMeterDetailsPage() {
         </div>
 
         <div className="print-body">
-            <div className="print-row"><span className="print-label">Bulk meter name:</span><span>{bulkMeter.name}</span></div>
-            <div className="print-row"><span className="print-label">Customer key number:</span><span>{bulkMeter.customerKeyNumber}</span></div>
-            <div className="print-row"><span className="print-label">Contract No:</span><span>{bulkMeter.contractNumber ?? 'N/A'}</span></div>
-            <div className="print-row"><span className="print-label">Branch:</span><span>{displayBranchName ?? 'N/A'}</span></div>
-            <div className="print-row"><span className="print-label">Location:</span><span>{displayCardLocation}</span></div>
+            <div className="print-row"><span className="print-label">Bulk meter name: </span>{bulkMeter.name}</div>
+            <div className="print-row"><span className="print-label">Customer key number: </span>{bulkMeter.customerKeyNumber}</div>
+            <div className="print-row"><span className="print-label">Contract No: </span>{bulkMeter.contractNumber ?? 'N/A'}</div>
+            <div className="print-row"><span className="print-label">Branch: </span>{displayBranchName ?? 'N/A'}</div>
+            <div className="print-row"><span className="print-label">Location: </span>{displayCardLocation}</div>
             
-            <div className="print-row mt-4"><span className="print-label">Bulk Meter Category:</span><span>Non-domestic</span></div>
-            <div className="print-row"><span className="print-label">Number of Assigned Individual Customers:</span><span>{associatedCustomers.length}</span></div>
-            <div className="print-row"><span className="print-label">Previous and current reading:</span><span>{billCardDetails.prevReading.toFixed(2)} / {billCardDetails.currReading.toFixed(2)} m³</span></div>
-            <div className="print-row"><span className="print-label">Bulk usage:</span><span>{billCardDetails.usage.toFixed(2)} m³</span></div>
-            <div className="print-row"><span className="print-label">Total Individual Usage:</span><span>{totalIndividualUsage.toFixed(2)} m³</span></div>
+            <div className="print-row mt-4"><span className="print-label">Bulk Meter Category: </span>Non-domestic</div>
+            <div className="print-row"><span className="print-label">Number of Assigned Individual Customers: </span>{associatedCustomers.length}</div>
+            <div className="print-row"><span className="print-label">Previous and current reading: </span>{billCardDetails.prevReading.toFixed(2)} / {billCardDetails.currReading.toFixed(2)} m³</div>
+            <div className="print-row"><span className="print-label">Bulk usage: </span>{billCardDetails.usage.toFixed(2)} m³</div>
+            <div className="print-row"><span className="print-label">Total Individual Usage: </span>{totalIndividualUsage.toFixed(2)} m³</div>
 
-            <div className="print-row mt-4"><span className="print-label">Base Water Charge:</span><span>ETB {billCardDetails.baseWaterCharge.toFixed(2)}</span></div>
-            <div className="print-row"><span className="print-label">Maintenance Fee:</span><span>ETB {billCardDetails.maintenanceFee.toFixed(2)}</span></div>
-            <div className="print-row"><span className="print-label">Sanitation Fee:</span><span>ETB {billCardDetails.sanitationFee.toFixed(2)}</span></div>
-            <div className="print-row"><span className="print-label">Sewerage Fee:</span><span>ETB {billCardDetails.sewerageCharge.toFixed(2)}</span></div>
-            <div className="print-row"><span className="print-label">Meter Rent:</span><span>ETB {billCardDetails.meterRent.toFixed(2)}</span></div>
-            <div className="print-row"><span className="print-label">VAT (15%):</span><span>ETB {billCardDetails.vatAmount.toFixed(2)}</span></div>
-            <div className="print-row"><span className="print-label">Difference usage:</span><span>{billCardDetails.differenceUsage.toFixed(2)} m³</span></div>
+            <div className="print-row mt-4"><span className="print-label">Base Water Charge: </span>ETB {billCardDetails.baseWaterCharge.toFixed(2)}</div>
+            <div className="print-row"><span className="print-label">Maintenance Fee: </span>ETB {billCardDetails.maintenanceFee.toFixed(2)}</div>
+            <div className="print-row"><span className="print-label">Sanitation Fee: </span>ETB {billCardDetails.sanitationFee.toFixed(2)}</div>
+            <div className="print-row"><span className="print-label">Sewerage Fee: </span>ETB {billCardDetails.sewerageCharge.toFixed(2)}</div>
+            <div className="print-row"><span className="print-label">Meter Rent: </span>ETB {billCardDetails.meterRent.toFixed(2)}</div>
+            <div className="print-row"><span className="print-label">VAT (15%): </span>ETB {billCardDetails.vatAmount.toFixed(2)}</div>
+            <div className="print-row"><span className="print-label">Difference usage: </span>{billCardDetails.differenceUsage.toFixed(2)} m³</div>
 
             <hr className="my-1" />
-            <div className="print-row"><span className="print-label">Total Difference bill:</span><span>ETB {billCardDetails.totalDifferenceBill.toFixed(2)}</span></div>
+            <div className="print-row"><span className="print-label">Total Difference bill: </span>ETB {billCardDetails.totalDifferenceBill.toFixed(2)}</div>
             <hr className="my-1" />
             
-            <div className="print-row"><span className="print-label">Outstanding Bill (Previous Balance):</span><span>ETB {billCardDetails.outstandingBill.toFixed(2)}</span></div>
+            <div className="print-row"><span className="print-label">Outstanding Bill (Previous Balance): </span>ETB {billCardDetails.outstandingBill.toFixed(2)}</div>
             <hr className="my-1" />
-            <div className="print-row font-bold text-lg"><span className="print-label">Total Amount Payable:</span><span>ETB {billCardDetails.totalPayable.toFixed(2)}</span></div>
+            <div className="print-row font-bold text-lg"><span className="print-label">Total Amount Payable: </span>ETB {billCardDetails.totalPayable.toFixed(2)}</div>
             <hr className="my-1" />
 
-            <div className="print-row mt-2"><span className="print-label">Paid/Unpaid:</span><span>{billCardDetails.paymentStatus}</span></div>
-            <div className="print-row"><span className="print-label">Month:</span><span>{billCardDetails.month}</span></div>
-        </div>
-        
-        <div className="print-footer">
-            <div className="print-row"><span className="print-label">Requested by:</span></div>
-            <div className="print-row"><span className="print-label">Check by:</span></div>
-            <div className="print-row"><span className="print-label">Approved by:</span></div>
+            <div className="print-row mt-2"><span className="print-label">Paid/Unpaid: </span>{billCardDetails.paymentStatus}</div>
+            <div className="print-row"><span className="print-label">Month: </span>{billCardDetails.month}</div>
         </div>
       </div>
 

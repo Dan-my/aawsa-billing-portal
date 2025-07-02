@@ -227,23 +227,13 @@ body {
   }
 
   .print-row {
-      display: flex;
-      justify-content: space-between;
-      padding-top: 0.15rem;
-      padding-bottom: 0.15rem;
-      line-height: 1.3;
-  }
-
-  .print-row span:last-child {
-      text-align: right;
-      font-weight: 600;
+    padding-top: 0.1rem;
+    padding-bottom: 0.1rem;
+    line-height: 1.4;
   }
 
   .print-label {
-    font-weight: bold !important;
-    text-decoration: underline;
-    text-decoration-color: #008000; /* Green */
-    text-decoration-thickness: 1.5px;
+    font-weight: bold;
   }
 
   .print-body .font-bold {
@@ -252,17 +242,5 @@ body {
 
   .print-body .text-lg {
       font-size: 1.1em !important;
-  }
-  
-  .print-footer {
-      margin-top: 4rem;
-      font-size: 10pt;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-  }
-
-  .print-footer .print-row {
-      justify-content: flex-start;
   }
 }

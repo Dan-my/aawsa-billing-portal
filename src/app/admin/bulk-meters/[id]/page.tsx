@@ -46,7 +46,6 @@ export default function BulkMeterDetailsPage() {
   const [meterReadingHistory, setMeterReadingHistory] = useState<DomainBulkMeterReading[]>([]);
   const [billingHistory, setBillingHistory] = useState<DomainBill[]>([]);
   const [billForPrintView, setBillForPrintView] = React.useState<DomainBill | null>(null);
-  const [printDate, setPrintDate] = React.useState('');
 
   const [isBulkMeterFormOpen, setIsBulkMeterFormOpen] = React.useState(false);
   const [isBulkMeterDeleteDialogOpen, setIsBulkMeterDeleteDialogOpen] = React.useState(false);
@@ -68,12 +67,6 @@ export default function BulkMeterDetailsPage() {
     billingHistoryPage * billingHistoryRowsPerPage,
     billingHistoryPage * billingHistoryRowsPerPage + billingHistoryRowsPerPage
   );
-
-  React.useEffect(() => {
-    if (billForPrintView) {
-      setPrintDate(new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short'}));
-    }
-  }, [billForPrintView]);
 
   const memoizedDetails = useMemo(() => {
     if (!bulkMeter) {
@@ -644,10 +637,6 @@ export default function BulkMeterDetailsPage() {
 
       <div className="printable-bill-card">
         <div className="print-header">
-          <div className="print-header-top">
-            <span>{printDate}</span>
-            <span>AAWSA Bulk Meter Billing Portal</span>
-          </div>
           <div className="print-header-main">
             <h1 className="font-bold tracking-wider uppercase">ADDIS ABABA WATER AND SEWERAGE AUTHORITY</h1>
             <hr className="my-2" />

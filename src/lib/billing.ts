@@ -111,6 +111,7 @@ export function calculateBill(
   const tariffConfig = customerType === "Domestic" ? DomesticTariffInfo : NonDomesticTariffInfo;
   const tiers = tariffConfig.tiers;
 
+  // --- Base Water Charge Calculation ---
   if (customerType === "Domestic") {
     // Progressive calculation for Domestic customers
     let remainingUsage = usageM3;
@@ -125,50 +126,84 @@ export function calculateBill(
       lastTierLimit = tier.limit;
 
       if (tier.limit === Infinity) {
-        if (remainingUsage > 0) { // This condition is important
+        if (remainingUsage > 0) {
           baseWaterCharge += remainingUsage * tier.rate;
-          remainingUsage = 0;
         }
-        break; // Stop after infinity tier
+        break;
       }
     }
   } else {
     // Non-progressive (flat rate based on consumption tier) for Non-domestic customers
     let applicableRate = 0;
-    // Find the correct tier for the total consumption
     for (const tier of tiers) {
         if (usageM3 <= tier.limit) {
             applicableRate = tier.rate;
             break;
         }
     }
-    // The loop handles the Infinity case correctly because the last tier's limit is Infinity.
-    
     baseWaterCharge = usageM3 * applicableRate;
   }
 
-  // --- The rest of the calculation is the same for both customer types ---
-
+  // --- Service Fees Calculation (based on total water charge) ---
   const maintenanceFee = (tariffConfig.maintenancePercentage ?? 0) * baseWaterCharge;
-  
-  const sanitationFee = tariffConfig.sanitationPercentage 
-                        ? baseWaterCharge * tariffConfig.sanitationPercentage 
-                        : 0;
+  const sanitationFee = tariffConfig.sanitationPercentage ? baseWaterCharge * tariffConfig.sanitationPercentage : 0;
 
-  const vatBase = baseWaterCharge + maintenanceFee + sanitationFee;
+  // --- VAT Calculation ---
+  let vatAmount = 0;
+  if (customerType === 'Domestic') {
+    const VAT_EXEMPTION_LIMIT = 15; // Consumption up to 15 m³ is exempt
+    if (usageM3 > VAT_EXEMPTION_LIMIT) {
+      let taxableWaterCharge = 0;
+      let remainingUsageForVat = usageM3;
+      let lastTierLimitForVat = 0;
 
-  const vatAmount = (customerType === 'Domestic' && usageM3 < 16) 
-                  ? 0 
-                  : vatBase * VAT_RATE;
+      // Loop through tiers again to calculate the water charge for consumption *above* the exemption limit
+      for (const tier of tiers) {
+        if (remainingUsageForVat <= 0) break;
 
+        const tierUpperLimit = tier.limit === Infinity ? Infinity : tier.limit;
+        const consumptionInTier = Math.min(remainingUsageForVat, tierUpperLimit - lastTierLimitForVat);
+        
+        // The point from which consumption in this tier becomes taxable
+        const taxableStartPointInTier = Math.max(lastTierLimitForVat, VAT_EXEMPTION_LIMIT);
+        
+        // The point where consumption in this tier ends
+        const consumptionEndPointInTier = lastTierLimitForVat + consumptionInTier;
+
+        // If the consumption in this tier is past the exemption limit, calculate the taxable portion
+        if (consumptionEndPointInTier > taxableStartPointInTier) {
+          const taxableConsumption = consumptionEndPointInTier - taxableStartPointInTier;
+          taxableWaterCharge += taxableConsumption * tier.rate;
+        }
+        
+        remainingUsageForVat -= consumptionInTier;
+        lastTierLimitForVat = tierUpperLimit;
+        
+        if (tierUpperLimit === Infinity) {
+            if(remainingUsageForVat > 0 && lastTierLimitForVat > VAT_EXEMPTION_LIMIT) {
+                 taxableWaterCharge += remainingUsageForVat * tier.rate;
+            }
+            break;
+        }
+      }
+      
+      // VAT is 15% of the taxable portion of the water charge, plus 15% of the total service fees
+      const vatBase = taxableWaterCharge + maintenanceFee + sanitationFee;
+      vatAmount = vatBase * VAT_RATE;
+    }
+  } else {
+    // For Non-domestic, VAT is applied on the total water charge and service fees
+    const vatBase = baseWaterCharge + maintenanceFee + sanitationFee;
+    vatAmount = vatBase * VAT_RATE;
+  }
+
+  // --- Other Charges ---
   const METER_RENT_PRICES = getMeterRentPrices();
   const meterRent = METER_RENT_PRICES[String(meterSize)] || 0;
+  const sewerageCharge = (sewerageConnection === "Yes" && tariffConfig.sewerageRatePerM3) ? usageM3 * tariffConfig.sewerageRatePerM3 : 0;
 
-  const sewerageCharge = (sewerageConnection === "Yes" && tariffConfig.sewerageRatePerM3) 
-                         ? usageM3 * tariffConfig.sewerageRatePerM3 
-                         : 0;
-
-  const totalBill = vatBase + vatAmount + meterRent + sewerageCharge;
+  // --- Final Total Bill ---
+  const totalBill = baseWaterCharge + maintenanceFee + sanitationFee + vatAmount + meterRent + sewerageCharge;
 
   return {
     totalBill: parseFloat(totalBill.toFixed(2)),

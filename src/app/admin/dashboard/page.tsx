@@ -77,15 +77,12 @@ export default function AdminDashboardPage() {
     const currentBulkMeters = getBulkMeters();
     const currentCustomers = getCustomers();
 
-    // 1. Total Bills Status (Bulk Meters + Individual Customers)
+    // 1. Total Bills Status (Bulk Meters ONLY)
     const paidBMs = currentBulkMeters.filter(bm => bm.paymentStatus === 'Paid').length;
     const unpaidBMs = currentBulkMeters.filter(bm => bm.paymentStatus === 'Unpaid').length;
 
-    const paidCustomers = currentCustomers.filter(c => c.paymentStatus === 'Paid').length;
-    const unpaidCustomers = currentCustomers.filter(c => c.paymentStatus === 'Unpaid' || c.paymentStatus === 'Pending').length;
-
-    const totalPaid = paidBMs + paidCustomers;
-    const totalUnpaid = unpaidBMs + unpaidCustomers;
+    const totalPaid = paidBMs;
+    const totalUnpaid = unpaidBMs;
     const totalBills = totalPaid + totalUnpaid;
 
     setDynamicTotalBills(totalBills);
@@ -100,7 +97,7 @@ export default function AdminDashboardPage() {
     setDynamicTotalCustomerCount(currentCustomers.length);
     setDynamicTotalBulkMeterCount(currentBulkMeters.length);
 
-    // 3. Branch Performance Data (Bulk Meters + Individual Customers)
+    // 3. Branch Performance Data (Bulk Meters ONLY)
     const performanceMap = new Map<string, { branchName: string, paid: number, unpaid: number }>();
     currentBranches.forEach(branch => {
       performanceMap.set(branch.id, { branchName: branch.name, paid: 0, unpaid: 0 });
@@ -113,15 +110,6 @@ export default function AdminDashboardPage() {
         else if (bm.paymentStatus === 'Unpaid') entry.unpaid++;
         performanceMap.set(bm.branchId, entry);
       }
-    });
-    
-    currentCustomers.forEach(c => {
-        if (c.branchId && performanceMap.has(c.branchId)) {
-            const entry = performanceMap.get(c.branchId)!;
-            if (c.paymentStatus === 'Paid') entry.paid++;
-            else if (c.paymentStatus === 'Unpaid' || c.paymentStatus === 'Pending') entry.unpaid++;
-            performanceMap.set(c.branchId, entry);
-        }
     });
 
     setDynamicBranchPerformanceData(Array.from(performanceMap.values()).map(p => ({ branch: p.branchName.replace(/ Branch$/i, ""), paid: p.paid, unpaid: p.unpaid })));
@@ -216,7 +204,7 @@ export default function AdminDashboardPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Bills</CardTitle>
+            <CardTitle className="text-sm font-medium">Bulk Meter Bills Status</CardTitle>
             <FileText className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -302,8 +290,8 @@ export default function AdminDashboardPage() {
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Branch Performance (Paid vs Unpaid)</CardTitle>
-              <CardDescription>Comparison of bills status across branches.</CardDescription>
+              <CardTitle>Branch Performance (Bulk Meters)</CardTitle>
+              <CardDescription>Paid vs. Unpaid status for bulk meters across branches.</CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={() => setBranchPerformanceView(prev => prev === 'chart' ? 'table' : 'chart')}>
               {branchPerformanceView === 'chart' ? <TableIcon className="mr-2 h-4 w-4" /> : <BarChartIcon className="mr-2 h-4 w-4" />}

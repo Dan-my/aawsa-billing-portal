@@ -150,49 +150,15 @@ export function calculateBill(
 
   // --- VAT Calculation ---
   let vatAmount = 0;
+  const vatBase = baseWaterCharge + maintenanceFee + sanitationFee;
+
   if (customerType === 'Domestic') {
-    const VAT_EXEMPTION_LIMIT = 15; // Consumption up to 15 m³ is exempt
-    if (usageM3 > VAT_EXEMPTION_LIMIT) {
-      let taxableWaterCharge = 0;
-      let remainingUsageForVat = usageM3;
-      let lastTierLimitForVat = 0;
-
-      // Loop through tiers again to calculate the water charge for consumption *above* the exemption limit
-      for (const tier of tiers) {
-        if (remainingUsageForVat <= 0) break;
-
-        const tierUpperLimit = tier.limit === Infinity ? Infinity : tier.limit;
-        const consumptionInTier = Math.min(remainingUsageForVat, tierUpperLimit - lastTierLimitForVat);
-        
-        // The point from which consumption in this tier becomes taxable
-        const taxableStartPointInTier = Math.max(lastTierLimitForVat, VAT_EXEMPTION_LIMIT);
-        
-        // The point where consumption in this tier ends
-        const consumptionEndPointInTier = lastTierLimitForVat + consumptionInTier;
-
-        // If the consumption in this tier is past the exemption limit, calculate the taxable portion
-        if (consumptionEndPointInTier > taxableStartPointInTier) {
-          const taxableConsumption = consumptionEndPointInTier - taxableStartPointInTier;
-          taxableWaterCharge += taxableConsumption * tier.rate;
-        }
-        
-        remainingUsageForVat -= consumptionInTier;
-        lastTierLimitForVat = tierUpperLimit;
-        
-        if (tierUpperLimit === Infinity) {
-            if(remainingUsageForVat > 0 && lastTierLimitForVat > VAT_EXEMPTION_LIMIT) {
-                 taxableWaterCharge += remainingUsageForVat * tier.rate;
-            }
-            break;
-        }
-      }
-      
-      // VAT is 15% of the taxable portion of the water charge ONLY.
-      vatAmount = taxableWaterCharge * VAT_RATE;
+    const VAT_THRESHOLD = 16; // VAT applies if consumption is 16m³ or more.
+    if (usageM3 >= VAT_THRESHOLD) {
+      vatAmount = vatBase * VAT_RATE;
     }
   } else {
-    // For Non-domestic, VAT is applied on the total water charge and service fees
-    const vatBase = baseWaterCharge + maintenanceFee + sanitationFee;
+    // For Non-domestic, VAT is always applied on the total of base charge and service fees.
     vatAmount = vatBase * VAT_RATE;
   }
 

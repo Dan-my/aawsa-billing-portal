@@ -187,9 +187,8 @@ export function calculateBill(
         }
       }
       
-      // VAT is 15% of the taxable portion of the water charge, plus 15% of the total service fees
-      const vatBase = taxableWaterCharge + maintenanceFee + sanitationFee;
-      vatAmount = vatBase * VAT_RATE;
+      // VAT is 15% of the taxable portion of the water charge ONLY.
+      vatAmount = taxableWaterCharge * VAT_RATE;
     }
   } else {
     // For Non-domestic, VAT is applied on the total water charge and service fees

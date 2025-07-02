@@ -461,7 +461,8 @@ export default function StaffBulkMeterDetailsPage() {
         return;
       }
 
-      const parsedMonth = currentBulkMeterState.data.month;
+      const latestMeterData = currentBulkMeterState.data;
+      const parsedMonth = latestMeterData.month;
 
       if (!parsedMonth) {
           toast({ variant: "destructive", title: "Billing Month Missing", description: "The meter does not have a billing month set." });
@@ -480,29 +481,26 @@ export default function StaffBulkMeterDetailsPage() {
         return;
       }
       
-      const { 
-        differenceUsage: differenceUsageForCycle,
-        differenceBill: billForDifferenceUsage,
-        totalPayable: totalPayableForCycle
-      } = memoizedDetails;
-
-      const { ...differenceBillBreakdownForCycle } = calculateBill(differenceUsageForCycle, 'Non-domestic', 'No', currentBulkMeterState.data.meterSize);
+      const bmUsage = (latestMeterData.currentReading ?? 0) - (latestMeterData.previousReading ?? 0);
+      const totalIndivUsage = associatedCustomers.reduce((sum, cust) => sum + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
+      const differenceUsageForCycle = bmUsage - totalIndivUsage;
+      const { totalBill: billForDifferenceUsage, ...differenceBillBreakdownForCycle } = calculateBill(differenceUsageForCycle, 'Non-domestic', 'No', latestMeterData.meterSize);
+      const balanceFromPreviousPeriods = latestMeterData.outStandingbill || 0;
+      const totalPayableForCycle = billForDifferenceUsage + balanceFromPreviousPeriods;
 
       const billDate = new Date();
       const periodEndDate = lastDayOfMonth(parsedDate);
       const dueDateObject = new Date(periodEndDate);
       dueDateObject.setDate(dueDateObject.getDate() + 15);
 
-      const balanceFromPreviousPeriods = currentBulkMeterState.data.outStandingbill || 0;
-
       const billToSave: Omit<DomainBill, 'id' | 'createdAt' | 'updatedAt'> = {
-        bulkMeterId: currentBulkMeterState.data.customerKeyNumber,
+        bulkMeterId: latestMeterData.customerKeyNumber,
         billPeriodStartDate: `${parsedMonth}-01`,
         billPeriodEndDate: format(periodEndDate, 'yyyy-MM-dd'),
         monthYear: parsedMonth,
-        previousReadingValue: currentBulkMeterState.data.previousReading,
-        currentReadingValue: currentBulkMeterState.data.currentReading,
-        usageM3: (currentBulkMeterState.data.currentReading ?? 0) - (currentBulkMeterState.data.previousReading ?? 0),
+        previousReadingValue: latestMeterData.previousReading,
+        currentReadingValue: latestMeterData.currentReading,
+        usageM3: (latestMeterData.currentReading ?? 0) - (latestMeterData.previousReading ?? 0),
         differenceUsage: differenceUsageForCycle,
         ...differenceBillBreakdownForCycle,
         balanceCarriedForward: balanceFromPreviousPeriods,
@@ -522,12 +520,12 @@ export default function StaffBulkMeterDetailsPage() {
       const newOutstandingBalance = carryBalance ? totalPayableForCycle : 0;
 
       const updatePayload: Partial<Omit<BulkMeter, 'customerKeyNumber'>> = {
-          previousReading: currentBulkMeterState.data.currentReading,
+          previousReading: latestMeterData.currentReading,
           outStandingbill: newOutstandingBalance,
           paymentStatus: carryBalance ? 'Unpaid' : 'Paid',
       };
 
-      const updateResult = await updateBulkMeterInStore(currentBulkMeterState.data.customerKeyNumber, updatePayload);
+      const updateResult = await updateBulkMeterInStore(latestMeterData.customerKeyNumber, updatePayload);
       if (updateResult.success && updateResult.data) {
          toast({ 
             title: "Billing Cycle Closed", 

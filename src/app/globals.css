@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -158,7 +159,7 @@ body {
     font-family: Arial, sans-serif;
   }
   
-  header, nav, aside, main > div > *:not(.printable-bill-card), .non-printable {
+  header, nav, aside, .non-printable {
     display: none !important;
   }
 
@@ -234,6 +235,7 @@ body {
 
   .print-label {
     font-weight: bold;
+    padding-right: 8px;
   }
 
   .print-body .font-bold {
@@ -242,5 +244,9 @@ body {
 
   .print-body .text-lg {
       font-size: 1.1em !important;
+  }
+
+  .print-value {
+    display: inline-block;
   }
 }

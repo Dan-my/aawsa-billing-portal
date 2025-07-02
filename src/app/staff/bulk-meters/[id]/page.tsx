@@ -691,7 +691,7 @@ export default function StaffBulkMeterDetailsPage() {
           </div>
           <div className="print-header-main">
             <h1 className="font-bold tracking-wider uppercase">ADDIS ABABA WATER AND SEWERAGE AUTHORITY</h1>
-            <hr className="my-2 border-black"/>
+            <hr className="my-2" />
             <div className="flex flex-row items-center justify-center pt-1">
               <Image src="https://veiethiopia.com/photo/partner/par2.png" alt="AAWSA Logo" width={30} height={18} className="flex-shrink-0 mr-3" />
               <h2 className="font-semibold">AAWSA Bill calculating Portal</h2>
@@ -700,53 +700,43 @@ export default function StaffBulkMeterDetailsPage() {
         </div>
 
         <div className="print-body">
-            <div className="print-row"><span>Bulk meter name:</span><span>{bulkMeter.name}</span></div>
-            <div className="print-row"><span>Customer key number:</span><span>{bulkMeter.customerKeyNumber}</span></div>
-            <div className="print-row"><span>Contract No:</span><span>{bulkMeter.contractNumber ?? 'N/A'}</span></div>
-            <div className="print-row"><span>Branch:</span><span>{displayBranchName ?? 'N/A'}</span></div>
-            <div className="print-row"><span>Location:</span><span>{displayCardLocation}</span></div>
+            <div className="print-row"><span className="print-label">Bulk meter name:</span><span>{bulkMeter.name}</span></div>
+            <div className="print-row"><span className="print-label">Customer key number:</span><span>{bulkMeter.customerKeyNumber}</span></div>
+            <div className="print-row"><span className="print-label">Contract No:</span><span>{bulkMeter.contractNumber ?? 'N/A'}</span></div>
+            <div className="print-row"><span className="print-label">Branch:</span><span>{displayBranchName ?? 'N/A'}</span></div>
+            <div className="print-row"><span className="print-label">Location:</span><span>{displayCardLocation}</span></div>
             
-            <div className="print-row mt-4"><span>Bulk Meter Category:</span><span>Non-domestic</span></div>
-            <div className="print-row"><span>Number of Assigned Individual Customers:</span><span>{associatedCustomers.length}</span></div>
-            <div className="print-row"><span>Previous and current reading:</span><span>{billCardDetails.prevReading.toFixed(2)} / {billCardDetails.currReading.toFixed(2)} m³</span></div>
-            <div className="print-row"><span>Bulk usage:</span><span>{billCardDetails.usage.toFixed(2)} m³</span></div>
-            <div className="print-row"><span>Total Individual Usage:</span><span>{totalIndividualUsage.toFixed(2)} m³</span></div>
+            <div className="print-row mt-4"><span className="print-label">Bulk Meter Category:</span><span>Non-domestic</span></div>
+            <div className="print-row"><span className="print-label">Number of Assigned Individual Customers:</span><span>{associatedCustomers.length}</span></div>
+            <div className="print-row"><span className="print-label">Previous and current reading:</span><span>{billCardDetails.prevReading.toFixed(2)} / {billCardDetails.currReading.toFixed(2)} m³</span></div>
+            <div className="print-row"><span className="print-label">Bulk usage:</span><span>{billCardDetails.usage.toFixed(2)} m³</span></div>
+            <div className="print-row"><span className="print-label">Total Individual Usage:</span><span>{totalIndividualUsage.toFixed(2)} m³</span></div>
 
-            <div className="print-row mt-4"><span>Base Water Charge:</span><span>ETB {billCardDetails.baseWaterCharge.toFixed(2)}</span></div>
-            <div className="print-row"><span>Maintenance Fee:</span><span>ETB {billCardDetails.maintenanceFee.toFixed(2)}</span></div>
-            <div className="print-row"><span>Sanitation Fee:</span><span>ETB {billCardDetails.sanitationFee.toFixed(2)}</span></div>
-            <div className="print-row"><span>Sewerage Fee:</span><span>ETB {billCardDetails.sewerageCharge.toFixed(2)}</span></div>
-            <div className="print-row"><span>Meter Rent:</span><span>ETB {billCardDetails.meterRent.toFixed(2)}</span></div>
-            <div className="print-row"><span>VAT (15%):</span><span>ETB {billCardDetails.vatAmount.toFixed(2)}</span></div>
-            <div className="print-row"><span>Difference usage:</span><span>{billCardDetails.differenceUsage.toFixed(2)} m³</span></div>
+            <div className="print-row mt-4"><span className="print-label">Base Water Charge:</span><span>ETB {billCardDetails.baseWaterCharge.toFixed(2)}</span></div>
+            <div className="print-row"><span className="print-label">Maintenance Fee:</span><span>ETB {billCardDetails.maintenanceFee.toFixed(2)}</span></div>
+            <div className="print-row"><span className="print-label">Sanitation Fee:</span><span>ETB {billCardDetails.sanitationFee.toFixed(2)}</span></div>
+            <div className="print-row"><span className="print-label">Sewerage Fee:</span><span>ETB {billCardDetails.sewerageCharge.toFixed(2)}</span></div>
+            <div className="print-row"><span className="print-label">Meter Rent:</span><span>ETB {billCardDetails.meterRent.toFixed(2)}</span></div>
+            <div className="print-row"><span className="print-label">VAT (15%):</span><span>ETB {billCardDetails.vatAmount.toFixed(2)}</span></div>
+            <div className="print-row"><span className="print-label">Difference usage:</span><span>{billCardDetails.differenceUsage.toFixed(2)} m³</span></div>
 
-            <hr className="my-1 border-black" />
-            <div className="print-row font-bold text-base"><span>Total Difference bill:</span><span>ETB {billCardDetails.totalDifferenceBill.toFixed(2)}</span></div>
-            <hr className="my-1 border-black" />
+            <hr className="my-1" />
+            <div className="print-row"><span className="print-label">Total Difference bill:</span><span>ETB {billCardDetails.totalDifferenceBill.toFixed(2)}</span></div>
+            <hr className="my-1" />
             
-            <div className="print-row mt-4"><span>Outstanding Bill (Previous Balance):</span><span>ETB {billCardDetails.outstandingBill.toFixed(2)}</span></div>
-            
-            <hr className="my-1 border-black" />
-            <div className="print-row font-bold text-lg"><span>Total Amount Payable:</span><span>ETB {billCardDetails.totalPayable.toFixed(2)}</span></div>
-            <hr className="my-1 border-black" />
+            <div className="print-row"><span className="print-label">Outstanding Bill (Previous Balance):</span><span>ETB {billCardDetails.outstandingBill.toFixed(2)}</span></div>
+            <hr className="my-1" />
+            <div className="print-row font-bold text-lg"><span className="print-label">Total Amount Payable:</span><span>ETB {billCardDetails.totalPayable.toFixed(2)}</span></div>
+            <hr className="my-1" />
 
-            <div className="print-row mt-2"><span>Paid/Unpaid:</span><span>{billCardDetails.paymentStatus}</span></div>
-            <div className="print-row"><span>Month:</span><span>{billCardDetails.month}</span></div>
+            <div className="print-row mt-2"><span className="print-label">Paid/Unpaid:</span><span>{billCardDetails.paymentStatus}</span></div>
+            <div className="print-row"><span className="print-label">Month:</span><span>{billCardDetails.month}</span></div>
         </div>
         
         <div className="print-footer">
-          <div className="signature-line">
-              <p>Requested by:</p>
-              <p className="dotted-line"></p>
-          </div>
-          <div className="signature-line">
-              <p>Check by:</p>
-              <p className="dotted-line"></p>
-          </div>
-          <div className="signature-line">
-              <p>Approved by:</p>
-              <p className="dotted-line"></p>
-          </div>
+            <div className="print-row"><span className="print-label">Requested by:</span></div>
+            <div className="print-row"><span className="print-label">Check by:</span></div>
+            <div className="print-row"><span className="print-label">Approved by:</span></div>
         </div>
       </div>
 

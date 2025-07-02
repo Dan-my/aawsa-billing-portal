@@ -158,7 +158,7 @@ body {
     font-family: Arial, sans-serif;
   }
   
-  header, nav, aside, footer, main > div > *:not(.printable-bill-card), .non-printable {
+  header, nav, aside, main > div > *:not(.printable-bill-card), .non-printable {
     display: none !important;
   }
 
@@ -185,6 +185,9 @@ body {
     color: #000 !important;
     background-color: transparent !important;
     box-shadow: none !important;
+  }
+  
+  .printable-bill-card hr {
     border-color: #000 !important;
   }
   
@@ -193,12 +196,12 @@ body {
       justify-content: space-between;
       font-size: 9pt;
       color: #333 !important;
-      margin-bottom: 1rem;
+      margin-bottom: 0rem;
   }
   
   .print-header-main {
       text-align: center;
-      margin-bottom: 2rem;
+      margin-bottom: 1rem;
   }
 
   .print-header-main h1 {
@@ -219,15 +222,16 @@ body {
 
   .print-body {
       margin: 0 auto;
-      max-width: 90%;
+      max-width: 100%;
+      padding-left: 0;
   }
 
   .print-row {
       display: flex;
       justify-content: space-between;
-      padding-top: 0.3rem;
-      padding-bottom: 0.3rem;
-      line-height: 1.4;
+      padding-top: 0.15rem;
+      padding-bottom: 0.15rem;
+      line-height: 1.3;
   }
 
   .print-row span:last-child {
@@ -235,11 +239,13 @@ body {
       font-weight: 600;
   }
 
-  .print-row span:first-child {
-      font-weight: normal;
-      padding-right: 1rem;
+  .print-label {
+    font-weight: bold !important;
+    text-decoration: underline;
+    text-decoration-color: #008000; /* Green */
+    text-decoration-thickness: 1.5px;
   }
-  
+
   .print-body .font-bold {
       font-weight: bold !important;
   }
@@ -247,26 +253,16 @@ body {
   .print-body .text-lg {
       font-size: 1.1em !important;
   }
-
+  
   .print-footer {
       margin-top: 4rem;
       font-size: 10pt;
-      max-width: 90%;
-      margin-left: auto;
-      margin-right: auto;
-  }
-  
-  .signature-line {
-      margin-top: 2rem;
-  }
-  
-  .signature-line p {
-      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
   }
 
-  .dotted-line {
-    border-bottom: 1px dotted #000;
-    height: 1.2em;
-    margin-top: 0.25rem;
+  .print-footer .print-row {
+      justify-content: flex-start;
   }
 }

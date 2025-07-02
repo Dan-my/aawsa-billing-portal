@@ -147,7 +147,7 @@ body {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 1cm;
+    margin: 1.5cm 1cm;
   }
 
   body {
@@ -155,14 +155,13 @@ body {
     print-color-adjust: exact !important;
     background: #fff !important;
     font-size: 10pt;
+    font-family: Arial, sans-serif;
   }
   
-  /* Hide all non-printable elements */
-  header, nav, aside, footer, main > div > *:not(.printable-bill-card) {
+  header, nav, aside, footer, main > div > *:not(.printable-bill-card), .non-printable {
     display: none !important;
   }
 
-  /* Reset layout containers */
   main, main > div {
     padding: 0 !important;
     margin: 0 !important;
@@ -173,7 +172,7 @@ body {
     display: block !important;
     position: static !important;
     width: 100% !important;
-    height: 100% !important;
+    height: auto !important;
     margin: 0 !important;
     padding: 0 !important;
     border: none !important;
@@ -182,17 +181,92 @@ body {
     background: #fff !important;
   }
   
-  /* Ensure all children of the printable card have correct basic print styles */
   .printable-bill-card * {
     color: #000 !important;
     background-color: transparent !important;
     box-shadow: none !important;
     border-color: #000 !important;
   }
+  
+  .print-header-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9pt;
+      color: #333 !important;
+      margin-bottom: 1rem;
+  }
+  
+  .print-header-main {
+      text-align: center;
+      margin-bottom: 2rem;
+  }
 
-  .printable-bill-card .text-primary, 
-  .printable-bill-card .text-destructive,
-  .printable-bill-card .text-muted-foreground {
-    color: #000 !important;
+  .print-header-main h1 {
+    font-size: 14pt;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+  }
+  
+  .print-header-main h2 {
+      font-size: 12pt;
+      font-weight: 600;
+  }
+  
+  .print-header-main img {
+      margin-right: 0.75rem;
+      vertical-align: middle;
+  }
+
+  .print-body {
+      margin: 0 auto;
+      max-width: 90%;
+  }
+
+  .print-row {
+      display: flex;
+      justify-content: space-between;
+      padding-top: 0.3rem;
+      padding-bottom: 0.3rem;
+      line-height: 1.4;
+  }
+
+  .print-row span:last-child {
+      text-align: right;
+      font-weight: 600;
+  }
+
+  .print-row span:first-child {
+      font-weight: normal;
+      padding-right: 1rem;
+  }
+  
+  .print-body .font-bold {
+      font-weight: bold !important;
+  }
+
+  .print-body .text-lg {
+      font-size: 1.1em !important;
+  }
+
+  .print-footer {
+      margin-top: 4rem;
+      font-size: 10pt;
+      max-width: 90%;
+      margin-left: auto;
+      margin-right: auto;
+  }
+  
+  .signature-line {
+      margin-top: 2rem;
+  }
+  
+  .signature-line p {
+      margin: 0;
+  }
+
+  .dotted-line {
+    border-bottom: 1px dotted #000;
+    height: 1.2em;
+    margin-top: 0.25rem;
   }
 }

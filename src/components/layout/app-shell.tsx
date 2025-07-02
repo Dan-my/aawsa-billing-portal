@@ -194,10 +194,6 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
         <main className="flex-1 p-4 sm:p-6 space-y-6 bg-background">
           {children}
         </main>
-        <footer className="py-4 px-6 text-center text-xs text-muted-foreground border-t">
-          <p>&copy; {currentYear} {appName}. All rights reserved.</p>
-          <p>Developed by Daniel Temesgen</p>
-        </footer>
       </SidebarInset>
     </SidebarProvider>
   );

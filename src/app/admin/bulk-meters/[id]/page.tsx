@@ -46,6 +46,7 @@ export default function BulkMeterDetailsPage() {
   const [meterReadingHistory, setMeterReadingHistory] = useState<DomainBulkMeterReading[]>([]);
   const [billingHistory, setBillingHistory] = useState<DomainBill[]>([]);
   const [billForPrintView, setBillForPrintView] = React.useState<DomainBill | null>(null);
+  const [printDate, setPrintDate] = React.useState('');
 
   const [isBulkMeterFormOpen, setIsBulkMeterFormOpen] = React.useState(false);
   const [isBulkMeterDeleteDialogOpen, setIsBulkMeterDeleteDialogOpen] = React.useState(false);
@@ -67,6 +68,12 @@ export default function BulkMeterDetailsPage() {
     billingHistoryPage * billingHistoryRowsPerPage,
     billingHistoryPage * billingHistoryRowsPerPage + billingHistoryRowsPerPage
   );
+
+  React.useEffect(() => {
+    if (billForPrintView) {
+      setPrintDate(new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short'}));
+    }
+  }, [billForPrintView]);
 
   const memoizedDetails = useMemo(() => {
     if (!bulkMeter) {
@@ -369,10 +376,8 @@ export default function BulkMeterDetailsPage() {
     const recentBill = billingHistory.length > 0 ? billingHistory[0] : null;
 
     if (recentBill) {
-      // Use the most recent historical bill for printing
       setBillForPrintView(recentBill);
     } else {
-      // Fallback: If no history, generate a temporary payslip from live data
       toast({
         title: "Generating Live Payslip",
         description: "No historical bill found. A payslip is being generated from the current meter data.",
@@ -638,55 +643,69 @@ export default function BulkMeterDetailsPage() {
       </Card>
 
       <div className="printable-bill-card">
-        <div className="text-center space-y-2 mb-4 px-6 pt-6">
-            <h1 className="text-xl font-bold tracking-wider uppercase">Addis Ababa Water and Sewerage Authority</h1>
-            <hr />
-            <div className="flex flex-row items-center justify-center pt-2">
-              <Image src="https://veiethiopia.com/photo/partner/par2.png" alt="AAWSA Logo" width={40} height={25} className="flex-shrink-0 mr-3" />
-              <h2 className="text-lg font-semibold">AAWSA Bill calculating Portal</h2>
+        <div className="print-header">
+          <div className="print-header-top">
+            <span>{printDate}</span>
+            <span>AAWSA Bulk Meter Billing Portal</span>
+          </div>
+          <div className="print-header-main">
+            <h1 className="font-bold tracking-wider uppercase">ADDIS ABABA WATER AND SEWERAGE AUTHORITY</h1>
+            <hr className="my-2 border-black"/>
+            <div className="flex flex-row items-center justify-center pt-1">
+              <Image src="https://veiethiopia.com/photo/partner/par2.png" alt="AAWSA Logo" width={30} height={18} className="flex-shrink-0 mr-3" />
+              <h2 className="font-semibold">AAWSA Bill calculating Portal</h2>
             </div>
-            <hr />
+          </div>
         </div>
 
-        <CardContent className="px-6 text-sm">
-          <div className="space-y-1.5">
-              <p className="flex justify-between"><span>Bulk meter name:</span><strong>{bulkMeter.name}</strong></p>
-              <p className="flex justify-between"><span>Customer key number:</span><strong>{bulkMeter.customerKeyNumber}</strong></p>
-              <p className="flex justify-between"><span>Contract No:</span><strong>{bulkMeter.contractNumber ?? 'N/A'}</strong></p>
-              <p className="flex justify-between"><span>Branch:</span><strong>{displayBranchName ?? 'N/A'}</strong></p>
-              <p className="flex justify-between"><span>Location:</span><strong>{displayCardLocation}</strong></p>
-              
-              <p className="flex justify-between pt-3"><span>Bulk Meter Category:</span><strong>Non-domestic</strong></p>
-              <p className="flex justify-between"><span>Number of Assigned Individual Customers:</span><strong>{associatedCustomers.length}</strong></p>
-              <p className="flex justify-between"><span>Previous and current reading:</span><strong>{billCardDetails.prevReading.toFixed(2)} / {billCardDetails.currReading.toFixed(2)} m³</strong></p>
-              <p className="flex justify-between"><span>Bulk usage:</span><strong>{billCardDetails.usage.toFixed(2)} m³</strong></p>
-              <p className="flex justify-between"><span>Total Individual Usage:</span><strong>{totalIndividualUsage.toFixed(2)} m³</strong></p>
-              
-              <p className="flex justify-between pt-3"><span>Base Water Charge:</span> <strong>ETB {billCardDetails.baseWaterCharge.toFixed(2)}</strong></p>
-              <p className="flex justify-between"><span>Maintenance Fee:</span> <strong>ETB {billCardDetails.maintenanceFee.toFixed(2)}</strong></p>
-              <p className="flex justify-between"><span>Sanitation Fee:</span> <strong>ETB {billCardDetails.sanitationFee.toFixed(2)}</strong></p>
-              <p className="flex justify-between"><span>Sewerage Fee:</span> <strong>ETB {billCardDetails.sewerageCharge.toFixed(2)}</strong></p>
-              <p className="flex justify-between"><span>Meter Rent:</span> <strong>ETB {billCardDetails.meterRent.toFixed(2)}</strong></p>
-              <p className="flex justify-between"><span>VAT (15%):</span> <strong>ETB {billCardDetails.vatAmount.toFixed(2)}</strong></p>
-              <p className="flex justify-between font-semibold"><span>Difference usage:</span><strong>{billCardDetails.differenceUsage.toFixed(2)} m³</strong></p>
-              <p className="flex justify-between font-bold border-t border-b py-1 my-1"><span>Total Difference bill:</span> <strong>ETB {billCardDetails.totalDifferenceBill.toFixed(2)}</strong></p>
+        <div className="print-body">
+            <div className="print-row"><span>Bulk meter name:</span><span>{bulkMeter.name}</span></div>
+            <div className="print-row"><span>Customer key number:</span><span>{bulkMeter.customerKeyNumber}</span></div>
+            <div className="print-row"><span>Contract No:</span><span>{bulkMeter.contractNumber ?? 'N/A'}</span></div>
+            <div className="print-row"><span>Branch:</span><span>{displayBranchName ?? 'N/A'}</span></div>
+            <div className="print-row"><span>Location:</span><span>{displayCardLocation}</span></div>
+            
+            <div className="print-row mt-4"><span>Bulk Meter Category:</span><span>Non-domestic</span></div>
+            <div className="print-row"><span>Number of Assigned Individual Customers:</span><span>{associatedCustomers.length}</span></div>
+            <div className="print-row"><span>Previous and current reading:</span><span>{billCardDetails.prevReading.toFixed(2)} / {billCardDetails.currReading.toFixed(2)} m³</span></div>
+            <div className="print-row"><span>Bulk usage:</span><span>{billCardDetails.usage.toFixed(2)} m³</span></div>
+            <div className="print-row"><span>Total Individual Usage:</span><span>{totalIndividualUsage.toFixed(2)} m³</span></div>
 
-              <p className="flex justify-between pt-3"><span>Outstanding Bill (Previous Balance):</span> <strong>ETB {billCardDetails.outstandingBill.toFixed(2)}</strong></p>
-              <p className="flex justify-between font-bold text-lg border-t border-b py-1 my-1"><span>Total Amount Payable:</span> <strong>ETB {billCardDetails.totalPayable.toFixed(2)}</strong></p>
-              <p className="flex justify-between"><span>Paid/Unpaid:</span> <strong>{billCardDetails.paymentStatus}</strong></p>
-              <p className="flex justify-between"><span>Month:</span> <strong>{billCardDetails.month}</strong></p>
-          </div>
-          
-          <div className="pt-12 space-y-8 text-sm">
-              <p className="border-b-2 border-dotted border-gray-400 pb-1">Requested by: </p>
-              <p className="border-b-2 border-dotted border-gray-400 pb-1">Check by: </p>
-              <p className="border-b-2 border-dotted border-gray-400 pb-1">Approved by: </p>
-          </div>
-        </CardContent>
+            <div className="print-row mt-4"><span>Base Water Charge:</span><span>ETB {billCardDetails.baseWaterCharge.toFixed(2)}</span></div>
+            <div className="print-row"><span>Maintenance Fee:</span><span>ETB {billCardDetails.maintenanceFee.toFixed(2)}</span></div>
+            <div className="print-row"><span>Sanitation Fee:</span><span>ETB {billCardDetails.sanitationFee.toFixed(2)}</span></div>
+            <div className="print-row"><span>Sewerage Fee:</span><span>ETB {billCardDetails.sewerageCharge.toFixed(2)}</span></div>
+            <div className="print-row"><span>Meter Rent:</span><span>ETB {billCardDetails.meterRent.toFixed(2)}</span></div>
+            <div className="print-row"><span>VAT (15%):</span><span>ETB {billCardDetails.vatAmount.toFixed(2)}</span></div>
+            <div className="print-row"><span>Difference usage:</span><span>{billCardDetails.differenceUsage.toFixed(2)} m³</span></div>
+
+            <hr className="my-1 border-black" />
+            <div className="print-row font-bold text-base"><span>Total Difference bill:</span><span>ETB {billCardDetails.totalDifferenceBill.toFixed(2)}</span></div>
+            <hr className="my-1 border-black" />
+            
+            <div className="print-row mt-4"><span>Outstanding Bill (Previous Balance):</span><span>ETB {billCardDetails.outstandingBill.toFixed(2)}</span></div>
+            
+            <hr className="my-1 border-black" />
+            <div className="print-row font-bold text-lg"><span>Total Amount Payable:</span><span>ETB {billCardDetails.totalPayable.toFixed(2)}</span></div>
+            <hr className="my-1 border-black" />
+
+            <div className="print-row mt-2"><span>Paid/Unpaid:</span><span>{billCardDetails.paymentStatus}</span></div>
+            <div className="print-row"><span>Month:</span><span>{billCardDetails.month}</span></div>
+        </div>
         
-        <div className="text-center pt-8 mt-4 px-6 pb-6">
-          <hr/>
-          <h2 className="text-sm font-semibold tracking-wider uppercase pt-4">Addis Ababa Water and Sewerage Authority</h2>
+        <div className="print-footer">
+          <div className="signature-line">
+              <p>Requested by:</p>
+              <p className="dotted-line"></p>
+          </div>
+          <div className="signature-line">
+              <p>Check by:</p>
+              <p className="dotted-line"></p>
+          </div>
+          <div className="signature-line">
+              <p>Approved by:</p>
+              <p className="dotted-line"></p>
+          </div>
         </div>
       </div>
 

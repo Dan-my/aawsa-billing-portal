@@ -46,6 +46,7 @@ export default function BulkMeterDetailsPage() {
   const [meterReadingHistory, setMeterReadingHistory] = useState<DomainBulkMeterReading[]>([]);
   const [billingHistory, setBillingHistory] = useState<DomainBill[]>([]);
   const [billForPrintView, setBillForPrintView] = React.useState<DomainBill | null>(null);
+  const [currentDateTime, setCurrentDateTime] = React.useState('');
 
   const [isBulkMeterFormOpen, setIsBulkMeterFormOpen] = React.useState(false);
   const [isBulkMeterDeleteDialogOpen, setIsBulkMeterDeleteDialogOpen] = React.useState(false);
@@ -532,6 +533,13 @@ export default function BulkMeterDetailsPage() {
     }
     setIsBillDeleteDialogOpen(false);
   };
+  
+  React.useEffect(() => {
+    if (showSlip || isPrinting) {
+      setCurrentDateTime(new Date().toLocaleString('en-US'));
+    }
+  }, [showSlip, isPrinting]);
+
 
   if (isLoading) return <div className="p-4 text-center">Loading bulk meter details...</div>;
   if (!bulkMeter && !isLoading) return <div className="p-4 text-center">Bulk meter not found or an error occurred.</div>;
@@ -549,6 +557,10 @@ export default function BulkMeterDetailsPage() {
           <CardContent>
             <div className="printable-bill-card">
               <div className="print-header">
+                <div className="print-header-top">
+                  <span>{currentDateTime}</span>
+                  <span>AAWSA Bulk Meter Billing Portal</span>
+                </div>
                 <div className="print-header-main">
                   <h1 className="font-bold tracking-wider uppercase">ADDIS ABABA WATER AND SEWERAGE AUTHORITY</h1>
                   <hr className="my-2" />
@@ -559,36 +571,46 @@ export default function BulkMeterDetailsPage() {
                 </div>
               </div>
               <div className="print-body">
-                <div className="print-row"><span className="print-label">Bulk meter name:</span> {bulkMeter.name}</div>
-                <div className="print-row"><span className="print-label">Customer key number:</span> {bulkMeter.customerKeyNumber}</div>
-                <div className="print-row"><span className="print-label">Contract No:</span> {bulkMeter.contractNumber ?? 'N/A'}</div>
-                <div className="print-row"><span className="print-label">Branch:</span> {displayBranchName ?? 'N/A'}</div>
-                <div className="print-row"><span className="print-label">Location:</span> {bulkMeter.specificArea ?? displayCardLocation}</div>
-                
-                <div className="print-row mt-4"><span className="print-label">Bulk Meter Category:</span> Non-domestic</div>
-                <div className="print-row"><span className="print-label">Number of Assigned Individual Customers:</span> {associatedCustomers.length}</div>
-                <div className="print-row"><span className="print-label">Previous and current reading:</span> {billCardDetails.prevReading.toFixed(2)} / {billCardDetails.currReading.toFixed(2)} m³</div>
-                <div className="print-row"><span className="print-label">Bulk usage:</span> {billCardDetails.usage.toFixed(2)} m³</div>
-                <div className="print-row"><span className="print-label">Total Individual Usage:</span> {totalIndividualUsage.toFixed(2)} m³</div>
-                
-                <div className="print-row mt-4"><span className="print-label">Base Water Charge:</span> ETB {billCardDetails.baseWaterCharge.toFixed(2)}</div>
-                <div className="print-row"><span className="print-label">Maintenance Fee:</span> ETB {billCardDetails.maintenanceFee.toFixed(2)}</div>
-                <div className="print-row"><span className="print-label">Sanitation Fee:</span> ETB {billCardDetails.sanitationFee.toFixed(2)}</div>
-                <div className="print-row"><span className="print-label">Sewerage Fee:</span> ETB {billCardDetails.sewerageCharge.toFixed(2)}</div>
-                <div className="print-row"><span className="print-label">Meter Rent:</span> ETB {billCardDetails.meterRent.toFixed(2)}</div>
-                <div className="print-row"><span className="print-label">VAT (15%):</span> ETB {billCardDetails.vatAmount.toFixed(2)}</div>
-                <div className="print-row"><span className="print-label">Difference usage:</span> {billCardDetails.differenceUsage.toFixed(2)} m³</div>
-                
-                <hr className="my-1" />
-                <div className="print-row"><span className="print-label">Total Difference bill:</span> ETB {billCardDetails.totalDifferenceBill.toFixed(2)}</div>
-                <hr className="my-1" />
-                <div className="print-row"><span className="print-label">Outstanding Bill (Previous Balance):</span> ETB {billCardDetails.outstandingBill.toFixed(2)}</div>
-                <hr className="my-1" />
-                <div className="print-row font-bold text-lg"><span className="print-label">Total Amount Payable:</span> ETB {billCardDetails.totalPayable.toFixed(2)}</div>
-                <hr className="my-1" />
+                <div className="print-section">
+                  <div className="print-row"><span>Bulk meter name:</span> <span>{bulkMeter.name}</span></div>
+                  <div className="print-row"><span>Customer key number:</span> <span>{bulkMeter.customerKeyNumber}</span></div>
+                  <div className="print-row"><span>Contract No:</span> <span>{bulkMeter.contractNumber ?? 'N/A'}</span></div>
+                  <div className="print-row"><span>Branch:</span> <span>{displayBranchName ?? 'N/A'}</span></div>
+                  <div className="print-row"><span>Location:</span> <span>{bulkMeter.specificArea ?? displayCardLocation}</span></div>
+                </div>
 
-                <div className="print-row mt-2"><span className="print-label">Paid/Unpaid:</span> {billCardDetails.paymentStatus}</div>
-                <div className="print-row"><span className="print-label">Month:</span> {billCardDetails.month}</div>
+                <div className="print-section">
+                  <div className="print-row"><span>Bulk Meter Category:</span> <span>Non-domestic</span></div>
+                  <div className="print-row"><span>Number of Assigned Individual Customers:</span> <span>{associatedCustomers.length}</span></div>
+                  <div className="print-row"><span>Previous and current reading:</span> <span>{billCardDetails.prevReading.toFixed(2)} / {billCardDetails.currReading.toFixed(2)} m³</span></div>
+                  <div className="print-row"><span>Bulk usage:</span> <span>{billCardDetails.usage.toFixed(2)} m³</span></div>
+                  <div className="print-row"><span>Total Individual Usage:</span> <span>{totalIndividualUsage.toFixed(2)} m³</span></div>
+                </div>
+
+                <div className="print-section">
+                  <div className="print-row"><span>Base Water Charge:</span> <span>ETB {billCardDetails.baseWaterCharge.toFixed(2)}</span></div>
+                  <div className="print-row"><span>Maintenance Fee:</span> <span>ETB {billCardDetails.maintenanceFee.toFixed(2)}</span></div>
+                  <div className="print-row"><span>Sanitation Fee:</span> <span>ETB {billCardDetails.sanitationFee.toFixed(2)}</span></div>
+                  <div className="print-row"><span>Sewerage Fee:</span> <span>ETB {billCardDetails.sewerageCharge.toFixed(2)}</span></div>
+                  <div className="print-row"><span>Meter Rent:</span> <span>ETB {billCardDetails.meterRent.toFixed(2)}</span></div>
+                  <div className="print-row"><span>VAT (15%):</span> <span>ETB {billCardDetails.vatAmount.toFixed(2)}</span></div>
+                  <div className="print-row"><span>Difference usage:</span> <span>{billCardDetails.differenceUsage.toFixed(2)} m³</span></div>
+                </div>
+                
+                <hr className="print-hr" />
+                <div className="print-row"><span>Total Difference bill:</span> <span>ETB {billCardDetails.totalDifferenceBill.toFixed(2)}</span></div>
+                <hr className="print-hr" />
+                <div className="print-row"><span>Outstanding Bill (Previous Balance):</span> <span>ETB {billCardDetails.outstandingBill.toFixed(2)}</span></div>
+                <hr className="print-hr" />
+                <div className="print-row font-bold text-lg"><span>Total Amount Payable:</span> <span>ETB {billCardDetails.totalPayable.toFixed(2)}</span></div>
+                <hr className="print-hr" />
+
+                <div className="print-section">
+                  <div className="print-row"><span>Paid/Unpaid:</span> <span>{billCardDetails.paymentStatus}</span></div>
+                  <div className="print-row"><span>Month:</span> <span>{billCardDetails.month}</span></div>
+                </div>
+
+                <hr className="print-hr-dashed"/>
                 
                 <div className="print-signature-section">
                   <div className="print-signature-item"><span>Requested by</span><span>...................................</span></div>

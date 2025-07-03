@@ -176,7 +176,7 @@ body {
     width: 100% !important;
     height: auto !important;
     margin: 0 !important;
-    padding: 0 !important;
+    padding: 0.5rem !important;
     border: 2px solid #000 !important;
     box-shadow: none !important;
     color: #000 !important;
@@ -188,22 +188,26 @@ body {
     background-color: transparent !important;
     box-shadow: none !important;
   }
-  
-  .printable-bill-card hr {
-    border-color: #000 !important;
-  }
-  
+
   .print-header-top {
-      display: none; /* Hide custom header */
+      display: flex !important;
+      justify-content: space-between !important;
+      font-size: 9pt;
+      padding: 0.25rem 0.5rem;
+      border-bottom: 1px solid #ccc;
+      margin-bottom: 0.5rem;
   }
   
   .print-header-main {
       text-align: center;
       margin-bottom: 1rem;
       padding: 0.5rem;
-      border-bottom: 1px solid #000;
   }
 
+  .print-header-main hr {
+    border-color: #000 !important;
+  }
+  
   .print-header-main h1 {
     font-size: 14pt;
     font-weight: bold;
@@ -218,40 +222,48 @@ body {
   .print-header-main img {
       margin-right: 0.75rem;
       vertical-align: middle;
+      display: inline-block !important;
   }
 
   .print-body {
       margin: 0 auto;
       max-width: 100%;
-      padding: 0.5rem 1rem;
+      padding: 0.5rem;
+  }
+
+  .print-section {
+    margin-bottom: 1rem;
   }
 
   .print-row {
-    padding-top: 0.2rem;
-    padding-bottom: 0.2rem;
-    line-height: 1.5;
+    display: flex;
+    justify-content: space-between;
+    padding: 0.1rem 0;
+    line-height: 1.4;
   }
 
-  .print-body .font-bold {
-      font-weight: bold !important;
+  .print-row > span:first-child {
+      padding-right: 1rem;
+      font-weight: bold;
   }
 
-  .print-body .text-lg {
-      font-size: 1.1em !important;
+  .print-hr {
+      border: 0 !important;
+      height: 1px !important;
+      background-color: #000 !important;
+      margin: 0.25rem 0;
   }
 
-  .print-body .print-label {
-    font-weight: bold;
-    padding-right: 8px;
-    text-decoration: none;
-  }
-
-  .print-signature-section {
-      margin-top: 2.5rem;
-      padding-top: 1rem;
-      border-top: 1px dashed #999;
+  .print-hr-dashed {
+      border: 0 !important;
+      border-top: 1px dashed #999 !important;
+      margin: 1.5rem 0;
   }
   
+  .print-signature-section {
+    margin-top: 2rem;
+  }
+
   .print-signature-item {
       margin-top: 1.5rem;
       font-size: 11pt;
@@ -259,7 +271,11 @@ body {
 
   .print-signature-item span:first-child {
       display: inline-block;
-      width: 120px;
+      min-width: 120px;
       font-weight: bold;
+  }
+
+  .print-signature-item span:last-child {
+      font-family: monospace;
   }
 }

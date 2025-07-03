@@ -598,14 +598,14 @@ export default function StaffBulkMeterDetailsPage() {
   return (
     <div className="space-y-6 p-4">
       {showSlip ? (
-         <Card>
+         <Card className="printable-bill-card-wrapper">
           <CardHeader className="non-printable flex flex-row items-center justify-between">
             <CardTitle>Pay Slip Preview</CardTitle>
             <Button variant="ghost" size="icon" onClick={() => setShowSlip(false)}>
               <XCircle className="h-5 w-5" />
             </Button>
           </CardHeader>
-          <CardContent className="printable-bill-card-wrapper">
+          <CardContent>
             <div className="printable-bill-card">
                <div className="print-header">
                 <div className="print-header-top">
@@ -615,8 +615,8 @@ export default function StaffBulkMeterDetailsPage() {
                 <div className="print-header-main">
                   <h1 className="font-bold tracking-wider uppercase">ADDIS ABABA WATER AND SEWERAGE AUTHORITY</h1>
                   <hr className="my-2" />
-                  <div className="flex flex-row items-center justify-center pt-1">
-                    <Image src="https://veiethiopia.com/photo/partner/par2.png" alt="AAWSA Logo" width={30} height={18} className="flex-shrink-0 mr-3" />
+                  <div className="flex flex-row items-center justify-center gap-2 pt-1">
+                    <Image src="https://veiethiopia.com/photo/partner/par2.png" alt="AAWSA Logo" width={30} height={18} className="flex-shrink-0" />
                     <h2 className="font-semibold">AAWSA Bill calculating Portal</h2>
                   </div>
                 </div>

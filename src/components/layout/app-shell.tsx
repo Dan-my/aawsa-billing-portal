@@ -186,7 +186,9 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
         <SidebarContent>
           {sidebar}
         </SidebarContent>
-        <SidebarFooter>
+        <SidebarFooter className="text-xs text-center text-muted-foreground p-2">
+          Design and Developed by Daniel Temesgen
+          &copy; {currentYear} {appName}. All rights reserved.
         </SidebarFooter>
       </Sidebar>
       <SidebarInset> 

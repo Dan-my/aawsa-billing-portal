@@ -64,7 +64,7 @@ export default function AdminDataEntryPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Customer Data Entry</h1>
+        <h1 className="text-2xl md:text-3xl font-bold">Customer Data Entry</h1>
       </div>
 
       <Tabs defaultValue="manual-individual" className="w-full">

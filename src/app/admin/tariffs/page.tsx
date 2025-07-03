@@ -203,28 +203,23 @@ export default function TariffManagementPage() {
 
   return (
     <div className="space-y-6">
-      <Card className="bg-muted/20 shadow-none border-none">
-        <CardHeader className="px-0 md:px-6 py-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-3">
-                <LibraryBig className="h-8 w-8 text-primary" />
-                <div>
-                    <CardTitle className="text-2xl">Tariff Knowledge Base</CardTitle>
-                    <CardDescription className="text-sm">Manage water tariff rates used for bill calculations.</CardDescription>
-                </div>
-            </div>
-            <div className="mt-4 md:mt-0 flex gap-2 flex-wrap">
-                <Button onClick={handleAddTier} className="bg-primary hover:bg-primary/90">
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add New Tariff Tier
-                </Button>
-                <Button onClick={() => setIsMeterRentDialogOpen(true)} variant="default" className="bg-primary hover:bg-primary/90">
-                    <DollarSign className="mr-2 h-4 w-4" /> Manage Meter Rent
-                </Button>
-                <Button variant="destructive" onClick={() => setIsResetDialogOpen(true)}>
-                    <RotateCcw className="mr-2 h-4 w-4" /> Reset to Defaults
-                </Button>
-            </div>
-        </CardHeader>
-      </Card>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4">
+        <div className="flex items-center gap-3">
+            <LibraryBig className="h-8 w-8 text-primary" />
+            <h1 className="text-2xl md:text-3xl font-bold">Tariff Management</h1>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+            <Button onClick={handleAddTier} className="bg-primary hover:bg-primary/90">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add New Tier
+            </Button>
+            <Button onClick={() => setIsMeterRentDialogOpen(true)} variant="default">
+                <DollarSign className="mr-2 h-4 w-4" /> Manage Meter Rent
+            </Button>
+            <Button variant="destructive" onClick={() => setIsResetDialogOpen(true)}>
+                <RotateCcw className="mr-2 h-4 w-4" /> Reset Defaults
+            </Button>
+        </div>
+      </div>
 
       <div className="space-y-2">
         <Label htmlFor="customer-category">Select Customer Category</Label>

@@ -199,7 +199,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+      <h1 className="text-2xl md:text-3xl font-bold">Admin Dashboard</h1>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="shadow-lg">
@@ -288,7 +288,7 @@ export default function AdminDashboardPage() {
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <div>
               <CardTitle>Branch Performance (Bulk Meters)</CardTitle>
               <CardDescription>Paid vs. Unpaid status for bulk meters across branches.</CardDescription>
@@ -353,7 +353,7 @@ export default function AdminDashboardPage() {
         </Card>
 
         <Card className="shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <div>
               <CardTitle>Overall Water Usage Trend</CardTitle>
               <CardDescription>Monthly water consumption across all meters.</CardDescription>

@@ -125,8 +125,8 @@ export default function BulkMetersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold">Bulk Meters Management</h1>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold">Bulk Meters Management</h1>
         <div className="flex gap-2 w-full md:w-auto">
            <div className="relative flex-grow md:flex-grow-0">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -154,11 +154,11 @@ export default function BulkMetersPage() {
              <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
                 Loading bulk meters...
              </div>
-          ) : bulkMeters.length === 0 && !searchTerm ? (
+           ) : bulkMeters.length === 0 && !searchTerm ? (
              <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
                 No bulk meters found. Click "Add New Bulk Meter" to get started. <Gauge className="inline-block ml-2 h-5 w-5" />
              </div>
-          ) : (
+           ) : (
             <BulkMeterTable
               data={paginatedBulkMeters}
               onEdit={handleEditBulkMeter}

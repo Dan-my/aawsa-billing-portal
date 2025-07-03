@@ -97,7 +97,7 @@ export default function StaffDataEntryPage() {
   if (!isBranchDetermined) {
     return (
         <div className="space-y-6">
-             <h1 className="text-3xl font-bold">Customer Data Entry (Loading branch info...)</h1>
+             <h1 className="text-2xl md:text-3xl font-bold">Customer Data Entry (Loading branch info...)</h1>
              <Card className="shadow-md border-primary/50">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-primary">
@@ -117,7 +117,7 @@ export default function StaffDataEntryPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-3xl font-bold">Customer Data Entry ({staffBranchName})</h1>
+        <h1 className="text-2xl md:text-3xl font-bold">Customer Data Entry ({staffBranchName})</h1>
       </div>
 
       {!canProceedWithDataEntry && (

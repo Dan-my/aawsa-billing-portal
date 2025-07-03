@@ -283,7 +283,7 @@ export default function AdminReportsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Generate Reports</h1>
+        <h1 className="text-2xl md:text-3xl font-bold">Generate Reports</h1>
       </div>
       <Card className="shadow-lg">
         <CardHeader>
@@ -313,7 +313,7 @@ export default function AdminReportsPage() {
           {selectedReport && (
             <Card className="bg-muted/50">
               <CardHeader>
-                <CardTitle className="text-xl">{selectedReport.name}</CardTitle>
+                <CardTitle>{selectedReport.name}</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">{selectedReport.description}</p>

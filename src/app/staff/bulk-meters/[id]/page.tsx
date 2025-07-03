@@ -675,8 +675,8 @@ export default function StaffBulkMeterDetailsPage() {
       ) : (
         <>
           <Card className="shadow-lg non-printable">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div className="flex items-center gap-2"><Gauge className="h-6 w-6 text-primary" /><CardTitle className="text-2xl">Bulk Meter: {bulkMeter.name} ({staffBranchName})</CardTitle></div>
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2"><Gauge className="h-6 w-6 text-primary" /><CardTitle className="text-xl sm:text-2xl">Bulk Meter: {bulkMeter.name} ({staffBranchName})</CardTitle></div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="h-8 w-8 p-0">

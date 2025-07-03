@@ -624,10 +624,10 @@ export default function BulkMeterDetailsPage() {
       ) : (
         <>
           <Card className="shadow-lg non-printable">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Gauge className="h-6 w-6 text-primary" />
-                <CardTitle className="text-2xl">Bulk Meter: {bulkMeter.name}</CardTitle>
+                <CardTitle className="text-xl sm:text-2xl">Bulk Meter: {bulkMeter.name}</CardTitle>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

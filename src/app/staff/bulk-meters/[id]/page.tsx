@@ -616,6 +616,7 @@ export default function StaffBulkMeterDetailsPage() {
                 <div className="print-row"><span className="print-label">Contract No:</span> {bulkMeter.contractNumber ?? 'N/A'}</div>
                 <div className="print-row"><span className="print-label">Branch:</span> {displayBranchName ?? 'N/A'}</div>
                 <div className="print-row"><span className="print-label">Location:</span> {bulkMeter.specificArea ?? displayCardLocation}</div>
+                
                 <div className="print-row mt-4"><span className="print-label">Bulk Meter Category:</span> Non-domestic</div>
                 <div className="print-row"><span className="print-label">Number of Assigned Individual Customers:</span> {associatedCustomers.length}</div>
                 <div className="print-row"><span className="print-label">Previous and current reading:</span> {billCardDetails.prevReading.toFixed(2)} / {billCardDetails.currReading.toFixed(2)} m³</div>

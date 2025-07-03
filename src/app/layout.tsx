@@ -10,18 +10,11 @@ export const metadata: Metadata = {
   title: 'AAWSA Billing Portal',
   description: 'Bulk meter bill calculation and water usage management for AAWSA.',
   icons: {
-    icon: {
-      url: 'https://veiethiopia.com/photo/partner/par2.png',
-      type: 'image/png',
-    },
-    shortcut: {
-      url: 'https://veiethiopia.com/photo/partner/par2.png',
-      type: 'image/png',
-    },
-    apple: {
-      url: 'https://veiethiopia.com/photo/partner/par2.png',
-      type: 'image/png',
-    },
+    icon: 'https://veiethiopia.com/photo/partner/par2.png',
+    apple: 'https://veiethiopia.com/photo/partner/par2.png',
+  },
+  openGraph: {
+    images: ['https://veiethiopia.com/photo/partner/par2.png'],
   },
 };
 

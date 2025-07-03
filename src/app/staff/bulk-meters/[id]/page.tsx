@@ -598,14 +598,14 @@ export default function StaffBulkMeterDetailsPage() {
   return (
     <div className="space-y-6 p-4">
       {showSlip ? (
-         <Card className="non-printable">
-          <CardHeader className="flex flex-row items-center justify-between">
+         <Card>
+          <CardHeader className="non-printable flex flex-row items-center justify-between">
             <CardTitle>Pay Slip Preview</CardTitle>
             <Button variant="ghost" size="icon" onClick={() => setShowSlip(false)}>
               <XCircle className="h-5 w-5" />
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="printable-bill-card-wrapper">
             <div className="printable-bill-card">
                <div className="print-header">
                 <div className="print-header-top">

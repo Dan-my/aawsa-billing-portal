@@ -170,6 +170,10 @@ body {
     background: none !important;
   }
 
+  .printable-bill-card-wrapper {
+    padding: 0 !important;
+  }
+  
   .printable-bill-card {
     display: block !important;
     position: static !important;

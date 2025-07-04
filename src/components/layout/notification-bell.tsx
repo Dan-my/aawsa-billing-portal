@@ -43,25 +43,37 @@ export function NotificationBell({ user }: NotificationBellProps) {
   }, []);
 
   const relevantNotifications = React.useMemo(() => {
-    if (!user) return [];
-    if (user.role.toLowerCase() === "admin") {
+    if (!user || !user.role) {
+      return [];
+    }
+    
+    // Admins see all notifications
+    if (user.role.toLowerCase() === 'admin') {
       return notifications;
     }
     
-    const staffBranch = user.branchName?.trim().toLowerCase();
-
-    return notifications.filter(
-      (n) => {
+    // Staff see notifications targeted to them or "All Staff"
+    if (user.role.toLowerCase() === 'staff') {
+      const staffBranch = user.branchName?.trim().toLowerCase();
+      
+      return notifications.filter(n => {
         const targetBranch = n.targetBranchName.trim().toLowerCase();
-        if (targetBranch === "all staff") {
-            return true;
+        
+        // Always show "All Staff" notifications
+        if (targetBranch === 'all staff') {
+          return true;
         }
+        
+        // Show notifications for their specific branch (case-insensitive and exact match)
         if (staffBranch && targetBranch === staffBranch) {
-            return true;
+          return true;
         }
+        
         return false;
-      }
-    );
+      });
+    }
+
+    return [];
   }, [notifications, user]);
 
   React.useEffect(() => {

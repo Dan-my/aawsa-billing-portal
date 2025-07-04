@@ -60,7 +60,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
     }
 
     if (user.role.toLowerCase() === 'admin') {
-      return notifications;
+      return []; // Admins do not receive notifications in the bell.
     }
     
     if (user.role.toLowerCase() === 'staff') {
@@ -112,7 +112,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
       }
   };
 
-  if (!user) return null;
+  if (!user || user.role.toLowerCase() === 'admin') return null;
 
   return (
     <Dialog open={!!selectedNotification} onOpenChange={handleDialogChange}>

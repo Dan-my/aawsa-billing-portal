@@ -4,7 +4,7 @@
 import * as React from "react";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Bell, CircleAlert } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -31,6 +31,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
   const [notifications, setNotifications] = React.useState<DomainNotification[]>([]);
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [lastReadTimestamp, setLastReadTimestamp] = React.useState<string | null>(null);
+  const [selectedNotification, setSelectedNotification] = React.useState<DomainNotification | null>(null);
 
   React.useEffect(() => {
     if (typeof window !== "undefined") {
@@ -46,8 +47,20 @@ export function NotificationBell({ user }: NotificationBellProps) {
     if (user.role.toLowerCase() === "admin") {
       return notifications;
     }
+    
+    const staffBranch = user.branchName?.trim().toLowerCase();
+
     return notifications.filter(
-      (n) => n.targetBranchName === "All Staff" || n.targetBranchName === user.branchName
+      (n) => {
+        const targetBranch = n.targetBranchName.trim().toLowerCase();
+        if (targetBranch === "all staff") {
+            return true;
+        }
+        if (staffBranch && targetBranch === staffBranch) {
+            return true;
+        }
+        return false;
+      }
     );
   }, [notifications, user]);
 
@@ -67,10 +80,16 @@ export function NotificationBell({ user }: NotificationBellProps) {
     }
   };
 
+  const handleDialogChange = (isOpen: boolean) => {
+      if (!isOpen) {
+          setSelectedNotification(null);
+      }
+  };
+
   if (!user) return null;
 
   return (
-    <Dialog>
+    <Dialog open={!!selectedNotification} onOpenChange={handleDialogChange}>
       <DropdownMenu onOpenChange={handleOpenChange}>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-full">
@@ -90,17 +109,19 @@ export function NotificationBell({ user }: NotificationBellProps) {
           <ScrollArea className="h-[300px]">
             {relevantNotifications.length > 0 ? (
               relevantNotifications.map((n) => (
-                <DialogTrigger key={n.id} asChild>
-                  <DropdownMenuItem className="flex flex-col items-start gap-1 p-2 cursor-pointer">
-                    <div className="flex justify-between w-full">
-                      <p className="font-semibold text-sm truncate">{n.title}</p>
-                      <p className="text-xs text-muted-foreground ml-2 flex-shrink-0">
-                        {formatDistanceToNow(parseISO(n.createdAt), { addSuffix: true })}
-                      </p>
-                    </div>
-                    <p className="text-xs text-muted-foreground w-full truncate">{n.message}</p>
-                  </DropdownMenuItem>
-                </DialogTrigger>
+                <DropdownMenuItem
+                  key={n.id}
+                  className="flex flex-col items-start gap-1 p-2 cursor-pointer"
+                  onSelect={() => setSelectedNotification(n)}
+                >
+                  <div className="flex justify-between w-full">
+                    <p className="font-semibold text-sm truncate">{n.title}</p>
+                    <p className="text-xs text-muted-foreground ml-2 flex-shrink-0">
+                      {formatDistanceToNow(parseISO(n.createdAt), { addSuffix: true })}
+                    </p>
+                  </div>
+                  <p className="text-xs text-muted-foreground w-full truncate">{n.message}</p>
+                </DropdownMenuItem>
               ))
             ) : (
               <div className="flex flex-col items-center justify-center h-full p-4 text-center">
@@ -113,17 +134,17 @@ export function NotificationBell({ user }: NotificationBellProps) {
       </DropdownMenu>
 
       {/* The Dialog Content for viewing a single notification */}
-      {relevantNotifications.map((n) => (
-         <DialogContent key={`dialog-${n.id}`}>
+      {selectedNotification && (
+         <DialogContent>
              <DialogHeader>
-                 <DialogTitle>{n.title}</DialogTitle>
+                 <DialogTitle>{selectedNotification.title}</DialogTitle>
                  <DialogDescription className="text-xs pt-2">
-                     Sent by {n.senderName} to {n.targetBranchName} &bull; {formatDistanceToNow(parseISO(n.createdAt), { addSuffix: true })}
+                     Sent by {selectedNotification.senderName} to {selectedNotification.targetBranchName} &bull; {formatDistanceToNow(parseISO(selectedNotification.createdAt), { addSuffix: true })}
                  </DialogDescription>
              </DialogHeader>
-             <div className="py-4 text-sm">{n.message}</div>
+             <div className="py-4 text-sm">{selectedNotification.message}</div>
          </DialogContent>
-      ))}
+      )}
     </Dialog>
   );
 }

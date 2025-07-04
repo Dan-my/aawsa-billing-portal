@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { IndividualCustomer as DomainIndividualCustomer, IndividualCustomerStatus } from '@/app/admin/individual-customers/individual-customer-types';
@@ -384,6 +383,8 @@ const mapSupabaseBulkMeterToDomain = (sbm: SupabaseBulkMeterRow): BulkMeter => {
     differenceUsage: sbm.difference_usage === null || sbm.difference_usage === undefined ? undefined : Number(sbm.difference_usage),
     differenceBill: sbm.difference_bill === null || sbm.difference_bill === undefined ? undefined : Number(sbm.difference_bill),
     outStandingbill: sbm.outStandingbill ? Number(sbm.outStandingbill) : 0, 
+    xCoordinate: sbm.x_coordinate ? Number(sbm.x_coordinate) : undefined,
+    yCoordinate: sbm.y_coordinate ? Number(sbm.y_coordinate) : undefined,
   };
 };
 
@@ -419,6 +420,8 @@ const mapDomainBulkMeterToInsert = (bm: Omit<BulkMeter, 'customerKeyNumber'> & {
     difference_usage: differenceUsage,
     difference_bill: differenceBill,
     outStandingbill: bm.outStandingbill ? Number(bm.outStandingbill) : 0, 
+    x_coordinate: bm.xCoordinate,
+    y_coordinate: bm.yCoordinate,
   };
 };
 
@@ -439,7 +442,9 @@ const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { customerKeyNumber
     if (bm.branchId !== undefined) updatePayload.branch_id = bm.branchId; 
     if (bm.status !== undefined) updatePayload.status = bm.status;
     if (bm.paymentStatus !== undefined) updatePayload.paymentStatus = bm.paymentStatus;
-    if (bm.outStandingbill !== undefined) updatePayload.outStandingbill = Number(bm.outStandingbill); 
+    if (bm.outStandingbill !== undefined) updatePayload.outStandingbill = Number(bm.outStandingbill);
+    if (bm.xCoordinate !== undefined) updatePayload.x_coordinate = bm.xCoordinate;
+    if (bm.yCoordinate !== undefined) updatePayload.y_coordinate = bm.yCoordinate;
 
     if (bm.customerKeyNumber && (bm.currentReading !== undefined || bm.previousReading !== undefined || bm.meterSize !== undefined)) {
         const existingBM = bulkMeters.find(b => b.customerKeyNumber === bm.customerKeyNumber);

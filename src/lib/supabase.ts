@@ -1,5 +1,4 @@
 
-
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Database as ActualDatabase } from '@/types/supabase';
 
@@ -67,6 +66,8 @@ export interface Database {
           difference_usage?: number | null;
           difference_bill?: number | null;
           outStandingbill?: number | null;
+          x_coordinate?: number | null;
+          y_coordinate?: number | null;
           createdAt?: string | null;
           updatedAt?: string | null;
         };
@@ -90,6 +91,8 @@ export interface Database {
           difference_usage?: number | null;
           difference_bill?: number | null;
           outStandingbill?: number | null;
+          x_coordinate?: number | null;
+          y_coordinate?: number | null;
           createdAt?: string | null;
           updatedAt?: string | null;
         };
@@ -113,6 +116,8 @@ export interface Database {
           difference_usage?: number | null;
           difference_bill?: number | null;
           outStandingbill?: number | null;
+          x_coordinate?: number | null;
+          y_coordinate?: number | null;
           createdAt?: string | null;
           updatedAt?: string | null;
         };

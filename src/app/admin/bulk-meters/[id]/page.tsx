@@ -665,6 +665,8 @@ export default function BulkMeterDetailsPage() {
                 <p><strong className="font-semibold">Specific Area:</strong> {bulkMeter.specificArea ?? 'N/A'}</p>
                 <p><strong className="font-semibold">Meter No:</strong> {bulkMeter.meterNumber ?? 'N/A'}</p>
                 <p><strong className="font-semibold">Meter Size:</strong> {bulkMeter.meterSize} inch</p>
+                <p><strong className="font-semibold">X Coordinate:</strong> {bulkMeter.xCoordinate ?? 'N/A'}</p>
+                <p><strong className="font-semibold">Y Coordinate:</strong> {bulkMeter.yCoordinate ?? 'N/A'}</p>
               </div>
               <div>
                 <p><strong className="font-semibold">Customer Key:</strong> {bulkMeter.customerKeyNumber ?? 'N/A'}</p>

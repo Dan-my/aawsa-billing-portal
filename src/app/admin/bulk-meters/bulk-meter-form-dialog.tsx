@@ -90,6 +90,8 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
       branchId: undefined,
       status: "Active", 
       paymentStatus: "Unpaid", 
+      xCoordinate: undefined,
+      yCoordinate: undefined,
     },
   });
 
@@ -103,6 +105,8 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
         branchId: defaultValues.branchId || undefined,
         status: defaultValues.status || "Active",
         paymentStatus: defaultValues.paymentStatus || "Unpaid",
+        xCoordinate: defaultValues.xCoordinate ?? undefined,
+        yCoordinate: defaultValues.yCoordinate ?? undefined,
       });
     } else {
       form.reset({
@@ -120,6 +124,8 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
         branchId: undefined,
         status: "Active",
         paymentStatus: "Unpaid",
+        xCoordinate: undefined,
+        yCoordinate: undefined,
       });
     }
   }, [defaultValues, form, open]);
@@ -359,6 +365,50 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                     <FormLabel>Ward / Woreda *</FormLabel>
                     <FormControl>
                       <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="xCoordinate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>X Coordinate (Optional)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        step="any" 
+                        {...field} 
+                        value={field.value ?? ""}
+                        onChange={e => {
+                          const val = e.target.value;
+                          field.onChange(val === "" ? undefined : parseFloat(val));
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="yCoordinate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Y Coordinate (Optional)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        step="any" 
+                        {...field} 
+                        value={field.value ?? ""}
+                        onChange={e => {
+                          const val = e.target.value;
+                          field.onChange(val === "" ? undefined : parseFloat(val));
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

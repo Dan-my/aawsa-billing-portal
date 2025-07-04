@@ -19,4 +19,6 @@ export type BulkMeter = z.infer<typeof baseBulkMeterDataSchema> & {
   totalBulkBill?: number;
   differenceUsage?: number;
   differenceBill?: number;
+  xCoordinate?: number;
+  yCoordinate?: number;
 };

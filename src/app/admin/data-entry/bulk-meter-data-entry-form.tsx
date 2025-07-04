@@ -63,6 +63,8 @@ export function BulkMeterDataEntryForm() {
       location: "", // Will be set by branch selection
       ward: "",
       branchId: undefined, // Initialize branchId
+      xCoordinate: undefined,
+      yCoordinate: undefined,
     },
   });
 
@@ -312,6 +314,52 @@ export function BulkMeterDataEntryForm() {
                       <FormLabel>Ward / Woreda *</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter ward / woreda" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="xCoordinate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>X Coordinate (Optional)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="any"
+                          placeholder="e.g., 9.005401"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={e => {
+                            const val = e.target.value;
+                            field.onChange(val === "" ? undefined : parseFloat(val));
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="yCoordinate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Y Coordinate (Optional)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="any"
+                          placeholder="e.g., 38.763611"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={e => {
+                            const val = e.target.value;
+                            field.onChange(val === "" ? undefined : parseFloat(val));
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

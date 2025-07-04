@@ -28,18 +28,24 @@ import {
 } from "@/lib/data-store";
 import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
-import { initialCustomers } from "../individual-customers/page";
-import { initialBulkMeters } from "../bulk-meters/page";
 import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
 import type { StaffMember } from "../staff-management/staff-types";
 import type { Branch } from "../branches/branch-types";
+import type { DateRange } from "react-day-picker";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+
+interface ReportFilters {
+  branchId?: string;
+  startDate?: Date;
+  endDate?: Date;
+}
 
 interface ReportType {
   id: string;
   name: string;
   description: string;
   headers?: string[];
-  getData?: () => any[];
+  getData?: (filters: ReportFilters) => any[];
 }
 
 const arrayToXlsxBlob = (data: any[], headers: string[]): Blob => {
@@ -101,10 +107,29 @@ const availableReports: ReportType[] = [
       "location", "ward", "sewerageConnection", "assignedBulkMeterId", "status", "paymentStatus", "calculatedBill",
       "Assigned Branch Name", "created_at", "updated_at"
     ],
-    getData: () => {
+    getData: (filters) => {
+      const { branchId, startDate, endDate } = filters;
       const customers = getCustomers();
       const branches = getBranches();
-      return customers.map(customer => {
+      
+      let filteredData = customers;
+
+      if (branchId) {
+        filteredData = filteredData.filter(c => c.branchId === branchId);
+      }
+      if (startDate && endDate) {
+        const start = startDate.getTime();
+        const end = endDate.getTime();
+        filteredData = filteredData.filter(c => {
+          if (!c.created_at) return false;
+          try {
+            const customerDate = new Date(c.created_at).getTime();
+            return customerDate >= start && customerDate <= end;
+          } catch { return false; }
+        });
+      }
+
+      return filteredData.map(customer => {
         const branch = customer.branchId ? branches.find(b => b.id === customer.branchId) : null;
         return {
           ...customer,
@@ -122,10 +147,19 @@ const availableReports: ReportType[] = [
       "previousReading", "currentReading", "month", "specificArea", "location", "ward", "status", "paymentStatus",
       "Assigned Branch Name", "bulkUsage", "totalBulkBill", "differenceUsage", "differenceBill"
     ],
-    getData: () => {
+    getData: (filters) => {
+      const { branchId, startDate, endDate } = filters;
       const bulkMeters = getBulkMeters();
       const branches = getBranches();
-      return bulkMeters.map(bm => {
+
+      let filteredData = bulkMeters;
+
+      if (branchId) {
+        filteredData = filteredData.filter(bm => bm.branchId === branchId);
+      }
+      // Note: Bulk meter table does not have a created_at field, this filter will be ignored for this report for now.
+
+      return filteredData.map(bm => {
         const branch = bm.branchId ? branches.find(b => b.id === bm.branchId) : null;
         return {
           ...bm,
@@ -145,7 +179,30 @@ const availableReports: ReportType[] = [
         "meterRent", "totalAmountDue", "amountPaid", "balanceDue", "dueDate", 
         "paymentStatus", "billNumber", "notes", "createdAt", "updatedAt"
     ],
-    getData: () => getBills(),
+    getData: (filters) => {
+      const { branchId, startDate, endDate } = filters;
+      let bills = getBills();
+      
+      if (branchId) {
+        const bulkMetersInBranch = getBulkMeters().filter(bm => bm.branchId === branchId).map(bm => bm.customerKeyNumber);
+        const customersInBranch = getCustomers().filter(c => c.branchId === branchId).map(c => c.customerKeyNumber);
+        bills = bills.filter(b => 
+          (b.bulkMeterId && bulkMetersInBranch.includes(b.bulkMeterId)) ||
+          (b.individualCustomerId && customersInBranch.includes(b.individualCustomerId))
+        );
+      }
+      if (startDate && endDate) {
+         const start = startDate.getTime();
+         const end = endDate.getTime();
+         bills = bills.filter(b => {
+           try {
+             const billDate = new Date(b.billPeriodEndDate).getTime();
+             return billDate >= start && billDate <= end;
+           } catch { return false; }
+         });
+      }
+      return bills;
+    },
   },
   {
     id: "water-usage",
@@ -156,7 +213,30 @@ const availableReports: ReportType[] = [
         "readingDate", "monthYear", "readingValue", "isEstimate", "notes", 
         "createdAt", "updatedAt"
     ],
-    getData: () => getMeterReadings(),
+    getData: (filters) => {
+      const { branchId, startDate, endDate } = filters;
+      let readings = getMeterReadings();
+
+      if (branchId) {
+        const bulkMetersInBranch = getBulkMeters().filter(bm => bm.branchId === branchId).map(bm => bm.customerKeyNumber);
+        const customersInBranch = getCustomers().filter(c => c.branchId === branchId).map(c => c.customerKeyNumber);
+        readings = readings.filter(r => 
+          (r.meterType === 'bulk_meter' && r.bulkMeterId && bulkMetersInBranch.includes(r.bulkMeterId)) ||
+          (r.meterType === 'individual_customer_meter' && r.individualCustomerId && customersInBranch.includes(r.individualCustomerId))
+        );
+      }
+      if (startDate && endDate) {
+        const start = startDate.getTime();
+        const end = endDate.getTime();
+        readings = readings.filter(r => {
+          try {
+            const readingDate = new Date(r.readingDate).getTime();
+            return readingDate >= start && readingDate <= end;
+          } catch { return false; }
+        });
+      }
+      return readings;
+    },
   },
   {
     id: "payment-history",
@@ -167,7 +247,26 @@ const availableReports: ReportType[] = [
         "paymentMethod", "transactionReference", "processedByStaffId", "notes", 
         "createdAt", "updatedAt"
     ],
-    getData: () => getPayments(),
+    getData: (filters) => {
+      const { branchId, startDate, endDate } = filters;
+      let payments = getPayments();
+
+      if (branchId) {
+        const customersInBranch = getCustomers().filter(c => c.branchId === branchId).map(c => c.customerKeyNumber);
+        payments = payments.filter(p => p.individualCustomerId && customersInBranch.includes(p.individualCustomerId));
+      }
+      if (startDate && endDate) {
+        const start = startDate.getTime();
+        const end = endDate.getTime();
+        payments = payments.filter(p => {
+          try {
+            const paymentDate = new Date(p.paymentDate).getTime();
+            return paymentDate >= start && paymentDate <= end;
+          } catch { return false; }
+        });
+      }
+      return payments;
+    },
   },
   {
     id: "meter-reading-accuracy",
@@ -177,13 +276,35 @@ const availableReports: ReportType[] = [
       "Reading ID", "Meter Identifier", "Meter Type", "Reading Date", "Month/Year", 
       "Reading Value", "Is Estimate", "Reader Name", "Reader Staff ID", "Notes"
     ],
-    getData: () => {
+    getData: (filters) => {
+      const { branchId, startDate, endDate } = filters;
       const readings = getMeterReadings();
       const customers = getCustomers();
       const bulkMeters = getBulkMeters();
       const staffList = getStaffMembers();
 
-      return readings.map(r => {
+      let filteredReadings = readings;
+
+      if (branchId) {
+        const bulkMetersInBranch = bulkMeters.filter(bm => bm.branchId === branchId).map(bm => bm.customerKeyNumber);
+        const customersInBranch = customers.filter(c => c.branchId === branchId).map(c => c.customerKeyNumber);
+        filteredReadings = filteredReadings.filter(r => 
+          (r.meterType === 'bulk_meter' && r.bulkMeterId && bulkMetersInBranch.includes(r.bulkMeterId)) ||
+          (r.meterType === 'individual_customer_meter' && r.individualCustomerId && customersInBranch.includes(r.individualCustomerId))
+        );
+      }
+      if (startDate && endDate) {
+        const start = startDate.getTime();
+        const end = endDate.getTime();
+        filteredReadings = filteredReadings.filter(r => {
+          try {
+            const readingDate = new Date(r.readingDate).getTime();
+            return readingDate >= start && readingDate <= end;
+          } catch { return false; }
+        });
+      }
+
+      return filteredReadings.map(r => {
         let meterIdentifier = "N/A";
         if (r.meterType === 'individual_customer_meter' && r.individualCustomerId) {
           const cust = customers.find(c => c.customerKeyNumber === r.individualCustomerId);
@@ -217,9 +338,14 @@ export default function AdminReportsPage() {
   const { toast } = useToast();
   const [selectedReportId, setSelectedReportId] = React.useState<string | undefined>(undefined);
   const [isGenerating, setIsGenerating] = React.useState(false);
+  const [branches, setBranches] = React.useState<Branch[]>([]);
+  const [selectedBranch, setSelectedBranch] = React.useState<string>("all");
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined);
+  const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
     const initializeData = async () => {
+        setIsLoading(true);
         await initializeCustomers();
         await initializeBulkMeters();
         await initializeBills();
@@ -227,7 +353,9 @@ export default function AdminReportsPage() {
         await initializeBulkMeterReadings();
         await initializePayments();
         await initializeStaffMembers();
-        await initializeBranches(); // Ensure branches are loaded
+        await initializeBranches();
+        setBranches(getBranches());
+        setIsLoading(false);
     };
     initializeData();
   }, []);
@@ -249,11 +377,15 @@ export default function AdminReportsPage() {
     setIsGenerating(true);
 
     try {
-      const data = selectedReport.getData();
+      const data = selectedReport.getData({
+          branchId: selectedBranch === 'all' ? undefined : selectedBranch,
+          startDate: dateRange?.from,
+          endDate: dateRange?.to
+      });
       if (!data || data.length === 0) {
         toast({
           title: "No Data",
-          description: `No data available to generate ${selectedReport.name}.`,
+          description: `No data found for ${selectedReport.name} with the selected filters.`,
         });
         setIsGenerating(false);
         return;
@@ -288,7 +420,7 @@ export default function AdminReportsPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Report Generation</CardTitle>
-          <CardDescription>Select a report type to generate and download.</CardDescription>
+          <CardDescription>Select a report type and apply filters to generate and download.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
@@ -317,7 +449,31 @@ export default function AdminReportsPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">{selectedReport.description}</p>
-                {!selectedReport.getData && (
+                 {selectedReport.getData ? (
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                    <div className="space-y-2">
+                        <Label htmlFor="branch-filter">Filter by Branch</Label>
+                        <Select value={selectedBranch} onValueChange={setSelectedBranch} disabled={isLoading}>
+                            <SelectTrigger id="branch-filter">
+                                <SelectValue placeholder="Select a branch"/>
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Branches</SelectItem>
+                                {branches.map(branch => (
+                                    <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="date-range-filter">Filter by Date</Label>
+                        <DateRangePicker 
+                            date={dateRange} 
+                            onDateChange={setDateRange}
+                        />
+                    </div>
+                  </div>
+                 ) : (
                    <Alert variant="default" className="mt-4 border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30">
                      <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                      <AlertTitle className="text-blue-700 dark:text-blue-300">Coming Soon</AlertTitle>
@@ -326,14 +482,6 @@ export default function AdminReportsPage() {
                      </UIAlertDescription>
                    </Alert>
                 )}
-                 {selectedReport.getData && (
-                  <div className="mt-4 space-y-2">
-                    <Label>Report Filters (Coming Soon)</Label>
-                    <div className="p-4 border rounded-md text-sm text-muted-foreground">
-                      Date range selectors, branch filters, etc., will appear here based on the selected report type. For now, the export contains all available data.
-                    </div>
-                  </div>
-                 )}
               </CardContent>
             </Card>
           )}
@@ -341,7 +489,7 @@ export default function AdminReportsPage() {
           {selectedReport && selectedReport.getData && (
             <Button onClick={handleGenerateReport} disabled={isGenerating || !selectedReportId}>
               <Download className="mr-2 h-4 w-4" />
-              {isGenerating ? "Generating..." : `Generate & Download ${selectedReport.name.replace(" (XLSX)", "").replace(" (Coming Soon)", "")}`}
+              {isGenerating ? "Generating..." : `Generate & Download ${selectedReport.name.replace(" (XLSX)", "")}`}
             </Button>
           )}
 

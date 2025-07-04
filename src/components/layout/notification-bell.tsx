@@ -12,12 +12,8 @@ import {
   getNotifications,
   initializeNotifications,
   subscribeToNotifications,
-  getBranches,
-  initializeBranches,
-  subscribeToBranches,
 } from "@/lib/data-store";
 import type { DomainNotification } from "@/lib/data-store";
-import type { Branch } from "@/app/admin/branches/branch-types";
 
 const LAST_READ_TIMESTAMP_KEY = "last-read-timestamp";
 
@@ -31,9 +27,22 @@ interface NotificationBellProps {
   user: UserProfile | null;
 }
 
+// Helper function for robust branch name comparison
+const normalizeBranchName = (name?: string): string => {
+  if (!name) return "";
+  return name
+    .trim()
+    .toLowerCase()
+    // Remove "branch" if it's at the end of the string, tolerant to whitespace
+    .replace(/\s*branch\s*$/, '')
+    // Remove all non-alphanumeric characters (keeps letters and numbers)
+    // This handles cases like "Megenagna." vs "Megenagna"
+    .replace(/[^\w]/g, '');
+};
+
+
 export function NotificationBell({ user }: NotificationBellProps) {
   const [notifications, setNotifications] = React.useState<DomainNotification[]>([]);
-  const [branches, setBranches] = React.useState<Branch[]>([]);
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [lastReadTimestamp, setLastReadTimestamp] = React.useState<string | null>(null);
   const [selectedNotification, setSelectedNotification] = React.useState<DomainNotification | null>(null);
@@ -43,52 +52,40 @@ export function NotificationBell({ user }: NotificationBellProps) {
       setLastReadTimestamp(localStorage.getItem(LAST_READ_TIMESTAMP_KEY));
     }
     initializeNotifications();
-    initializeBranches();
     
     const unsubNotifications = subscribeToNotifications(setNotifications);
-    const unsubBranches = subscribeToBranches(setBranches);
 
     return () => {
       unsubNotifications();
-      unsubBranches();
     };
   }, []);
 
   const relevantNotifications = React.useMemo(() => {
-    if (!user || !user.role || branches.length === 0) {
+    if (!user || user.role.toLowerCase() !== 'staff' || !user.branchName) {
       return [];
     }
-
-    if (user.role.toLowerCase() === 'admin') {
-      return []; // Admins do not receive notifications in the bell.
-    }
     
-    if (user.role.toLowerCase() === 'staff') {
-        const staffBranch = branches.find(b => b.name === user.branchName);
+    const staffBranchNormalized = normalizeBranchName(user.branchName);
 
-        // Staff not assigned to a valid branch can only see global notifications
-        if (!staffBranch) {
-            return notifications.filter(n => n.targetBranchName.toLowerCase() === 'all staff');
+    return notifications
+      .filter(n => {
+        const targetBranchNormalized = normalizeBranchName(n.targetBranchName);
+
+        // Global notifications for all staff
+        if (targetBranchNormalized === 'allstaff') {
+            return true;
         }
 
-        return notifications.filter(n => {
-            // Case 1: Notification is for "All Staff".
-            if (n.targetBranchName.toLowerCase() === 'all staff') {
-                return true;
-            }
-            
-            // Case 2: Notification target branch ID matches staff's branch ID.
-            const targetBranch = branches.find(b => b.name === n.targetBranchName);
-            if (targetBranch) {
-                return targetBranch.id === staffBranch.id;
-            }
+        // Branch-specific notifications
+        if (staffBranchNormalized && targetBranchNormalized === staffBranchNormalized) {
+            return true;
+        }
 
-            return false;
-        });
-    }
+        return false;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    return [];
-  }, [notifications, user, branches]);
+  }, [notifications, user]);
 
   React.useEffect(() => {
     const newUnreadCount = relevantNotifications.filter(

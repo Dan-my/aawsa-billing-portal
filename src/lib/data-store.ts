@@ -1365,21 +1365,30 @@ export const removeReportLog = async (logId: string): Promise<StoreOperationResu
 };
 
 export const addNotification = async (notificationData: Omit<DomainNotification, 'id' | 'createdAt'>): Promise<StoreOperationResult<DomainNotification>> => {
-  const payload: NotificationInsert = {
-    title: notificationData.title,
-    message: notificationData.message,
-    sender_name: notificationData.senderName,
-    target_branch_name: notificationData.targetBranchName,
-  };
-  const { data: newSupabaseNotification, error } = await supabaseCreateNotification(payload);
-  if (newSupabaseNotification && !error) {
-    const newNotification = mapSupabaseNotificationToDomain(newSupabaseNotification);
+  // Use an RPC call to a SECURITY DEFINER function to bypass RLS for this specific insert.
+  // This is necessary because the app uses a custom auth flow where the client isn't fully authenticated with a Supabase session.
+  const { data, error } = await supabase.rpc('insert_notification', {
+    p_title: notificationData.title,
+    p_message: notificationData.message,
+    p_sender_name: notificationData.senderName,
+    p_target_branch_name: notificationData.targetBranchName
+  }).single();
+
+  if (data && !error) {
+    const newNotification = mapSupabaseNotificationToDomain(data as SupabaseNotificationRow);
     notifications = [newNotification, ...notifications];
     notifyNotificationListeners();
     return { success: true, data: newNotification };
   }
-  console.error("DataStore: Failed to add notification. Supabase error:", JSON.stringify(error, null, 2));
-  return { success: false, message: (error as any)?.message || "Failed to add notification.", error };
+
+  console.error("DataStore: Failed to add notification via RPC. Supabase error:", JSON.stringify(error, null, 2));
+  
+  let userMessage = (error as any)?.message || "Failed to add notification.";
+  if (error && (error as any).message?.includes('function public.insert_notification does not exist')) {
+    userMessage = "The database is missing a required function. Please run the SQL script provided in the instructions to create it.";
+  }
+  
+  return { success: false, message: userMessage, error };
 };
 
 
@@ -1476,3 +1485,5 @@ export async function loadInitialData() {
     initializeNotifications(),
   ]);
 }
+
+    

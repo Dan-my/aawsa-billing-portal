@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -50,34 +51,38 @@ export function NotificationBell({ user }: NotificationBellProps) {
       return [];
     }
 
+    // Normalizes branch names for robust comparison.
+    const normalize = (name?: string) =>
+      name
+        ?.trim()
+        .toLowerCase()
+        // Remove the word "branch" or "office" and any punctuation
+        .replace(/branch|office|[.,]/g, '') 
+        .replace(/\s+/g, ' ') // Normalize multiple spaces into one
+        .trim(); // Trim again in case of leading/trailing spaces
+
     if (user.role.toLowerCase() === 'admin') {
       return notifications;
     }
 
     if (user.role.toLowerCase() === 'staff') {
-      const userBranchName = user.branchName?.trim().toLowerCase();
+      const userBranchName = normalize(user.branchName);
       if (!userBranchName) {
-        // Staff not assigned to a branch only see "All Staff" notifications.
-        return notifications.filter(n => n.targetBranchName?.trim().toLowerCase() === 'all staff');
+        // Staff without a branch only see global notifications.
+        return notifications.filter(n => normalize(n.targetBranchName) === 'all staff');
       }
 
       return notifications.filter(n => {
-        if (!n || !n.targetBranchName) return false;
-
-        const targetBranchName = n.targetBranchName.trim().toLowerCase();
+        if (!n.targetBranchName) return false;
+        const targetBranchName = normalize(n.targetBranchName);
 
         // Case 1: Notification is for "All Staff".
         if (targetBranchName === 'all staff') {
           return true;
         }
 
-        // Case 2: Notification is for the user's specific branch.
-        // Normalize names by removing spaces and making them lowercase.
-        const normalizedUserBranch = userBranchName.replace(/\s+/g, '');
-        const normalizedTargetBranch = targetBranchName.replace(/\s+/g, '');
-        
-        // Check if one name contains the other.
-        return normalizedTargetBranch.includes(normalizedUserBranch) || normalizedUserBranch.includes(normalizedTargetBranch);
+        // Case 2: Notification matches the staff's branch name after normalization.
+        return targetBranchName === userBranchName;
       });
     }
 

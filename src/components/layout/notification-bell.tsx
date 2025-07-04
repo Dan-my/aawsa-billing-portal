@@ -12,11 +12,8 @@ import {
   getNotifications,
   initializeNotifications,
   subscribeToNotifications,
-  getBranches,
-  initializeBranches,
-  subscribeToBranches,
 } from "@/lib/data-store";
-import type { DomainNotification, DomainBranch } from "@/lib/data-store";
+import type { DomainNotification } from "@/lib/data-store";
 
 const LAST_READ_TIMESTAMP_KEY = "last-read-timestamp";
 
@@ -32,7 +29,6 @@ interface NotificationBellProps {
 
 export function NotificationBell({ user }: NotificationBellProps) {
   const [notifications, setNotifications] = React.useState<DomainNotification[]>([]);
-  const [branches, setBranches] = React.useState<DomainBranch[]>([]);
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [lastReadTimestamp, setLastReadTimestamp] = React.useState<string | null>(null);
   const [selectedNotification, setSelectedNotification] = React.useState<DomainNotification | null>(null);
@@ -42,61 +38,42 @@ export function NotificationBell({ user }: NotificationBellProps) {
       setLastReadTimestamp(localStorage.getItem(LAST_READ_TIMESTAMP_KEY));
     }
     initializeNotifications();
-    initializeBranches();
     
     const unsubNotifications = subscribeToNotifications(setNotifications);
-    const unsubBranches = subscribeToBranches(setBranches);
 
     return () => {
       unsubNotifications();
-      unsubBranches();
     };
   }, []);
 
   const relevantNotifications = React.useMemo(() => {
-    if (!user || user.role.toLowerCase() !== 'staff' || !user.branchName || branches.length === 0) {
+    if (!user || user.role.toLowerCase() !== 'staff' || !user.branchName) {
       return [];
     }
-
-    // A robust function to find the official branch from the user's potentially messy profile branch name.
-    const findOfficialBranch = (userBranchName: string, allBranches: DomainBranch[]): DomainBranch | undefined => {
-        // Normalize by making lowercase, removing all punctuation and spaces, and removing "branch" suffix
-        const normalize = (name: string) => name.toLowerCase().replace(/[.\s]/g, '').replace(/branch$/, '');
-        const normalizedUserBranchName = normalize(userBranchName);
-        
-        for (const branch of allBranches) {
-            const normalizedOfficialName = normalize(branch.name);
-            if (normalizedOfficialName === normalizedUserBranchName) {
-                return branch;
-            }
-        }
-        return undefined;
-    };
-
-    const staffOfficialBranch = findOfficialBranch(user.branchName, branches);
+    
+    // Normalize the user's branch name from their profile for comparison.
+    const userBranch = user.branchName.toLowerCase().trim();
 
     return notifications
       .filter(n => {
-        // Case 1: Notification is for "All Staff"
-        if (n.targetBranchName.toLowerCase() === 'all staff') {
+        // Normalize the notification's target branch name.
+        const targetBranch = n.targetBranchName.toLowerCase().trim();
+        
+        // Case 1: Notification is for "All Staff".
+        if (targetBranch === 'all staff') {
           return true;
         }
         
-        // Case 2: Notification is for the user's specific branch
-        // Only proceed if we could identify the user's official branch
-        if (staffOfficialBranch) {
-            // Compare the notification's target name directly with the user's official branch name.
-            // This is robust because the target name is set from the official list when the admin sends it.
-            if (n.targetBranchName === staffOfficialBranch.name) {
-                return true;
-            }
+        // Case 2: Notification target branch matches the user's branch (case-insensitive).
+        if (targetBranch === userBranch) {
+          return true;
         }
 
         return false;
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-  }, [notifications, user, branches]);
+  }, [notifications, user]);
 
   React.useEffect(() => {
     const newUnreadCount = relevantNotifications.filter(

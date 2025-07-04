@@ -31,7 +31,7 @@ import type { Branch } from "../branches/branch-types";
 const formSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters.").max(100, "Title is too long."),
   message: z.string().min(10, "Message must be at least 10 characters.").max(1000, "Message is too long."),
-  targetBranchName: z.string().min(1, "You must select a target."),
+  targetBranchId: z.string().min(1, "You must select a target."),
 });
 
 type NotificationFormValues = z.infer<typeof formSchema>;
@@ -67,7 +67,7 @@ export default function AdminNotificationsPage() {
     defaultValues: {
       title: "",
       message: "",
-      targetBranchName: "All Staff",
+      targetBranchId: "All Staff",
     },
   });
 
@@ -76,13 +76,30 @@ export default function AdminNotificationsPage() {
       toast({ variant: "destructive", title: "Error", description: "Could not find sender name. Please log in again." });
       return;
     }
+    
+    const targetBranchName = data.targetBranchId === "All Staff"
+      ? "All Staff"
+      : branches.find(b => b.id === data.targetBranchId)?.name;
+
+    if (!targetBranchName) {
+      toast({ variant: "destructive", title: "Error", description: "Selected branch not found." });
+      return;
+    }
+
     const result = await addNotification({
-      ...data,
+      title: data.title,
+      message: data.message,
+      targetBranchName: targetBranchName,
       senderName: user.name,
     });
+
     if (result.success) {
-      toast({ title: "Notification Sent", description: `Your message has been sent to ${data.targetBranchName}.` });
-      form.reset();
+      toast({ title: "Notification Sent", description: `Your message has been sent to ${targetBranchName}.` });
+      form.reset({
+        title: "",
+        message: "",
+        targetBranchId: "All Staff",
+      });
     } else {
       toast({ variant: "destructive", title: "Failed to Send", description: result.message });
     }
@@ -129,11 +146,11 @@ export default function AdminNotificationsPage() {
                 />
                 <FormField
                   control={form.control}
-                  name="targetBranchName"
+                  name="targetBranchId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Send To</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select target..." />
@@ -142,7 +159,7 @@ export default function AdminNotificationsPage() {
                         <SelectContent>
                           <SelectItem value="All Staff">All Staff</SelectItem>
                           {branches.map(branch => (
-                            <SelectItem key={branch.id} value={branch.name}>{branch.name}</SelectItem>
+                            <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>

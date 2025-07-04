@@ -33,11 +33,13 @@ const normalizeBranchName = (name?: string): string => {
   return name
     .trim()
     .toLowerCase()
-    // Remove "branch" if it's at the end of the string, tolerant to whitespace
-    .replace(/\s*branch\s*$/, '')
-    // Remove all non-alphanumeric characters (keeps letters and numbers)
-    // This handles cases like "Megenagna." vs "Megenagna"
-    .replace(/[^\w]/g, '');
+    // Remove punctuation except for spaces
+    .replace(/[^\w\s]/g, '')
+    // Remove the word "branch" if it exists as a whole word
+    .replace(/\bbranch\b/g, '')
+    // Collapse multiple spaces into one and trim again
+    .replace(/\s+/g, ' ')
+    .trim();
 };
 
 
@@ -72,7 +74,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
         const targetBranchNormalized = normalizeBranchName(n.targetBranchName);
 
         // Global notifications for all staff
-        if (targetBranchNormalized === 'allstaff') {
+        if (targetBranchNormalized === 'all staff') {
             return true;
         }
 

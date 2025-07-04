@@ -30,20 +30,9 @@ interface NotificationBellProps {
   user: UserProfile | null;
 }
 
-// More robust normalization function
-const normalizeBranchName = (name?: string): string => {
-  if (!name) return "";
-  return name
-    .toLowerCase()
-    .replace(/branch/g, '')      // remove the word "branch"
-    .replace(/[.\s]/g, '')       // remove periods and all whitespace
-    .trim();
-};
-
-
 export function NotificationBell({ user }: NotificationBellProps) {
   const [notifications, setNotifications] = React.useState<DomainNotification[]>([]);
-  const [branches, setBranches] = React.useState<DomainBranch[]>([]); // This is kept in case it's needed for other features later
+  const [branches, setBranches] = React.useState<DomainBranch[]>([]);
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [lastReadTimestamp, setLastReadTimestamp] = React.useState<string | null>(null);
   const [selectedNotification, setSelectedNotification] = React.useState<DomainNotification | null>(null);
@@ -53,7 +42,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
       setLastReadTimestamp(localStorage.getItem(LAST_READ_TIMESTAMP_KEY));
     }
     initializeNotifications();
-    initializeBranches(); // Keep initializing branches for data consistency elsewhere
+    initializeBranches();
     
     const unsubNotifications = subscribeToNotifications(setNotifications);
     const unsubBranches = subscribeToBranches(setBranches);
@@ -65,11 +54,26 @@ export function NotificationBell({ user }: NotificationBellProps) {
   }, []);
 
   const relevantNotifications = React.useMemo(() => {
-    if (!user || user.role.toLowerCase() !== 'staff' || !user.branchName) {
+    if (!user || user.role.toLowerCase() !== 'staff' || !user.branchName || branches.length === 0) {
       return [];
     }
 
-    const normalizedStaffBranchName = normalizeBranchName(user.branchName);
+    // A robust function to find the official branch from the user's potentially messy profile branch name.
+    const findOfficialBranch = (userBranchName: string, allBranches: DomainBranch[]): DomainBranch | undefined => {
+        // Normalize by making lowercase, removing all punctuation and spaces, and removing "branch" suffix
+        const normalize = (name: string) => name.toLowerCase().replace(/[.\s]/g, '').replace(/branch$/, '');
+        const normalizedUserBranchName = normalize(userBranchName);
+        
+        for (const branch of allBranches) {
+            const normalizedOfficialName = normalize(branch.name);
+            if (normalizedOfficialName === normalizedUserBranchName) {
+                return branch;
+            }
+        }
+        return undefined;
+    };
+
+    const staffOfficialBranch = findOfficialBranch(user.branchName, branches);
 
     return notifications
       .filter(n => {
@@ -79,18 +83,20 @@ export function NotificationBell({ user }: NotificationBellProps) {
         }
         
         // Case 2: Notification is for the user's specific branch
-        const normalizedTargetBranchName = normalizeBranchName(n.targetBranchName);
-        
-        // This comparison should now work reliably for "Megenagna." vs "Megenagna Branch" etc.
-        if (normalizedTargetBranchName === normalizedStaffBranchName) {
-            return true;
+        // Only proceed if we could identify the user's official branch
+        if (staffOfficialBranch) {
+            // Compare the notification's target name directly with the user's official branch name.
+            // This is robust because the target name is set from the official list when the admin sends it.
+            if (n.targetBranchName === staffOfficialBranch.name) {
+                return true;
+            }
         }
 
         return false;
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-  }, [notifications, user]);
+  }, [notifications, user, branches]);
 
   React.useEffect(() => {
     const newUnreadCount = relevantNotifications.filter(

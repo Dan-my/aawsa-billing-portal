@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -55,8 +56,11 @@ export function NotificationBell({ user }: NotificationBellProps) {
     if (user.role.toLowerCase() === 'staff') {
       const staffBranch = user.branchName?.trim().toLowerCase();
       
+      // Helper function to normalize strings for comparison
+      const normalize = (str: string) => str.toLowerCase().replace(/\s+/g, '');
+
       return notifications.filter(n => {
-        if (!n || !n.targetBranchName) return false; // Guard against bad data
+        if (!n || !n.targetBranchName) return false;
         
         const targetBranch = n.targetBranchName.trim().toLowerCase();
         
@@ -68,9 +72,13 @@ export function NotificationBell({ user }: NotificationBellProps) {
         if (!staffBranch) {
             return false;
         }
-        
-        // More robust matching for branch name using 'includes'
-        if (targetBranch.includes(staffBranch) || staffBranch.includes(targetBranch)) {
+
+        // Normalize both strings to handle variations like "Megenagna" vs "Megenagna Branch"
+        const normalizedStaffBranch = normalize(staffBranch);
+        const normalizedTargetBranch = normalize(targetBranch);
+
+        // Check if one normalized string contains the other
+        if (normalizedTargetBranch.includes(normalizedStaffBranch) || normalizedStaffBranch.includes(normalizedTargetBranch)) {
             return true;
         }
 

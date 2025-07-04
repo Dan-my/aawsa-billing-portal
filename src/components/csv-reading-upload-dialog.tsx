@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { addIndividualCustomerReading, addBulkMeterReading } from "@/lib/data-store";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
-import { format, parse, isValid } from "date-fns";
+import { format, parse, isValid, lastDayOfMonth } from "date-fns";
 import { z, ZodError } from "zod";
 import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -33,19 +33,11 @@ interface CsvReadingUploadDialogProps {
 const readingCsvHeaders = ["meter_number", "reading_value", "reading_date"];
 const CSV_SPLIT_REGEX = /,(?=(?:[^"]*"[^"]*")*[^"]*$)/;
 
-// Using superRefine for a more detailed error message
+// Schema now validates for YYYY-MM format.
 const readingCsvRowSchema = z.object({
   meter_number: z.string().min(1, { message: "meter_number is required." }),
   reading_value: z.coerce.number().min(0, { message: "reading_value must be a non-negative number." }),
-  reading_date: z.string(), // Validate as a string first
-}).superRefine((data, ctx) => {
-  if (!isValid(parse(data.reading_date, 'dd-MMM-yy', new Date()))) {
-    ctx.addIssue({
-      path: ['reading_date'],
-      code: z.ZodIssueCode.custom,
-      message: `Value '${data.reading_date}' is not a valid date. Please use DD-MMM-YY format (e.g., 26-May-25).`,
-    });
-  }
+  reading_date: z.string().regex(/^\d{4}-\d{2}$/, { message: "Value must be in YYYY-MM format (e.g., 2024-05)." }),
 });
 
 
@@ -117,7 +109,8 @@ export function CsvReadingUploadDialog({ open, onOpenChange, meterType, meters, 
 
         try {
           const validatedRow = readingCsvRowSchema.parse(rowData);
-          const readingDate = parse(validatedRow.reading_date, 'dd-MMM-yy', new Date());
+          const parsedMonthDate = parse(validatedRow.reading_date, 'yyyy-MM', new Date());
+          const endOfMonthDate = lastDayOfMonth(parsedMonthDate);
 
           const meter = meters.find(m => m.meterNumber === validatedRow.meter_number);
 
@@ -129,20 +122,20 @@ export function CsvReadingUploadDialog({ open, onOpenChange, meterType, meters, 
           let result;
           if (meterType === 'individual') {
             result = await addIndividualCustomerReading({
-              individualCustomerId: meter.id,
+              individualCustomerId: meter.customerKeyNumber,
               readerStaffId: currentUser.id,
-              readingDate: format(readingDate, "yyyy-MM-dd"),
-              monthYear: format(readingDate, "yyyy-MM"),
+              readingDate: format(endOfMonthDate, "yyyy-MM-dd"),
+              monthYear: validatedRow.reading_date,
               readingValue: validatedRow.reading_value,
               isEstimate: false,
               notes: `CSV Upload by ${currentUser.email}`,
             });
           } else { // bulk
             result = await addBulkMeterReading({
-              bulkMeterId: meter.id,
+              bulkMeterId: meter.customerKeyNumber,
               readerStaffId: currentUser.id,
-              readingDate: format(readingDate, "yyyy-MM-dd"),
-              monthYear: format(readingDate, "yyyy-MM"),
+              readingDate: format(endOfMonthDate, "yyyy-MM-dd"),
+              monthYear: validatedRow.reading_date,
               readingValue: validatedRow.reading_value,
               isEstimate: false,
               notes: `CSV Upload by ${currentUser.email}`,
@@ -202,7 +195,7 @@ export function CsvReadingUploadDialog({ open, onOpenChange, meterType, meters, 
         <DialogHeader>
           <UIDialogTitle>Upload {meterType === 'individual' ? 'Individual Customer' : 'Bulk Meter'} Readings</UIDialogTitle>
           <UIDialogDescription>
-              Select a CSV file with columns: meter_number, reading_value, reading_date (in DD-MMM-YY format, e.g., 26-May-25).
+              Select a CSV file with columns: meter_number, reading_value, reading_date (in YYYY-MM format, e.g., 2024-05).
           </UIDialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">

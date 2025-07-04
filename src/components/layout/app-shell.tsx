@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -31,6 +32,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useIdleTimeout } from '@/hooks/use-idle-timeout';
+import { NotificationBell } from './notification-bell';
 
 interface UserProfile {
   id: string; 
@@ -74,26 +76,29 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal", onLogout }: 
           />
           <span className="hidden sm:inline-block">{appName}</span>
         </Link>
-        {user && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="overflow-hidden rounded-full h-8 w-8">
-                <UserCircle className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel className="truncate max-w-[200px]">{user.name || user.email}</DropdownMenuLabel>
-              <DropdownMenuLabel className="text-xs text-muted-foreground font-normal -mt-2">
-                Role: {user.role === 'Staff' && user.branchName ? `Staff (${user.branchName})` : user.role}
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Logout
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+        <div className="flex items-center gap-4">
+          {user && <NotificationBell user={user} />}
+          {user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="overflow-hidden rounded-full h-8 w-8">
+                  <UserCircle className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel className="truncate max-w-[200px]">{user.name || user.email}</DropdownMenuLabel>
+                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal -mt-2">
+                  Role: {user.role === 'Staff' && user.branchName ? `Staff (${user.branchName})` : user.role}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
     </header>
   );
@@ -112,6 +117,7 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
     if (typeof window !== 'undefined' && window.localStorage) {
       window.localStorage.removeItem("user");
       window.localStorage.removeItem("session_expires_at");
+      window.localStorage.removeItem("last-read-timestamp"); // Also clear notification timestamp
     }
     setUser(null);
     router.push("/");

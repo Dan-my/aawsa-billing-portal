@@ -13,7 +13,8 @@ import {
   Gauge,
   ClipboardList,
   UploadCloud,
-  LibraryBig, 
+  LibraryBig,
+  Bell, 
   // Ticket icon removed as Voucher is being removed
 } from "lucide-react";
 
@@ -28,6 +29,7 @@ const adminSidebarNavItems: NavItemGroup[] = [
     items: [
       { title: "Branch Management", href: "/admin/branches", iconName: "Building" },
       { title: "Staff Management", href: "/admin/staff-management", iconName: "UserCog" },
+      { title: "Notifications", href: "/admin/notifications", iconName: "Bell" },
       { title: "Tariff Management", href: "/admin/tariffs", iconName: "LibraryBig" }, 
     ],
   },

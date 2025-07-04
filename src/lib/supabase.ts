@@ -13,6 +13,32 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      notifications: {
+        Row: {
+          id: string;
+          created_at: string;
+          title: string;
+          message: string;
+          sender_name: string;
+          target_branch_name: string;
+        };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          title: string;
+          message: string;
+          sender_name: string;
+          target_branch_name?: string;
+        };
+        Update: {
+          id?: string;
+          created_at?: string;
+          title?: string;
+          message?: string;
+          sender_name?: string;
+          target_branch_name?: string;
+        };
+      };
       branches: {
         Row: {
           id: string;
@@ -506,6 +532,10 @@ export interface Database {
 
 type ResolvedDatabase = ActualDatabase extends { public: any } ? ActualDatabase : Database;
 
+export type NotificationRow = ResolvedDatabase['public']['Tables']['notifications']['Row'];
+export type NotificationInsert = ResolvedDatabase['public']['Tables']['notifications']['Insert'];
+export type NotificationUpdate = ResolvedDatabase['public']['Tables']['notifications']['Update'];
+
 export type Branch = ResolvedDatabase['public']['Tables']['branches']['Row'];
 export type BranchInsert = ResolvedDatabase['public']['Tables']['branches']['Insert'];
 export type BranchUpdate = ResolvedDatabase['public']['Tables']['branches']['Update'];
@@ -554,6 +584,10 @@ if (!supabaseAnonKey) {
 }
 
 export const supabase: SupabaseClient<ResolvedDatabase> = createClient<ResolvedDatabase>(supabaseUrl, supabaseAnonKey);
+
+// CRUD for Notifications
+export const getAllNotifications = async () => supabase.from('notifications').select('*').order('created_at', { ascending: false });
+export const createNotification = async (notification: NotificationInsert) => supabase.from('notifications').insert(notification).select().single();
 
 // CRUD for Branches
 export const getAllBranches = async () => supabase.from('branches').select('*');

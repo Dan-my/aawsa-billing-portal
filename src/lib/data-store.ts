@@ -18,6 +18,7 @@ import type {
   BulkMeterReading as SupabaseBulkMeterReadingRow,
   Payment as SupabasePaymentRow,
   ReportLog as SupabaseReportLogRow,
+  NotificationRow as SupabaseNotificationRow,
   BranchInsert, BranchUpdate,
   BulkMeterInsert, BulkMeterUpdate,
   IndividualCustomerInsert, IndividualCustomerUpdate,
@@ -27,6 +28,7 @@ import type {
   BulkMeterReadingInsert, BulkMeterReadingUpdate,
   PaymentInsert, PaymentUpdate,
   ReportLogInsert, ReportLogUpdate,
+  NotificationInsert,
 } from './supabase';
 
 import {
@@ -67,8 +69,18 @@ import {
   createReportLog as supabaseCreateReportLog,
   updateReportLog as supabaseUpdateReportLog,
   deleteReportLog as supabaseDeleteReportLog,
+  getAllNotifications as supabaseGetAllNotifications,
+  createNotification as supabaseCreateNotification,
 } from './supabase';
 
+export interface DomainNotification {
+  id: string;
+  createdAt: string;
+  title: string;
+  message: string;
+  senderName: string;
+  targetBranchName: string;
+}
 
 export interface DomainBill {
   id: string;
@@ -183,6 +195,7 @@ let individualCustomerReadings: DomainIndividualCustomerReading[] = [];
 let bulkMeterReadings: DomainBulkMeterReading[] = [];
 let payments: DomainPayment[] = [];
 let reportLogs: DomainReportLog[] = [];
+let notifications: DomainNotification[] = [];
 
 let branchesFetched = false;
 let customersFetched = false;
@@ -193,6 +206,7 @@ let individualCustomerReadingsFetched = false;
 let bulkMeterReadingsFetched = false;
 let paymentsFetched = false;
 let reportLogsFetched = false;
+let notificationsFetched = false;
 
 type Listener<T> = (data: T[]) => void;
 const branchListeners: Set<Listener<DomainBranch>> = new Set();
@@ -204,6 +218,7 @@ const individualCustomerReadingListeners: Set<Listener<DomainIndividualCustomerR
 const bulkMeterReadingListeners: Set<Listener<DomainBulkMeterReading>> = new Set();
 const paymentListeners: Set<Listener<DomainPayment>> = new Set();
 const reportLogListeners: Set<Listener<DomainReportLog>> = new Set();
+const notificationListeners: Set<Listener<DomainNotification>> = new Set();
 
 const notifyBranchListeners = () => branchListeners.forEach(listener => listener([...branches]));
 const notifyCustomerListeners = () => customerListeners.forEach(listener => listener([...customers]));
@@ -214,8 +229,18 @@ const notifyIndividualCustomerReadingListeners = () => individualCustomerReading
 const notifyBulkMeterReadingListeners = () => bulkMeterReadingListeners.forEach(listener => listener([...bulkMeterReadings]));
 const notifyPaymentListeners = () => paymentListeners.forEach(listener => listener([...payments])); 
 const notifyReportLogListeners = () => reportLogListeners.forEach(listener => listener([...reportLogs]));
+const notifyNotificationListeners = () => notificationListeners.forEach(listener => listener([...notifications]));
 
 // --- Mappers ---
+const mapSupabaseNotificationToDomain = (sn: SupabaseNotificationRow): DomainNotification => ({
+  id: sn.id,
+  createdAt: sn.created_at,
+  title: sn.title,
+  message: sn.message,
+  senderName: sn.sender_name,
+  targetBranchName: sn.target_branch_name,
+});
+
 const mapSupabaseBranchToDomain = (sb: SupabaseBranchRow): DomainBranch => ({
   id: sb.id,
   name: sb.name,
@@ -849,6 +874,18 @@ async function fetchAllReportLogs() {
     return reportLogs;
 }
 
+async function fetchAllNotifications() {
+  const { data, error } = await supabaseGetAllNotifications();
+  if (data) {
+    notifications = data.map(mapSupabaseNotificationToDomain);
+    notifyNotificationListeners();
+  } else {
+    console.error("DataStore: Failed to fetch notifications. Supabase error:", JSON.stringify(error, null, 2));
+  }
+  notificationsFetched = true;
+  return notifications;
+}
+
 export const initializeBranches = async () => {
   if (!branchesFetched || branches.length === 0) {
     await fetchAllBranches();
@@ -889,6 +926,12 @@ export const initializeReportLogs = async () => {
     if (!reportLogsFetched || reportLogs.length === 0) await fetchAllReportLogs();
 };
 
+export const initializeNotifications = async () => {
+  if (!notificationsFetched) {
+    await fetchAllNotifications();
+  }
+};
+
 export async function getBulkMeterByCustomerKey(customerKeyNumber: string): Promise<StoreOperationResult<BulkMeter>> {
     const { data, error } = await supabase.from('bulk_meters').select('*').eq('customerKeyNumber', customerKeyNumber).single();
     if (error) {
@@ -909,6 +952,7 @@ export const getStaffMembers = (): StaffMember[] => [...staffMembers];
 export const getBills = (): DomainBill[] => [...bills];
 export const getIndividualCustomerReadings = (): DomainIndividualCustomerReading[] => [...individualCustomerReadings];
 export const getBulkMeterReadings = (): DomainBulkMeterReading[] => [...bulkMeterReadings];
+export const getNotifications = (): DomainNotification[] => [...notifications];
 
 export function getMeterReadings(): (DomainIndividualCustomerReading | DomainBulkMeterReading)[] {
     const allReadings = [
@@ -1320,6 +1364,25 @@ export const removeReportLog = async (logId: string): Promise<StoreOperationResu
     return { success: false, message: (error as any)?.message || "Failed to delete report log.", error };
 };
 
+export const addNotification = async (notificationData: Omit<DomainNotification, 'id' | 'createdAt'>): Promise<StoreOperationResult<DomainNotification>> => {
+  const payload: NotificationInsert = {
+    title: notificationData.title,
+    message: notificationData.message,
+    sender_name: notificationData.senderName,
+    target_branch_name: notificationData.targetBranchName,
+  };
+  const { data: newSupabaseNotification, error } = await supabaseCreateNotification(payload);
+  if (newSupabaseNotification && !error) {
+    const newNotification = mapSupabaseNotificationToDomain(newSupabaseNotification);
+    notifications = [newNotification, ...notifications];
+    notifyNotificationListeners();
+    return { success: true, data: newNotification };
+  }
+  console.error("DataStore: Failed to add notification. Supabase error:", JSON.stringify(error, null, 2));
+  return { success: false, message: (error as any)?.message || "Failed to add notification.", error };
+};
+
+
 export const subscribeToBranches = (listener: Listener<DomainBranch>): (() => void) => {
   branchListeners.add(listener);
   if (branchesFetched) listener([...branches]); else initializeBranches().then(() => listener([...branches]));
@@ -1369,6 +1432,12 @@ export const subscribeToReportLogs = (listener: Listener<DomainReportLog>): (() 
     if (reportLogsFetched) listener([...reportLogs]); else initializeReportLogs().then(() => listener([...reportLogs]));
     return () => reportLogListeners.delete(listener);
 };
+export const subscribeToNotifications = (listener: Listener<DomainNotification>): (() => void) => {
+  notificationListeners.add(listener);
+  if (notificationsFetched) listener([...notifications]); else initializeNotifications().then(() => listener([...notifications]));
+  return () => notificationListeners.delete(listener);
+};
+
 
 export const authenticateStaffMember = async (email: string, password: string): Promise<StoreOperationResult<StaffMember>> => {
   const { data, error } = await supabase
@@ -1404,5 +1473,6 @@ export async function loadInitialData() {
     initializeBulkMeterReadings(),
     initializePayments(),
     initializeReportLogs(),
+    initializeNotifications(),
   ]);
 }

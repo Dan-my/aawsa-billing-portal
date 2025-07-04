@@ -57,6 +57,8 @@ export function NotificationBell({ user }: NotificationBellProps) {
       const staffBranch = user.branchName?.trim().toLowerCase();
       
       return notifications.filter(n => {
+        if (!n || !n.targetBranchName) return false; // Guard against bad data
+        
         const targetBranch = n.targetBranchName.trim().toLowerCase();
         
         // Always show "All Staff" notifications
@@ -64,11 +66,15 @@ export function NotificationBell({ user }: NotificationBellProps) {
           return true;
         }
         
-        // Show notifications for their specific branch (case-insensitive and exact match)
-        if (staffBranch && targetBranch === staffBranch) {
-          return true;
+        if (!staffBranch) {
+            return false;
         }
         
+        // Robust matching for branch name. Handles "Megenagna" vs "Megenagna Branch".
+        if (targetBranch.startsWith(staffBranch) || staffBranch.startsWith(targetBranch)) {
+            return true;
+        }
+
         return false;
       });
     }

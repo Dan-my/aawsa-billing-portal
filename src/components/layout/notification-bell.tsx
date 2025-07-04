@@ -27,19 +27,16 @@ interface NotificationBellProps {
   user: UserProfile | null;
 }
 
-// Helper function for robust branch name comparison
+// Helper function for robust branch name comparison.
 const normalizeBranchName = (name?: string): string => {
   if (!name) return "";
+  // Converts to lowercase, removes "branch", then removes all non-alphanumeric characters.
+  // e.g., "Megenagna Branch." -> "megenagnabranch" -> "megenagna"
+  // e.g., "All Staff" -> "allstaff"
   return name
-    .trim()
     .toLowerCase()
-    // Remove punctuation except for spaces
-    .replace(/[^\w\s]/g, '')
-    // Remove the word "branch" if it exists as a whole word
-    .replace(/\bbranch\b/g, '')
-    // Collapse multiple spaces into one and trim again
-    .replace(/\s+/g, ' ')
-    .trim();
+    .replace(/\bbranch\b/gi, '') // Case-insensitive removal of "branch"
+    .replace(/[^a-z0-9]/g, ''); // Keep only letters and numbers
 };
 
 
@@ -63,7 +60,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
   }, []);
 
   const relevantNotifications = React.useMemo(() => {
-    if (!user || user.role.toLowerCase() !== 'staff' || !user.branchName) {
+    if (!user || user.role.toLowerCase() !== 'staff') {
       return [];
     }
     
@@ -73,14 +70,15 @@ export function NotificationBell({ user }: NotificationBellProps) {
       .filter(n => {
         const targetBranchNormalized = normalizeBranchName(n.targetBranchName);
 
-        // Global notifications for all staff
-        if (targetBranchNormalized === 'all staff') {
-            return true;
+        // Case 1: Notification is for "All Staff"
+        if (targetBranchNormalized === 'allstaff') {
+          return true;
         }
 
-        // Branch-specific notifications
-        if (staffBranchNormalized && targetBranchNormalized === staffBranchNormalized) {
-            return true;
+        // Case 2: Notification is for the user's specific branch
+        // This check ensures that a staff member with a branch sees notifications for that branch.
+        if (user.branchName && staffBranchNormalized && targetBranchNormalized === staffBranchNormalized) {
+          return true;
         }
 
         return false;

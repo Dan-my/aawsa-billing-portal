@@ -565,7 +565,7 @@ export default function BulkMeterDetailsPage() {
                   <h1 className="font-bold tracking-wider uppercase">ADDIS ABABA WATER AND SEWERAGE AUTHORITY</h1>
                   <hr className="my-2" />
                   <div className="flex flex-row items-center justify-center gap-2 pt-1">
- <Image src="https://www.vei.nl/IManager/Media/101987/2250105/EN/reg/aawsa.png" alt="AAWSA Logo" width={30} height={18} className="flex-shrink-0" />
+                    <Image src="https://veiethiopia.com/photo/partner/par2.png" alt="AAWSA Logo" width={30} height={18} className="flex-shrink-0" />
                     <h2 className="font-semibold">AAWSA Bill calculating Portal</h2>
                   </div>
                 </div>

@@ -50,22 +50,31 @@ export function NotificationBell({ user }: NotificationBellProps) {
     if (!user || user.role.toLowerCase() !== 'staff' || !user.branchName) {
       return [];
     }
-    
-    // Normalize the user's branch name from their profile for comparison.
-    const userBranch = user.branchName.toLowerCase().trim();
+
+    // Normalizes branch names for reliable comparison.
+    // Converts to lowercase, removes punctuation, the word "branch", and extra spaces.
+    const normalizeBranchName = (name: string): string => {
+      if (!name) return "";
+      return name
+        .toLowerCase()
+        .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "") // remove punctuation
+        .replace(/branch/g, "") // remove the word "branch"
+        .trim();
+    };
+
+    const normalizedUserBranch = normalizeBranchName(user.branchName);
 
     return notifications
-      .filter(n => {
-        // Normalize the notification's target branch name.
-        const targetBranch = n.targetBranchName.toLowerCase().trim();
-        
-        // Case 1: Notification is for "All Staff".
-        if (targetBranch === 'all staff') {
+      .filter(notification => {
+        // First, check for the "All Staff" special case (case-insensitive)
+        if (notification.targetBranchName.toLowerCase().trim() === 'all staff') {
           return true;
         }
+
+        // For other notifications, compare the normalized names
+        const normalizedTargetBranch = normalizeBranchName(notification.targetBranchName);
         
-        // Case 2: Notification target branch matches the user's branch (case-insensitive).
-        if (targetBranch === userBranch) {
+        if (normalizedUserBranch && normalizedTargetBranch === normalizedUserBranch) {
           return true;
         }
 

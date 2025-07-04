@@ -12,8 +12,12 @@ import {
   getNotifications,
   initializeNotifications,
   subscribeToNotifications,
+  getBranches,
+  initializeBranches,
+  subscribeToBranches,
 } from "@/lib/data-store";
 import type { DomainNotification } from "@/lib/data-store";
+import type { Branch } from "@/app/admin/branches/branch-types";
 
 const LAST_READ_TIMESTAMP_KEY = "last-read-timestamp";
 
@@ -29,6 +33,7 @@ interface NotificationBellProps {
 
 export function NotificationBell({ user }: NotificationBellProps) {
   const [notifications, setNotifications] = React.useState<DomainNotification[]>([]);
+  const [branches, setBranches] = React.useState<Branch[]>([]);
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [lastReadTimestamp, setLastReadTimestamp] = React.useState<string | null>(null);
   const [selectedNotification, setSelectedNotification] = React.useState<DomainNotification | null>(null);
@@ -38,8 +43,15 @@ export function NotificationBell({ user }: NotificationBellProps) {
       setLastReadTimestamp(localStorage.getItem(LAST_READ_TIMESTAMP_KEY));
     }
     initializeNotifications();
-    const unsubscribe = subscribeToNotifications(setNotifications);
-    return () => unsubscribe();
+    initializeBranches();
+    
+    const unsubNotifications = subscribeToNotifications(setNotifications);
+    const unsubBranches = subscribeToBranches(setBranches);
+
+    return () => {
+      unsubNotifications();
+      unsubBranches();
+    };
   }, []);
 
   const relevantNotifications = React.useMemo(() => {
@@ -47,47 +59,45 @@ export function NotificationBell({ user }: NotificationBellProps) {
       return [];
     }
     
-    // Admins see all notifications
     if (user.role.toLowerCase() === 'admin') {
       return notifications;
     }
     
-    // Staff see notifications targeted to them or "All Staff"
     if (user.role.toLowerCase() === 'staff') {
-      const staffBranch = user.branchName?.trim().toLowerCase();
+      const userBranchName = user.branchName?.trim().toLowerCase();
       
-      // Helper function to normalize strings for comparison
-      const normalize = (str: string) => str.toLowerCase().replace(/\s+/g, '');
+      // Find the user's canonical branch object from the central list.
+      const userBranch = userBranchName 
+        ? branches.find(b => b.name.trim().toLowerCase() === userBranchName) 
+        : null;
 
       return notifications.filter(n => {
         if (!n || !n.targetBranchName) return false;
         
-        const targetBranch = n.targetBranchName.trim().toLowerCase();
+        const targetBranchName = n.targetBranchName.trim().toLowerCase();
         
-        // Always show "All Staff" notifications
-        if (targetBranch === 'all staff') {
+        // Case 1: Notification is for "All Staff".
+        if (targetBranchName === 'all staff') {
           return true;
         }
         
-        if (!staffBranch) {
-            return false;
+        // Case 2: Notification is for the user's specific branch.
+        // We look up the target branch object from the central list.
+        const targetBranch = branches.find(b => b.name.trim().toLowerCase() === targetBranchName);
+
+        // If both the user's branch and the notification's target branch
+        // were found in the master list, we can reliably compare their IDs.
+        if (userBranch && targetBranch) {
+          return userBranch.id === targetBranch.id;
         }
 
-        // Normalize both strings to handle variations like "Megenagna" vs "Megenagna Branch"
-        const normalizedStaffBranch = normalize(staffBranch);
-        const normalizedTargetBranch = normalize(targetBranch);
-
-        // Check if one normalized string contains the other
-        if (normalizedTargetBranch.includes(normalizedStaffBranch) || normalizedStaffBranch.includes(normalizedTargetBranch)) {
-            return true;
-        }
-
-        return false;
+        // Fallback for cases where IDs might not be available
+        return userBranchName === targetBranchName;
       });
     }
 
     return [];
-  }, [notifications, user]);
+  }, [notifications, user, branches]);
 
   React.useEffect(() => {
     const newUnreadCount = relevantNotifications.filter(
@@ -158,7 +168,6 @@ export function NotificationBell({ user }: NotificationBellProps) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* The Dialog Content for viewing a single notification */}
       {selectedNotification && (
          <DialogContent>
              <DialogHeader>

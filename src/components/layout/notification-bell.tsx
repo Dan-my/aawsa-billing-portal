@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -70,8 +69,8 @@ export function NotificationBell({ user }: NotificationBellProps) {
             return false;
         }
         
-        // Robust matching for branch name. Handles "Megenagna" vs "Megenagna Branch".
-        if (targetBranch.startsWith(staffBranch) || staffBranch.startsWith(targetBranch)) {
+        // More robust matching for branch name using 'includes'
+        if (targetBranch.includes(staffBranch) || staffBranch.includes(targetBranch)) {
             return true;
         }
 

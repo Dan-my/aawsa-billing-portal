@@ -18,9 +18,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { bulkMeterDataEntrySchema, type BulkMeterDataEntryFormValues, meterSizeOptions } from "@/app/admin/data-entry/customer-data-entry-types"; 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { addBulkMeter as addBulkMeterToStore, initializeBulkMeters, getBulkMeters } from "@/lib/data-store";
+import { addBulkMeter as addBulkMeterToStore, initializeBulkMeters, getBulkMeters, getBranches, initializeBranches } from "@/lib/data-store";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
-import { initialBulkMeters as defaultInitialBulkMeters } from "@/app/admin/bulk-meters/page";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse } from "date-fns";
 
@@ -30,10 +29,23 @@ interface StaffBulkMeterEntryFormProps {
 
 export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormProps) {
   const { toast } = useToast();
+  const [staffBranchId, setStaffBranchId] = React.useState<string | undefined>(undefined);
 
   React.useEffect(() => {
-    if (getBulkMeters().length === 0) initializeBulkMeters(defaultInitialBulkMeters);
-  }, []);
+    initializeBranches().then(() => {
+      const allBranches = getBranches();
+      const normalizedStaffBranchName = branchName.trim().toLowerCase();
+      const staffBranch = allBranches.find(b => {
+        const normalizedBranchName = b.name.trim().toLowerCase();
+        return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
+      });
+      if (staffBranch) {
+        setStaffBranchId(staffBranch.id);
+      }
+    });
+
+    if (getBulkMeters().length === 0) initializeBulkMeters();
+  }, [branchName]);
 
   const form = useForm<BulkMeterDataEntryFormValues>({
     resolver: zodResolver(bulkMeterDataEntrySchema),
@@ -59,14 +71,16 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
   }, [branchName, form]);
 
 
-  function onSubmit(data: BulkMeterDataEntryFormValues) {
-    const bulkMeterDataForStore: Omit<BulkMeter, 'id' | 'status' | 'paymentStatus'> & { status: 'Active' | 'Maintenance' | 'Decommissioned'; paymentStatus: 'Paid' | 'Unpaid' } = { 
+  async function onSubmit(data: BulkMeterDataEntryFormValues) {
+    const bulkMeterDataForStore = {
         ...data, 
+        branchId: staffBranchId, // Add the staff's branchId to the submission
         status: "Active",
-        paymentStatus: "Unpaid" 
+        paymentStatus: "Unpaid",
+        outStandingbill: 0,
     };
     
-    addBulkMeterToStore(bulkMeterDataForStore as Omit<BulkMeter, 'id'>); 
+    await addBulkMeterToStore(bulkMeterDataForStore as BulkMeter); 
     toast({
       title: "Bulk Meter Data Submitted",
       description: `Data for bulk meter ${data.name} (Branch: ${branchName}) has been successfully recorded.`,

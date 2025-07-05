@@ -156,7 +156,7 @@ export default function StaffDashboardPage() {
 
     const monthlyPerformance = Array.from(monthlyMap.entries())
         .map(([month, data]) => ({ month, ...data }))
-        .sort((a,b) => new Date(a.month).getTime() - new Date(b.month).getTime());
+        .sort((a,b) => new Date(a.month + "-01").getTime() - new Date(b.month + "-01").getTime());
     
     const paidPercentage = totalBillsCount > 0 ? `${((paidCount / totalBillsCount) * 100).toFixed(0)}%` : "0%";
 
@@ -260,26 +260,26 @@ export default function StaffDashboardPage() {
             <CardDescription>Navigate quickly to key management areas for your branch.</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Link href="/staff/bulk-meters" passHref>
-                <Button variant="outline" className="w-full justify-start p-4 h-auto quick-access-btn">
-                 <Gauge className="mr-3 h-6 w-6" />
+            <Button asChild variant="outline" className="w-full justify-start p-4 h-auto quick-access-btn">
+                <Link href="/staff/bulk-meters">
+                    <Gauge className="mr-3 h-6 w-6" />
                     <div>
                         <p className="font-semibold text-base">View Bulk Meters</p>
                         <p className="text-xs text-muted-foreground">Manage bulk water meters in your branch.</p>
                     </div>
                     <ArrowRight className="ml-auto h-5 w-5" />
-                </Button>
-            </Link>
-             <Link href="/staff/individual-customers" passHref>
-                <Button variant="outline" className="w-full justify-start p-4 h-auto quick-access-btn">
+                </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start p-4 h-auto quick-access-btn">
+                <Link href="/staff/individual-customers">
                     <Users className="mr-3 h-6 w-6" />
                     <div>
                         <p className="font-semibold text-base">View Individual Customers</p>
                         <p className="text-xs text-muted-foreground">Manage individual customer accounts in your branch.</p>
                     </div>
                     <ArrowRight className="ml-auto h-5 w-5" />
-                </Button>
-            </Link>
+                </Link>
+            </Button>
         </CardContent>
       </Card>
 
@@ -294,7 +294,7 @@ export default function StaffDashboardPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={branchStats.monthlyPerformance}>
                   <XAxis dataKey="month" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
                   <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
                   <Legend />
                   <Bar dataKey="paid" stackId="a" fill="var(--color-paid)" radius={[4, 4, 0, 0]} />

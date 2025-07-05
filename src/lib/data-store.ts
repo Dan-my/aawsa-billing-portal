@@ -79,7 +79,7 @@ export interface DomainNotification {
   title: string;
   message: string;
   senderName: string;
-  targetBranchName: string;
+  targetBranchId: string | null;
 }
 
 export interface DomainBill {
@@ -238,7 +238,7 @@ const mapSupabaseNotificationToDomain = (sn: SupabaseNotificationRow): DomainNot
   title: sn.title,
   message: sn.message,
   senderName: sn.sender_name,
-  targetBranchName: sn.target_branch_name,
+  targetBranchId: sn.target_branch_id,
 });
 
 const mapSupabaseBranchToDomain = (sb: SupabaseBranchRow): DomainBranch => ({
@@ -506,7 +506,8 @@ const mapSupabaseStaffToDomain = (ss: SupabaseStaffMemberRow): StaffMember => ({
   name: ss.name,
   email: ss.email,
   password: ss.password || undefined,
-  branch: ss.branch,
+  branchId: ss.branch_id,
+  branchName: '', // This will be populated later
   status: ss.status,
   phone: ss.phone || undefined,
   hireDate: ss.hire_date || undefined,
@@ -517,7 +518,7 @@ const mapDomainStaffToInsert = (staff: StaffMember): StaffMemberInsert => ({
   name: staff.name,
   email: staff.email,
   password: staff.password,
-  branch: staff.branch,
+  branch_id: staff.branchId,
   status: staff.status,
   phone: staff.phone,
   hire_date: staff.hireDate,
@@ -528,7 +529,7 @@ const mapDomainStaffToUpdate = (staff: Partial<Omit<StaffMember, 'id'>>): StaffM
     const updatePayload: StaffMemberUpdate = {};
     if(staff.name !== undefined) updatePayload.name = staff.name;
     if(staff.email !== undefined) updatePayload.email = staff.email;
-    if(staff.branch !== undefined) updatePayload.branch = staff.branch;
+    if(staff.branchId !== undefined) updatePayload.branch_id = staff.branchId;
     if(staff.status !== undefined) updatePayload.status = staff.status;
     if(staff.phone !== undefined) updatePayload.phone = staff.phone;
     if(staff.hireDate !== undefined) updatePayload.hire_date = staff.hireDate;
@@ -803,9 +804,15 @@ async function fetchAllBulkMeters() {
 
 
 async function fetchAllStaffMembers() {
+  await initializeBranches();
   const { data, error } = await supabaseGetAllStaffMembers();
   if (data) {
-    staffMembers = data.map(mapSupabaseStaffToDomain);
+    staffMembers = data.map(ss => {
+      const domainStaff = mapSupabaseStaffToDomain(ss);
+      const branch = branches.find(b => b.id === domainStaff.branchId);
+      domainStaff.branchName = branch?.name || "Unknown Branch";
+      return domainStaff;
+    });
     notifyStaffMemberListeners();
   } else {
     console.error("DataStore: Failed to fetch staff members. Supabase error:", JSON.stringify(error, null, 2));
@@ -1365,18 +1372,16 @@ export const removeReportLog = async (logId: string): Promise<StoreOperationResu
 };
 
 export const addNotification = async (notificationData: Omit<DomainNotification, 'id' | 'createdAt'>): Promise<StoreOperationResult<DomainNotification>> => {
-  // Use an RPC call to a SECURITY DEFINER function to bypass RLS for this specific insert.
-  // This is necessary because the app uses a custom auth flow where the client isn't fully authenticated with a Supabase session.
   const { data, error } = await supabase.rpc('insert_notification', {
     p_title: notificationData.title,
     p_message: notificationData.message,
     p_sender_name: notificationData.senderName,
-    p_target_branch_name: notificationData.targetBranchName
+    p_target_branch_id: notificationData.targetBranchId
   }).single();
 
   if (data && !error) {
     const newNotification = mapSupabaseNotificationToDomain(data as SupabaseNotificationRow);
-    notifications = [newNotification, ...notifications];
+    notifications = [newNotification, ...notifications].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     notifyNotificationListeners();
     return { success: true, data: newNotification };
   }
@@ -1451,20 +1456,26 @@ export const subscribeToNotifications = (listener: Listener<DomainNotification>)
 export const authenticateStaffMember = async (email: string, password: string): Promise<StoreOperationResult<StaffMember>> => {
   const { data, error } = await supabase
     .from('staff_members')
-    .select('*')
+    .select('*, branches(name)')
     .eq('email', email.toLowerCase())
     .eq('password', password)
     .single();
 
   if (error) {
-    if (error.code !== 'PGRST116') {
+    if (error.code !== 'PGRST116') { // Not a "0 rows" error
       console.error("DataStore: Authentication error", error);
     }
     return { success: false, message: "Invalid email or password.", isNotFoundError: true, error };
   }
 
   if (data) {
-    const user = mapSupabaseStaffToDomain(data);
+    // The type from Supabase with the joined table is a bit tricky.
+    // We cast it to access the nested branch name.
+    const row = data as unknown as (SupabaseStaffMemberRow & { branches: { name: string } | null });
+    
+    const user = mapSupabaseStaffToDomain(row);
+    user.branchName = row.branches?.name || 'Unknown Branch'; // Set the branch name from the join
+    
     return { success: true, data: user };
   }
   

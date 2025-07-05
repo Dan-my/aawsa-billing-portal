@@ -50,12 +50,12 @@ export default function AdminNotificationsPage() {
     if (storedUser) setUser(JSON.parse(storedUser));
     
     Promise.all([initializeNotifications(), initializeBranches()]).then(() => {
-      setSentNotifications(getNotifications());
+      setSentNotifications(getNotifications().sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       setBranches(getBranches());
       setIsLoading(false);
     });
 
-    const unsubNotifications = subscribeToNotifications(setSentNotifications);
+    const unsubNotifications = subscribeToNotifications((data) => setSentNotifications(data.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())));
     const unsubBranches = subscribeToBranches(setBranches);
     
     return () => {

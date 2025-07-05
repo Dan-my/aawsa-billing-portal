@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -47,35 +46,46 @@ export function NotificationBell({ user }: NotificationBellProps) {
   }, []);
 
   const relevantNotifications = React.useMemo(() => {
+    // The bell is only for staff, so exit early if not a staff user or if their branch is unknown.
     if (!user || user.role.toLowerCase() !== 'staff' || !user.branchName) {
       return [];
     }
-
-    // Normalizes branch names for reliable comparison.
-    // Converts to lowercase, removes punctuation, the word "branch", and extra spaces.
-    const normalizeBranchName = (name: string): string => {
-      if (!name) return "";
-      return name
-        .toLowerCase()
-        .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "") // remove punctuation
-        .replace(/branch/g, "") // remove the word "branch"
-        .trim();
+    
+    /**
+     * Normalizes a branch name for reliable, flexible comparison.
+     * This function ensures that variations like "Megenagna.", "Megenagna", 
+     * and "Megenagna Branch" are all treated as the same identifier.
+     * @param name The branch name string to normalize.
+     * @returns A cleaned, standardized string.
+     */
+    const normalizeBranchName = (name: string | undefined | null): string => {
+        if (!name) return "";
+        return name
+            .toLowerCase() // 1. Make case-insensitive
+            .replace(/\s*branch\s*$/, "") // 2. Remove "branch" and surrounding spaces from the end
+            .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "") // 3. Remove all punctuation
+            .trim(); // 4. Remove any leading/trailing whitespace
     };
 
     const normalizedUserBranch = normalizeBranchName(user.branchName);
+    
+    // If the user's branch name is empty after normalization, they can't match anything.
+    if (!normalizedUserBranch) {
+        return [];
+    }
 
     return notifications
       .filter(notification => {
-        // First, check for the "All Staff" special case (case-insensitive)
-        if (notification.targetBranchName.toLowerCase().trim() === 'all staff') {
+        const normalizedTargetBranch = normalizeBranchName(notification.targetBranchName);
+
+        // Case 1: Notification is for "All Staff".
+        if (normalizedTargetBranch === 'all staff') {
           return true;
         }
 
-        // For other notifications, compare the normalized names
-        const normalizedTargetBranch = normalizeBranchName(notification.targetBranchName);
-        
-        if (normalizedUserBranch && normalizedTargetBranch === normalizedUserBranch) {
-          return true;
+        // Case 2: The normalized target branch name exactly matches the user's normalized branch name.
+        if (normalizedTargetBranch === normalizedUserBranch) {
+            return true;
         }
 
         return false;
@@ -106,6 +116,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
       }
   };
 
+  // Do not render the bell at all for Admin users.
   if (!user || user.role.toLowerCase() === 'admin') return null;
 
   return (

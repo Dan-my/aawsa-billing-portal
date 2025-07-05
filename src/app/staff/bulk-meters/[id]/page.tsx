@@ -37,6 +37,7 @@ interface UserAuth {
   email: string;
   role: "admin" | "staff";
   branchName?: string;
+  branchId?: string;
 }
 
 export default function StaffBulkMeterDetailsPage() {
@@ -50,7 +51,7 @@ export default function StaffBulkMeterDetailsPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessingCycle, setIsProcessingCycle] = React.useState(false);
-  const [staffBranchName, setStaffBranchName] = React.useState<string | undefined>(undefined);
+  const [staffBranchId, setStaffBranchId] = React.useState<string | undefined>(undefined);
   const [isAuthorized, setIsAuthorized] = useState(false); 
   const [meterReadingHistory, setMeterReadingHistory] = useState<DomainBulkMeterReading[]>([]);
   const [billingHistory, setBillingHistory] = useState<DomainBill[]>([]);
@@ -185,15 +186,15 @@ export default function StaffBulkMeterDetailsPage() {
 
   useEffect(() => {
     let isMounted = true;
-    let localBranchName: string | undefined;
+    let localBranchId: string | undefined;
 
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
         const parsedUser: UserAuth = JSON.parse(storedUser);
-        if (parsedUser.role.toLowerCase() === "staff" && parsedUser.branchName) {
-          if(isMounted) setStaffBranchName(parsedUser.branchName);
-          localBranchName = parsedUser.branchName;
+        if (parsedUser.role.toLowerCase() === "staff" && parsedUser.branchId) {
+          if(isMounted) setStaffBranchId(parsedUser.branchId);
+          localBranchId = parsedUser.branchId;
         }
       } catch (e) { console.error("Failed to parse user from localStorage", e); }
     }
@@ -218,19 +219,14 @@ export default function StaffBulkMeterDetailsPage() {
       const foundBM = currentGlobalMeters.find(bm => bm.customerKeyNumber === bulkMeterKey);
 
       if (foundBM) {
-        const normalizedStaffBranchName = localBranchName?.trim().toLowerCase();
-        const staffBranch = normalizedStaffBranchName ? currentGlobalBranches.find(b => {
-          const normalizedBranchName = b.name.trim().toLowerCase();
-          return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
-        }) : undefined;
-        const isUserAuthorized = staffBranch ? foundBM.branchId === staffBranch.id : false;
+        const isUserAuthorized = localBranchId ? foundBM.branchId === localBranchId : false;
 
         if (isUserAuthorized) {
           setBulkMeter(foundBM);
           setAssociatedCustomers(currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterKey));
           setIsAuthorized(true);
 
-          const branchMeters = currentGlobalMeters.filter(bm => bm.branchId === staffBranch.id).map(bm => ({customerKeyNumber: bm.customerKeyNumber, name: bm.name}));
+          const branchMeters = currentGlobalMeters.filter(bm => bm.branchId === localBranchId).map(bm => ({customerKeyNumber: bm.customerKeyNumber, name: bm.name}));
           setBranchBulkMetersForCustomerForm(branchMeters);
           
           setMeterReadingHistory(getBulkMeterReadings().filter(r => r.bulkMeterId === foundBM.customerKeyNumber).sort((a, b) => {
@@ -275,19 +271,14 @@ export default function StaffBulkMeterDetailsPage() {
       const foundBM = currentGlobalMeters.find(bm => bm.customerKeyNumber === bulkMeterKey);
 
       if (foundBM) {
-        const normalizedStaffBranchName = localBranchName?.trim().toLowerCase();
-        const staffBranch = normalizedStaffBranchName ? currentGlobalBranches.find(b => {
-          const normalizedBranchName = b.name.trim().toLowerCase();
-          return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
-        }) : undefined;
-        const isUserAuthorized = staffBranch ? foundBM.branchId === staffBranch.id : false;
+        const isUserAuthorized = localBranchId ? foundBM.branchId === localBranchId : false;
 
         if (isUserAuthorized) { 
             setBulkMeter(foundBM);
             setAssociatedCustomers(currentGlobalCustomers.filter(c => c.assignedBulkMeterId === bulkMeterKey));
             setIsAuthorized(true);
 
-            const branchMeters = currentGlobalMeters.filter(bm => bm.branchId === staffBranch.id).map(bm => ({customerKeyNumber: bm.customerKeyNumber, name: bm.name}));
+            const branchMeters = currentGlobalMeters.filter(bm => bm.branchId === localBranchId).map(bm => ({customerKeyNumber: bm.customerKeyNumber, name: bm.name}));
             setBranchBulkMetersForCustomerForm(branchMeters);
 
             setMeterReadingHistory(getBulkMeterReadings().filter(r => r.bulkMeterId === foundBM.customerKeyNumber).sort((a, b) => {
@@ -676,7 +667,7 @@ export default function StaffBulkMeterDetailsPage() {
         <>
           <Card className="shadow-lg non-printable">
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2"><Gauge className="h-6 w-6 text-primary" /><CardTitle className="text-xl sm:text-2xl">Bulk Meter: {bulkMeter.name} ({staffBranchName})</CardTitle></div>
+              <div className="flex items-center gap-2"><Gauge className="h-6 w-6 text-primary" /><CardTitle className="text-xl sm:text-2xl">Bulk Meter: {bulkMeter.name}</CardTitle></div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="h-8 w-8 p-0">

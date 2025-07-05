@@ -28,6 +28,7 @@ interface User {
   email: string;
   role: "admin" | "staff" | "Admin" | "Staff";
   branchName?: string;
+  branchId?: string;
 }
 
 interface ReportType {
@@ -35,7 +36,7 @@ interface ReportType {
   name: string;
   description: string;
   headers?: string[];
-  getData?: (branchName?: string) => any[]; // Accept optional branchName
+  getData?: (branchId?: string) => any[]; // Accept optional branchId
 }
 
 const arrayToXlsxBlob = (data: any[], headers: string[]): Blob => {
@@ -92,24 +93,15 @@ const availableStaffReports: ReportType[] = [
       "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea",
       "location", "ward", "sewerageConnection", "assignedBulkMeterId", "status", "paymentStatus", "calculatedBill"
     ],
-    getData: (branchName?: string) => {
-        if (!branchName) return [];
-        const allBranches = getBranches();
+    getData: (branchId?: string) => {
+        if (!branchId) return [];
         const allCustomers = getCustomers();
         const allBulkMeters = getBulkMeters();
 
-        const staffBranch = allBranches.find(b => {
-            const normalizedBranchName = b.name.trim().toLowerCase();
-            const normalizedStaffBranchName = branchName.trim().toLowerCase();
-            return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
-        });
-
-        if (!staffBranch) return [];
-        
-        const branchBulkMeterIds = new Set(allBulkMeters.filter(bm => bm.branchId === staffBranch.id).map(bm => bm.customerKeyNumber));
+        const branchBulkMeterIds = new Set(allBulkMeters.filter(bm => bm.branchId === branchId).map(bm => bm.customerKeyNumber));
         
         return allCustomers.filter(c => 
-            c.branchId === staffBranch.id || 
+            c.branchId === branchId || 
             (c.assignedBulkMeterId && branchBulkMeterIds.has(c.assignedBulkMeterId))
         );
     },
@@ -122,20 +114,10 @@ const availableStaffReports: ReportType[] = [
       "customerKeyNumber", "name", "contractNumber", "meterSize", "meterNumber",
       "previousReading", "currentReading", "month", "specificArea", "location", "ward", "status", "paymentStatus"
     ],
-    getData: (branchName?: string) => {
-       if (!branchName) return [];
-        const allBranches = getBranches();
+    getData: (branchId?: string) => {
+       if (!branchId) return [];
         const allBulkMeters = getBulkMeters();
-
-        const staffBranch = allBranches.find(b => {
-            const normalizedBranchName = b.name.trim().toLowerCase();
-            const normalizedStaffBranchName = branchName.trim().toLowerCase();
-            return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
-        });
-
-        if (!staffBranch) return [];
-
-        return allBulkMeters.filter(bm => bm.branchId === staffBranch.id);
+        return allBulkMeters.filter(bm => bm.branchId === branchId);
     },
   },
   {
@@ -149,66 +131,22 @@ const availableStaffReports: ReportType[] = [
         "meterRent", "totalAmountDue", "amountPaid", "balanceDue", "dueDate", 
         "paymentStatus", "billNumber", "notes", "createdAt", "updatedAt"
     ],
-    getData: (branchName?: string) => {
-        if (!branchName) return [];
+    getData: (branchId?: string) => {
+        if (!branchId) return [];
 
-        const allBranches = getBranches();
         const allCustomers = getCustomers();
         const allBulkMeters = getBulkMeters();
         const allBillsFromStore = getBills();
 
-        const staffBranch = allBranches.find(b => {
-            const normalizedBranchName = b.name.trim().toLowerCase();
-            const normalizedStaffBranchName = branchName.trim().toLowerCase();
-            return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
-        });
-
-        if (!staffBranch) return [];
-        
-        const branchBulkMeterKeys = new Set(allBulkMeters.filter(bm => bm.branchId === staffBranch.id).map(bm => bm.customerKeyNumber));
+        const branchBulkMeterKeys = new Set(allBulkMeters.filter(bm => bm.branchId === branchId).map(bm => bm.customerKeyNumber));
         const bulkMeterBills = allBillsFromStore.filter(bill => bill.bulkMeterId && branchBulkMeterKeys.has(bill.bulkMeterId));
         
-        const branchCustomers = allCustomers.filter(c => 
-            c.branchId === staffBranch.id || 
-            (c.assignedBulkMeterId && branchBulkMeterKeys.has(c.assignedBulkMeterId))
+        const branchCustomerKeys = new Set(allCustomers
+            .filter(c => c.branchId === branchId || (c.assignedBulkMeterId && branchBulkMeterKeys.has(c.assignedBulkMeterId)))
+            .map(c => c.customerKeyNumber)
         );
-        
-        const individualCustomerBills = branchCustomers.map(customer => {
-            const usage = customer.currentReading - customer.previousReading;
-            const { baseWaterCharge, sewerageCharge, maintenanceFee, sanitationFee, meterRent } = calculateBill(
-                usage,
-                customer.customerType,
-                customer.sewerageConnection,
-                customer.meterSize
-            );
-            
-            return {
-                id: `cust-bill-${customer.customerKeyNumber}`,
-                individualCustomerId: customer.customerKeyNumber,
-                bulkMeterId: null,
-                billPeriodStartDate: 'N/A',
-                billPeriodEndDate: 'N/A',
-                monthYear: customer.month,
-                previousReadingValue: customer.previousReading,
-                currentReadingValue: customer.currentReading,
-                usageM3: usage,
-                baseWaterCharge: baseWaterCharge,
-                sewerageCharge: sewerageCharge,
-                maintenanceFee: maintenanceFee,
-                sanitationFee: sanitationFee,
-                meterRent: meterRent,
-                balanceCarriedForward: customer.arrears || 0,
-                totalAmountDue: customer.calculatedBill,
-                amountPaid: 0,
-                balanceDue: customer.calculatedBill + (customer.arrears || 0),
-                dueDate: 'N/A',
-                paymentStatus: customer.paymentStatus,
-                billNumber: `CUST-${customer.customerKeyNumber}`,
-                notes: `Bill for ${customer.name}`,
-                createdAt: customer.created_at,
-                updatedAt: customer.updated_at,
-            };
-        });
+
+        const individualCustomerBills = allBillsFromStore.filter(bill => bill.individualCustomerId && branchCustomerKeys.has(bill.individualCustomerId));
 
         return [...bulkMeterBills, ...individualCustomerBills];
     },
@@ -220,6 +158,8 @@ export default function StaffReportsPage() {
   const [selectedReportId, setSelectedReportId] = React.useState<string | undefined>(undefined);
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [staffBranchName, setStaffBranchName] = React.useState<string | undefined>(undefined);
+  const [staffBranchId, setStaffBranchId] = React.useState<string | undefined>(undefined);
+
 
   React.useEffect(() => {
     initializeCustomers();
@@ -231,8 +171,9 @@ export default function StaffReportsPage() {
     if (storedUser) {
       try {
         const parsedUser: User = JSON.parse(storedUser);
-        if (parsedUser.role.toLowerCase() === "staff" && parsedUser.branchName) {
+        if (parsedUser.role.toLowerCase() === "staff" && parsedUser.branchId && parsedUser.branchName) {
           setStaffBranchName(parsedUser.branchName);
+          setStaffBranchId(parsedUser.branchId);
         }
       } catch (e) {
         console.error("Failed to parse user from localStorage", e);
@@ -253,7 +194,7 @@ export default function StaffReportsPage() {
       });
       return;
     }
-    if (!staffBranchName && (selectedReport.id.includes("branch"))) {
+    if (!staffBranchId) {
         toast({
             variant: "destructive",
             title: "Branch Information Missing",
@@ -266,7 +207,7 @@ export default function StaffReportsPage() {
     setIsGenerating(true);
 
     try {
-      const data = selectedReport.getData(staffBranchName);
+      const data = selectedReport.getData(staffBranchId);
       if (!data || data.length === 0) {
         toast({
           title: "No Data",
@@ -356,7 +297,7 @@ export default function StaffReportsPage() {
           )}
 
           {selectedReport && selectedReport.getData && (
-            <Button onClick={handleGenerateReport} disabled={isGenerating || !selectedReportId || (!staffBranchName && selectedReport.id.includes("branch"))}>
+            <Button onClick={handleGenerateReport} disabled={isGenerating || !selectedReportId || !staffBranchId}>
               <Download className="mr-2 h-4 w-4" />
               {isGenerating ? "Generating..." : `Generate & Download ${selectedReport.name.replace(" (XLSX)", "").replace(" (Coming Soon)", "")}`}
             </Button>

@@ -31,10 +31,12 @@ interface User {
   email: string;
   role: "admin" | "staff" | "Admin" | "Staff";
   branchName?: string;
+  branchId?: string;
 }
 
 export default function StaffDataEntryPage() {
   const [staffBranchName, setStaffBranchName] = React.useState<string>("Your Branch");
+  const [staffBranchId, setStaffBranchId] = React.useState<string | null>(null);
   const [isBranchDetermined, setIsBranchDetermined] = React.useState(false);
 
   React.useEffect(() => {
@@ -45,9 +47,10 @@ export default function StaffDataEntryPage() {
     if (storedUser) {
       try {
         const parsedUser: User = JSON.parse(storedUser);
-        if (parsedUser.role.toLowerCase() === "staff" && parsedUser.branchName) {
+        if (parsedUser.role.toLowerCase() === "staff" && parsedUser.branchId && parsedUser.branchName) {
           setStaffBranchName(parsedUser.branchName);
-        } else if (parsedUser.role.toLowerCase() === "staff" && !parsedUser.branchName) {
+          setStaffBranchId(parsedUser.branchId);
+        } else if (parsedUser.role.toLowerCase() === "staff" && !parsedUser.branchId) {
           setStaffBranchName("Unassigned Branch");
         }
       } catch (e) {
@@ -64,6 +67,7 @@ export default function StaffDataEntryPage() {
   const handleBulkMeterCsvUpload = async (data: BulkMeterDataEntryFormValues) => {
     const bulkMeterDataForStore: Omit<BulkMeter, 'id'> = {
       ...data,
+      branchId: staffBranchId || undefined, // Use the stored branch ID
       status: "Active",
       paymentStatus: "Unpaid",
     };
@@ -73,6 +77,7 @@ export default function StaffDataEntryPage() {
   const handleIndividualCustomerCsvUpload = async (data: IndividualCustomerDataEntryFormValues) => {
      const customerDataForStore = {
         ...data,
+        branchId: staffBranchId || undefined, // Use the stored branch ID
     } as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill'>;
     await addCustomer(customerDataForStore);
   };

@@ -1464,24 +1464,34 @@ export const authenticateStaffMember = async (email: string, password: string): 
 
     const user = mapSupabaseStaffToDomain(staffData);
     
-    // Find the branch ID based on the staff's branch name
+    // Find the branch ID and official name based on the staff's branch name
     if (user.branchName) {
-        // Ensure branches are loaded before trying to find a match
         if (branches.length === 0) {
           await initializeBranches();
         }
         
         const normalizedStaffBranchName = user.branchName.trim().toLowerCase();
+        // New, more robust word-based matching, also splits on hyphens.
+        const staffBranchWords = new Set(normalizedStaffBranchName.split(/[\s-]+/).filter(w => w));
+
         const matchedBranch = branches.find(b => {
-            const normalizedBranchName = b.name.trim().toLowerCase();
-            return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
+            const officialBranchWords = new Set(b.name.trim().toLowerCase().split(/[\s-]+/).filter(w => w));
+            // Check for intersection between the two sets of words
+            for (const word of staffBranchWords) {
+                if (officialBranchWords.has(word)) {
+                    return true;
+                }
+            }
+            return false;
         });
         
         if (matchedBranch) {
-            user.branchId = matchedBranch.id; // Attach the ID to the user object
+            user.branchId = matchedBranch.id; // Attach the ID
+            user.branchName = matchedBranch.name; // Standardize to the official name
         } else {
             console.warn(`DataStore: Could not find a branch matching the name "${user.branchName}" for user ${user.email}.`);
-            user.branchName = 'Unknown Branch'; // Standardize the name if not found.
+            user.branchName = 'Unknown Branch';
+            delete user.branchId; // Ensure no stale/incorrect ID
         }
     }
     

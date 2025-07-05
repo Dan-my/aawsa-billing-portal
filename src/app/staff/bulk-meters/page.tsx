@@ -29,12 +29,14 @@ interface User {
   email: string;
   role: "admin" | "staff" | "Admin" | "Staff";
   branchName?: string;
+  branchId?: string;
 }
 
 export default function StaffBulkMetersPage() {
   const { toast } = useToast();
   const [authStatus, setAuthStatus] = React.useState<'loading' | 'unauthorized' | 'authorized'>('loading');
   const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
+  const [staffBranchId, setStaffBranchId] = React.useState<string | null>(null);
   
   const [allBulkMeters, setAllBulkMeters] = React.useState<BulkMeter[]>([]);
   const [allBranches, setAllBranches] = React.useState<Branch[]>([]);
@@ -55,8 +57,9 @@ export default function StaffBulkMetersPage() {
     if (userString) {
       try {
         const parsedUser: User = JSON.parse(userString);
-        if (parsedUser.role.toLowerCase() === 'staff' && parsedUser.branchName) {
+        if (parsedUser.role.toLowerCase() === 'staff' && parsedUser.branchId && parsedUser.branchName) {
           setStaffBranchName(parsedUser.branchName);
+          setStaffBranchId(parsedUser.branchId);
           setAuthStatus('authorized');
         } else {
           setAuthStatus('unauthorized');
@@ -108,20 +111,11 @@ export default function StaffBulkMetersPage() {
 
   // Declarative filtering with useMemo
   const branchFilteredBulkMeters = React.useMemo(() => {
-    if (authStatus !== 'authorized' || !staffBranchName || allBranches.length === 0) {
+    if (authStatus !== 'authorized' || !staffBranchId) {
       return [];
     }
-    const normalizedStaffBranchName = staffBranchName.trim().toLowerCase();
-    const staffBranch = allBranches.find(b => {
-      const normalizedBranchName = b.name.trim().toLowerCase();
-      return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
-    });
-
-    if (!staffBranch) {
-      return [];
-    }
-    return allBulkMeters.filter(bm => bm.branchId === staffBranch.id);
-  }, [authStatus, staffBranchName, allBulkMeters, allBranches]);
+    return allBulkMeters.filter(bm => bm.branchId === staffBranchId);
+  }, [authStatus, staffBranchId, allBulkMeters]);
 
 
   const searchedBulkMeters = React.useMemo(() => {
@@ -166,12 +160,8 @@ export default function StaffBulkMetersPage() {
   };
 
   const handleSubmitBulkMeter = async (data: BulkMeterFormValues) => {
-    const staffBranch = allBranches.find(b => {
-        const normalizedStaffBranchName = (staffBranchName || '').trim().toLowerCase();
-        const normalizedBranchName = b.name.trim().toLowerCase();
-        return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
-    });
-    const dataWithBranchId = { ...data, branchId: staffBranch?.id || data.branchId, location: staffBranch?.name || data.location };
+    // Automatically associate with staff's branch ID
+    const dataWithBranchId = { ...data, branchId: staffBranchId, location: staffBranchName || data.location };
     
     if (selectedBulkMeter) {
       await updateBulkMeterInStore(selectedBulkMeter.customerKeyNumber, dataWithBranchId);

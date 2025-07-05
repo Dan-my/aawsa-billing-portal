@@ -17,6 +17,7 @@ interface User {
   email: string;
   role: "admin" | "staff" | "Admin" | "Staff";
   branchName?: string;
+  branchId?: string;
 }
 
 const chartConfig = {
@@ -27,6 +28,7 @@ const chartConfig = {
 export default function StaffDashboardPage() {
   const [authStatus, setAuthStatus] = React.useState<'loading' | 'unauthorized' | 'authorized'>('loading');
   const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
+  const [staffBranchId, setStaffBranchId] = React.useState<string | null>(null);
   const [isClient, setIsClient] = React.useState(false);
 
   const [allBranches, setAllBranches] = React.useState<Branch[]>([]);
@@ -46,10 +48,12 @@ export default function StaffDashboardPage() {
         const parsedUser: User = JSON.parse(userString);
         if (
           parsedUser.role.toLowerCase() === "staff" &&
+          parsedUser.branchId && // Now check for branchId
           parsedUser.branchName &&
           parsedUser.branchName !== 'Unknown Branch'
         ) {
           setStaffBranchName(parsedUser.branchName);
+          setStaffBranchId(parsedUser.branchId); // Set the branch ID from the session
           setAuthStatus('authorized');
         } else {
           setAuthStatus('unauthorized');
@@ -103,25 +107,16 @@ export default function StaffDashboardPage() {
 
   // Derived state with useMemo
   const branchStats = React.useMemo(() => {
-    if (authStatus !== 'authorized' || !staffBranchName || allBranches.length === 0) {
+    if (authStatus !== 'authorized' || !staffBranchId) { // Use staffBranchId for check
       return { totalBulkMeters: 0, totalCustomers: 0, totalBills: 0, paidBills: 0, unpaidBills: 0, billsData: [], monthlyPerformance: [], paidPercentage: "0%" };
     }
 
-    const normalizedStaffBranchName = staffBranchName.trim().toLowerCase();
-    const staffBranch = allBranches.find(b => {
-      const normalizedBranchName = b.name.trim().toLowerCase();
-      return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
-    });
-    
-    if (!staffBranch) {
-      return { totalBulkMeters: 0, totalCustomers: 0, totalBills: 0, paidBills: 0, unpaidBills: 0, billsData: [], monthlyPerformance: [], paidPercentage: "0%" };
-    }
-    
-    const branchBMs = allBulkMeters.filter(bm => bm.branchId === staffBranch.id);
+    // No more lenient matching needed here. Just use the ID.
+    const branchBMs = allBulkMeters.filter(bm => bm.branchId === staffBranchId);
     const branchBMKeys = new Set(branchBMs.map(bm => bm.customerKeyNumber));
 
     const branchCustomers = allCustomers.filter(customer =>
-      customer.branchId === staffBranch.id ||
+      customer.branchId === staffBranchId ||
       (customer.assignedBulkMeterId && branchBMKeys.has(customer.assignedBulkMeterId))
     );
       
@@ -170,7 +165,7 @@ export default function StaffDashboardPage() {
       monthlyPerformance,
       paidPercentage,
     };
-  }, [authStatus, staffBranchName, allBranches, allBulkMeters, allCustomers]);
+  }, [authStatus, staffBranchId, allBulkMeters, allCustomers]);
 
 
   if (isLoading || authStatus === 'loading') {

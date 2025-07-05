@@ -35,12 +35,14 @@ interface User {
   email: string;
   role: "admin" | "staff" | "Admin" | "Staff";
   branchName?: string;
+  branchId?: string;
 }
 
 export default function StaffIndividualCustomersPage() {
   const { toast } = useToast();
   const [authStatus, setAuthStatus] = React.useState<'loading' | 'unauthorized' | 'authorized'>('loading');
   const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
+  const [staffBranchId, setStaffBranchId] = React.useState<string | null>(null);
   
   const [allCustomers, setAllCustomers] = React.useState<IndividualCustomer[]>([]);
   const [allBulkMeters, setAllBulkMeters] = React.useState<BulkMeter[]>([]);
@@ -62,8 +64,9 @@ export default function StaffIndividualCustomersPage() {
     if (userString) {
       try {
         const parsedUser: User = JSON.parse(userString);
-        if (parsedUser.role.toLowerCase() === 'staff' && parsedUser.branchName) {
+        if (parsedUser.role.toLowerCase() === 'staff' && parsedUser.branchId && parsedUser.branchName) {
           setStaffBranchName(parsedUser.branchName);
+          setStaffBranchId(parsedUser.branchId);
           setAuthStatus('authorized');
         } else {
           setAuthStatus('unauthorized');
@@ -117,29 +120,20 @@ export default function StaffIndividualCustomersPage() {
 
   // Declarative filtering with useMemo
   const branchFilteredData = React.useMemo(() => {
-    if (authStatus !== 'authorized' || !staffBranchName || allBranches.length === 0) {
+    if (authStatus !== 'authorized' || !staffBranchId) {
       return { customers: [], bulkMeters: [] };
     }
     
-    const normalizedStaffBranchName = staffBranchName.trim().toLowerCase();
-    const staffBranch = allBranches.find(b => {
-      const normalizedBranchName = b.name.trim().toLowerCase();
-      return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
-    });
-    
-    if (!staffBranch) {
-      return { customers: [], bulkMeters: [] };
-    }
-    const branchBMs = allBulkMeters.filter(bm => bm.branchId === staffBranch.id);
+    const branchBMs = allBulkMeters.filter(bm => bm.branchId === staffBranchId);
     const branchBMKeys = new Set(branchBMs.map(bm => bm.customerKeyNumber));
     
     const branchCustomers = allCustomers.filter(customer =>
-      customer.branchId === staffBranch.id ||
+      customer.branchId === staffBranchId ||
       (customer.assignedBulkMeterId && branchBMKeys.has(customer.assignedBulkMeterId))
     );
     
     return { customers: branchCustomers, bulkMeters: branchBMs.map(bm => ({ customerKeyNumber: bm.customerKeyNumber, name: bm.name })) };
-  }, [authStatus, staffBranchName, allCustomers, allBulkMeters, allBranches]);
+  }, [authStatus, staffBranchId, allCustomers, allBulkMeters]);
   
   const searchedCustomers = React.useMemo(() => {
     if (!searchTerm) {
@@ -188,12 +182,7 @@ export default function StaffIndividualCustomersPage() {
   };
 
   const handleSubmitCustomer = async (data: IndividualCustomerFormValues) => {
-    const staffBranch = allBranches.find(b => {
-      const normalizedStaffBranchName = (staffBranchName || '').trim().toLowerCase();
-      const normalizedBranchName = b.name.trim().toLowerCase();
-      return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
-    });
-    const dataWithBranchId = { ...data, branchId: staffBranch?.id || data.branchId };
+    const dataWithBranchId = { ...data, branchId: staffBranchId };
 
     if (selectedCustomer) {
       const updatedCustomerData: Partial<Omit<IndividualCustomer, 'customerKeyNumber'>> = {

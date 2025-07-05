@@ -60,14 +60,14 @@ export function NotificationBell({ user }: NotificationBellProps) {
       return [];
     }
     
-    // Attempt to find the staff's branch ID based on their branchName
     let staffBranchId: string | undefined = undefined;
     if (user.branchName) {
         const normalizedStaffBranchName = user.branchName.trim().toLowerCase();
-        // Use an exact match for better reliability
-        const staffBranch = allBranches.find(b => 
-            b.name.trim().toLowerCase() === normalizedStaffBranchName
-        );
+        // Use a more lenient find method to handle partial matches like "Kolfe" vs "Kolfe Branch"
+        const staffBranch = allBranches.find(b => {
+            const normalizedBranchName = b.name.trim().toLowerCase();
+            return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
+        });
         if (staffBranch) {
             staffBranchId = staffBranch.id;
         }

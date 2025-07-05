@@ -28,6 +28,8 @@ import {
 import type { DomainNotification } from "@/lib/data-store";
 import type { Branch } from "../branches/branch-types";
 
+const ALL_STAFF_VALUE = "all-staff-target";
+
 const formSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters.").max(100, "Title is too long."),
   message: z.string().min(10, "Message must be at least 10 characters.").max(1000, "Message is too long."),
@@ -67,7 +69,7 @@ export default function AdminNotificationsPage() {
     defaultValues: {
       title: "",
       message: "",
-      targetBranchId: "All Staff",
+      targetBranchId: ALL_STAFF_VALUE,
     },
   });
 
@@ -77,34 +79,33 @@ export default function AdminNotificationsPage() {
       return;
     }
     
-    // The value from the form is now either a branch ID or the string "All Staff"
-    const targetIdentifier = data.targetBranchId;
+    const targetBranchId = data.targetBranchId === ALL_STAFF_VALUE ? null : data.targetBranchId;
 
     const result = await addNotification({
       title: data.title,
       message: data.message,
-      targetBranchName: targetIdentifier, // Send the ID or "All Staff" directly
+      targetBranchId: targetBranchId, 
       senderName: user.name,
     });
 
     if (result.success) {
-      const displayTargetName = data.targetBranchId === "All Staff"
+      const displayTargetName = targetBranchId === null
           ? "All Staff"
-          : branches.find(b => b.id === data.targetBranchId)?.name || "the selected branch";
+          : branches.find(b => b.id === targetBranchId)?.name || "the selected branch";
       toast({ title: "Notification Sent", description: `Your message has been sent to ${displayTargetName}.` });
       form.reset({
         title: "",
         message: "",
-        targetBranchId: "All Staff",
+        targetBranchId: ALL_STAFF_VALUE,
       });
     } else {
       toast({ variant: "destructive", title: "Failed to Send", description: result.message });
     }
   }
 
-  const getDisplayTargetName = (targetId: string) => {
-    if (targetId === "All Staff") return "All Staff";
-    return branches.find(b => b.id === targetId)?.name || targetId;
+  const getDisplayTargetName = (targetId: string | null) => {
+    if (targetId === null) return "All Staff";
+    return branches.find(b => b.id === targetId)?.name || `ID: ${targetId}`;
   };
 
   return (
@@ -159,7 +160,7 @@ export default function AdminNotificationsPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="All Staff">All Staff</SelectItem>
+                          <SelectItem value={ALL_STAFF_VALUE}>All Staff</SelectItem>
                           {branches.map(branch => (
                             <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
                           ))}
@@ -203,7 +204,7 @@ export default function AdminNotificationsPage() {
                           <p className="font-medium">{n.title}</p>
                           <p className="text-xs text-muted-foreground truncate max-w-xs">{n.message}</p>
                         </TableCell>
-                        <TableCell>{getDisplayTargetName(n.targetBranchName)}</TableCell>
+                        <TableCell>{getDisplayTargetName(n.targetBranchId)}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
                         </TableCell>

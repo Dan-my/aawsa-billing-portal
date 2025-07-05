@@ -35,12 +35,10 @@ const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(6, "Password must be at least 6 characters.").optional().or(z.literal('')),
-  branch: z.string().min(1, { message: "Branch is required." }),
+  branchId: z.string().min(1, { message: "A branch must be selected." }),
   status: z.enum(staffStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
   phone: z.string().optional(),
   role: z.enum(staffRoles, { required_error: "Role is required." }),
-}).refine(data => {
-    return true;
 });
 
 
@@ -77,7 +75,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
       name: "",
       email: "",
       password: "",
-      branch: "",
+      branchId: "",
       status: undefined,
       phone: "",
       role: undefined,
@@ -92,7 +90,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
         name: defaultValues.name,
         email: defaultValues.email,
         password: "", // Always clear password field for security
-        branch: defaultValues.branch,
+        branchId: defaultValues.branchId,
         status: defaultValues.status,
         phone: defaultValues.phone || "",
         role: defaultValues.role,
@@ -102,7 +100,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
         name: "",
         email: "",
         password: "",
-        branch: "",
+        branchId: "",
         status: "Active",
         phone: "",
         role: "Staff",
@@ -111,7 +109,6 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
   }, [defaultValues, form, open]);
 
   const handleSubmit = (data: StaffFormValues) => {
-    // For new users, ensure a password is provided
     if (!isEditing && !data.password) {
         form.setError("password", { type: "manual", message: "Password is required for new staff members." });
         return;
@@ -152,7 +149,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
                 <FormItem>
                   <FormLabel>Email (Login ID)</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="e.g., kality@aawsa.com" {...field} />
+                    <Input type="email" placeholder="e.g., staff@aawsa.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -186,7 +183,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
             />
              <FormField
               control={form.control}
-              name="branch"
+              name="branchId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Branch</FormLabel>
@@ -198,7 +195,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
                     </FormControl>
                     <SelectContent>
                       {availableBranches.map(branch => (
-                        <SelectItem key={branch.id} value={branch.name}>{branch.name}</SelectItem>
+                        <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -206,7 +203,6 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
                 </FormItem>
               )}
             />
-            {/* Add Role Select Field */}
             <FormField
               control={form.control}
               name="role"

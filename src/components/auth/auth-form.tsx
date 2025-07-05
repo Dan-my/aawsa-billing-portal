@@ -69,11 +69,13 @@ export function AuthForm() {
         description: "Welcome back! Redirecting...",
       });
       
+      // Store user object with branchId and branchName
       const sessionUser = {
         id: user.id,
         email: user.email,
         role: user.role,
-        branchName: user.branch,
+        branchId: user.branchId,
+        branchName: user.branchName,
         name: user.name,
       };
       localStorage.setItem("user", JSON.stringify(sessionUser));

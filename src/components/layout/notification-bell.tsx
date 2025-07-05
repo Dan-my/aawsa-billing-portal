@@ -23,6 +23,7 @@ const LAST_READ_TIMESTAMP_KEY = "last-read-timestamp";
 
 interface UserProfile {
   role: 'Admin' | 'Staff';
+  branchId: string;
   branchName?: string;
   name?: string;
 }
@@ -55,37 +56,20 @@ export function NotificationBell({ user }: NotificationBellProps) {
   }, []);
 
   const relevantNotifications = React.useMemo(() => {
-    if (!user || user.role.toLowerCase() !== 'staff' || !user.branchName || allBranches.length === 0) {
+    if (!user || user.role.toLowerCase() !== 'staff' || !user.branchId) {
       return [];
     }
 
-    // A robust function to find the staff member's official branch ID
-    const getStaffBranchId = (): string | undefined => {
-        const normalize = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const normalizedUserBranchName = normalize(user.branchName!);
-        const staffBranch = allBranches.find(branch => normalize(branch.name) === normalizedUserBranchName);
-        return staffBranch?.id;
-    };
-    
-    const staffBranchId = getStaffBranchId();
+    const staffBranchId = user.branchId;
 
     return notifications
       .filter(notification => {
-        // Case 1: Notification is for everyone
-        if (notification.targetBranchName === 'All Staff') {
-          return true;
-        }
-
-        // Case 2: Notification is for this staff member's specific branch ID
-        if (staffBranchId && notification.targetBranchName === staffBranchId) {
-          return true;
-        }
-
-        return false;
+        // Notification is relevant if it's for all staff OR for this staff member's specific branch ID.
+        return notification.targetBranchId === null || notification.targetBranchId === staffBranchId;
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-  }, [notifications, user, allBranches]);
+  }, [notifications, user]);
 
   React.useEffect(() => {
     const newUnreadCount = relevantNotifications.filter(
@@ -109,9 +93,9 @@ export function NotificationBell({ user }: NotificationBellProps) {
       }
   };
   
-  const getDisplayTargetName = (targetId: string) => {
-    if (targetId === "All Staff") return "All Staff";
-    return allBranches.find(b => b.id === targetId)?.name || "a specific branch";
+  const getDisplayTargetName = (targetId: string | null) => {
+    if (targetId === null) return "All Staff";
+    return allBranches.find(b => b.id === targetId)?.name || `Branch ID: ${targetId}`;
   };
 
   if (!user || user.role.toLowerCase() === 'admin') return null;
@@ -166,7 +150,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
              <DialogHeader>
                  <DialogTitle>{selectedNotification.title}</DialogTitle>
                  <DialogDescription className="text-xs pt-2">
-                     Sent by {selectedNotification.senderName} to {getDisplayTargetName(selectedNotification.targetBranchName)} &bull; {formatDistanceToNow(parseISO(selectedNotification.createdAt), { addSuffix: true })}
+                     Sent by {selectedNotification.senderName} to {getDisplayTargetName(selectedNotification.targetBranchId)} &bull; {formatDistanceToNow(parseISO(selectedNotification.createdAt), { addSuffix: true })}
                  </DialogDescription>
              </DialogHeader>
              <div className="py-4 text-sm">{selectedNotification.message}</div>

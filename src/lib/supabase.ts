@@ -20,7 +20,7 @@ export interface Database {
           title: string;
           message: string;
           sender_name: string;
-          target_branch_name: string;
+          target_branch_id: string | null; // Changed from target_branch_name
         };
         Insert: {
           id?: string;
@@ -28,7 +28,7 @@ export interface Database {
           title: string;
           message: string;
           sender_name: string;
-          target_branch_name?: string;
+          target_branch_id?: string | null; // Changed from target_branch_name
         };
         Update: {
           id?: string;
@@ -36,7 +36,7 @@ export interface Database {
           title?: string;
           message?: string;
           sender_name?: string;
-          target_branch_name?: string;
+          target_branch_id?: string | null; // Changed from target_branch_name
         };
       };
       branches: {
@@ -231,7 +231,7 @@ export interface Database {
           name: string;
           email: string;
           password?: string;
-          branch: string;
+          branch_id: string; // Changed from branch
           status: 'Active' | 'Inactive' | 'On Leave';
           phone?: string | null;
           hire_date?: string | null;
@@ -244,7 +244,7 @@ export interface Database {
           name: string;
           email: string;
           password?: string;
-          branch: string;
+          branch_id: string; // Changed from branch
           status: 'Active' | 'Inactive' | 'On Leave';
           phone?: string | null;
           hire_date?: string | null;
@@ -257,7 +257,7 @@ export interface Database {
           name?: string;
           email?: string;
           password?: string;
-          branch?: string;
+          branch_id?: string; // Changed from branch
           status?: 'Active' | 'Inactive' | 'On Leave';
           phone?: string | null;
           hire_date?: string | null;
@@ -510,7 +510,22 @@ export interface Database {
       [key: string]: never;
     };
     Functions: {
-      [key: string]: never;
+      insert_notification: {
+        Args: {
+          p_title: string
+          p_message: string
+          p_sender_name: string
+          p_target_branch_id: string | null
+        }
+        Returns: {
+            id: string;
+            created_at: string;
+            title: string;
+            message: string;
+            sender_name: string;
+            target_branch_id: string | null;
+        }[]
+      }
     };
     Enums: {
         branch_status_enum: 'Active' | 'Inactive';

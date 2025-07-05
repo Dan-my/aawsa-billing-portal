@@ -54,7 +54,7 @@ export function StaffTable({ data, onEdit, onDelete }: StaffTableProps) {
             <TableRow key={staff.id}>
               <TableCell className="font-medium">{staff.name}</TableCell>
               <TableCell>{staff.email}</TableCell>
-              <TableCell>{staff.branch}</TableCell>
+              <TableCell>{staff.branchName}</TableCell>
               <TableCell>
                 <Badge variant={staff.status === 'Active' ? 'default' : staff.status === 'Inactive' ? 'destructive' : 'secondary'}>
                   {staff.status}

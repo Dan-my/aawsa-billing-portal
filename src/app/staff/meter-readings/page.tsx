@@ -77,7 +77,11 @@ export default function StaffMeterReadingsPage() {
     const allIndividualReadings = getIndividualCustomerReadings();
     const allBulkReadings = getBulkMeterReadings();
 
-    const staffBranch = currentBranchName ? allBranches.find(b => b.name === currentBranchName) : undefined;
+    const staffBranch = currentBranchName ? allBranches.find(b => {
+        const normalizedBranchName = b.name.trim().toLowerCase();
+        const normalizedStaffBranchName = currentBranchName.trim().toLowerCase();
+        return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
+    }) : undefined;
     
     let branchBulkMeters: BulkMeter[] = [];
     let branchCustomers: IndividualCustomer[] = [];
@@ -86,7 +90,7 @@ export default function StaffMeterReadingsPage() {
         const staffBranchId = staffBranch.id;
         branchBulkMeters = allBulkMeters.filter(bm => bm.branchId === staffBranchId);
         
-        const branchBulkMeterIds = branchBulkMeters.map(bm => bm.id);
+        const branchBulkMeterIds = branchBulkMeters.map(bm => bm.customerKeyNumber);
         branchCustomers = allCustomers.filter(c => 
           c.branchId === staffBranchId ||
           (c.assignedBulkMeterId && branchBulkMeterIds.includes(c.assignedBulkMeterId))
@@ -97,9 +101,9 @@ export default function StaffMeterReadingsPage() {
     setCustomersForForm(branchCustomers);
 
     const displayedIndividualReadings: DisplayReading[] = allIndividualReadings
-      .filter(r => branchCustomers.some(c => c.id === r.individualCustomerId))
+      .filter(r => branchCustomers.some(c => c.customerKeyNumber === r.individualCustomerId))
       .map(r => {
-          const customer = allCustomers.find(c => c.id === r.individualCustomerId);
+          const customer = allCustomers.find(c => c.customerKeyNumber === r.individualCustomerId);
           return {
             id: r.id,
             meterId: r.individualCustomerId,
@@ -110,9 +114,9 @@ export default function StaffMeterReadingsPage() {
       }).sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
 
     const displayedBulkReadings: DisplayReading[] = allBulkReadings
-      .filter(r => branchBulkMeters.some(bm => bm.id === r.bulkMeterId))
+      .filter(r => branchBulkMeters.some(bm => bm.customerKeyNumber === r.bulkMeterId))
       .map(r => {
-           const bulkMeter = allBulkMeters.find(bm => bm.id === r.bulkMeterId);
+           const bulkMeter = allBulkMeters.find(bm => bm.customerKeyNumber === r.bulkMeterId);
            return {
                 id: r.id,
                 meterId: r.bulkMeterId,

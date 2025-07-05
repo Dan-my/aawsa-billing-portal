@@ -93,7 +93,12 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
         initializeAdminBranches()
     ]).then(() => {
         const allBranches = getBranches();
-        const staffBranch = allBranches.find(b => b.name === branchName);
+        const normalizedStaffBranchName = branchName.trim().toLowerCase();
+        const staffBranch = allBranches.find(b => {
+            const normalizedBranchName = b.name.trim().toLowerCase();
+            return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
+        });
+
         if (staffBranch) {
             setStaffBranchId(staffBranch.id);
             const branchFilteredBms = getBulkMeters().filter(bm => bm.branchId === staffBranch.id);

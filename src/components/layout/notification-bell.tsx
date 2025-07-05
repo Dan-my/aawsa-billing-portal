@@ -60,15 +60,21 @@ export function NotificationBell({ user }: NotificationBellProps) {
       return [];
     }
     
-    const staffBranch = allBranches.find(b => b.name === user.branchName);
+    // Normalize the staff's branch name for a more reliable comparison.
+    const normalizedStaffBranchName = user.branchName.trim().toLowerCase();
+
+    // Find the branch object by comparing normalized names.
+    const staffBranch = allBranches.find(b => b.name.trim().toLowerCase() === normalizedStaffBranchName);
+
     if (!staffBranch) {
+        // If no matching branch is found after normalization, there's no way to link notifications.
         return [];
     }
     const staffBranchId = staffBranch.id;
 
     return notifications
       .filter(notification => {
-        // Notification is relevant if it's for all staff OR for this staff member's specific branch ID.
+        // A notification is relevant if it's for all staff (null target) OR for the staff's specific branch ID.
         return notification.targetBranchId === null || notification.targetBranchId === staffBranchId;
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart as BarChartIcon, PieChart as PieChartIcon, Gauge, Users, ArrowRight, FileText, TrendingUp } from 'lucide-react'; 
+import { BarChart as BarChartIcon, PieChart as PieChartIcon, Gauge, Users, ArrowRight, FileText, TrendingUp, AlertCircle } from 'lucide-react'; 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ResponsiveContainer, BarChart, PieChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Bar } from 'recharts';
@@ -44,7 +44,11 @@ export default function StaffDashboardPage() {
     if (userString) {
       try {
         const parsedUser: User = JSON.parse(userString);
-        if (parsedUser.role.toLowerCase() === "staff" && parsedUser.branchName) {
+        if (
+          parsedUser.role.toLowerCase() === "staff" &&
+          parsedUser.branchName &&
+          parsedUser.branchName !== 'Unknown Branch'
+        ) {
           setStaffBranchName(parsedUser.branchName);
           setAuthStatus('authorized');
         } else {
@@ -175,11 +179,13 @@ export default function StaffDashboardPage() {
   
   if (authStatus === 'unauthorized') {
       return (
-        <div className="p-4 text-center">
-             <Card className="max-w-md mx-auto">
-                <CardHeader>
-                    <CardTitle className="text-destructive">Access Denied</CardTitle>
-                    <CardDescription>Your user profile is not correctly configured for a staff role or branch. Please contact an administrator.</CardDescription>
+        <div className="flex items-center justify-center pt-20">
+             <Card className="w-full max-w-lg border-red-200 shadow-lg bg-red-50/50 dark:bg-destructive/10">
+                <CardHeader className="text-center space-y-2">
+                    <CardTitle className="text-destructive text-xl">Access Denied</CardTitle>
+                    <CardDescription className="text-destructive/80 px-4">
+                      Your user profile is not correctly configured for a staff role or branch. Please contact an administrator.
+                    </CardDescription>
                 </CardHeader>
              </Card>
         </div>

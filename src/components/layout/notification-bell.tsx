@@ -22,8 +22,8 @@ import type { Branch } from "@/app/admin/branches/branch-types";
 const LAST_READ_TIMESTAMP_KEY = "last-read-timestamp";
 
 interface UserProfile {
+  id: string;
   role: 'Admin' | 'Staff';
-  branchId: string;
   branchName?: string;
   name?: string;
 }
@@ -56,11 +56,15 @@ export function NotificationBell({ user }: NotificationBellProps) {
   }, []);
 
   const relevantNotifications = React.useMemo(() => {
-    if (!user || user.role.toLowerCase() !== 'staff' || !user.branchId) {
+    if (!user || user.role.toLowerCase() !== 'staff' || !user.branchName) {
       return [];
     }
-
-    const staffBranchId = user.branchId;
+    
+    const staffBranch = allBranches.find(b => b.name === user.branchName);
+    if (!staffBranch) {
+        return [];
+    }
+    const staffBranchId = staffBranch.id;
 
     return notifications
       .filter(notification => {
@@ -69,7 +73,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-  }, [notifications, user]);
+  }, [notifications, user, allBranches]);
 
   React.useEffect(() => {
     const newUnreadCount = relevantNotifications.filter(

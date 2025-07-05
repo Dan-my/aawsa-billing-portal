@@ -21,7 +21,7 @@ export interface Database {
           title: string;
           message: string;
           sender_name: string;
-          target_branch_id: string | null; // Changed from target_branch_name
+          target_branch_id: string | null;
         };
         Insert: {
           id?: string;
@@ -29,7 +29,7 @@ export interface Database {
           title: string;
           message: string;
           sender_name: string;
-          target_branch_id?: string | null; // Changed from target_branch_name
+          target_branch_id?: string | null;
         };
         Update: {
           id?: string;
@@ -37,7 +37,7 @@ export interface Database {
           title?: string;
           message?: string;
           sender_name?: string;
-          target_branch_id?: string | null; // Changed from target_branch_name
+          target_branch_id?: string | null;
         };
       };
       branches: {
@@ -228,10 +228,11 @@ export interface Database {
       };
       staff_members: {
         Row: {
+          id: string;
           name: string;
           email: string;
           password?: string;
-          branch_id: string; // Changed from branch
+          branch: string;
           status: 'Active' | 'Inactive' | 'On Leave';
           phone?: string | null;
           hire_date?: string | null;
@@ -240,10 +241,11 @@ export interface Database {
           updated_at?: string | null;
         };
         Insert: {
+          id?: string;
           name: string;
           email: string;
           password?: string;
-          branch_id: string; // Changed from branch
+          branch: string;
           status: 'Active' | 'Inactive' | 'On Leave';
           phone?: string | null;
           hire_date?: string | null;
@@ -252,10 +254,11 @@ export interface Database {
           updated_at?: string | null;
         };
         Update: {
+          id?: string;
           name?: string;
           email?: string;
           password?: string;
-          branch_id?: string; // Changed from branch
+          branch?: string;
           status?: 'Active' | 'Inactive' | 'On Leave';
           phone?: string | null;
           hire_date?: string | null;

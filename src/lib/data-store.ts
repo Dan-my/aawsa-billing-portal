@@ -5,7 +5,7 @@
 import type { IndividualCustomer as DomainIndividualCustomer, IndividualCustomerStatus } from '@/app/admin/individual-customers/individual-customer-types';
 import type { BulkMeter as DomainBulkMeterTypeFromTypes } from '@/app/admin/bulk-meters/bulk-meter-types'; 
 import type { Branch as DomainBranch } from '@/app/admin/branches/branch-types';
-import type { StaffMember } from '@/app/admin/staff-management/staff-types';
+import type { StaffMember as DomainStaffMember } from '@/app/admin/staff-management/staff-types';
 import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult } from '@/lib/billing';
 
 
@@ -185,6 +185,7 @@ interface StoreOperationResult<T = any> {
 }
 
 type BulkMeter = DomainBulkMeterTypeFromTypes;
+type StaffMember = DomainStaffMember;
 
 
 let branches: DomainBranch[] = [];
@@ -503,12 +504,11 @@ const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { customerKeyNumber
 
 
 const mapSupabaseStaffToDomain = (ss: SupabaseStaffMemberRow): StaffMember => ({
-  id: ss.email, // Use email as the unique ID for the app
+  id: ss.id,
   name: ss.name,
   email: ss.email,
   password: ss.password || undefined,
-  branchId: ss.branch_id,
-  branchName: '', // This will be populated later
+  branchName: ss.branch,
   status: ss.status,
   phone: ss.phone || undefined,
   hireDate: ss.hire_date || undefined,
@@ -516,21 +516,21 @@ const mapSupabaseStaffToDomain = (ss: SupabaseStaffMemberRow): StaffMember => ({
 });
 
 const mapDomainStaffToInsert = (staff: StaffMember): StaffMemberInsert => ({
+  id: staff.id,
   name: staff.name,
   email: staff.email,
   password: staff.password,
-  branch_id: staff.branchId,
+  branch: staff.branchName,
   status: staff.status,
   phone: staff.phone,
   hire_date: staff.hireDate,
   role: staff.role,
 });
 
-const mapDomainStaffToUpdate = (staff: Partial<Omit<StaffMember, 'id'>>): StaffMemberUpdate => {
-    const updatePayload: StaffMemberUpdate = {};
+const mapDomainStaffToUpdate = (staff: Partial<Omit<StaffMember, 'id' | 'email'>>): Omit<StaffMemberUpdate, 'email'> => {
+    const updatePayload: Omit<StaffMemberUpdate, 'email'> = {};
     if(staff.name !== undefined) updatePayload.name = staff.name;
-    if(staff.email !== undefined) updatePayload.email = staff.email;
-    if(staff.branchId !== undefined) updatePayload.branch_id = staff.branchId;
+    if(staff.branchName !== undefined) updatePayload.branch = staff.branchName;
     if(staff.status !== undefined) updatePayload.status = staff.status;
     if(staff.phone !== undefined) updatePayload.phone = staff.phone;
     if(staff.hireDate !== undefined) updatePayload.hire_date = staff.hireDate;
@@ -538,7 +538,6 @@ const mapDomainStaffToUpdate = (staff: Partial<Omit<StaffMember, 'id'>>): StaffM
     if(staff.password !== undefined && staff.password) {
         updatePayload.password = staff.password;
     } else {
-        // To prevent setting password to null if it's an empty string
         delete updatePayload.password;
     }
     return updatePayload;
@@ -805,15 +804,9 @@ async function fetchAllBulkMeters() {
 
 
 async function fetchAllStaffMembers() {
-  await initializeBranches();
   const { data, error } = await supabaseGetAllStaffMembers();
   if (data) {
-    staffMembers = data.map(ss => {
-      const domainStaff = mapSupabaseStaffToDomain(ss);
-      const branch = branches.find(b => b.id === domainStaff.branchId);
-      domainStaff.branchName = branch?.name || "Unknown Branch";
-      return domainStaff;
-    });
+    staffMembers = data.map(mapSupabaseStaffToDomain);
     notifyStaffMemberListeners();
   } else {
     console.error("DataStore: Failed to fetch staff members. Supabase error:", JSON.stringify(error, null, 2));
@@ -1123,8 +1116,8 @@ export const deleteBulkMeter = async (customerKeyNumber: string): Promise<StoreO
   return { success: false, message: (error as any)?.message || "Failed to delete bulk meter.", error };
 };
 
-export const addStaffMember = async (staffData: StaffMember): Promise<StoreOperationResult<StaffMember>> => {
-  const payload = mapDomainStaffToInsert(staffData);
+export const addStaffMember = async (staffData: Omit<StaffMember, 'id'> & {id?: string}): Promise<StoreOperationResult<StaffMember>> => {
+  const payload = mapDomainStaffToInsert(staffData as StaffMember);
   const { data: newSupabaseStaff, error } = await supabaseCreateStaffMember(payload);
   if (newSupabaseStaff && !error) {
     const newStaff = mapSupabaseStaffToDomain(newSupabaseStaff);
@@ -1136,7 +1129,7 @@ export const addStaffMember = async (staffData: StaffMember): Promise<StoreOpera
   return { success: false, message: (error as any)?.message || "Failed to add staff member.", error };
 };
 
-export const updateStaffMember = async (email: string, updatedStaffData: Partial<Omit<StaffMember, 'id'>>): Promise<StoreOperationResult<void>> => {
+export const updateStaffMember = async (email: string, updatedStaffData: Partial<Omit<StaffMember, 'id' | 'email'>>): Promise<StoreOperationResult<void>> => {
   const staffUpdatePayload = mapDomainStaffToUpdate(updatedStaffData);
   const { data: updatedSupabaseStaff, error } = await supabaseUpdateStaffMember(email, staffUpdatePayload);
 
@@ -1473,15 +1466,8 @@ export const authenticateStaffMember = async (email: string, password: string): 
         return { success: false, message: "Invalid email or password.", isNotFoundError: true };
     }
     
-    // Map the raw staff data to our domain model
     const user = mapSupabaseStaffToDomain(staffData);
-
-    // Ensure branches are available in memory and find the branch name
-    await initializeBranches(); 
-    const allBranches = getBranches();
-    const userBranch = allBranches.find(b => b.id === user.branchId);
-    user.branchName = userBranch?.name || "Unknown Branch";
-
+    
     return { success: true, data: user };
 };
 

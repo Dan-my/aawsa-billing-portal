@@ -80,7 +80,7 @@ export default function StaffManagementPage() {
         toast({ variant: "destructive", title: "Update Failed", description: result.message });
       }
     } else {
-      const result = await addStaffMemberToStore(data);
+      const result = await addStaffMemberToStore(data as StaffMember);
       if (result.success) {
         toast({ title: "Staff Added", description: `${data.name} has been added.` });
       } else {

@@ -52,22 +52,13 @@ export function NotificationBell({ user }: NotificationBellProps) {
     }
     
     const normalizeBranchName = (name: string | undefined | null): string => {
-        if (!name) return "";
-        let normalized = name.toLowerCase().trim();
-        
-        let changed = true;
-        while(changed) {
-            changed = false;
-            if (normalized.endsWith(" branch")) {
-                normalized = normalized.slice(0, -7).trim();
-                changed = true;
-            }
-            if (normalized.endsWith(".")) {
-                normalized = normalized.slice(0, -1).trim();
-                changed = true;
-            }
-        }
-        return normalized;
+      if (!name) return "";
+      return name
+        .trim()
+        .toLowerCase()
+        .replace(/\s*branch\s*$/i, '') // Case-insensitively remove "branch" and surrounding spaces from the end
+        .replace(/\.$/, '')             // Remove a trailing period
+        .trim();                        // Final trim
     };
 
     const normalizedUserBranch = normalizeBranchName(user.branchName);

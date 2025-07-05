@@ -56,25 +56,35 @@ export function NotificationBell({ user }: NotificationBellProps) {
   }, []);
 
   const relevantNotifications = React.useMemo(() => {
-    if (!user || user.role.toLowerCase() !== 'staff' || !user.branchName) {
+    if (!user || user.role.toLowerCase() !== 'staff') {
       return [];
     }
     
-    const normalizedStaffBranchName = user.branchName.trim().toLowerCase();
-    
-    // This comparison is intentionally case-insensitive and loose to handle minor data variations.
-    const staffBranch = allBranches.find(b => 
-      b.name.trim().toLowerCase().includes(normalizedStaffBranchName) ||
-      normalizedStaffBranchName.includes(b.name.trim().toLowerCase())
-    );
-
-    if (!staffBranch) {
-      return [];
+    // Attempt to find the staff's branch ID based on their branchName
+    let staffBranchId: string | undefined = undefined;
+    if (user.branchName) {
+        const normalizedStaffBranchName = user.branchName.trim().toLowerCase();
+        // Use an exact match for better reliability
+        const staffBranch = allBranches.find(b => 
+            b.name.trim().toLowerCase() === normalizedStaffBranchName
+        );
+        if (staffBranch) {
+            staffBranchId = staffBranch.id;
+        }
     }
 
     return notifications
       .filter(notification => {
-        return notification.targetBranchId === null || notification.targetBranchId === staffBranch.id;
+        // Condition 1: Notification is for all staff (target is NULL)
+        if (notification.targetBranchId === null) {
+            return true;
+        }
+        // Condition 2: Notification is for the staff's specific branch
+        if (staffBranchId && notification.targetBranchId === staffBranchId) {
+            return true;
+        }
+        // Otherwise, exclude the notification
+        return false;
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 

@@ -50,34 +50,25 @@ export function NotificationBell({ user }: NotificationBellProps) {
     if (!user || user.role.toLowerCase() !== 'staff' || !user.branchName) {
       return [];
     }
-    
-    const normalizeBranchName = (name: string | undefined | null): string => {
-        if (!name) return "";
-        return name
-            .toLowerCase()
-            .replace(/\s*branch\s*$/, "") // Remove "branch" from the end
-            .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "") // Remove all punctuation
-            .replace(/\s+/g, "") // Remove all spaces
-            .trim();
-    };
 
-    const normalizedUserBranch = normalizeBranchName(user.branchName);
-    const normalizedAllStaff = normalizeBranchName("All Staff");
+    // Simplified, direct comparison logic
+    const userBranch = user.branchName.trim().toLowerCase();
     
-    if (!normalizedUserBranch) {
-        return [];
-    }
-
     return notifications
       .filter(notification => {
-        const normalizedTargetBranch = normalizeBranchName(notification.targetBranchName);
-
-        if (normalizedTargetBranch === normalizedAllStaff) {
+        if (!notification.targetBranchName) {
+          return false;
+        }
+        const targetBranch = notification.targetBranchName.trim().toLowerCase();
+        
+        // Case 1: Notification is for everyone
+        if (targetBranch === 'all staff') {
           return true;
         }
 
-        if (normalizedTargetBranch === normalizedUserBranch) {
-            return true;
+        // Case 2: Notification is for this staff member's specific branch
+        if (targetBranch === userBranch) {
+          return true;
         }
 
         return false;

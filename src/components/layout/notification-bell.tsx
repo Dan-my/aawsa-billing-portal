@@ -62,19 +62,19 @@ export function NotificationBell({ user }: NotificationBellProps) {
       return [];
     }
     
-    const staffBranchId = user.branchId;
+    const staffBranchId = user.branchId; // This can be undefined if branch name doesn't match
 
     return notifications
       .filter(notification => {
-        // Condition 1: Notification is for "All Staff" (target_branch_id is null)
+        // Notification is for "All Staff" - always show.
         if (notification.targetBranchId === null) {
             return true;
         }
-        // Condition 2: Notification is for the staff's specific branch
+        // Notification is for a specific branch. Show it ONLY if the user has a matching branchId.
         if (staffBranchId && notification.targetBranchId === staffBranchId) {
             return true;
         }
-        // Otherwise, exclude the notification
+        // Otherwise, don't show the notification.
         return false;
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

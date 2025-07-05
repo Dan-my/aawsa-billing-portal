@@ -57,6 +57,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
   }, []);
 
   const relevantNotifications = React.useMemo(() => {
+    // The bell is only for staff members.
     if (!user || user.role.toLowerCase() !== 'staff') {
       return [];
     }
@@ -65,7 +66,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
 
     return notifications
       .filter(notification => {
-        // Condition 1: Notification is for all staff (target is NULL)
+        // Condition 1: Notification is for "All Staff" (target_branch_id is null)
         if (notification.targetBranchId === null) {
             return true;
         }

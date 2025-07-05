@@ -52,16 +52,17 @@ export function NotificationBell({ user }: NotificationBellProps) {
     }
     
     const normalizeBranchName = (name: string | undefined | null): string => {
-      if (!name) return "";
-      return name
-        .trim()
-        .toLowerCase()
-        .replace(/\s*branch\s*$/i, '') // Case-insensitively remove "branch" and surrounding spaces from the end
-        .replace(/\.$/, '')             // Remove a trailing period
-        .trim();                        // Final trim
+        if (!name) return "";
+        return name
+            .toLowerCase()
+            .replace(/\s*branch\s*$/, "") // Remove "branch" from the end
+            .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "") // Remove all punctuation
+            .replace(/\s+/g, "") // Remove all spaces
+            .trim();
     };
 
     const normalizedUserBranch = normalizeBranchName(user.branchName);
+    const normalizedAllStaff = normalizeBranchName("All Staff");
     
     if (!normalizedUserBranch) {
         return [];
@@ -71,7 +72,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
       .filter(notification => {
         const normalizedTargetBranch = normalizeBranchName(notification.targetBranchName);
 
-        if (normalizedTargetBranch === 'all staff') {
+        if (normalizedTargetBranch === normalizedAllStaff) {
           return true;
         }
 

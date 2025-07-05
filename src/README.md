@@ -141,3 +141,31 @@ You can also deploy this application to major cloud providers, although these me
 *   **AWS (Amazon Web Services):** Using services like AWS Amplify or containerizing your app for ECS/Fargate.
 *   **Google Cloud:** Using Cloud Run for a containerized deployment or App Engine.
 *   **Microsoft Azure:** Using Azure App Service or Azure Static Web Apps.
+
+---
+
+## Database Migrations
+
+From time to time, application updates may require changes to the database structure or functions. These changes are provided as SQL scripts that you need to run in your Supabase project's SQL Editor.
+
+### **Important: Always back up your data before running any migration script.**
+
+---
+
+### **Migration: Update Notification Function (Required)**
+
+This update fixes a critical bug in the notification system by changing how notifications are targeted from using a branch *name* to a unique branch *ID*. This makes the system much more reliable.
+
+**To apply this update:**
+
+1.  **Navigate to the SQL Editor:**
+    *   Go to your Supabase project dashboard.
+    *   In the left-hand menu, click on the **SQL Editor** icon (it looks like a database with a query symbol).
+2.  **Run the Script:**
+    *   Click on **"+ New query"**.
+    *   Open the newly added file `database_migrations/update_notification_function.sql` in this project.
+    *   Copy the entire content of that file.
+    *   Paste the content into the query window in the Supabase SQL Editor.
+    *   Click the **"RUN"** button.
+
+You should see a "Success. No rows returned" message. After running this script, the notification system will function correctly.

@@ -55,16 +55,6 @@ export function AuthForm() {
     const { data: user, success, message } = await authenticateStaffMember(values.email, values.password);
 
     if (success && user) {
-      if (user.status.toLowerCase() !== "active") {
-          toast({
-            variant: "destructive",
-            title: "Login Failed",
-            description: `This account is currently ${user.status}. Please contact an administrator.`,
-          });
-          setIsLoading(false);
-          return;
-      }
-      
       toast({
         title: "Login Successful",
         description: "Welcome back! Redirecting...",

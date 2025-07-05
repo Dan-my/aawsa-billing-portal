@@ -1455,7 +1455,6 @@ export const subscribeToNotifications = (listener: Listener<DomainNotification>)
 
 
 export const authenticateStaffMember = async (email: string, password: string): Promise<StoreOperationResult<StaffMember>> => {
-    // Step 1: Authenticate the staff member by email and password
     const { data: staffData, error: staffError } = await supabase
         .from('staff_members')
         .select('*')
@@ -1463,10 +1462,8 @@ export const authenticateStaffMember = async (email: string, password: string): 
         .eq('password', password)
         .single();
 
-    // Handle authentication errors
     if (staffError) {
-        // Don't log the common "not found" error to avoid console spam for failed logins
-        if (staffError.code !== 'PGRST116') {
+        if (staffError.code !== 'PGRST116') { // Don't log "No rows found"
             console.error("DataStore: Authentication error", staffError);
         }
         return { success: false, message: "Invalid email or password.", isNotFoundError: true, error: staffError };
@@ -1479,24 +1476,11 @@ export const authenticateStaffMember = async (email: string, password: string): 
     // Map the raw staff data to our domain model
     const user = mapSupabaseStaffToDomain(staffData);
 
-    // Step 2: Fetch the associated branch name separately for robustness
-    if (user.branchId) {
-        const { data: branchData, error: branchError } = await supabase
-            .from('branches')
-            .select('name')
-            .eq('id', user.branchId)
-            .single();
-
-        if (branchError) {
-            // Log if fetching the branch fails, but don't fail the login
-            console.error(`DataStore: Could not fetch branch name for user ${user.email}`, branchError);
-            user.branchName = 'Unknown Branch'; // Assign a fallback name
-        } else {
-            user.branchName = branchData?.name || 'Unknown Branch';
-        }
-    } else {
-        user.branchName = 'Unknown Branch';
-    }
+    // Ensure branches are available in memory and find the branch name
+    await initializeBranches(); 
+    const allBranches = getBranches();
+    const userBranch = allBranches.find(b => b.id === user.branchId);
+    user.branchName = userBranch?.name || "Unknown Branch";
 
     return { success: true, data: user };
 };
@@ -1516,5 +1500,3 @@ export async function loadInitialData() {
     initializeNotifications(),
   ]);
 }
-
-    

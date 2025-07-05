@@ -23,9 +23,6 @@ import {
   getBulkMeterReadings,
   initializeBulkMeterReadings,
   subscribeToBulkMeterReadings,
-  getBranches,
-  initializeBranches,
-  subscribeToBranches,
   subscribeToCustomers,
   subscribeToBulkMeters
 } from "@/lib/data-store";
@@ -45,11 +42,11 @@ interface User {
   email: string;
   role: "admin" | "staff" | "Admin" | "Staff";
   branchName?: string;
+  branchId?: string;
 }
 
 export default function StaffMeterReadingsPage() {
   const { toast } = useToast();
-  const [branchName, setBranchName] = React.useState<string>("Your Branch");
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isIndividualCsvModalOpen, setIsIndividualCsvModalOpen] = React.useState(false);
   const [isBulkCsvModalOpen, setIsBulkCsvModalOpen] = React.useState(false);
@@ -70,30 +67,24 @@ export default function StaffMeterReadingsPage() {
   const [bulkRowsPerPage, setBulkRowsPerPage] = React.useState(10);
 
 
-  const combineAndSortReadings = React.useCallback((currentBranchName?: string) => {
+  const combineAndSortReadings = React.useCallback(() => {
     const allCustomers = getCustomers();
     const allBulkMeters = getBulkMeters();
-    const allBranches = getBranches();
     const allIndividualReadings = getIndividualCustomerReadings();
     const allBulkReadings = getBulkMeterReadings();
 
-    const staffBranch = currentBranchName ? allBranches.find(b => {
-        const normalizedBranchName = b.name.trim().toLowerCase();
-        const normalizedStaffBranchName = currentBranchName.trim().toLowerCase();
-        return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
-    }) : undefined;
+    const staffBranchId = currentUser?.branchId;
     
     let branchBulkMeters: BulkMeter[] = [];
     let branchCustomers: IndividualCustomer[] = [];
 
-    if (staffBranch) {
-        const staffBranchId = staffBranch.id;
+    if (staffBranchId) {
         branchBulkMeters = allBulkMeters.filter(bm => bm.branchId === staffBranchId);
         
-        const branchBulkMeterIds = branchBulkMeters.map(bm => bm.customerKeyNumber);
+        const branchBulkMeterIds = new Set(branchBulkMeters.map(bm => bm.customerKeyNumber));
         branchCustomers = allCustomers.filter(c => 
           c.branchId === staffBranchId ||
-          (c.assignedBulkMeterId && branchBulkMeterIds.includes(c.assignedBulkMeterId))
+          (c.assignedBulkMeterId && branchBulkMeterIds.has(c.assignedBulkMeterId))
         );
     }
     
@@ -128,22 +119,17 @@ export default function StaffMeterReadingsPage() {
     
     setIndividualReadings(displayedIndividualReadings);
     setBulkReadings(displayedBulkReadings);
-  }, []);
+  }, [currentUser]);
 
   React.useEffect(() => {
     let isMounted = true;
     const storedUser = localStorage.getItem("user");
-    let localBranchName: string | undefined;
-
+    
     if (storedUser) {
       try {
         const parsedUser: User = JSON.parse(storedUser);
         if (isMounted) {
             setCurrentUser(parsedUser);
-            if (parsedUser.role.toLowerCase() === "staff" && parsedUser.branchName) {
-              setBranchName(parsedUser.branchName);
-              localBranchName = parsedUser.branchName;
-            }
         }
       } catch (e) { console.error("Failed to parse user from localStorage", e); }
     }
@@ -154,10 +140,9 @@ export default function StaffMeterReadingsPage() {
       initializeBulkMeters(),
       initializeIndividualCustomerReadings(),
       initializeBulkMeterReadings(),
-      initializeBranches(),
     ]).then(() => {
       if (!isMounted) return;
-      combineAndSortReadings(localBranchName);
+      combineAndSortReadings();
       setIsLoading(false);
     }).catch(error => {
       if (!isMounted) return;
@@ -166,13 +151,12 @@ export default function StaffMeterReadingsPage() {
       setIsLoading(false);
     });
     
-    const handleDataUpdate = () => { if(isMounted) combineAndSortReadings(localBranchName); };
+    const handleDataUpdate = () => { if(isMounted) combineAndSortReadings(); };
 
     const unsubIndiReadings = subscribeToIndividualCustomerReadings(handleDataUpdate);
     const unsubBulkReadings = subscribeToBulkMeterReadings(handleDataUpdate);
     const unsubCustomers = subscribeToCustomers(handleDataUpdate);
     const unsubBulkMeters = subscribeToBulkMeters(handleDataUpdate);
-    const unsubBranches = subscribeToBranches(handleDataUpdate);
 
     return () => { 
         isMounted = false; 
@@ -180,7 +164,6 @@ export default function StaffMeterReadingsPage() {
         unsubBulkReadings();
         unsubCustomers();
         unsubBulkMeters();
-        unsubBranches();
     };
   }, [toast, combineAndSortReadings]);
 
@@ -258,7 +241,7 @@ export default function StaffMeterReadingsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4">
-        <h1 className="text-2xl md:text-3xl font-bold">Meter Readings ({branchName})</h1>
+        <h1 className="text-2xl md:text-3xl font-bold">Meter Readings ({currentUser?.branchName || 'Your Branch'})</h1>
         <div className="flex gap-2 w-full md:w-auto flex-wrap justify-end">
           <div className="relative flex-grow md:flex-grow-0">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -374,7 +357,7 @@ export default function StaffMeterReadingsPage() {
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>No Meters Found</AlertTitle>
                     <UIAlertDescription>
-                        No customers or bulk meters could be loaded for your branch ({branchName}) to add readings. Please check if data exists or contact an administrator.
+                        No customers or bulk meters could be loaded for your branch ({currentUser?.branchName}) to add readings. Please check if data exists or contact an administrator.
                     </UIAlertDescription>
                 </Alert>
             ) : (

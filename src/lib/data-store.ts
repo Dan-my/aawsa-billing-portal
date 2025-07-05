@@ -1469,18 +1469,24 @@ export const authenticateStaffMember = async (email: string, password: string): 
           await initializeBranches();
         }
         
-        // This function normalizes a branch name for reliable matching.
+        // Improved, robust branch name normalization and matching
         const normalizeBranchName = (name: string) => {
-            return name.toLowerCase().replace(/\s*branch\s*/, '').trim();
+            return name.toLowerCase().replace(/\s*branch\s*$/, '').trim();
         };
 
         const normalizedStaffBranchName = normalizeBranchName(user.branchName);
 
-        const matchedBranch = branches.find(b => normalizeBranchName(b.name) === normalizedStaffBranchName);
+        const matchedBranch = branches.find(b => {
+            const normalizedOfficialName = normalizeBranchName(b.name);
+            if (normalizedOfficialName === normalizedStaffBranchName) return true;
+            if (normalizedOfficialName.includes(normalizedStaffBranchName)) return true;
+            if (normalizedStaffBranchName.includes(normalizedOfficialName)) return true;
+            return false;
+        });
         
         if (matchedBranch) {
             user.branchId = matchedBranch.id;
-            user.branchName = matchedBranch.name; // Standardize to the official name
+            user.branchName = matchedBranch.name;
         } else {
             console.warn(`DataStore: Could not find a branch matching the name "${user.branchName}" for user ${user.email}.`);
             user.branchName = 'Unknown Branch';

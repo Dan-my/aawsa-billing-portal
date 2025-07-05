@@ -60,22 +60,21 @@ export function NotificationBell({ user }: NotificationBellProps) {
       return [];
     }
     
-    // Normalize the staff's branch name for a more reliable comparison.
     const normalizedStaffBranchName = user.branchName.trim().toLowerCase();
-
-    // Find the branch object by comparing normalized names.
-    const staffBranch = allBranches.find(b => b.name.trim().toLowerCase() === normalizedStaffBranchName);
+    
+    // This comparison is intentionally case-insensitive and loose to handle minor data variations.
+    const staffBranch = allBranches.find(b => 
+      b.name.trim().toLowerCase().includes(normalizedStaffBranchName) ||
+      normalizedStaffBranchName.includes(b.name.trim().toLowerCase())
+    );
 
     if (!staffBranch) {
-        // If no matching branch is found after normalization, there's no way to link notifications.
-        return [];
+      return [];
     }
-    const staffBranchId = staffBranch.id;
 
     return notifications
       .filter(notification => {
-        // A notification is relevant if it's for all staff (null target) OR for the staff's specific branch ID.
-        return notification.targetBranchId === null || notification.targetBranchId === staffBranchId;
+        return notification.targetBranchId === null || notification.targetBranchId === staffBranch.id;
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 

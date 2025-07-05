@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -21,12 +22,12 @@ import {
   getBulkMeters,
   subscribeToBulkMeters,
   initializeBulkMeters,
-  getBranches,
-  initializeBranches,
-  subscribeToBranches
+  getBranches, // Added
+  initializeBranches, // Added
+  subscribeToBranches // Added
 } from "@/lib/data-store";
 import type { PaymentStatus, CustomerType, SewerageConnection } from "@/lib/billing";
-import type { Branch } from "@/app/admin/branches/branch-types";
+import type { Branch } from "@/app/admin/branches/branch-types"; // Added
 import { TablePagination } from "@/components/ui/table-pagination";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 
@@ -321,7 +322,8 @@ export default function StaffIndividualCustomersPage() {
         onOpenChange={setIsFormOpen}
         onSubmit={handleSubmitCustomer}
         defaultValues={selectedCustomer}
-        bulkMeters={branchFilteredData.bulkMeters} 
+        bulkMeters={branchFilteredData.bulkMeters}
+        staffBranchName={staffBranchName || undefined}
       />
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

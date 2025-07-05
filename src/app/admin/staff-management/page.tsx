@@ -94,7 +94,7 @@ export default function StaffManagementPage() {
   const filteredStaff = staffMembers.filter(staff =>
     staff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     staff.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    staff.branch.toLowerCase().includes(searchTerm.toLowerCase())
+    staff.branchName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (

@@ -54,9 +54,10 @@ interface BulkMeterFormDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: BulkMeterFormValues) => void;
   defaultValues?: BulkMeter | null;
+  staffBranchName?: string; // New prop for staff users
 }
 
-export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValues }: BulkMeterFormDialogProps) {
+export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValues, staffBranchName }: BulkMeterFormDialogProps) {
   const [availableBranches, setAvailableBranches] = React.useState<Branch[]>([]);
   const [isLoadingBranches, setIsLoadingBranches] = React.useState(true);
 
@@ -119,7 +120,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
         currentReading: undefined,
         month: "",
         specificArea: "",
-        location: "",
+        location: staffBranchName || "", // Use staff branch name for location
         ward: "",
         branchId: undefined,
         status: "Active",
@@ -128,7 +129,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
         yCoordinate: undefined,
       });
     }
-  }, [defaultValues, form, open]);
+  }, [defaultValues, form, open, staffBranchName]);
 
   const handleSubmit = (data: BulkMeterFormValues) => {
      const submissionData = {
@@ -162,35 +163,44 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="branchId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Assign to Branch (sets Location)</FormLabel>
-                    <Select
-                      onValueChange={(value) => handleBranchChange(value)}
-                      value={field.value || BRANCH_UNASSIGNED_VALUE}
-                      disabled={isLoadingBranches || form.formState.isSubmitting}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={isLoadingBranches ? "Loading branches..." : "Select a branch"} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value={BRANCH_UNASSIGNED_VALUE}>None (Manual Location)</SelectItem>
-                        {availableBranches.map((branch) => (
-                          <SelectItem key={branch.id} value={branch.id}>
-                            {branch.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {staffBranchName ? (
+                <FormItem>
+                  <FormLabel>Branch</FormLabel>
+                  <FormControl>
+                    <Input value={staffBranchName} readOnly disabled className="bg-muted/50" />
+                  </FormControl>
+                </FormItem>
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="branchId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Assign to Branch (sets Location)</FormLabel>
+                      <Select
+                        onValueChange={(value) => handleBranchChange(value)}
+                        value={field.value || BRANCH_UNASSIGNED_VALUE}
+                        disabled={isLoadingBranches || form.formState.isSubmitting}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={isLoadingBranches ? "Loading branches..." : "Select a branch"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value={BRANCH_UNASSIGNED_VALUE}>None (Manual Location)</SelectItem>
+                          {availableBranches.map((branch) => (
+                            <SelectItem key={branch.id} value={branch.id}>
+                              {branch.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <FormField
                 control={form.control}
                 name="name"
@@ -349,9 +359,9 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 name="location"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Location / Sub-City * (set by Branch selection)</FormLabel>
+                    <FormLabel>Location / Sub-City * {staffBranchName ? '' : '(set by Branch selection)'}</FormLabel>
                     <FormControl>
-                      <Input {...field} readOnly={!!form.getValues().branchId && form.getValues().branchId !== BRANCH_UNASSIGNED_VALUE} />
+                      <Input {...field} readOnly={!!staffBranchName || (!!form.getValues().branchId && form.getValues().branchId !== BRANCH_UNASSIGNED_VALUE)} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

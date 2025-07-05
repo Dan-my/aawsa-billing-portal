@@ -171,7 +171,7 @@ export default function StaffBulkMetersPage() {
         const normalizedBranchName = b.name.trim().toLowerCase();
         return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
     });
-    const dataWithBranchId = { ...data, branchId: staffBranch?.id || data.branchId };
+    const dataWithBranchId = { ...data, branchId: staffBranch?.id || data.branchId, location: staffBranch?.name || data.location };
     
     if (selectedBulkMeter) {
       await updateBulkMeterInStore(selectedBulkMeter.customerKeyNumber, dataWithBranchId);
@@ -273,6 +273,7 @@ export default function StaffBulkMetersPage() {
         onOpenChange={setIsFormOpen}
         onSubmit={handleSubmitBulkMeter}
         defaultValues={selectedBulkMeter}
+        staffBranchName={staffBranchName || undefined}
       />
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

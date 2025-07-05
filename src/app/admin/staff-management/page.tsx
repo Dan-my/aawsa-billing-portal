@@ -60,7 +60,7 @@ export default function StaffManagementPage() {
 
   const confirmDelete = async () => {
     if (staffToDelete) {
-      const result = await deleteStaffMemberFromStore(staffToDelete.id);
+      const result = await deleteStaffMemberFromStore(staffToDelete.email);
       if (result.success) {
         toast({ title: "Staff Deleted", description: `${staffToDelete.name} has been removed.` });
       } else {
@@ -73,7 +73,7 @@ export default function StaffManagementPage() {
 
   const handleSubmitStaff = async (data: StaffFormValues) => {
     if (selectedStaff) {
-      const result = await updateStaffMemberInStore(selectedStaff.id, data);
+      const result = await updateStaffMemberInStore(selectedStaff.email, data);
       if (result.success) {
         toast({ title: "Staff Updated", description: `${data.name} has been updated.` });
       } else {

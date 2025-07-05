@@ -51,7 +51,7 @@ export function StaffTable({ data, onEdit, onDelete }: StaffTableProps) {
         </TableHeader>
         <TableBody>
           {data.map((staff) => (
-            <TableRow key={staff.id}>
+            <TableRow key={staff.email}>
               <TableCell className="font-medium">{staff.name}</TableCell>
               <TableCell>{staff.email}</TableCell>
               <TableCell>{staff.branchName}</TableCell>

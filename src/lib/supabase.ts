@@ -1,4 +1,5 @@
 
+
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Database as ActualDatabase } from '@/types/supabase';
 
@@ -227,7 +228,6 @@ export interface Database {
       };
       staff_members: {
         Row: {
-          id: string;
           name: string;
           email: string;
           password?: string;
@@ -240,7 +240,6 @@ export interface Database {
           updated_at?: string | null;
         };
         Insert: {
-          id?: string;
           name: string;
           email: string;
           password?: string;
@@ -253,7 +252,6 @@ export interface Database {
           updated_at?: string | null;
         };
         Update: {
-          id?: string;
           name?: string;
           email?: string;
           password?: string;
@@ -625,8 +623,8 @@ export const deleteCustomer = async (customerKeyNumber: string) => supabase.from
 // CRUD for Staff Members
 export const getAllStaffMembers = async () => supabase.from('staff_members').select('*');
 export const createStaffMember = async (staffMember: StaffMemberInsert) => supabase.from('staff_members').insert(staffMember).select().single();
-export const updateStaffMember = async (id: string, staffMember: StaffMemberUpdate) => supabase.from('staff_members').update(staffMember).eq('id', id).select().single();
-export const deleteStaffMember = async (id: string) => supabase.from('staff_members').delete().eq('id', id);
+export const updateStaffMember = async (email: string, staffMember: StaffMemberUpdate) => supabase.from('staff_members').update(staffMember).eq('email', email).select().single();
+export const deleteStaffMember = async (email: string) => supabase.from('staff_members').delete().eq('email', email);
 
 // CRUD for Bills
 export const getAllBills = async () => supabase.from('bills').select('*');

@@ -503,7 +503,7 @@ const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { customerKeyNumber
 
 
 const mapSupabaseStaffToDomain = (ss: SupabaseStaffMemberRow): StaffMember => ({
-  id: ss.id,
+  id: ss.email, // Use email as the unique ID for the app
   name: ss.name,
   email: ss.email,
   password: ss.password || undefined,
@@ -1136,13 +1136,13 @@ export const addStaffMember = async (staffData: StaffMember): Promise<StoreOpera
   return { success: false, message: (error as any)?.message || "Failed to add staff member.", error };
 };
 
-export const updateStaffMember = async (id: string, updatedStaffData: Partial<Omit<StaffMember, 'id'>>): Promise<StoreOperationResult<void>> => {
+export const updateStaffMember = async (email: string, updatedStaffData: Partial<Omit<StaffMember, 'id'>>): Promise<StoreOperationResult<void>> => {
   const staffUpdatePayload = mapDomainStaffToUpdate(updatedStaffData);
-  const { data: updatedSupabaseStaff, error } = await supabaseUpdateStaffMember(id, staffUpdatePayload);
+  const { data: updatedSupabaseStaff, error } = await supabaseUpdateStaffMember(email, staffUpdatePayload);
 
   if (updatedSupabaseStaff && !error) {
     const updatedStaff = mapSupabaseStaffToDomain(updatedSupabaseStaff);
-    staffMembers = staffMembers.map(s => s.id === id ? updatedStaff : s);
+    staffMembers = staffMembers.map(s => (s.email === email ? updatedStaff : s));
     notifyStaffMemberListeners();
     return { success: true };
   }
@@ -1152,14 +1152,14 @@ export const updateStaffMember = async (id: string, updatedStaffData: Partial<Om
 };
 
 
-export const deleteStaffMember = async (staffId: string): Promise<StoreOperationResult<void>> => {
-  const { error } = await supabaseDeleteStaffMember(staffId);
+export const deleteStaffMember = async (email: string): Promise<StoreOperationResult<void>> => {
+  const { error } = await supabaseDeleteStaffMember(email);
   if (error) {
     console.error("DataStore: Failed to delete staff member profile.", error);
     return { success: false, message: (error as any)?.message || "Failed to delete staff profile." };
   }
   
-  staffMembers = staffMembers.filter(s => s.id !== staffId);
+  staffMembers = staffMembers.filter(s => s.email !== email);
   notifyStaffMemberListeners();
   return { success: true };
 };

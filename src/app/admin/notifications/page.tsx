@@ -77,24 +77,21 @@ export default function AdminNotificationsPage() {
       return;
     }
     
-    const targetBranchName = data.targetBranchId === "All Staff"
-      ? "All Staff"
-      : branches.find(b => b.id === data.targetBranchId)?.name;
-
-    if (!targetBranchName) {
-      toast({ variant: "destructive", title: "Error", description: "Selected branch not found." });
-      return;
-    }
+    // The value from the form is now either a branch ID or the string "All Staff"
+    const targetIdentifier = data.targetBranchId;
 
     const result = await addNotification({
       title: data.title,
       message: data.message,
-      targetBranchName: targetBranchName,
+      targetBranchName: targetIdentifier, // Send the ID or "All Staff" directly
       senderName: user.name,
     });
 
     if (result.success) {
-      toast({ title: "Notification Sent", description: `Your message has been sent to ${targetBranchName}.` });
+      const displayTargetName = data.targetBranchId === "All Staff"
+          ? "All Staff"
+          : branches.find(b => b.id === data.targetBranchId)?.name || "the selected branch";
+      toast({ title: "Notification Sent", description: `Your message has been sent to ${displayTargetName}.` });
       form.reset({
         title: "",
         message: "",
@@ -104,6 +101,11 @@ export default function AdminNotificationsPage() {
       toast({ variant: "destructive", title: "Failed to Send", description: result.message });
     }
   }
+
+  const getDisplayTargetName = (targetId: string) => {
+    if (targetId === "All Staff") return "All Staff";
+    return branches.find(b => b.id === targetId)?.name || targetId;
+  };
 
   return (
     <div className="space-y-6">
@@ -201,7 +203,7 @@ export default function AdminNotificationsPage() {
                           <p className="font-medium">{n.title}</p>
                           <p className="text-xs text-muted-foreground truncate max-w-xs">{n.message}</p>
                         </TableCell>
-                        <TableCell>{n.targetBranchName}</TableCell>
+                        <TableCell>{getDisplayTargetName(n.targetBranchName)}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
                         </TableCell>

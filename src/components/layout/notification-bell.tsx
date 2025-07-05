@@ -12,8 +12,12 @@ import {
   getNotifications,
   initializeNotifications,
   subscribeToNotifications,
+  getBranches,
+  initializeBranches,
+  subscribeToBranches,
 } from "@/lib/data-store";
 import type { DomainNotification } from "@/lib/data-store";
+import type { Branch } from "@/app/admin/branches/branch-types";
 
 const LAST_READ_TIMESTAMP_KEY = "last-read-timestamp";
 
@@ -29,6 +33,7 @@ interface NotificationBellProps {
 
 export function NotificationBell({ user }: NotificationBellProps) {
   const [notifications, setNotifications] = React.useState<DomainNotification[]>([]);
+  const [allBranches, setAllBranches] = React.useState<Branch[]>([]);
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [lastReadTimestamp, setLastReadTimestamp] = React.useState<string | null>(null);
   const [selectedNotification, setSelectedNotification] = React.useState<DomainNotification | null>(null);
@@ -38,46 +43,41 @@ export function NotificationBell({ user }: NotificationBellProps) {
       setLastReadTimestamp(localStorage.getItem(LAST_READ_TIMESTAMP_KEY));
     }
     initializeNotifications();
+    initializeBranches();
     
     const unsubNotifications = subscribeToNotifications(setNotifications);
+    const unsubBranches = subscribeToBranches(setAllBranches);
 
     return () => {
       unsubNotifications();
+      unsubBranches();
     };
   }, []);
 
   const relevantNotifications = React.useMemo(() => {
-    if (!user || user.role.toLowerCase() !== 'staff' || !user.branchName) {
+    if (!user || user.role.toLowerCase() !== 'staff' || !user.branchName || allBranches.length === 0) {
       return [];
     }
 
-    // Definitive normalization function to clean up branch names before comparison.
-    // This will handle variations in capitalization, punctuation, spacing, and the word "branch".
-    const normalizeBranchName = (name: string): string => {
-      if (!name) return '';
-      return name
-        .toLowerCase() // 1. Convert to lowercase
-        .replace(/branch/g, '') // 2. Remove the word "branch"
-        .replace(/[^a-z0-9]/g, ''); // 3. Remove all non-alphanumeric characters (spaces, punctuation, etc.)
+    // A robust function to find the staff member's official branch ID
+    const getStaffBranchId = (): string | undefined => {
+        const normalize = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const normalizedUserBranchName = normalize(user.branchName!);
+        const staffBranch = allBranches.find(branch => normalize(branch.name) === normalizedUserBranchName);
+        return staffBranch?.id;
     };
     
-    const normalizedUserBranch = normalizeBranchName(user.branchName);
-    
+    const staffBranchId = getStaffBranchId();
+
     return notifications
       .filter(notification => {
-        if (!notification.targetBranchName) {
-          return false;
-        }
-        
-        const normalizedTargetBranch = normalizeBranchName(notification.targetBranchName);
-
-        // Case 1: Notification is for everyone (e.g., target is "All Staff")
-        if (normalizedTargetBranch === 'allstaff') {
+        // Case 1: Notification is for everyone
+        if (notification.targetBranchName === 'All Staff') {
           return true;
         }
 
-        // Case 2: Notification is for this staff member's specific branch
-        if (normalizedTargetBranch === normalizedUserBranch) {
+        // Case 2: Notification is for this staff member's specific branch ID
+        if (staffBranchId && notification.targetBranchName === staffBranchId) {
           return true;
         }
 
@@ -85,7 +85,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-  }, [notifications, user]);
+  }, [notifications, user, allBranches]);
 
   React.useEffect(() => {
     const newUnreadCount = relevantNotifications.filter(
@@ -107,6 +107,11 @@ export function NotificationBell({ user }: NotificationBellProps) {
       if (!isOpen) {
           setSelectedNotification(null);
       }
+  };
+  
+  const getDisplayTargetName = (targetId: string) => {
+    if (targetId === "All Staff") return "All Staff";
+    return allBranches.find(b => b.id === targetId)?.name || "a specific branch";
   };
 
   if (!user || user.role.toLowerCase() === 'admin') return null;
@@ -161,7 +166,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
              <DialogHeader>
                  <DialogTitle>{selectedNotification.title}</DialogTitle>
                  <DialogDescription className="text-xs pt-2">
-                     Sent by {selectedNotification.senderName} to {selectedNotification.targetBranchName} &bull; {formatDistanceToNow(parseISO(selectedNotification.createdAt), { addSuffix: true })}
+                     Sent by {selectedNotification.senderName} to {getDisplayTargetName(selectedNotification.targetBranchName)} &bull; {formatDistanceToNow(parseISO(selectedNotification.createdAt), { addSuffix: true })}
                  </DialogDescription>
              </DialogHeader>
              <div className="py-4 text-sm">{selectedNotification.message}</div>

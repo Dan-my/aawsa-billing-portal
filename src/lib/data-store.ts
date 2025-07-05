@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { IndividualCustomer as DomainIndividualCustomer, IndividualCustomerStatus } from '@/app/admin/individual-customers/individual-customer-types';
@@ -1454,33 +1455,52 @@ export const subscribeToNotifications = (listener: Listener<DomainNotification>)
 
 
 export const authenticateStaffMember = async (email: string, password: string): Promise<StoreOperationResult<StaffMember>> => {
-  const { data, error } = await supabase
-    .from('staff_members')
-    .select('*, branches(name)')
-    .eq('email', email.toLowerCase())
-    .eq('password', password)
-    .single();
+    // Step 1: Authenticate the staff member by email and password
+    const { data: staffData, error: staffError } = await supabase
+        .from('staff_members')
+        .select('*')
+        .eq('email', email.toLowerCase())
+        .eq('password', password)
+        .single();
 
-  if (error) {
-    if (error.code !== 'PGRST116') { // Not a "0 rows" error
-      console.error("DataStore: Authentication error", error);
+    // Handle authentication errors
+    if (staffError) {
+        // Don't log the common "not found" error to avoid console spam for failed logins
+        if (staffError.code !== 'PGRST116') {
+            console.error("DataStore: Authentication error", staffError);
+        }
+        return { success: false, message: "Invalid email or password.", isNotFoundError: true, error: staffError };
     }
-    return { success: false, message: "Invalid email or password.", isNotFoundError: true, error };
-  }
 
-  if (data) {
-    // The type from Supabase with the joined table is a bit tricky.
-    // We cast it to access the nested branch name.
-    const row = data as unknown as (SupabaseStaffMemberRow & { branches: { name: string } | null });
+    if (!staffData) {
+        return { success: false, message: "Invalid email or password.", isNotFoundError: true };
+    }
     
-    const user = mapSupabaseStaffToDomain(row);
-    user.branchName = row.branches?.name || 'Unknown Branch'; // Set the branch name from the join
-    
+    // Map the raw staff data to our domain model
+    const user = mapSupabaseStaffToDomain(staffData);
+
+    // Step 2: Fetch the associated branch name separately for robustness
+    if (user.branchId) {
+        const { data: branchData, error: branchError } = await supabase
+            .from('branches')
+            .select('name')
+            .eq('id', user.branchId)
+            .single();
+
+        if (branchError) {
+            // Log if fetching the branch fails, but don't fail the login
+            console.error(`DataStore: Could not fetch branch name for user ${user.email}`, branchError);
+            user.branchName = 'Unknown Branch'; // Assign a fallback name
+        } else {
+            user.branchName = branchData?.name || 'Unknown Branch';
+        }
+    } else {
+        user.branchName = 'Unknown Branch';
+    }
+
     return { success: true, data: user };
-  }
-  
-  return { success: false, message: "Invalid email or password.", isNotFoundError: true };
 };
+
 
 export async function loadInitialData() {
   await initializeCustomers();

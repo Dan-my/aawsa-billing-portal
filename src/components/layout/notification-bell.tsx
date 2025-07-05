@@ -25,6 +25,7 @@ interface UserProfile {
   id: string;
   role: 'Admin' | 'Staff';
   branchName?: string;
+  branchId?: string;
   name?: string;
 }
 
@@ -60,18 +61,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
       return [];
     }
     
-    let staffBranchId: string | undefined = undefined;
-    if (user.branchName) {
-        const normalizedStaffBranchName = user.branchName.trim().toLowerCase();
-        // Use a more lenient find method to handle partial matches like "Kolfe" vs "Kolfe Branch"
-        const staffBranch = allBranches.find(b => {
-            const normalizedBranchName = b.name.trim().toLowerCase();
-            return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
-        });
-        if (staffBranch) {
-            staffBranchId = staffBranch.id;
-        }
-    }
+    const staffBranchId = user.branchId;
 
     return notifications
       .filter(notification => {
@@ -88,7 +78,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-  }, [notifications, user, allBranches]);
+  }, [notifications, user]);
 
   React.useEffect(() => {
     const newUnreadCount = relevantNotifications.filter(

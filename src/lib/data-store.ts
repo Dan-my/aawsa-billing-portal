@@ -1455,18 +1455,35 @@ export const authenticateStaffMember = async (email: string, password: string): 
         .eq('password', password)
         .single();
 
-    if (staffError) {
-        if (staffError.code !== 'PGRST116') { // Don't log "No rows found"
+    if (staffError || !staffData) {
+        if (staffError && staffError.code !== 'PGRST116') { // Don't log "No rows found"
             console.error("DataStore: Authentication error", staffError);
         }
         return { success: false, message: "Invalid email or password.", isNotFoundError: true, error: staffError };
     }
 
-    if (!staffData) {
-        return { success: false, message: "Invalid email or password.", isNotFoundError: true };
-    }
-    
     const user = mapSupabaseStaffToDomain(staffData);
+    
+    // Find the branch ID based on the staff's branch name
+    if (user.branchName) {
+        // Ensure branches are loaded before trying to find a match
+        if (branches.length === 0) {
+          await initializeBranches();
+        }
+        
+        const normalizedStaffBranchName = user.branchName.trim().toLowerCase();
+        const matchedBranch = branches.find(b => {
+            const normalizedBranchName = b.name.trim().toLowerCase();
+            return normalizedBranchName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedBranchName);
+        });
+        
+        if (matchedBranch) {
+            user.branchId = matchedBranch.id; // Attach the ID to the user object
+        } else {
+            console.warn(`DataStore: Could not find a branch matching the name "${user.branchName}" for user ${user.email}.`);
+            user.branchName = 'Unknown Branch'; // Standardize the name if not found.
+        }
+    }
     
     return { success: true, data: user };
 };

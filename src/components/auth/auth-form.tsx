@@ -65,6 +65,7 @@ export function AuthForm() {
         email: user.email,
         role: user.role,
         branchName: user.branchName,
+        branchId: user.branchId,
         name: user.name,
       };
       localStorage.setItem("user", JSON.stringify(sessionUser));

@@ -1,20 +1,27 @@
--- Drop the existing function if it exists to avoid conflicts.
--- This is safe because we are replacing it with the corrected version.
-DROP FUNCTION IF EXISTS public.insert_notification(p_title text, p_message text, p_sender_name text, p_target_branch_name text);
+-- Drop the existing function first to remove the dependency on the table.
 DROP FUNCTION IF EXISTS public.insert_notification(p_title text, p_message text, p_sender_name text, p_target_branch_id uuid);
+-- Also drop any older versions that might exist from previous attempts.
+DROP FUNCTION IF EXISTS public.insert_notification(p_title text, p_message text, p_sender_name text, p_target_branch_name text);
 
+-- Now it's safe to drop the table.
+DROP TABLE IF EXISTS public.notifications;
 
--- Create the new, corrected function that uses target_branch_id (UUID) and runs with the security level of the user who defines it.
--- This is necessary to bypass row-level security policies safely.
---
--- Parameters:
--- p_title: The title of the notification.
--- p_message: The main content of the notification.
--- p_sender_name: The name of the user sending the notification.
--- p_target_branch_id: The unique ID (UUID) of the target branch. Can be NULL for notifications sent to all staff.
---
--- Returns:
--- A single row from the public.notifications table representing the newly created notification.
+-- Create the new notifications table with the correct foreign key structure.
+CREATE TABLE public.notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    sender_name TEXT NOT NULL,
+    target_branch_id UUID,
+
+    CONSTRAINT fk_branch
+        FOREIGN KEY(target_branch_id)
+        REFERENCES public.branches(id)
+        ON DELETE SET NULL
+);
+
+-- Re-create the database function with the SECURITY DEFINER fix.
 CREATE OR REPLACE FUNCTION public.insert_notification(
     p_title text,
     p_message text,
@@ -23,7 +30,7 @@ CREATE OR REPLACE FUNCTION public.insert_notification(
 )
 RETURNS SETOF public.notifications
 LANGUAGE plpgsql
-SECURITY DEFINER -- This is the key change to bypass RLS for this specific function
+SECURITY DEFINER
 AS $$
 BEGIN
     RETURN QUERY
@@ -32,3 +39,19 @@ BEGIN
     RETURNING id, created_at, title, message, sender_name, target_branch_id;
 END;
 $$;
+
+-- Finally, re-enable Row Level Security and apply the necessary access policies.
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow service role full access"
+ON public.notifications
+FOR ALL
+TO service_role
+USING (true)
+WITH CHECK (true);
+
+CREATE POLICY "Allow authenticated users to read notifications"
+ON public.notifications
+FOR SELECT
+TO authenticated
+USING (true);

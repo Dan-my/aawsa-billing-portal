@@ -1,12 +1,13 @@
-
 -- Drop the existing function if it exists to avoid conflicts.
 -- This is safe because we are replacing it with the corrected version.
+-- We drop both potential old signatures to be safe.
 DROP FUNCTION IF EXISTS public.insert_notification(p_title text, p_message text, p_sender_name text, p_target_branch_name text);
 DROP FUNCTION IF EXISTS public.insert_notification(p_title text, p_message text, p_sender_name text, p_target_branch_id uuid);
 
 
--- Create the new, corrected function that uses target_branch_id (UUID).
--- This function inserts a new notification into the public.notifications table.
+-- Create the new, corrected function that uses target_branch_id (UUID) and runs with SECURITY DEFINER.
+-- The SECURITY DEFINER clause is the critical fix for the "row-level security policy" error.
+-- It allows the function to run with the permissions of its owner, bypassing the RLS of the calling user.
 --
 -- Parameters:
 -- p_title: The title of the notification.
@@ -24,6 +25,7 @@ CREATE OR REPLACE FUNCTION public.insert_notification(
 )
 RETURNS SETOF public.notifications
 LANGUAGE plpgsql
+SECURITY DEFINER
 AS $$
 BEGIN
     RETURN QUERY

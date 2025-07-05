@@ -154,7 +154,10 @@ From time to time, application updates may require changes to the database struc
 
 ### **Migration: Update Notification Function (Required)**
 
-This update fixes a critical bug in the notification system by changing how notifications are targeted from using a branch *name* to a unique branch *ID*. This makes the system much more reliable.
+This update fixes two critical bugs in the notification system.
+1. It changes how notifications are targeted from using a branch *name* to a unique branch *ID*, making the system much more reliable.
+2. It resolves a "row-level security policy" error by adding a necessary `SECURITY DEFINER` setting, allowing the application to send notifications without disabling important database security rules.
+**If you have run a previous version of this script, please run this updated version to apply the security fix.**
 
 **To apply this update:**
 

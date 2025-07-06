@@ -17,18 +17,12 @@ import {
   updateBranch as updateBranchInStore, 
   deleteBranch as deleteBranchFromStore,
   subscribeToBranches,
-  initializeBranches // This will now fetch from Supabase if cache is empty
+  initializeBranches
 } from "@/lib/data-store";
-
-// initialBranchesData is now effectively a fallback or example, Supabase is the source of truth.
-export const initialBranchesData: Branch[] = [
-  { id: "1", name: "Kality Branch", location: "Kality Sub-City, Woreda 05", contactPerson: "Abebe Kebede", contactPhone: "0911123456", status: "Active" },
-  { id: "2", name: "Bole Branch", location: "Bole Sub-City, Near Airport", contactPerson: "Chaltu Lemma", contactPhone: "0912987654", status: "Active" },
-  { id: "3", name: "Piassa Branch", location: "Arada Sub-City, Piassa", contactPerson: "Yosef Tadesse", contactPhone: "0913112233", status: "Inactive" },
-  { id: "4", name: "Megenagna Branch", location: "Yeka Sub-City, Megenagna Area", contactPerson: "Sara Belay", status: "Active" },
-];
+import { usePermissions } from "@/hooks/use-permissions";
 
 export default function BranchesPage() {
+  const { hasPermission } = usePermissions();
   const { toast } = useToast();
   const [branches, setBranches] = React.useState<Branch[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -47,7 +41,7 @@ export default function BranchesPage() {
     
     const unsubscribe = subscribeToBranches((updatedBranches) => {
       setBranches(updatedBranches);
-      setIsLoading(false); // Also set loading to false on updates
+      setIsLoading(false); 
     });
     return () => unsubscribe();
   }, []);
@@ -78,7 +72,6 @@ export default function BranchesPage() {
 
   const handleSubmitBranch = async (data: BranchFormValues) => {
     if (selectedBranch) {
-      // Pass the ID and the form data as separate arguments as expected by the update function
       await updateBranchInStore(selectedBranch.id, data);
       toast({ title: "Branch Updated", description: `${data.name} has been updated.` });
     } else {
@@ -110,9 +103,11 @@ export default function BranchesPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button onClick={handleAddBranch}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New Branch
-          </Button>
+          {hasPermission('branches_create') && (
+            <Button onClick={handleAddBranch}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Add New Branch
+            </Button>
+          )}
         </div>
       </div>
 
@@ -135,32 +130,38 @@ export default function BranchesPage() {
               data={filteredBranches}
               onEdit={handleEditBranch}
               onDelete={handleDeleteBranch}
+              canEdit={hasPermission('branches_update')}
+              canDelete={hasPermission('branches_delete')}
             />
           )}
         </CardContent>
       </Card>
 
-      <BranchFormDialog
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        onSubmit={handleSubmitBranch}
-        defaultValues={selectedBranch}
-      />
+      {hasPermission('branches_create') || hasPermission('branches_update') ? (
+        <BranchFormDialog
+          open={isFormOpen}
+          onOpenChange={setIsFormOpen}
+          onSubmit={handleSubmitBranch}
+          defaultValues={selectedBranch}
+        />
+      ) : null}
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the branch {branchToDelete?.name}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setBranchToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {hasPermission('branches_delete') && (
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the branch {branchToDelete?.name}.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setBranchToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }

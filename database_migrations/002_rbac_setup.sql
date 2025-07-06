@@ -6,7 +6,6 @@ CREATE TABLE IF NOT EXISTS public.roles (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-COMMENT ON TABLE public.roles IS 'Stores user roles for role-based access control.';
 
 -- Create permissions table
 CREATE TABLE IF NOT EXISTS public.permissions (
@@ -16,8 +15,6 @@ CREATE TABLE IF NOT EXISTS public.permissions (
     category TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
-COMMENT ON TABLE public.permissions IS 'Stores individual permissions that can be assigned to roles.';
-COMMENT ON COLUMN public.permissions.category IS 'A category for grouping permissions in the UI, e.g., "User Management".';
 
 -- Create role_permissions join table
 CREATE TABLE IF NOT EXISTS public.role_permissions (
@@ -26,19 +23,15 @@ CREATE TABLE IF NOT EXISTS public.role_permissions (
     PRIMARY KEY (role_id, permission_id),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
-COMMENT ON TABLE public.role_permissions IS 'Links roles to their assigned permissions.';
 
 -- Add the role_id column to staff_members if it doesn't exist
 ALTER TABLE public.staff_members ADD COLUMN IF NOT EXISTS role_id BIGINT;
 
 -- Add the foreign key constraint to link staff_members to roles
--- This is a critical fix for login functionality.
 ALTER TABLE public.staff_members
 DROP CONSTRAINT IF EXISTS staff_members_role_id_fkey,
 ADD CONSTRAINT staff_members_role_id_fkey
 FOREIGN KEY (role_id) REFERENCES public.roles(id) ON DELETE SET NULL;
-COMMENT ON COLUMN public.staff_members.role_id IS 'Foreign key to the roles table.';
-
 
 -- Insert default roles, ignoring if they already exist
 INSERT INTO public.roles (role_name, description) VALUES
@@ -102,7 +95,6 @@ BEGIN
 END;
 $function$;
 
--- Grant permission to any user (including the anonymous user your app uses) to call this function.
 GRANT EXECUTE ON FUNCTION public.update_role_permissions(bigint, bigint[]) TO public;
 
 

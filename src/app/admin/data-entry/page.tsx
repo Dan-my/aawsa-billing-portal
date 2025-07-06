@@ -4,7 +4,7 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, UploadCloud, Info, FileSpreadsheet } from "lucide-react";
+import { FileText, UploadCloud, Info, FileSpreadsheet, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BulkMeterDataEntryForm } from "./bulk-meter-data-entry-form";
 import { IndividualCustomerDataEntryForm } from "./individual-customer-data-entry-form";
@@ -18,13 +18,16 @@ import {
 import { addBulkMeter, addCustomer, initializeBulkMeters, initializeCustomers } from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
-import type { CustomerType, SewerageConnection } from "@/lib/billing";
+import { usePermissions } from "@/hooks/use-permissions";
+import { Alert, AlertTitle } from "@/components/ui/alert";
 
 const bulkMeterCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward", "branchId", "xCoordinate", "yCoordinate"];
 const individualCustomerCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward", "sewerageConnection", "assignedBulkMeterId", "branchId"];
 
 
 export default function AdminDataEntryPage() {
+  const { hasPermission } = usePermissions();
+
   React.useEffect(() => {
     initializeBulkMeters();
     initializeCustomers();
@@ -59,7 +62,19 @@ export default function AdminDataEntryPage() {
       URL.revokeObjectURL(url);
     }
   };
-
+  
+  if (!hasPermission('data_entry_access')) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl md:text-3xl font-bold">Customer Data Entry</h1>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Access Denied</AlertTitle>
+          <CardDescription>You do not have permission to access the data entry page.</CardDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

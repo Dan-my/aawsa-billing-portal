@@ -27,9 +27,11 @@ interface StaffTableProps {
   data: StaffMember[];
   onEdit: (staff: StaffMember) => void;
   onDelete: (staff: StaffMember) => void;
+  canEdit: boolean;
+  canDelete: boolean;
 }
 
-export function StaffTable({ data, onEdit, onDelete }: StaffTableProps) {
+export function StaffTable({ data, onEdit, onDelete, canEdit, canDelete }: StaffTableProps) {
   if (data.length === 0) {
     return (
       <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
@@ -37,6 +39,9 @@ export function StaffTable({ data, onEdit, onDelete }: StaffTableProps) {
       </div>
     );
   }
+
+  const showActionsColumn = canEdit || canDelete;
+
   return (
     <div className="rounded-md border mt-4">
       <Table>
@@ -46,7 +51,7 @@ export function StaffTable({ data, onEdit, onDelete }: StaffTableProps) {
             <TableHead>Email</TableHead>
             <TableHead>Branch</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            {showActionsColumn && <TableHead className="text-right">Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -60,28 +65,34 @@ export function StaffTable({ data, onEdit, onDelete }: StaffTableProps) {
                   {staff.status}
                 </Badge>
               </TableCell>
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                      <span className="sr-only">Open menu</span>
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => onEdit(staff)}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => onDelete(staff)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
+              {showActionsColumn && (
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      {canEdit && (
+                        <DropdownMenuItem onClick={() => onEdit(staff)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                      )}
+                      {canEdit && canDelete && <DropdownMenuSeparator />}
+                      {canDelete && (
+                        <DropdownMenuItem onClick={() => onDelete(staff)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>

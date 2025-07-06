@@ -19,25 +19,19 @@ import {
   deleteBulkMeter as deleteBulkMeterFromStore,
   subscribeToBulkMeters,
   initializeBulkMeters,
-  getBranches, // Added
-  initializeBranches, // Added
-  subscribeToBranches // Added
+  getBranches,
+  initializeBranches,
+  subscribeToBranches
 } from "@/lib/data-store";
-import type { Branch } from "../branches/branch-types"; // Added
+import type { Branch } from "../branches/branch-types";
 import { TablePagination } from "@/components/ui/table-pagination";
-
-// Initial data is now mainly for reference or if Supabase fetch fails and a fallback is desired.
-export const initialBulkMeters: Omit<BulkMeter, 'status' | 'paymentStatus' | 'outStandingbill'>[] = [
-  { customerKeyNumber: "BMK001", name: "Kality Industrial Meter", contractNumber: "BMC001", meterSize: 3, meterNumber: "MTR-BM-001", previousReading: 10000, currentReading: 10500, month: "2023-11", specificArea: "Ind. Zone A", location: "Kality", ward: "Woreda 5" },
-  { customerKeyNumber: "BMB002", name: "Bole Airport Feeder", contractNumber: "BMC002", meterSize: 4, meterNumber: "MTR-BM-002", previousReading: 25000, currentReading: 26500, month: "2023-11", specificArea: "Airport Cargo", location: "Bole", ward: "Woreda 1" },
-  { customerKeyNumber: "BMM003", name: "Megenagna Res. Supply", contractNumber: "BMC003", meterSize: 2.5, meterNumber: "MTR-BM-003", previousReading: 5000, currentReading: 5200, month: "2023-11", specificArea: "Block 10", location: "Megenagna", ward: "Woreda 8" },
-];
-
+import { usePermissions } from "@/hooks/use-permissions";
 
 export default function BulkMetersPage() {
+  const { hasPermission } = usePermissions();
   const { toast } = useToast();
   const [bulkMeters, setBulkMeters] = React.useState<BulkMeter[]>([]);
-  const [branches, setBranches] = React.useState<Branch[]>([]); // Added
+  const [branches, setBranches] = React.useState<Branch[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
@@ -52,24 +46,23 @@ export default function BulkMetersPage() {
     setIsLoading(true);
     Promise.all([
       initializeBulkMeters(),
-      initializeBranches() // Added
+      initializeBranches()
     ]).then(() => {
       setBulkMeters(getBulkMeters());
-      setBranches(getBranches()); // Added
+      setBranches(getBranches());
       setIsLoading(false);
     });
     
     const unsubscribeBM = subscribeToBulkMeters((updatedBulkMeters) => {
        setBulkMeters(updatedBulkMeters);
-       // setIsLoading(false); // Removed to avoid multiple setIsLoading calls
     });
-    const unsubscribeBranches = subscribeToBranches((updatedBranches) => { // Added
+    const unsubscribeBranches = subscribeToBranches((updatedBranches) => {
       setBranches(updatedBranches);
     });
 
     return () => {
       unsubscribeBM();
-      unsubscribeBranches(); // Added
+      unsubscribeBranches();
     };
   }, []);
 
@@ -112,7 +105,7 @@ export default function BulkMetersPage() {
   const filteredBulkMeters = bulkMeters.filter(bm =>
     bm.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     bm.meterNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (bm.branchId && branches.find(b => b.id === bm.branchId)?.name.toLowerCase().includes(searchTerm.toLowerCase())) || // Search by branch name
+    (bm.branchId && branches.find(b => b.id === bm.branchId)?.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
     bm.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
     bm.ward.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -138,9 +131,11 @@ export default function BulkMetersPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button onClick={handleAddBulkMeter}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New Bulk Meter
-          </Button>
+          {hasPermission('bulk_meters_create') && (
+            <Button onClick={handleAddBulkMeter}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Add New Bulk Meter
+            </Button>
+          )}
         </div>
       </div>
 
@@ -163,7 +158,9 @@ export default function BulkMetersPage() {
               data={paginatedBulkMeters}
               onEdit={handleEditBulkMeter}
               onDelete={handleDeleteBulkMeter}
-              branches={branches} // Added
+              branches={branches}
+              canEdit={hasPermission('bulk_meters_update')}
+              canDelete={hasPermission('bulk_meters_delete')}
             />
           )}
         </CardContent>
@@ -182,27 +179,31 @@ export default function BulkMetersPage() {
         )}
       </Card>
 
-      <BulkMeterFormDialog
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        onSubmit={handleSubmitBulkMeter}
-        defaultValues={selectedBulkMeter}
-      />
+      {(hasPermission('bulk_meters_create') || hasPermission('bulk_meters_update')) && (
+        <BulkMeterFormDialog
+          open={isFormOpen}
+          onOpenChange={setIsFormOpen}
+          onSubmit={handleSubmitBulkMeter}
+          defaultValues={selectedBulkMeter}
+        />
+      )}
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the bulk meter {bulkMeterToDelete?.name}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setBulkMeterToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {hasPermission('bulk_meters_delete') && (
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the bulk meter {bulkMeterToDelete?.name}.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setBulkMeterToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }

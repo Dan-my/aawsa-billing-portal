@@ -22,26 +22,21 @@ import {
   getBulkMeters,
   subscribeToBulkMeters,
   initializeBulkMeters,
-  getBranches, // Added
-  initializeBranches, // Added
-  subscribeToBranches // Added
+  getBranches,
+  initializeBranches,
+  subscribeToBranches
 } from "@/lib/data-store";
 import type { PaymentStatus, CustomerType, SewerageConnection } from "@/lib/billing";
-import type { Branch } from "../branches/branch-types"; // Added
+import type { Branch } from "../branches/branch-types";
 import { TablePagination } from "@/components/ui/table-pagination";
-
-// Fallback initial data, actual data comes from Supabase via data-store
-export const initialCustomers: Omit<IndividualCustomer, 'status' | 'paymentStatus' | 'calculatedBill' | 'arrears' | 'created_at' | 'updated_at'>[] = [
-  { customerKeyNumber: "ICK001", name: "Abebe Bikila", contractNumber: "ICC001", customerType: "Domestic", bookNumber: "B001", ordinal: 1, meterSize: 0.75, meterNumber: "IMTR001", previousReading: 100, currentReading: 120, month: "2023-11", specificArea: "Kebele 17", location: "Bole", ward: "Woreda 3", sewerageConnection: "Yes", assignedBulkMeterId: "bm001" },
-  { customerKeyNumber: "ICK002", name: "Fatuma Roba", contractNumber: "ICC002", customerType: "Non-domestic", bookNumber: "B002", ordinal: 1, meterSize: 1, meterNumber: "IMTR002", previousReading: 500, currentReading: 550, month: "2023-11", specificArea: "Industrial Zone", location: "Kality", ward: "Woreda 5", sewerageConnection: "No", assignedBulkMeterId: "bm002" },
-];
-
+import { usePermissions } from "@/hooks/use-permissions";
 
 export default function IndividualCustomersPage() {
+  const { hasPermission } = usePermissions();
   const { toast } = useToast();
   const [customers, setCustomers] = React.useState<IndividualCustomer[]>([]);
   const [bulkMetersList, setBulkMetersList] = React.useState<{customerKeyNumber: string, name: string}[]>([]);
-  const [branches, setBranches] = React.useState<Branch[]>([]); // Added
+  const [branches, setBranches] = React.useState<Branch[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
@@ -57,11 +52,11 @@ export default function IndividualCustomersPage() {
     Promise.all([
       initializeBulkMeters(),
       initializeCustomers(),
-      initializeBranches() // Added
+      initializeBranches()
     ]).then(() => {
       setBulkMetersList(getBulkMeters().map(bm => ({customerKeyNumber: bm.customerKeyNumber, name: bm.name })));
       setCustomers(getCustomers());
-      setBranches(getBranches()); // Added
+      setBranches(getBranches());
       setIsLoading(false);
     });
 
@@ -70,16 +65,15 @@ export default function IndividualCustomersPage() {
     });
     const unsubscribeCustomers = subscribeToCustomers((updatedCustomers) => {
        setCustomers(updatedCustomers);
-       // setIsLoading(false); // Removed to avoid multiple calls
     });
-    const unsubscribeBranches = subscribeToBranches((updatedBranches) => { // Added
+    const unsubscribeBranches = subscribeToBranches((updatedBranches) => {
       setBranches(updatedBranches);
     });
 
     return () => {
       unsubscribeCustomers();
       unsubscribeBulkMeters();
-      unsubscribeBranches(); // Added
+      unsubscribeBranches();
     };
   }, []);
 
@@ -168,7 +162,7 @@ export default function IndividualCustomersPage() {
     return (
         customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         customer.meterNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        branchName.toLowerCase().includes(searchTerm.toLowerCase()) || // Search by derived/actual branch name
+        branchName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         customer.ward.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (customer.assignedBulkMeterId && bulkMetersList.find(bm => bm.customerKeyNumber === customer.assignedBulkMeterId)?.name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
@@ -194,9 +188,11 @@ export default function IndividualCustomersPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button onClick={handleAddCustomer}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New Customer
-          </Button>
+          {hasPermission('customers_create') && (
+            <Button onClick={handleAddCustomer}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Add New Customer
+            </Button>
+          )}
         </div>
       </div>
 
@@ -220,7 +216,9 @@ export default function IndividualCustomersPage() {
               onEdit={handleEditCustomer}
               onDelete={handleDeleteCustomer}
               bulkMetersList={bulkMetersList}
-              branches={branches} // Added
+              branches={branches}
+              canEdit={hasPermission('customers_update')}
+              canDelete={hasPermission('customers_delete')}
             />
           )}
         </CardContent>
@@ -239,28 +237,32 @@ export default function IndividualCustomersPage() {
         )}
       </Card>
 
-      <IndividualCustomerFormDialog
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        onSubmit={handleSubmitCustomer}
-        defaultValues={selectedCustomer}
-        bulkMeters={bulkMetersList}
-      />
+      {(hasPermission('customers_create') || hasPermission('customers_update')) && (
+        <IndividualCustomerFormDialog
+          open={isFormOpen}
+          onOpenChange={setIsFormOpen}
+          onSubmit={handleSubmitCustomer}
+          defaultValues={selectedCustomer}
+          bulkMeters={bulkMetersList}
+        />
+      )}
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the customer {customerToDelete?.name}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setCustomerToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {hasPermission('customers_delete') && (
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the customer {customerToDelete?.name}.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setCustomerToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }

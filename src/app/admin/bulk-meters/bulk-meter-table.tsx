@@ -23,16 +23,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import type { BulkMeter } from "./bulk-meter-types";
-import type { Branch } from "../branches/branch-types"; // Added
+import type { Branch } from "../branches/branch-types";
 
 interface BulkMeterTableProps {
   data: BulkMeter[];
   onEdit: (bulkMeter: BulkMeter) => void;
   onDelete: (bulkMeter: BulkMeter) => void;
-  branches: Branch[]; // Added
+  branches: Branch[];
+  canEdit: boolean;
+  canDelete: boolean;
 }
 
-export function BulkMeterTable({ data, onEdit, onDelete, branches }: BulkMeterTableProps) { // Added branches to props
+export function BulkMeterTable({ data, onEdit, onDelete, branches, canEdit, canDelete }: BulkMeterTableProps) {
   if (data.length === 0) {
     return (
       <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
@@ -48,6 +50,8 @@ export function BulkMeterTable({ data, onEdit, onDelete, branches }: BulkMeterTa
     }
     return fallbackLocation || "-";
   };
+  
+  const showActionsColumn = canEdit || canDelete;
 
   return (
     <div className="rounded-md border mt-4">
@@ -96,15 +100,19 @@ export function BulkMeterTable({ data, onEdit, onDelete, branches }: BulkMeterTa
                          View Details
                        </DropdownMenuItem>
                      </Link>
-                    <DropdownMenuItem onClick={() => onEdit(bulkMeter)}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => onDelete(bulkMeter)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
+                    {canEdit && (
+                      <DropdownMenuItem onClick={() => onEdit(bulkMeter)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                    )}
+                    {(canEdit && canDelete) && <DropdownMenuSeparator />}
+                    {canDelete && (
+                      <DropdownMenuItem onClick={() => onDelete(bulkMeter)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>

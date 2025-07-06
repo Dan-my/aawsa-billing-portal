@@ -27,6 +27,7 @@ import {
 } from "@/lib/data-store";
 import type { DomainNotification } from "@/lib/data-store";
 import type { Branch } from "../branches/branch-types";
+import { usePermissions } from "@/hooks/use-permissions";
 
 const ALL_STAFF_VALUE = "all-staff-target";
 
@@ -39,6 +40,7 @@ const formSchema = z.object({
 type NotificationFormValues = z.infer<typeof formSchema>;
 
 export default function AdminNotificationsPage() {
+  const { hasPermission } = usePermissions();
   const { toast } = useToast();
   const [user, setUser] = React.useState<{ name?: string } | null>(null);
   const [sentNotifications, setSentNotifications] = React.useState<DomainNotification[]>([]);
@@ -113,73 +115,75 @@ export default function AdminNotificationsPage() {
       <h1 className="text-2xl md:text-3xl font-bold">Send Notifications</h1>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
-        <Card className="shadow-lg lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Compose Message</CardTitle>
-            <CardDescription>Send a message to all staff or a specific branch.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Title</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., System Maintenance" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="message"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Message</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Enter your notification message here..." {...field} rows={6} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="targetBranchId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Send To</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+        {hasPermission('notifications_create') && (
+            <Card className="shadow-lg lg:col-span-2">
+            <CardHeader>
+                <CardTitle>Compose Message</CardTitle>
+                <CardDescription>Send a message to all staff or a specific branch.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Title</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select target..." />
-                          </SelectTrigger>
+                            <Input placeholder="e.g., System Maintenance" {...field} />
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value={ALL_STAFF_VALUE}>All Staff</SelectItem>
-                          {branches.map(branch => (
-                            <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
-                  <Send className="mr-2 h-4 w-4" />
-                  {form.formState.isSubmitting ? "Sending..." : "Send Notification"}
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="message"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Message</FormLabel>
+                        <FormControl>
+                            <Textarea placeholder="Enter your notification message here..." {...field} rows={6} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="targetBranchId"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Send To</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select target..." />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            <SelectItem value={ALL_STAFF_VALUE}>All Staff</SelectItem>
+                            {branches.map(branch => (
+                                <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
+                    <Send className="mr-2 h-4 w-4" />
+                    {form.formState.isSubmitting ? "Sending..." : "Send Notification"}
+                    </Button>
+                </form>
+                </Form>
+            </CardContent>
+            </Card>
+        )}
 
-        <Card className="shadow-lg lg:col-span-3">
+        <Card className={`shadow-lg ${hasPermission('notifications_create') ? 'lg:col-span-3' : 'lg:col-span-5'}`}>
           <CardHeader>
             <CardTitle>Sent History</CardTitle>
             <CardDescription>A log of previously sent notifications.</CardDescription>

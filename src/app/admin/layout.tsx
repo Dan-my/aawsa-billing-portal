@@ -6,6 +6,7 @@ import * as React from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { SidebarNav, type NavItemGroup, type NavItem } from "@/components/layout/sidebar-nav"; 
 import { Skeleton } from "@/components/ui/skeleton";
+import { PermissionsContext, type PermissionsContextType } from '@/hooks/use-permissions';
 
 interface UserProfile {
   id: string; 
@@ -135,6 +136,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         setIsLoading(false);
     }, []);
 
+    const permissionsValue: PermissionsContextType = React.useMemo(() => ({
+        permissions: new Set(user?.permissions || []),
+        hasPermission: (permission: string) => {
+            if (user?.role.toLowerCase() === 'admin') return true; // Admin always has permission
+            return user?.permissions?.includes(permission) || false;
+        }
+    }), [user]);
+
     if (isLoading) {
        return (
          <div className="flex items-center justify-center h-screen">
@@ -143,6 +152,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
        );
     }
 
-
-    return <AppShell userRole="admin" sidebar={<SidebarNav items={navItems} />} >{children}</AppShell>;
+    return (
+        <AppShell userRole="admin" sidebar={<SidebarNav items={navItems} />} >
+            <PermissionsContext.Provider value={permissionsValue}>
+                {children}
+            </PermissionsContext.Provider>
+        </AppShell>
+    );
 }

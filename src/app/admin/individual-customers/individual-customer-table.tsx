@@ -32,9 +32,11 @@ interface IndividualCustomerTableProps {
   bulkMetersList?: { customerKeyNumber: string; name: string }[];
   branches: Branch[];
   currency?: string;
+  canEdit: boolean;
+  canDelete: boolean;
 }
 
-export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList = [], branches, currency = "ETB" }: IndividualCustomerTableProps) {
+export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList = [], branches, currency = "ETB", canEdit, canDelete }: IndividualCustomerTableProps) {
 
   const getBulkMeterName = (key?: string) => {
     if (!key) return "-";
@@ -48,6 +50,8 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
     }
     return "-";
   };
+
+  const showActionsColumn = canEdit || canDelete;
 
   if (data.length === 0) {
     return (
@@ -70,7 +74,7 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
             <TableHead>Bulk Meter</TableHead>
             <TableHead>Pay Status</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            {showActionsColumn && <TableHead className="text-right">Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -114,28 +118,34 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
                     {customer.status}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => onEdit(customer)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => onDelete(customer)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+                {showActionsColumn && (
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        {canEdit && (
+                          <DropdownMenuItem onClick={() => onEdit(customer)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                        )}
+                        {canEdit && canDelete && <DropdownMenuSeparator />}
+                        {canDelete && (
+                          <DropdownMenuItem onClick={() => onDelete(customer)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                )}
               </TableRow>
             );
           })}

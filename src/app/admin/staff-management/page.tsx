@@ -20,8 +20,10 @@ import {
   subscribeToStaffMembers,
   initializeStaffMembers
 } from "@/lib/data-store";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export default function StaffManagementPage() {
+  const { hasPermission } = usePermissions();
   const { toast } = useToast();
   const [staffMembers, setStaffMembers] = React.useState<StaffMember[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -113,9 +115,11 @@ export default function StaffManagementPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button onClick={handleAddStaff}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New Staff
-          </Button>
+          {hasPermission('staff_create') && (
+            <Button onClick={handleAddStaff}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Add New Staff
+            </Button>
+          )}
         </div>
       </div>
 
@@ -138,32 +142,38 @@ export default function StaffManagementPage() {
               data={filteredStaff}
               onEdit={handleEditStaff}
               onDelete={handleDeleteStaff}
+              canEdit={hasPermission('staff_update')}
+              canDelete={hasPermission('staff_delete')}
             />
           )}
         </CardContent>
       </Card>
+      
+      {(hasPermission('staff_create') || hasPermission('staff_update')) && (
+        <StaffFormDialog
+          open={isFormOpen}
+          onOpenChange={setIsFormOpen}
+          onSubmit={handleSubmitStaff}
+          defaultValues={selectedStaff}
+        />
+      )}
 
-      <StaffFormDialog
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        onSubmit={handleSubmitStaff}
-        defaultValues={selectedStaff}
-      />
-
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the staff member {staffToDelete?.name}. This will also remove their login access.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setStaffToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {hasPermission('staff_delete') && (
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the staff member {staffToDelete?.name}. This will also remove their login access.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setStaffToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }

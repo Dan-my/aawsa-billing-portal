@@ -14,9 +14,8 @@ import { TariffFormDialog, type TariffFormValues } from "./tariff-form-dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MeterRentDialog } from "./meter-rent-dialog";
+import { usePermissions } from "@/hooks/use-permissions";
 
-
-// Helper to map TariffTier from billing logic to a display-friendly format
 const mapTariffTierToDisplay = (tier: TariffTier, index: number, prevTier?: TariffTier): DisplayTariffRate => {
   let minConsumption: number;
   if (index === 0) {
@@ -24,7 +23,7 @@ const mapTariffTierToDisplay = (tier: TariffTier, index: number, prevTier?: Tari
   } else if (prevTier) {
     minConsumption = prevTier.limit === Infinity ? Infinity : Math.floor(prevTier.limit) + 1;
   } else {
-    minConsumption = 1; // Fallback for safety
+    minConsumption = 1;
   }
 
   const maxConsumptionDisplay = tier.limit === Infinity ? "Above" : String(Math.floor(tier.limit));
@@ -45,7 +44,6 @@ const mapTariffTierToDisplay = (tier: TariffTier, index: number, prevTier?: Tari
   };
 };
 
-// Gets the initial set of domestic tiers for display
 const getDefaultDomesticDisplayTiers = (): DisplayTariffRate[] => {
   let previousTier: TariffTier | undefined;
   return DomesticTariffInfo.tiers.map((tier, index) => {
@@ -55,7 +53,6 @@ const getDefaultDomesticDisplayTiers = (): DisplayTariffRate[] => {
   });
 };
 
-// Gets the initial set of non-domestic tiers for display
 const getDefaultNonDomesticDisplayTiers = (): DisplayTariffRate[] => {
   let previousTier: TariffTier | undefined;
   return NonDomesticTariffInfo.tiers.map((tier, index) => {
@@ -67,14 +64,13 @@ const getDefaultNonDomesticDisplayTiers = (): DisplayTariffRate[] => {
 
 
 export default function TariffManagementPage() {
+  const { hasPermission } = usePermissions();
   const { toast } = useToast();
   const [currentTariffType, setCurrentTariffType] = React.useState<'Domestic' | 'Non-domestic'>('Domestic');
   
-  // Separate state for each tariff type
   const [domesticTiers, setDomesticTiers] = React.useState<DisplayTariffRate[]>(getDefaultDomesticDisplayTiers());
   const [nonDomesticTiers, setNonDomesticTiers] = React.useState<DisplayTariffRate[]>(getDefaultNonDomesticDisplayTiers());
   
-  // These will now point to the correct state based on currentTariffType
   const activeTiers = currentTariffType === 'Domestic' ? domesticTiers : nonDomesticTiers;
   const setActiveTiers = currentTariffType === 'Domestic' ? setDomesticTiers : setNonDomesticTiers;
   
@@ -84,7 +80,6 @@ export default function TariffManagementPage() {
   const [isResetDialogOpen, setIsResetDialogOpen] = React.useState(false);
   const [rateToDelete, setRateToDelete] = React.useState<DisplayTariffRate | null>(null);
 
-  // State for meter rent management
   const [meterRentPrices, setMeterRentPrices] = React.useState(() => getMeterRentPrices());
   const [isMeterRentDialogOpen, setIsMeterRentDialogOpen] = React.useState(false);
 
@@ -106,8 +101,7 @@ export default function TariffManagementPage() {
           
           const maxConsumptionDisplay = tier.originalLimit === Infinity ? "Above" : String(Math.floor(tier.originalLimit));
           const minConsumptionDisplay = minConsumption === Infinity ? "N/A" : String(minConsumption);
-
-          // Only update calculated fields, preserve existing description
+          
           return {
               ...tier,
               minConsumption: minConsumptionDisplay,
@@ -146,7 +140,7 @@ export default function TariffManagementPage() {
     const newRateValue = parseFloat(data.rate);
     const newMaxConsumptionValue = data.maxConsumption === "Infinity" ? Infinity : parseFloat(data.maxConsumption);
 
-    if (editingRate) { // Editing existing tier
+    if (editingRate) {
       setActiveTiers(prevRates => {
         const updatedRatesList = prevRates.map(r => 
           r.id === editingRate.id 
@@ -163,7 +157,7 @@ export default function TariffManagementPage() {
       });
       toast({ title: "Tariff Tier Updated", description: `Tier "${data.description}" updated for ${currentTariffType} tariffs.` });
 
-    } else { // Adding new tier
+    } else {
       setActiveTiers(prevRates => {
         const newTier: Omit<DisplayTariffRate, 'minConsumption' | 'maxConsumption'> = { 
             id: `new-tier-${Date.now()}`, 
@@ -172,7 +166,6 @@ export default function TariffManagementPage() {
             originalRate: newRateValue, 
             originalLimit: newMaxConsumptionValue,
         };
-        // Add the new tier and then reprocess the whole list to calculate min/max correctly
         const newRatesList = [...prevRates, newTier as DisplayTariffRate];
         return reprocessTiersForDisplay(newRatesList);
       });
@@ -208,17 +201,19 @@ export default function TariffManagementPage() {
             <LibraryBig className="h-8 w-8 text-primary" />
             <h1 className="text-2xl md:text-3xl font-bold">Tariff Management</h1>
         </div>
-        <div className="flex gap-2 flex-wrap">
-            <Button onClick={handleAddTier} className="bg-primary hover:bg-primary/90">
-                <PlusCircle className="mr-2 h-4 w-4" /> Add New Tier
-            </Button>
-            <Button onClick={() => setIsMeterRentDialogOpen(true)} variant="default">
-                <DollarSign className="mr-2 h-4 w-4" /> Manage Meter Rent
-            </Button>
-            <Button variant="destructive" onClick={() => setIsResetDialogOpen(true)}>
-                <RotateCcw className="mr-2 h-4 w-4" /> Reset Defaults
-            </Button>
-        </div>
+        {hasPermission('tariffs_update') && (
+            <div className="flex gap-2 flex-wrap">
+                <Button onClick={handleAddTier} className="bg-primary hover:bg-primary/90">
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add New Tier
+                </Button>
+                <Button onClick={() => setIsMeterRentDialogOpen(true)} variant="default">
+                    <DollarSign className="mr-2 h-4 w-4" /> Manage Meter Rent
+                </Button>
+                <Button variant="destructive" onClick={() => setIsResetDialogOpen(true)}>
+                    <RotateCcw className="mr-2 h-4 w-4" /> Reset Defaults
+                </Button>
+            </div>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -256,6 +251,7 @@ export default function TariffManagementPage() {
               onEdit={handleEditTier} 
               onDelete={handleDeleteTier} 
               currency="ETB"
+              canUpdate={hasPermission('tariffs_update')}
             />
           </CardContent>
       </Card>
@@ -313,57 +309,60 @@ export default function TariffManagementPage() {
           </div>
         </CardContent>
       </Card>
+      
+      {hasPermission('tariffs_update') && (
+        <>
+          <TariffFormDialog
+            open={isFormOpen}
+            onOpenChange={setIsFormOpen}
+            onSubmit={handleSubmitTierForm}
+            defaultValues={editingRate ? { 
+                description: editingRate.description,
+                maxConsumption: editingRate.originalLimit === Infinity ? "Infinity" : String(editingRate.originalLimit),
+                rate: String(editingRate.originalRate)
+            } : null}
+            currency="ETB"
+          />
 
-      <TariffFormDialog
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        onSubmit={handleSubmitTierForm}
-        defaultValues={editingRate ? { 
-            description: editingRate.description,
-            maxConsumption: editingRate.originalLimit === Infinity ? "Infinity" : String(editingRate.originalLimit),
-            rate: String(editingRate.originalRate)
-        } : null}
-        currency="ETB"
-      />
+          <MeterRentDialog
+            open={isMeterRentDialogOpen}
+            onOpenChange={setIsMeterRentDialogOpen}
+            onSubmit={handleSaveMeterRents}
+            defaultPrices={meterRentPrices}
+            currency="ETB"
+          />
 
-       <MeterRentDialog
-        open={isMeterRentDialogOpen}
-        onOpenChange={setIsMeterRentDialogOpen}
-        onSubmit={handleSaveMeterRents}
-        defaultPrices={meterRentPrices}
-        currency="ETB"
-      />
+          <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure you want to reset settings?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will reset the tariff configuration for <span className="font-semibold">{currentTariffType}</span> AND all meter rent prices to the system defaults. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleResetToDefaults} className="bg-destructive hover:bg-destructive/90">Reset Settings</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
-      <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to reset settings?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will reset the tariff configuration for <span className="font-semibold">{currentTariffType}</span> AND all meter rent prices to the system defaults. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleResetToDefaults} className="bg-destructive hover:bg-destructive/90">Reset Settings</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={!!rateToDelete} onOpenChange={(open) => !open && setRateToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to delete this tier?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. Tier: "{rateToDelete?.description}"
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setRateToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Delete Tier</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
+          <AlertDialog open={!!rateToDelete} onOpenChange={(open) => !open && setRateToDelete(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure you want to delete this tier?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. Tier: "{rateToDelete?.description}"
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setRateToDelete(null)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Delete Tier</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
+      )}
     </div>
   );
 }

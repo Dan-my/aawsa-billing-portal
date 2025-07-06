@@ -35,6 +35,8 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
+const ADMIN_ROLES = ['admin', 'head office management', 'staff management'];
+
 export function AuthForm() {
   const router = useRouter();
   const { toast } = useToast();
@@ -59,25 +61,24 @@ export function AuthForm() {
         description: "Welcome back! Redirecting...",
       });
       
-      const sessionUser = {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        branchName: user.branchName,
-        branchId: user.branchId,
-        name: user.name,
-      };
-      localStorage.setItem("user", JSON.stringify(sessionUser));
+      // The user object now contains roleId and permissions
+      localStorage.setItem("user", JSON.stringify(user));
 
       const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes
       localStorage.setItem('session_expires_at', String(Date.now() + INACTIVITY_TIMEOUT));
 
       const role = user.role.toLowerCase();
-      if (role === 'admin' || role === 'head office management' || role === 'staff management') {
+      
+      if (role === 'admin') {
         router.push("/admin/dashboard");
+      } else if (role === 'head office management') {
+        router.push("/admin/head-office-dashboard");
+      } else if (role === 'staff management') {
+        router.push("/admin/staff-management-dashboard");
       } else {
         router.push("/staff/dashboard");
       }
+
     } else {
       toast({
         variant: "destructive",

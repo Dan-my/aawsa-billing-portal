@@ -13,4 +13,6 @@ export interface StaffMember {
   status: StaffStatus;
   phone?: string; // Optional
   hireDate?: string; // Optional, ISO date string
+  roleId?: number; // Added
+  permissions?: string[]; // Added
 }

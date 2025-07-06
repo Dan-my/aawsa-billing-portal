@@ -299,7 +299,8 @@ export interface Database {
           status: 'Active' | 'Inactive' | 'On Leave';
           phone?: string | null;
           hire_date?: string | null;
-          role: string; // Changed from enum
+          role: string;
+          role_id?: number | null; // Added
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -312,7 +313,8 @@ export interface Database {
           status: 'Active' | 'Inactive' | 'On Leave';
           phone?: string | null;
           hire_date?: string | null;
-          role: string; // Changed from enum
+          role: string;
+          role_id?: number | null; // Added
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -325,7 +327,8 @@ export interface Database {
           status?: 'Active' | 'Inactive' | 'On Leave';
           phone?: string | null;
           hire_date?: string | null;
-          role?: string; // Changed from enum
+          role?: string;
+          role_id?: number | null; // Added
           created_at?: string | null;
           updated_at?: string | null;
         };

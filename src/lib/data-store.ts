@@ -537,6 +537,7 @@ const mapSupabaseStaffToDomain = (ss: SupabaseStaffMemberRow): StaffMember => ({
   phone: ss.phone || undefined,
   hireDate: ss.hire_date || undefined,
   role: ss.role,
+  roleId: ss.role_id || undefined,
 });
 
 const mapDomainStaffToInsert = (staff: StaffMember): StaffMemberInsert => ({
@@ -1557,7 +1558,10 @@ export const subscribeToRolePermissions = (listener: Listener<DomainRolePermissi
 export const authenticateStaffMember = async (email: string, password: string): Promise<StoreOperationResult<StaffMember>> => {
     const { data: staffData, error: staffError } = await supabase
         .from('staff_members')
-        .select('*')
+        .select(`
+            *,
+            roles ( id, role_name )
+        `)
         .eq('email', email.toLowerCase())
         .eq('password', password)
         .single();
@@ -1571,24 +1575,33 @@ export const authenticateStaffMember = async (email: string, password: string): 
 
     const user = mapSupabaseStaffToDomain(staffData);
     
+    // Fetch permissions for the user's role
+    let permissions: string[] = [];
+    if (user.roleId) {
+        const { data: permissionData, error: permissionError } = await supabase
+            .from('role_permissions')
+            .select('permissions(name)')
+            .eq('role_id', user.roleId);
+
+        if (permissionData && !permissionError) {
+            permissions = permissionData.map(p => p.permissions?.name).filter((name): name is string => !!name);
+        } else if (permissionError) {
+            console.error("DataStore: Failed to fetch permissions for role.", permissionError);
+        }
+    }
+    user.permissions = permissions;
+    
     if (user.branchName) {
         if (branches.length === 0) {
           await initializeBranches();
         }
         
-        // Improved, robust branch name normalization and matching
-        const normalizeBranchName = (name: string) => {
-            return name.toLowerCase().replace(/\s*branch\s*$/, '').trim();
-        };
-
+        const normalizeBranchName = (name: string) => name.toLowerCase().replace(/\s*branch\s*$/, '').trim();
         const normalizedStaffBranchName = normalizeBranchName(user.branchName);
 
         const matchedBranch = branches.find(b => {
             const normalizedOfficialName = normalizeBranchName(b.name);
-            if (normalizedOfficialName === normalizedStaffBranchName) return true;
-            if (normalizedOfficialName.includes(normalizedStaffBranchName)) return true;
-            if (normalizedStaffBranchName.includes(normalizedOfficialName)) return true;
-            return false;
+            return normalizedOfficialName === normalizedStaffBranchName || normalizedOfficialName.includes(normalizedStaffBranchName) || normalizedStaffBranchName.includes(normalizedOfficialName);
         });
         
         if (matchedBranch) {

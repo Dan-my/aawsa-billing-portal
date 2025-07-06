@@ -162,7 +162,7 @@ This is a comprehensive update that adds the database tables, functions, and sec
 *   Adds the required database relationship between the `staff_members` and `roles` tables, which is critical for login to function correctly.
 *   **Adds Row-Level Security (RLS) policies** to the permissions tables. These policies allow the application to read role/permission data while preventing unauthorized users from making changes.
 
-**If you have run a previous version of this script, please run this updated version to apply critical security fixes.**
+**If you have run a previous version of this script, please run this updated version to apply critical security fixes.** This update corrects the read policies to allow the application to fetch roles and permissions correctly, fixing issues with UI elements like the "Roles & Permissions" dropdown.
 
 **To apply this update:**
 

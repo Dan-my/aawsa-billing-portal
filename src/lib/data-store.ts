@@ -550,6 +550,7 @@ const mapDomainStaffToInsert = (staff: StaffMember): StaffMemberInsert => ({
   phone: staff.phone,
   hire_date: staff.hireDate,
   role: staff.role,
+  role_id: staff.roleId,
 });
 
 const mapDomainStaffToUpdate = (staff: Partial<Omit<StaffMember, 'id' | 'email'>>): Omit<StaffMemberUpdate, 'email'> => {
@@ -560,6 +561,7 @@ const mapDomainStaffToUpdate = (staff: Partial<Omit<StaffMember, 'id' | 'email'>
     if(staff.phone !== undefined) updatePayload.phone = staff.phone;
     if(staff.hireDate !== undefined) updatePayload.hire_date = staff.hireDate;
     if(staff.role !== undefined) updatePayload.role = staff.role;
+    if(staff.roleId !== undefined) updatePayload.role_id = staff.roleId;
     if(staff.password !== undefined && staff.password) {
         updatePayload.password = staff.password;
     } else {
@@ -1199,7 +1201,17 @@ export const deleteBulkMeter = async (customerKeyNumber: string): Promise<StoreO
 };
 
 export const addStaffMember = async (staffData: Omit<StaffMember, 'id'> & {id?: string}): Promise<StoreOperationResult<StaffMember>> => {
-  const payload = mapDomainStaffToInsert(staffData as StaffMember);
+  if (!rolesFetched) {
+    await initializeRoles();
+  }
+  const role = roles.find(r => r.role_name === staffData.role);
+  if (!role) {
+    return { success: false, message: `Role '${staffData.role}' not found.` };
+  }
+  
+  const staffDataWithRoleId = { ...staffData, roleId: role.id };
+  const payload = mapDomainStaffToInsert(staffDataWithRoleId as StaffMember);
+
   const { data: newSupabaseStaff, error } = await supabaseCreateStaffMember(payload);
   if (newSupabaseStaff && !error) {
     const newStaff = mapSupabaseStaffToDomain(newSupabaseStaff);
@@ -1212,7 +1224,21 @@ export const addStaffMember = async (staffData: Omit<StaffMember, 'id'> & {id?: 
 };
 
 export const updateStaffMember = async (email: string, updatedStaffData: Partial<Omit<StaffMember, 'id' | 'email'>>): Promise<StoreOperationResult<void>> => {
-  const staffUpdatePayload = mapDomainStaffToUpdate(updatedStaffData);
+  const staffUpdateDataWithRoleId: Partial<StaffMember> = { ...updatedStaffData };
+
+  // If a role name is being updated, find its ID.
+  if (updatedStaffData.role) {
+    if (!rolesFetched) {
+      await initializeRoles();
+    }
+    const role = roles.find(r => r.role_name === updatedStaffData.role);
+    if (!role) {
+      return { success: false, message: `Role '${updatedStaffData.role}' not found.` };
+    }
+    staffUpdateDataWithRoleId.roleId = role.id;
+  }
+
+  const staffUpdatePayload = mapDomainStaffToUpdate(staffUpdateDataWithRoleId);
   const { data: updatedSupabaseStaff, error } = await supabaseUpdateStaffMember(email, staffUpdatePayload);
 
   if (updatedSupabaseStaff && !error) {
@@ -1223,7 +1249,7 @@ export const updateStaffMember = async (email: string, updatedStaffData: Partial
   }
   
   console.error("DataStore: Failed to update staff member. Error:", JSON.stringify(error, null, 2));
-  return { success: false, message: "Failed to update staff member." };
+  return { success: false, message: (error as any)?.message || "Failed to update staff member.", error };
 };
 
 

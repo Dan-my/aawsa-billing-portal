@@ -12,10 +12,9 @@ import {
   UserCog,
   Gauge,
   ClipboardList,
-  UploadCloud,
   LibraryBig,
   Bell, 
-  // Ticket icon removed as Voucher is being removed
+  ShieldCheck,
 } from "lucide-react";
 
 const adminSidebarNavItems: NavItemGroup[] = [
@@ -29,6 +28,7 @@ const adminSidebarNavItems: NavItemGroup[] = [
     items: [
       { title: "Branch Management", href: "/admin/branches", iconName: "Building" },
       { title: "Staff Management", href: "/admin/staff-management", iconName: "UserCog" },
+      { title: "Roles & Permissions", href: "/admin/roles-and-permissions", iconName: "ShieldCheck" },
       { title: "Notifications", href: "/admin/notifications", iconName: "Bell" },
       { title: "Tariff Management", href: "/admin/tariffs", iconName: "LibraryBig" }, 
     ],
@@ -46,7 +46,6 @@ const adminSidebarNavItems: NavItemGroup[] = [
       { title: "Data Entry", href: "/admin/data-entry", iconName: "FileText" },
       { title: "Meter Readings", href: "/admin/meter-readings", iconName: "ClipboardList" },
       { title: "Reports", href: "/admin/reports", iconName: "BarChart2" },
-      // { title: "Voucher", href: "/admin/voucher", iconName: "Ticket" }, // Voucher link removed
     ],
   },
   {

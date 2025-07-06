@@ -14,6 +14,69 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      roles: {
+        Row: {
+          id: number;
+          role_name: string;
+          description: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: number;
+          role_name: string;
+          description?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: number;
+          role_name?: string;
+          description?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      permissions: {
+        Row: {
+          id: number;
+          name: string;
+          description: string | null;
+          category: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          name: string;
+          description?: string | null;
+          category: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: number;
+          name?: string;
+          description?: string | null;
+          category?: string;
+          created_at?: string;
+        };
+      };
+      role_permissions: {
+        Row: {
+          role_id: number;
+          permission_id: number;
+          created_at: string;
+        };
+        Insert: {
+          role_id: number;
+          permission_id: number;
+          created_at?: string;
+        };
+        Update: {
+          role_id?: number;
+          permission_id?: number;
+          created_at?: string;
+        };
+      };
       notifications: {
         Row: {
           id: string;
@@ -236,7 +299,7 @@ export interface Database {
           status: 'Active' | 'Inactive' | 'On Leave';
           phone?: string | null;
           hire_date?: string | null;
-          role: 'Admin' | 'Staff';
+          role: string; // Changed from enum
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -249,7 +312,7 @@ export interface Database {
           status: 'Active' | 'Inactive' | 'On Leave';
           phone?: string | null;
           hire_date?: string | null;
-          role: 'Admin' | 'Staff';
+          role: string; // Changed from enum
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -262,7 +325,7 @@ export interface Database {
           status?: 'Active' | 'Inactive' | 'On Leave';
           phone?: string | null;
           hire_date?: string | null;
-          role?: 'Admin' | 'Staff';
+          role?: string; // Changed from enum
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -526,7 +589,14 @@ export interface Database {
             sender_name: string;
             target_branch_id: string | null;
         }[]
-      }
+      },
+      update_role_permissions: {
+          Args: {
+            p_role_id: number;
+            p_permission_ids: number[];
+          };
+          Returns: void;
+      };
     };
     Enums: {
         branch_status_enum: 'Active' | 'Inactive';
@@ -547,6 +617,11 @@ export interface Database {
 }
 
 type ResolvedDatabase = ActualDatabase extends { public: any } ? ActualDatabase : Database;
+
+export type RoleRow = ResolvedDatabase['public']['Tables']['roles']['Row'];
+export type PermissionRow = ResolvedDatabase['public']['Tables']['permissions']['Row'];
+export type RolePermissionRow = ResolvedDatabase['public']['Tables']['role_permissions']['Row'];
+export type RoleInsert = ResolvedDatabase['public']['Tables']['roles']['Insert'];
 
 export type NotificationRow = ResolvedDatabase['public']['Tables']['notifications']['Row'];
 export type NotificationInsert = ResolvedDatabase['public']['Tables']['notifications']['Insert'];
@@ -600,6 +675,13 @@ if (!supabaseAnonKey) {
 }
 
 export const supabase: SupabaseClient<ResolvedDatabase> = createClient<ResolvedDatabase>(supabaseUrl, supabaseAnonKey);
+
+// CRUD for Roles & Permissions
+export const getAllRoles = async () => supabase.from('roles').select('*');
+export const getAllPermissions = async () => supabase.from('permissions').select('*');
+export const getAllRolePermissions = async () => supabase.from('role_permissions').select('*');
+export const getPermissionsForRole = async (roleId: number) => supabase.from('role_permissions').select('permission_id').eq('role_id', roleId);
+export const rpcUpdateRolePermissions = async (roleId: number, permissionIds: number[]) => supabase.rpc('update_role_permissions', { p_role_id: roleId, p_permission_ids: permissionIds });
 
 // CRUD for Notifications
 export const getAllNotifications = async () => supabase.from('notifications').select('*').order('created_at', { ascending: false });

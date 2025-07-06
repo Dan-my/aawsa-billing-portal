@@ -28,6 +28,26 @@ CREATE TABLE role_permissions (
 );
 COMMENT ON TABLE role_permissions IS 'Links roles to their assigned permissions.';
 
+-- Create the RPC function to securely update permissions
+CREATE OR REPLACE FUNCTION update_role_permissions(p_role_id BIGINT, p_permission_ids BIGINT[])
+RETURNS void AS $$
+BEGIN
+    -- Use the security context of the function definer (the admin who creates it)
+    -- This is crucial for allowing updates to tables where the calling user might not have direct access.
+    
+    -- Remove old permissions for the role within a transaction
+    DELETE FROM public.role_permissions WHERE role_id = p_role_id;
+
+    -- Add new permissions for the role if any are provided
+    IF array_length(p_permission_ids, 1) > 0 THEN
+        INSERT INTO public.role_permissions (role_id, permission_id)
+        SELECT p_role_id, unnest(p_permission_ids);
+    END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+COMMENT ON FUNCTION update_role_permissions IS 'Transactionally updates the permissions for a given role.';
+
+
 -- Insert default roles
 INSERT INTO roles (role_name, description) VALUES
 ('Admin', 'Full access to all system features and settings.'),

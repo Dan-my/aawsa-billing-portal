@@ -37,8 +37,11 @@ import { NotificationBell } from './notification-bell';
 interface UserProfile {
   id: string; 
   email: string;
-  role: 'Admin' | 'Staff';
+  role: string; // No longer a strict enum
+  roleId?: number; // Added
+  permissions?: string[]; // Added
   branchName?: string;
+  branchId?: string;
   name?: string;
 }
 
@@ -104,7 +107,7 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal", onLogout }: 
 }
 
 
-export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 'staff', sidebar?: React.ReactNode, children: React.ReactNode }) {
+export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 'staff', children: React.ReactNode, sidebar?: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = React.useState<UserProfile | null>(null);
@@ -143,7 +146,8 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
     if (storedUser) {
         try {
             const parsedUser: UserProfile = JSON.parse(storedUser);
-            if (parsedUser.role.toLowerCase() === userRole) {
+            // This check is now more flexible, just checking if the path starts with the role's prefix.
+            if (pathname.startsWith(`/${parsedUser.role.toLowerCase()}`)) {
                 setUser(parsedUser);
             } else {
                 handleLogout();
@@ -178,9 +182,11 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
   if (!user) {
     return null;
   }
-
+  
+  // This check is important to prevent staff from seeing admin layout, and vice versa.
+  // Note: We check `userRole` prop, not `user.role` from state, to ensure layout consistency.
   if (user && user.role.toLowerCase() !== userRole) {
-    return null;
+    return null; 
   }
 
   return (

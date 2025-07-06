@@ -25,11 +25,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { StaffMember, StaffStatus } from "./staff-types";
-import { getBranches, initializeBranches, subscribeToBranches } from "@/lib/data-store";
+import { getBranches, initializeBranches, subscribeToBranches, getRoles, initializeRoles, subscribeToRoles } from "@/lib/data-store";
 import type { Branch } from "@/app/admin/branches/branch-types";
+import type { DomainRole } from "@/lib/data-store";
 
 const staffStatuses: StaffStatus[] = ['Active', 'Inactive', 'On Leave'];
-const staffRoles = ['Admin', 'Staff'] as const;
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -38,7 +38,7 @@ const formSchema = z.object({
   branchName: z.string().min(1, { message: "A branch must be selected." }),
   status: z.enum(staffStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
   phone: z.string().optional(),
-  role: z.enum(staffRoles, { required_error: "Role is required." }),
+  role: z.string({ required_error: "Role is required." }).min(1, "Role is required."),
 });
 
 
@@ -54,6 +54,8 @@ interface StaffFormDialogProps {
 export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }: StaffFormDialogProps) {
   const [availableBranches, setAvailableBranches] = React.useState<Branch[]>([]);
   const [isLoadingBranches, setIsLoadingBranches] = React.useState(true);
+  const [availableRoles, setAvailableRoles] = React.useState<DomainRole[]>([]);
+  const [isLoadingRoles, setIsLoadingRoles] = React.useState(true);
 
   React.useEffect(() => {
     if (open) {
@@ -62,10 +64,23 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
         setAvailableBranches(getBranches());
         setIsLoadingBranches(false);
       });
-      const unsubscribe = subscribeToBranches((updatedBranches) => {
+      const unsubscribeBranches = subscribeToBranches((updatedBranches) => {
         setAvailableBranches(updatedBranches);
       });
-      return () => unsubscribe();
+
+      setIsLoadingRoles(true);
+      initializeRoles().then(() => {
+        setAvailableRoles(getRoles());
+        setIsLoadingRoles(false);
+      });
+      const unsubscribeRoles = subscribeToRoles((updatedRoles) => {
+        setAvailableRoles(updatedRoles);
+      });
+
+      return () => {
+        unsubscribeBranches();
+        unsubscribeRoles();
+      }
     }
   }, [open]);
   
@@ -209,15 +224,16 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Role</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingRoles}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a role" />
+                        <SelectValue placeholder={isLoadingRoles ? "Loading roles..." : "Select a role"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Admin">Admin</SelectItem>
-                      <SelectItem value="Staff">Staff</SelectItem>
+                      {availableRoles.map(role => (
+                        <SelectItem key={role.id} value={role.role_name}>{role.role_name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

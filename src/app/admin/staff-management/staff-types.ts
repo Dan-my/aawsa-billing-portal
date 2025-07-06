@@ -7,7 +7,7 @@ export interface StaffMember {
   name: string;
   email: string; // This will be the login identifier, e.g., kality@aawsa.com
   password?: string; // Password for the staff member
-  role: 'Admin' | 'Staff';
+  role: string; // Changed from enum to string to support dynamic roles from DB
   branchName: string; // The name of the branch
   branchId?: string; // The canonical ID of the branch
   status: StaffStatus;

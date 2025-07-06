@@ -209,6 +209,7 @@ export function StaffFormDialog({ open, onOpenChange, onSubmit, defaultValues }:
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value="Head Office">Head Office</SelectItem>
                       {availableBranches.map(branch => (
                         <SelectItem key={branch.id} value={branch.name}>{branch.name}</SelectItem>
                       ))}

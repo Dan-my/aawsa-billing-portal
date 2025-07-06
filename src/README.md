@@ -154,9 +154,15 @@ From time to time, application updates may require changes to the database struc
 
 ### **Migration: Role-Based Access Control (RBAC) Setup (Required)**
 
-This update adds the database tables required for a dynamic, administrator-controlled permission system. It creates tables for `roles`, `permissions`, and the links between them. It also populates these tables with default roles and a comprehensive set of permissions to match the application's features.
+This is a comprehensive update that creates the tables for roles and permissions, adds the necessary database functions, and sets up row-level security. It also seeds the database with default roles and a permission set for each role.
 
-**Important:** If you have run a previous version of this script, please run this updated version to apply critical security fixes and to add the necessary relationship between the `staff_members` and `roles` tables, which is required for login to function correctly. This version also corrects a Row-Level Security policy that prevented the permissions dropdown from loading correctly.
+**What it does:**
+*   Creates tables for `roles`, `permissions`, and `role_permissions`.
+*   Populates these tables with default roles and a comprehensive set of permissions to match the application's features.
+*   Adds the required database relationship between the `staff_members` and `roles` tables, which is critical for login to function correctly.
+*   **Adds Row-Level Security (RLS) policies** to the permissions tables. These policies allow the application to read role/permission data while preventing unauthorized users from making changes.
+
+**Important:** If you have run a previous version of this script, please run this updated version to apply critical security fixes and to adjust the default permissions for the "Head Office Management" role to match the intended UI. Running the script again is safe and will not overwrite any manual permission changes you have made in the admin UI.
 
 **To apply this update:**
 
@@ -170,7 +176,7 @@ This update adds the database tables required for a dynamic, administrator-contr
     *   Paste the content into the query window in the Supabase SQL Editor.
     *   Click the **"RUN"** button.
 
-You should see a "Success. No rows returned" message. After running this, the foundation for the new permission system will be in place.
+You should see a "Success. No rows returned" message. After running this, the foundation for the new permission system will be in place and secured.
 
 ---
 

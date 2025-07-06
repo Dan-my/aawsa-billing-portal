@@ -154,7 +154,7 @@ From time to time, application updates may require changes to the database struc
 
 ### **Migration: Role-Based Access Control (RBAC) and Security Policies (Required)**
 
-This is a comprehensive update that adds the database tables, functions, and security policies for a dynamic, administrator-controlled permission system.
+This is a comprehensive update that creates the tables for roles and permissions, adds the necessary database functions, and sets up row-level security. It also seeds the database with default roles and a permission set for each role.
 
 **What it does:**
 *   Creates tables for `roles`, `permissions`, and `role_permissions`.
@@ -162,7 +162,7 @@ This is a comprehensive update that adds the database tables, functions, and sec
 *   Adds the required database relationship between the `staff_members` and `roles` tables, which is critical for login to function correctly.
 *   **Adds Row-Level Security (RLS) policies** to the permissions tables. These policies allow the application to read role/permission data while preventing unauthorized users from making changes.
 
-**If you have run a previous version of this script, please run this updated version to apply critical security fixes.** This update corrects the read policies to allow the application to fetch roles and permissions correctly, fixing issues with UI elements like the "Roles & Permissions" dropdown.
+**Important:** If you have run a previous version of this script, please run this updated version to apply critical security fixes and to adjust the default permissions for the "Head Office Management" role to match the intended UI. Running the script again is safe and will not overwrite any manual permission changes you have made in the admin UI.
 
 **To apply this update:**
 

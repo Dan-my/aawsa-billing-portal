@@ -152,9 +152,11 @@ From time to time, application updates may require changes to the database struc
 
 ---
 
-### **Migration: Role-Based Access Control (RBAC) Setup**
+### **Migration: Role-Based Access Control (RBAC) Setup (Required)**
 
 This update adds the database tables required for a dynamic, administrator-controlled permission system. It creates tables for `roles`, `permissions`, and the links between them. It also populates these tables with default roles and a comprehensive set of permissions to match the application's features.
+
+**Important:** If you have run a previous version of this script, please run this updated version to apply a critical security fix to the `update_role_permissions` function.
 
 **To apply this update:**
 

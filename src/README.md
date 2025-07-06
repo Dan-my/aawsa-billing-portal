@@ -152,9 +152,34 @@ From time to time, application updates may require changes to the database struc
 
 ---
 
+### **Migration: Role-Based Access Control (RBAC) Setup (Required)**
+
+This update adds the database tables required for a dynamic, administrator-controlled permission system. It creates tables for `roles`, `permissions`, and the links between them. It also populates these tables with default roles and a comprehensive set of permissions to match the application's features.
+
+**Important:** If you have run a previous version of this script, please run this updated version to apply critical security fixes and to add the necessary relationship between the `staff_members` and `roles` tables, which is required for login to function correctly. This version also corrects a Row-Level Security policy that prevented the permissions dropdown from loading correctly.
+
+**To apply this update:**
+
+1.  **Navigate to the SQL Editor:**
+    *   Go to your Supabase project dashboard.
+    *   In the left-hand menu, click on the **SQL Editor** icon (it looks like a database with a query symbol).
+2.  **Run the Script:**
+    *   Click on **"+ New query"**.
+    *   Open the newly added file `database_migrations/002_rbac_setup.sql` in this project.
+    *   Copy the entire content of that file.
+    *   Paste the content into the query window in the Supabase SQL Editor.
+    *   Click the **"RUN"** button.
+
+You should see a "Success. No rows returned" message. After running this, the foundation for the new permission system will be in place.
+
+---
+
 ### **Migration: Update Notification Function (Required)**
 
-This update fixes a critical bug in the notification system by changing how notifications are targeted from using a branch *name* to a unique branch *ID*. This makes the system much more reliable.
+This update fixes two critical bugs in the notification system.
+1. It changes how notifications are targeted from using a branch *name* to a unique branch *ID*, making the system much more reliable.
+2. It resolves a "row-level security policy" error by adding a necessary `SECURITY DEFINER` setting, allowing the application to send notifications without disabling important database security rules.
+**If you have run a previous version of this script, please run this updated version to apply the security fix.**
 
 **To apply this update:**
 

@@ -6,7 +6,6 @@ CREATE TABLE IF NOT EXISTS public.roles (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-COMMENT ON TABLE public.roles IS 'Stores user roles for role-based access control.';
 
 -- Create permissions table
 CREATE TABLE IF NOT EXISTS public.permissions (
@@ -16,8 +15,6 @@ CREATE TABLE IF NOT EXISTS public.permissions (
     category TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
-COMMENT ON TABLE public.permissions IS 'Stores individual permissions that can be assigned to roles.';
-COMMENT ON COLUMN public.permissions.category IS 'A category for grouping permissions in the UI, e.g., "User Management".';
 
 -- Create role_permissions join table
 CREATE TABLE IF NOT EXISTS public.role_permissions (
@@ -26,20 +23,15 @@ CREATE TABLE IF NOT EXISTS public.role_permissions (
     PRIMARY KEY (role_id, permission_id),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
-COMMENT ON TABLE public.role_permissions IS 'Links roles to their assigned permissions.';
 
 -- Add the role_id column to staff_members if it doesn't exist
--- This ensures the relationship between staff and roles can be established.
 ALTER TABLE public.staff_members ADD COLUMN IF NOT EXISTS role_id BIGINT;
 
 -- Add the foreign key constraint to link staff_members to roles
--- This is the critical fix for the login issue.
 ALTER TABLE public.staff_members
 DROP CONSTRAINT IF EXISTS staff_members_role_id_fkey,
 ADD CONSTRAINT staff_members_role_id_fkey
 FOREIGN KEY (role_id) REFERENCES public.roles(id) ON DELETE SET NULL;
-COMMENT ON COLUMN public.staff_members.role_id IS 'Foreign key to the roles table.';
-
 
 -- Insert default roles, ignoring if they already exist
 INSERT INTO public.roles (role_name, description) VALUES
@@ -88,9 +80,6 @@ INSERT INTO public.permissions (name, category, description) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- Function to update role permissions transactionally
--- IMPORTANT: SECURITY DEFINER allows this function to modify the role_permissions table
--- even when called by a user who doesn't have direct write access,
--- which is necessary for the application to work correctly.
 CREATE OR REPLACE FUNCTION public.update_role_permissions(p_role_id bigint, p_permission_ids bigint[])
  RETURNS void
  LANGUAGE plpgsql
@@ -98,25 +87,16 @@ CREATE OR REPLACE FUNCTION public.update_role_permissions(p_role_id bigint, p_pe
  SET search_path = public
 AS $function$
 BEGIN
-    -- This function runs with the privileges of the user who defined it (the owner).
-    
-    -- Delete all existing permissions for the specified role first.
     DELETE FROM public.role_permissions WHERE role_id = p_role_id;
-
-    -- Insert the new set of permissions for the role.
-    -- If the input array is empty or null, this will do nothing, effectively
-    -- removing all permissions for the role.
     IF p_permission_ids IS NOT NULL AND array_length(p_permission_ids, 1) > 0 THEN
         INSERT INTO public.role_permissions (role_id, permission_id)
         SELECT p_role_id, permission_id
         FROM unnest(p_permission_ids) AS t(permission_id);
     END IF;
-
 END;
 $function$;
 
--- The initial assignment of permissions is only done if the role_permissions table is empty,
--- to avoid overwriting any custom changes made by the administrator.
+-- Initial permission assignment (only if table is empty)
 DO $$
 DECLARE
     admin_role_id BIGINT;
@@ -126,48 +106,17 @@ DECLARE
     permission_count INTEGER;
 BEGIN
     SELECT count(*) INTO permission_count FROM role_permissions;
-    
     IF permission_count = 0 THEN
-        -- Get role IDs
         SELECT id INTO admin_role_id FROM roles WHERE role_name = 'Admin';
         SELECT id INTO staff_role_id FROM roles WHERE role_name = 'Staff';
         SELECT id INTO head_office_role_id FROM roles WHERE role_name = 'Head Office Management';
         SELECT id INTO staff_mgmt_role_id FROM roles WHERE role_name = 'Staff Management';
-
-        -- Assign all permissions to Admin
-        INSERT INTO role_permissions (role_id, permission_id)
-        SELECT admin_role_id, id FROM permissions;
-
-        -- Assign permissions for Staff
-        INSERT INTO role_permissions (role_id, permission_id)
-        SELECT staff_role_id, id FROM permissions WHERE name IN (
-            'dashboard_view_branch', 'bulk_meters_view_branch', 'bulk_meters_create', 'bulk_meters_update',
-            'bulk_meters_delete', 'customers_view_branch', 'customers_create', 'customers_update',
-            'customers_delete', 'data_entry_access', 'meter_readings_view_branch', 'meter_readings_create',
-            'reports_generate_branch'
-        );
-
-        -- Assign permissions for Head Office Management
-        INSERT INTO role_permissions (role_id, permission_id)
-        SELECT head_office_role_id, id FROM permissions WHERE name IN (
-            'dashboard_view_all', 'branches_view', 'staff_view', 'notifications_view', 'tariffs_view',
-            'bulk_meters_view_all', 'customers_view_all', 'meter_readings_view_all', 'reports_generate_all',
-            'settings_view'
-        );
-        
-        -- Assign permissions for Staff Management
-        INSERT INTO role_permissions (role_id, permission_id)
-        SELECT staff_mgmt_role_id, id FROM permissions WHERE name IN (
-            'dashboard_view_branch', 'bulk_meters_view_branch', 'bulk_meters_create', 'bulk_meters_update',
-            'bulk_meters_delete', 'customers_view_branch', 'customers_create', 'customers_update',
-            'customers_delete', 'data_entry_access', 'meter_readings_view_branch', 'meter_readings_create',
-            'reports_generate_branch', 'branches_view', 'branches_create', 'branches_update', 'staff_view',
-            'staff_create', 'staff_update', 'staff_delete', 'notifications_create', 'notifications_view'
-        );
+        INSERT INTO role_permissions (role_id, permission_id) SELECT admin_role_id, id FROM permissions;
+        INSERT INTO role_permissions (role_id, permission_id) SELECT staff_role_id, id FROM permissions WHERE name IN ('dashboard_view_branch', 'bulk_meters_view_branch', 'bulk_meters_create', 'bulk_meters_update', 'bulk_meters_delete', 'customers_view_branch', 'customers_create', 'customers_update', 'customers_delete', 'data_entry_access', 'meter_readings_view_branch', 'meter_readings_create', 'reports_generate_branch');
+        INSERT INTO role_permissions (role_id, permission_id) SELECT head_office_role_id, id FROM permissions WHERE name IN ('dashboard_view_all', 'branches_view', 'staff_view', 'notifications_view', 'tariffs_view', 'bulk_meters_view_all', 'customers_view_all', 'meter_readings_view_all', 'reports_generate_all', 'settings_view');
+        INSERT INTO role_permissions (role_id, permission_id) SELECT staff_mgmt_role_id, id FROM permissions WHERE name IN ('dashboard_view_branch', 'bulk_meters_view_branch', 'bulk_meters_create', 'bulk_meters_update', 'bulk_meters_delete', 'customers_view_branch', 'customers_create', 'customers_update', 'customers_delete', 'data_entry_access', 'meter_readings_view_branch', 'meter_readings_create', 'reports_generate_branch', 'branches_view', 'branches_create', 'branches_update', 'staff_view', 'staff_create', 'staff_update', 'staff_delete', 'notifications_create', 'notifications_view');
     END IF;
 END $$;
-
--- ====== START: ROW-LEVEL SECURITY POLICIES ======
 
 -- Helper function to check for Admin role.
 -- NOTE: This relies on your app eventually using Supabase Auth, where auth.uid() matches staff_members.id
@@ -189,22 +138,25 @@ ALTER TABLE public.role_permissions ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies to ensure a clean slate
 DROP POLICY IF EXISTS "Allow authenticated users to read roles" ON public.roles;
+DROP POLICY IF EXISTS "Allow all users to read roles" ON public.roles;
 DROP POLICY IF EXISTS "Allow Admins to manage roles" ON public.roles;
+
 DROP POLICY IF EXISTS "Allow authenticated users to read permissions" ON public.permissions;
+DROP POLICY IF EXISTS "Allow all users to read permissions" ON public.permissions;
 DROP POLICY IF EXISTS "Allow Admins to manage permissions" ON public.permissions;
+
 DROP POLICY IF EXISTS "Allow authenticated users to read their permissions" ON public.role_permissions;
+DROP POLICY IF EXISTS "Allow all users to read role permissions" ON public.role_permissions;
 DROP POLICY IF EXISTS "Disallow direct modification of role_permissions" ON public.role_permissions;
 
 -- Policies for 'roles' table
-CREATE POLICY "Allow authenticated users to read roles" ON public.roles FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Allow all users to read roles" ON public.roles FOR SELECT USING (true);
 CREATE POLICY "Allow Admins to manage roles" ON public.roles FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 
 -- Policies for 'permissions' table
-CREATE POLICY "Allow authenticated users to read permissions" ON public.permissions FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Allow all users to read permissions" ON public.permissions FOR SELECT USING (true);
 CREATE POLICY "Allow Admins to manage permissions" ON public.permissions FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 
 -- Policies for 'role_permissions' table
-CREATE POLICY "Allow authenticated users to read their permissions" ON public.role_permissions FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Allow all users to read role permissions" ON public.role_permissions FOR SELECT USING (true);
 CREATE POLICY "Disallow direct modification of role_permissions" ON public.role_permissions FOR ALL TO authenticated USING (false) WITH CHECK (false);
-
--- ====== END: ROW-LEVEL SECURITY POLICIES ======

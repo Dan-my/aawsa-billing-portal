@@ -18,17 +18,18 @@ interface UserProfile {
 }
 
 const buildSidebarNavItems = (user: UserProfile | null): NavItemGroup[] => {
-    if (!user || !user.permissions) return [];
+    if (!user) return [];
 
     const navItems: NavItemGroup[] = [];
-    const permissions = new Set(user.permissions);
+    const isAdmin = user.role.toLowerCase() === 'admin';
+    const permissions = new Set(user.permissions || []);
 
     // --- Dashboard ---
     let dashboardHref = "/admin/dashboard"; // Default for Admin
     if (user.role === 'Head Office Management') dashboardHref = '/admin/head-office-dashboard';
     if (user.role === 'Staff Management') dashboardHref = '/admin/staff-management-dashboard';
     
-    if (permissions.has('dashboard_view_all') || permissions.has('dashboard_view_branch')) {
+    if (isAdmin || permissions.has('dashboard_view_all') || permissions.has('dashboard_view_branch')) {
         navItems.push({
             items: [{ title: "Dashboard", href: dashboardHref, iconName: "LayoutDashboard" }]
         });
@@ -36,11 +37,11 @@ const buildSidebarNavItems = (user: UserProfile | null): NavItemGroup[] => {
 
     // --- Management Group ---
     const managementItems: NavItem[] = [];
-    if (permissions.has('branches_view')) managementItems.push({ title: "Branch Management", href: "/admin/branches", iconName: "Building" });
-    if (permissions.has('staff_view')) managementItems.push({ title: "Staff Management", href: "/admin/staff-management", iconName: "UserCog" });
-    if (permissions.has('permissions_view')) managementItems.push({ title: "Roles & Permissions", href: "/admin/roles-and-permissions", iconName: "ShieldCheck" });
-    if (permissions.has('notifications_view')) managementItems.push({ title: "Notifications", href: "/admin/notifications", iconName: "Bell" });
-    if (permissions.has('tariffs_view')) managementItems.push({ title: "Tariff Management", href: "/admin/tariffs", iconName: "LibraryBig" }); 
+    if (isAdmin || permissions.has('branches_view')) managementItems.push({ title: "Branch Management", href: "/admin/branches", iconName: "Building" });
+    if (isAdmin || permissions.has('staff_view')) managementItems.push({ title: "Staff Management", href: "/admin/staff-management", iconName: "UserCog" });
+    if (isAdmin || permissions.has('permissions_view')) managementItems.push({ title: "Roles & Permissions", href: "/admin/roles-and-permissions", iconName: "ShieldCheck" });
+    if (isAdmin || permissions.has('notifications_view')) managementItems.push({ title: "Notifications", href: "/admin/notifications", iconName: "Bell" });
+    if (isAdmin || permissions.has('tariffs_view')) managementItems.push({ title: "Tariff Management", href: "/admin/tariffs", iconName: "LibraryBig" }); 
     
     if (managementItems.length > 0) {
         navItems.push({ title: "Management", items: managementItems });
@@ -48,8 +49,8 @@ const buildSidebarNavItems = (user: UserProfile | null): NavItemGroup[] => {
     
     // --- Customer & Metering Group ---
     const customerMeteringItems: NavItem[] = [];
-    if (permissions.has('bulk_meters_view_all') || permissions.has('bulk_meters_view_branch')) customerMeteringItems.push({ title: "Bulk Meters", href: "/admin/bulk-meters", iconName: "Gauge" });
-    if (permissions.has('customers_view_all') || permissions.has('customers_view_branch')) customerMeteringItems.push({ title: "Individual Customers", href: "/admin/individual-customers", iconName: "Users" });
+    if (isAdmin || permissions.has('bulk_meters_view_all') || permissions.has('bulk_meters_view_branch')) customerMeteringItems.push({ title: "Bulk Meters", href: "/admin/bulk-meters", iconName: "Gauge" });
+    if (isAdmin || permissions.has('customers_view_all') || permissions.has('customers_view_branch')) customerMeteringItems.push({ title: "Individual Customers", href: "/admin/individual-customers", iconName: "Users" });
 
     if (customerMeteringItems.length > 0) {
         navItems.push({ title: "Customer & Metering", items: customerMeteringItems });
@@ -57,16 +58,16 @@ const buildSidebarNavItems = (user: UserProfile | null): NavItemGroup[] => {
 
     // --- Data & Reports Group ---
     const dataReportsItems: NavItem[] = [];
-    if (permissions.has('data_entry_access')) dataReportsItems.push({ title: "Data Entry", href: "/admin/data-entry", iconName: "FileText" });
-    if (permissions.has('meter_readings_view_all') || permissions.has('meter_readings_view_branch')) dataReportsItems.push({ title: "Meter Readings", href: "/admin/meter-readings", iconName: "ClipboardList" });
-    if (permissions.has('reports_generate_all') || permissions.has('reports_generate_branch')) dataReportsItems.push({ title: "Reports", href: "/admin/reports", iconName: "BarChart2" });
+    if (isAdmin || permissions.has('data_entry_access')) dataReportsItems.push({ title: "Data Entry", href: "/admin/data-entry", iconName: "FileText" });
+    if (isAdmin || permissions.has('meter_readings_view_all') || permissions.has('meter_readings_view_branch')) dataReportsItems.push({ title: "Meter Readings", href: "/admin/meter-readings", iconName: "ClipboardList" });
+    if (isAdmin || permissions.has('reports_generate_all') || permissions.has('reports_generate_branch')) dataReportsItems.push({ title: "Reports", href: "/admin/reports", iconName: "BarChart2" });
 
     if (dataReportsItems.length > 0) {
         navItems.push({ title: "Data & Reports", items: dataReportsItems });
     }
     
     // --- Settings ---
-    if (permissions.has('settings_view')) {
+    if (isAdmin || permissions.has('settings_view')) {
       navItems.push({
         items: [{ title: "Settings", href: "/admin/settings", iconName: "Settings" }]
       });

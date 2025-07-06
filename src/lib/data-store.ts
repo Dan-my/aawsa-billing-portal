@@ -1213,15 +1213,27 @@ export const addStaffMember = async (staffData: Omit<StaffMember, 'id'> & {id?: 
   const payload = mapDomainStaffToInsert(staffDataWithRoleId as StaffMember);
 
   const { data: newSupabaseStaff, error } = await supabaseCreateStaffMember(payload);
-  if (newSupabaseStaff && !error) {
+  
+  if (error) {
+    // Check for unique constraint violation
+    if ((error as any).code === '23505' && (error as any).message.includes('staff_members_email_key')) {
+      return { success: false, message: `A staff member with the email '${staffData.email}' already exists.` };
+    }
+    // Generic error handling
+    console.error("DataStore: Failed to add staff member. Error:", JSON.stringify(error, null, 2));
+    return { success: false, message: (error as any)?.message || "Failed to add staff member.", error };
+  }
+
+  if (newSupabaseStaff) {
     const newStaff = mapSupabaseStaffToDomain(newSupabaseStaff);
     staffMembers = [newStaff, ...staffMembers];
     notifyStaffMemberListeners();
     return { success: true, data: newStaff };
   }
-  console.error("DataStore: Failed to add staff member. Error:", JSON.stringify(error, null, 2));
-  return { success: false, message: (error as any)?.message || "Failed to add staff member.", error };
+  
+  return { success: false, message: "An unknown error occurred while adding the staff member." };
 };
+
 
 export const updateStaffMember = async (email: string, updatedStaffData: Partial<Omit<StaffMember, 'id' | 'email'>>): Promise<StoreOperationResult<void>> => {
   const staffUpdateDataWithRoleId: Partial<StaffMember> = { ...updatedStaffData };

@@ -106,6 +106,8 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal", onLogout }: 
   );
 }
 
+const ADMIN_ROLES = ['admin', 'head office management', 'staff management'];
+const STAFF_ROLES = ['staff'];
 
 export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 'staff', children: React.ReactNode, sidebar?: React.ReactNode }) {
   const router = useRouter();
@@ -146,8 +148,14 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
     if (storedUser) {
         try {
             const parsedUser: UserProfile = JSON.parse(storedUser);
-            // This check is now more flexible, just checking if the path starts with the role's prefix.
-            if (pathname.startsWith(`/${parsedUser.role.toLowerCase()}`)) {
+            const userRoleLower = parsedUser.role.toLowerCase();
+
+            // Check if the user's role is authorized for the current layout (defined by the userRole prop)
+            const isAuthorizedForLayout = 
+              (userRole === 'admin' && ADMIN_ROLES.includes(userRoleLower)) ||
+              (userRole === 'staff' && STAFF_ROLES.includes(userRoleLower));
+
+            if (isAuthorizedForLayout) {
                 setUser(parsedUser);
             } else {
                 handleLogout();
@@ -183,12 +191,6 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
     return null;
   }
   
-  // This check is important to prevent staff from seeing admin layout, and vice versa.
-  // Note: We check `userRole` prop, not `user.role` from state, to ensure layout consistency.
-  if (user && user.role.toLowerCase() !== userRole) {
-    return null; 
-  }
-
   return (
     <SidebarProvider defaultOpen>
       <Sidebar side="left" variant="sidebar" collapsible="icon" className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground">

@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from "react";
@@ -73,7 +72,8 @@ export function AuthForm() {
       const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes
       localStorage.setItem('session_expires_at', String(Date.now() + INACTIVITY_TIMEOUT));
 
-      if (user.role.toLowerCase() === "admin") {
+      const role = user.role.toLowerCase();
+      if (role === 'admin' || role === 'head office management' || role === 'staff management') {
         router.push("/admin/dashboard");
       } else {
         router.push("/staff/dashboard");

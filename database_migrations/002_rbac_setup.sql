@@ -28,6 +28,20 @@ CREATE TABLE IF NOT EXISTS public.role_permissions (
 );
 COMMENT ON TABLE public.role_permissions IS 'Links roles to their assigned permissions.';
 
+-- Add the role_id column to staff_members if it doesn't exist
+-- This ensures the script is safe to re-run.
+ALTER TABLE public.staff_members ADD COLUMN IF NOT EXISTS role_id BIGINT;
+
+-- Add the foreign key constraint to link staff_members to roles
+-- This is the critical fix for the login issue.
+-- It is dropped and re-added to ensure the correct constraint is in place.
+ALTER TABLE public.staff_members
+DROP CONSTRAINT IF EXISTS staff_members_role_id_fkey,
+ADD CONSTRAINT staff_members_role_id_fkey
+FOREIGN KEY (role_id) REFERENCES public.roles(id) ON DELETE SET NULL;
+COMMENT ON COLUMN public.staff_members.role_id IS 'Foreign key to the roles table.';
+
+
 -- Insert default roles, ignoring if they already exist
 INSERT INTO public.roles (role_name, description) VALUES
 ('Admin', 'Full access to all system features and settings.'),
@@ -101,22 +115,6 @@ BEGIN
 
 END;
 $function$;
-
--- Add foreign key from staff_members.role_id to roles.id to enforce integrity.
--- This is necessary for joining tables in queries.
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint 
-        WHERE conname = 'staff_members_role_id_fkey' AND conrelid = 'public.staff_members'::regclass
-    ) THEN
-        ALTER TABLE public.staff_members 
-        ADD CONSTRAINT staff_members_role_id_fkey 
-        FOREIGN KEY (role_id) REFERENCES public.roles(id) ON DELETE SET NULL;
-    END IF;
-END;
-$$;
-
 
 -- The initial assignment of permissions is only done if the role_permissions table is empty,
 -- to avoid overwriting any custom changes made by the administrator.

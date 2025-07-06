@@ -156,7 +156,7 @@ From time to time, application updates may require changes to the database struc
 
 This update adds the database tables required for a dynamic, administrator-controlled permission system. It creates tables for `roles`, `permissions`, and the links between them. It also populates these tables with default roles and a comprehensive set of permissions to match the application's features.
 
-**Important:** If you have run a previous version of this script, please run this updated version to apply a critical security fix to the `update_role_permissions` function.
+**Important:** If you have run a previous version of this script, please run this updated version to apply critical security fixes and to add the necessary relationship between the `staff_members` and `roles` tables, which is required for login to function correctly.
 
 **To apply this update:**
 

@@ -152,6 +152,26 @@ From time to time, application updates may require changes to the database struc
 
 ---
 
+### **Migration: Role-Based Access Control (RBAC) Setup**
+
+This update adds the database tables required for a dynamic, administrator-controlled permission system. It creates tables for `roles`, `permissions`, and the links between them. It also populates these tables with default roles and a comprehensive set of permissions to match the application's features.
+
+**To apply this update:**
+
+1.  **Navigate to the SQL Editor:**
+    *   Go to your Supabase project dashboard.
+    *   In the left-hand menu, click on the **SQL Editor** icon (it looks like a database with a query symbol).
+2.  **Run the Script:**
+    *   Click on **"+ New query"**.
+    *   Open the newly added file `database_migrations/002_rbac_setup.sql` in this project.
+    *   Copy the entire content of that file.
+    *   Paste the content into the query window in the Supabase SQL Editor.
+    *   Click the **"RUN"** button.
+
+You should see a "Success. No rows returned" message. After running this, the foundation for the new permission system will be in place.
+
+---
+
 ### **Migration: Update Notification Function (Required)**
 
 This update fixes two critical bugs in the notification system.

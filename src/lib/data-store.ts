@@ -10,6 +10,7 @@ import { calculateBill, type CustomerType, type SewerageConnection, type Payment
 
 
 import type {
+  RoleRow, PermissionRow, RolePermissionRow,
   Branch as SupabaseBranchRow,
   BulkMeterRow as SupabaseBulkMeterRow,
   IndividualCustomer as SupabaseIndividualCustomerRow,
@@ -72,7 +73,13 @@ import {
   deleteReportLog as supabaseDeleteReportLog,
   getAllNotifications as supabaseGetAllNotifications,
   createNotification as supabaseCreateNotification,
+  getAllRoles as supabaseGetAllRoles,
+  getAllPermissions as supabaseGetAllPermissions,
+  getAllRolePermissions as supabaseGetAllRolePermissions,
+  rpcUpdateRolePermissions as supabaseRpcUpdateRolePermissions,
 } from './supabase';
+
+export type { RoleRow as DomainRole, PermissionRow as DomainPermission, RolePermissionRow as DomainRolePermission } from './supabase';
 
 export interface DomainNotification {
   id: string;
@@ -186,6 +193,9 @@ interface StoreOperationResult<T = any> {
 
 type BulkMeter = DomainBulkMeterTypeFromTypes;
 type StaffMember = DomainStaffMember;
+type DomainRole = import('./supabase').RoleRow;
+type DomainPermission = import('./supabase').PermissionRow;
+type DomainRolePermission = import('./supabase').RolePermissionRow;
 
 
 let branches: DomainBranch[] = [];
@@ -198,6 +208,9 @@ let bulkMeterReadings: DomainBulkMeterReading[] = [];
 let payments: DomainPayment[] = [];
 let reportLogs: DomainReportLog[] = [];
 let notifications: DomainNotification[] = [];
+let roles: DomainRole[] = [];
+let permissions: DomainPermission[] = [];
+let rolePermissions: DomainRolePermission[] = [];
 
 let branchesFetched = false;
 let customersFetched = false;
@@ -209,6 +222,10 @@ let bulkMeterReadingsFetched = false;
 let paymentsFetched = false;
 let reportLogsFetched = false;
 let notificationsFetched = false;
+let rolesFetched = false;
+let permissionsFetched = false;
+let rolePermissionsFetched = false;
+
 
 type Listener<T> = (data: T[]) => void;
 const branchListeners: Set<Listener<DomainBranch>> = new Set();
@@ -221,6 +238,9 @@ const bulkMeterReadingListeners: Set<Listener<DomainBulkMeterReading>> = new Set
 const paymentListeners: Set<Listener<DomainPayment>> = new Set();
 const reportLogListeners: Set<Listener<DomainReportLog>> = new Set();
 const notificationListeners: Set<Listener<DomainNotification>> = new Set();
+const roleListeners: Set<Listener<DomainRole>> = new Set();
+const permissionListeners: Set<Listener<DomainPermission>> = new Set();
+const rolePermissionListeners: Set<Listener<DomainRolePermission>> = new Set();
 
 const notifyBranchListeners = () => branchListeners.forEach(listener => listener([...branches]));
 const notifyCustomerListeners = () => customerListeners.forEach(listener => listener([...customers]));
@@ -232,6 +252,10 @@ const notifyBulkMeterReadingListeners = () => bulkMeterReadingListeners.forEach(
 const notifyPaymentListeners = () => paymentListeners.forEach(listener => listener([...payments])); 
 const notifyReportLogListeners = () => reportLogListeners.forEach(listener => listener([...reportLogs]));
 const notifyNotificationListeners = () => notificationListeners.forEach(listener => listener([...notifications]));
+const notifyRoleListeners = () => roleListeners.forEach(listener => listener([...roles]));
+const notifyPermissionListeners = () => permissionListeners.forEach(listener => listener([...permissions]));
+const notifyRolePermissionListeners = () => rolePermissionListeners.forEach(listener => listener([...rolePermissions]));
+
 
 // --- Mappers ---
 const mapSupabaseNotificationToDomain = (sn: SupabaseNotificationRow): DomainNotification => ({
@@ -887,6 +911,42 @@ async function fetchAllNotifications() {
   return notifications;
 }
 
+async function fetchAllRoles() {
+  const { data, error } = await supabaseGetAllRoles();
+  if (data) {
+    roles = data;
+    notifyRoleListeners();
+  } else {
+    console.error("DataStore: Failed to fetch roles. Supabase error:", JSON.stringify(error, null, 2));
+  }
+  rolesFetched = true;
+  return roles;
+}
+
+async function fetchAllPermissions() {
+  const { data, error } = await supabaseGetAllPermissions();
+  if (data) {
+    permissions = data;
+    notifyPermissionListeners();
+  } else {
+    console.error("DataStore: Failed to fetch permissions. Supabase error:", JSON.stringify(error, null, 2));
+  }
+  permissionsFetched = true;
+  return permissions;
+}
+
+async function fetchAllRolePermissions() {
+  const { data, error } = await supabaseGetAllRolePermissions();
+  if (data) {
+    rolePermissions = data;
+    notifyRolePermissionListeners();
+  } else {
+    console.error("DataStore: Failed to fetch role permissions. Supabase error:", JSON.stringify(error, null, 2));
+  }
+  rolePermissionsFetched = true;
+  return rolePermissions;
+}
+
 export const initializeBranches = async () => {
   if (!branchesFetched || branches.length === 0) {
     await fetchAllBranches();
@@ -933,6 +993,24 @@ export const initializeNotifications = async () => {
   }
 };
 
+export const initializeRoles = async () => {
+  if (!rolesFetched) {
+    await fetchAllRoles();
+  }
+};
+
+export const initializePermissions = async () => {
+  if (!permissionsFetched) {
+    await fetchAllPermissions();
+  }
+};
+
+export const initializeRolePermissions = async () => {
+  if (!rolePermissionsFetched) {
+    await fetchAllRolePermissions();
+  }
+};
+
 export async function getBulkMeterByCustomerKey(customerKeyNumber: string): Promise<StoreOperationResult<BulkMeter>> {
     const { data, error } = await supabase.from('bulk_meters').select('*').eq('customerKeyNumber', customerKeyNumber).single();
     if (error) {
@@ -954,6 +1032,9 @@ export const getBills = (): DomainBill[] => [...bills];
 export const getIndividualCustomerReadings = (): DomainIndividualCustomerReading[] => [...individualCustomerReadings];
 export const getBulkMeterReadings = (): DomainBulkMeterReading[] => [...bulkMeterReadings];
 export const getNotifications = (): DomainNotification[] => [...notifications];
+export const getRoles = (): DomainRole[] => [...roles];
+export const getPermissions = (): DomainPermission[] => [...permissions];
+export const getRolePermissions = (): DomainRolePermission[] => [...rolePermissions];
 
 export function getMeterReadings(): (DomainIndividualCustomerReading | DomainBulkMeterReading)[] {
     const allReadings = [
@@ -1390,6 +1471,15 @@ export const addNotification = async (notificationData: Omit<DomainNotification,
   return { success: false, message: userMessage, error };
 };
 
+export const updateRolePermissions = async (roleId: number, permissionIds: number[]): Promise<StoreOperationResult<void>> => {
+    const { error } = await supabaseRpcUpdateRolePermissions(roleId, permissionIds);
+    if (!error) {
+        await fetchAllRolePermissions();
+        return { success: true };
+    }
+    console.error("DataStore: Failed to update role permissions. RPC error:", JSON.stringify(error, null, 2));
+    return { success: false, message: (error as any)?.message || "Failed to update permissions.", error };
+};
 
 export const subscribeToBranches = (listener: Listener<DomainBranch>): (() => void) => {
   branchListeners.add(listener);
@@ -1444,6 +1534,23 @@ export const subscribeToNotifications = (listener: Listener<DomainNotification>)
   notificationListeners.add(listener);
   if (notificationsFetched) listener([...notifications]); else initializeNotifications().then(() => listener([...notifications]));
   return () => notificationListeners.delete(listener);
+};
+export const subscribeToRoles = (listener: Listener<DomainRole>): (() => void) => {
+  roleListeners.add(listener);
+  if (rolesFetched) listener([...roles]); else initializeRoles().then(() => listener([...roles]));
+  return () => roleListeners.delete(listener);
+};
+
+export const subscribeToPermissions = (listener: Listener<DomainPermission>): (() => void) => {
+  permissionListeners.add(listener);
+  if (permissionsFetched) listener([...permissions]); else initializePermissions().then(() => listener([...permissions]));
+  return () => permissionListeners.delete(listener);
+};
+
+export const subscribeToRolePermissions = (listener: Listener<DomainRolePermission>): (() => void) => {
+  rolePermissionListeners.add(listener);
+  if (rolePermissionsFetched) listener([...rolePermissions]); else initializeRolePermissions().then(() => listener([...rolePermissions]));
+  return () => rolePermissionListeners.delete(listener);
 };
 
 
@@ -1510,5 +1617,8 @@ export async function loadInitialData() {
     initializePayments(),
     initializeReportLogs(),
     initializeNotifications(),
+    initializeRoles(),
+    initializePermissions(),
+    initializeRolePermissions(),
   ]);
 }

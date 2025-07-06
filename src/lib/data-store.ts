@@ -527,7 +527,7 @@ const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { customerKeyNumber
 };
 
 
-const mapSupabaseStaffToDomain = (ss: SupabaseStaffMemberRow): StaffMember => ({
+const mapSupabaseStaffToDomain = (ss: SupabaseStaffMemberRow & { roles?: { role_name: string } | null }): StaffMember => ({
   id: ss.id,
   name: ss.name,
   email: ss.email,
@@ -536,7 +536,7 @@ const mapSupabaseStaffToDomain = (ss: SupabaseStaffMemberRow): StaffMember => ({
   status: ss.status,
   phone: ss.phone || undefined,
   hireDate: ss.hire_date || undefined,
-  role: ss.role,
+  role: ss.roles?.role_name || ss.role,
   roleId: ss.role_id || undefined,
 });
 
@@ -1600,6 +1600,12 @@ export const authenticateStaffMember = async (email: string, password: string): 
     }
 
     const user = mapSupabaseStaffToDomain(staffData);
+    
+    // Overwrite the role with the correct one from the joined roles table.
+    // This is the key fix. The 'roles' object comes from the join in the select query.
+    if (staffData.roles && typeof staffData.roles === 'object' && 'role_name' in staffData.roles) {
+      user.role = (staffData.roles as { role_name: string }).role_name;
+    }
     
     // Fetch permissions for the user's role
     let permissions: string[] = [];

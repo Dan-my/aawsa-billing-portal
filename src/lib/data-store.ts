@@ -1600,20 +1600,32 @@ export const authenticateStaffMember = async (email: string, password: string): 
     }
 
     const user = mapSupabaseStaffToDomain(staffData);
-    
-    // Overwrite the role with the correct one from the joined roles table.
-    // This is the key fix. The 'roles' object comes from the join in the select query.
-    if (staffData.roles && typeof staffData.roles === 'object' && 'role_name' in staffData.roles) {
-      user.role = (staffData.roles as { role_name: string }).role_name;
+
+    let userRoleId = user.roleId;
+
+    // This is the key fix: If role_id is missing (e.g., for legacy data),
+    // try to find it using the role name.
+    if (!userRoleId && user.role) {
+        if (!rolesFetched) await initializeRoles();
+        const foundRole = roles.find(r => r.role_name === user.role);
+        if (foundRole) {
+            userRoleId = foundRole.id;
+            user.roleId = userRoleId; // Update the user object for this session
+        } else {
+            console.error(`DataStore: Could not find a matching role ID for role name "${user.role}" during login for user ${email}.`);
+        }
+    } else if (staffData.roles?.role_name) {
+      // If the join worked, ensure the user object has the definitive role name.
+      user.role = staffData.roles.role_name;
     }
     
     // Fetch permissions for the user's role
     let permissions: string[] = [];
-    if (user.roleId) {
+    if (userRoleId) { // Now use the potentially back-filled role ID
         const { data: permissionData, error: permissionError } = await supabase
             .from('role_permissions')
             .select('permissions(name)')
-            .eq('role_id', user.roleId);
+            .eq('role_id', userRoleId);
 
         if (permissionData && !permissionError) {
             permissions = permissionData.map(p => p.permissions?.name).filter((name): name is string => !!name);

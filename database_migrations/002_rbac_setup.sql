@@ -29,12 +29,11 @@ CREATE TABLE IF NOT EXISTS public.role_permissions (
 COMMENT ON TABLE public.role_permissions IS 'Links roles to their assigned permissions.';
 
 -- Add the role_id column to staff_members if it doesn't exist
--- This ensures the script is safe to re-run.
+-- This ensures the relationship between staff and roles can be established.
 ALTER TABLE public.staff_members ADD COLUMN IF NOT EXISTS role_id BIGINT;
 
 -- Add the foreign key constraint to link staff_members to roles
 -- This is the critical fix for the login issue.
--- It is dropped and re-added to ensure the correct constraint is in place.
 ALTER TABLE public.staff_members
 DROP CONSTRAINT IF EXISTS staff_members_role_id_fkey,
 ADD CONSTRAINT staff_members_role_id_fkey
@@ -167,3 +166,45 @@ BEGIN
         );
     END IF;
 END $$;
+
+-- ====== START: ROW-LEVEL SECURITY POLICIES ======
+
+-- Helper function to check for Admin role.
+-- NOTE: This relies on your app eventually using Supabase Auth, where auth.uid() matches staff_members.id
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1
+    FROM public.staff_members
+    WHERE id = auth.uid() AND role_id = (SELECT id FROM public.roles WHERE role_name = 'Admin' LIMIT 1)
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Enable RLS on all three tables
+ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.role_permissions ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies to ensure a clean slate
+DROP POLICY IF EXISTS "Allow authenticated users to read roles" ON public.roles;
+DROP POLICY IF EXISTS "Allow Admins to manage roles" ON public.roles;
+DROP POLICY IF EXISTS "Allow authenticated users to read permissions" ON public.permissions;
+DROP POLICY IF EXISTS "Allow Admins to manage permissions" ON public.permissions;
+DROP POLICY IF EXISTS "Allow authenticated users to read their permissions" ON public.role_permissions;
+DROP POLICY IF EXISTS "Disallow direct modification of role_permissions" ON public.role_permissions;
+
+-- Policies for 'roles' table
+CREATE POLICY "Allow authenticated users to read roles" ON public.roles FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Allow Admins to manage roles" ON public.roles FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- Policies for 'permissions' table
+CREATE POLICY "Allow authenticated users to read permissions" ON public.permissions FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Allow Admins to manage permissions" ON public.permissions FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- Policies for 'role_permissions' table
+CREATE POLICY "Allow authenticated users to read their permissions" ON public.role_permissions FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Disallow direct modification of role_permissions" ON public.role_permissions FOR ALL TO authenticated USING (false) WITH CHECK (false);
+
+-- ====== END: ROW-LEVEL SECURITY POLICIES ======

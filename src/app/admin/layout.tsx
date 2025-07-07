@@ -104,11 +104,13 @@ const buildSidebarNavItems = (user: UserProfile | null): NavItemGroup[] => {
     if (permissions.has('meter_readings_view_all') || permissions.has('meter_readings_view_branch')) dataReportsItems.push({ title: "Meter Readings", href: "/admin/meter-readings", iconName: "ClipboardList" });
     if (permissions.has('reports_generate_all') || permissions.has('reports_generate_branch')) {
         dataReportsItems.push({ title: "Reports", href: "/admin/reports", iconName: "BarChart2" });
-        // Assuming if you can generate reports, you can view these lists
+    }
+    if (permissions.has('reports_view_paid_bills')) {
         dataReportsItems.push({ title: "List Of Paid Bills", href: "/admin/reports/paid-bills", iconName: "CheckCircle2" });
+    }
+    if (permissions.has('reports_view_sent_bills')) {
         dataReportsItems.push({ title: "List Of Sent Bills", href: "/admin/reports/sent-bills", iconName: "Send" });
     }
-
 
     if (dataReportsItems.length > 0) {
         navItems.push({ title: "Data & Reports", items: dataReportsItems });

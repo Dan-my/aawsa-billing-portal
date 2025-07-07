@@ -45,6 +45,8 @@ const fullAdminSidebarNavItems: NavItemGroup[] = [
             { title: "Data Entry", href: "/admin/data-entry", iconName: "FileText" },
             { title: "Meter Readings", href: "/admin/meter-readings", iconName: "ClipboardList" },
             { title: "Reports", href: "/admin/reports", iconName: "BarChart2" },
+            { title: "List Of Paid Bills", href: "/admin/reports/paid-bills", iconName: "CheckCircle2" },
+            { title: "List Of Sent Bills", href: "/admin/reports/sent-bills", iconName: "Send" },
         ]
     },
     {
@@ -100,7 +102,13 @@ const buildSidebarNavItems = (user: UserProfile | null): NavItemGroup[] => {
     const dataReportsItems: NavItem[] = [];
     if (permissions.has('data_entry_access')) dataReportsItems.push({ title: "Data Entry", href: "/admin/data-entry", iconName: "FileText" });
     if (permissions.has('meter_readings_view_all') || permissions.has('meter_readings_view_branch')) dataReportsItems.push({ title: "Meter Readings", href: "/admin/meter-readings", iconName: "ClipboardList" });
-    if (permissions.has('reports_generate_all') || permissions.has('reports_generate_branch')) dataReportsItems.push({ title: "Reports", href: "/admin/reports", iconName: "BarChart2" });
+    if (permissions.has('reports_generate_all') || permissions.has('reports_generate_branch')) {
+        dataReportsItems.push({ title: "Reports", href: "/admin/reports", iconName: "BarChart2" });
+        // Assuming if you can generate reports, you can view these lists
+        dataReportsItems.push({ title: "List Of Paid Bills", href: "/admin/reports/paid-bills", iconName: "CheckCircle2" });
+        dataReportsItems.push({ title: "List Of Sent Bills", href: "/admin/reports/sent-bills", iconName: "Send" });
+    }
+
 
     if (dataReportsItems.length > 0) {
         navItems.push({ title: "Data & Reports", items: dataReportsItems });

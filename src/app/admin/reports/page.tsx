@@ -5,7 +5,7 @@ import * as React from "react";
 import * as XLSX from 'xlsx';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileSpreadsheet, Info } from "lucide-react";
+import { Download, FileSpreadsheet, Info, AlertCircle, Lock } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +33,7 @@ import type { StaffMember } from "../staff-management/staff-types";
 import type { Branch } from "../branches/branch-types";
 import type { DateRange } from "react-day-picker";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { usePermissions } from "@/hooks/use-permissions";
 
 interface ReportFilters {
   branchId?: string;
@@ -335,6 +336,7 @@ const availableReports: ReportType[] = [
 ];
 
 export default function AdminReportsPage() {
+  const { hasPermission } = usePermissions();
   const { toast } = useToast();
   const [selectedReportId, setSelectedReportId] = React.useState<string | undefined>(undefined);
   const [isGenerating, setIsGenerating] = React.useState(false);
@@ -342,6 +344,10 @@ export default function AdminReportsPage() {
   const [selectedBranch, setSelectedBranch] = React.useState<string>("all");
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [user, setUser] = React.useState<StaffMember | null>(null);
+
+  const canSelectAllBranches = hasPermission('reports_generate_all');
+  const isLockedToBranch = !canSelectAllBranches && hasPermission('reports_generate_branch');
 
   React.useEffect(() => {
     const initializeData = async () => {
@@ -355,10 +361,19 @@ export default function AdminReportsPage() {
         await initializeStaffMembers();
         await initializeBranches();
         setBranches(getBranches());
+
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser) as StaffMember;
+          setUser(parsedUser);
+          if (!hasPermission('reports_generate_all') && hasPermission('reports_generate_branch') && parsedUser.branchId) {
+              setSelectedBranch(parsedUser.branchId);
+          }
+        }
         setIsLoading(false);
     };
     initializeData();
-  }, []);
+  }, [hasPermission]);
 
   const selectedReport = availableReports.find(report => report.id === selectedReportId);
 
@@ -412,6 +427,19 @@ export default function AdminReportsPage() {
     }
   };
 
+  if (!hasPermission('reports_generate_all') && !hasPermission('reports_generate_branch')) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl md:text-3xl font-bold">Generate Reports</h1>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Access Denied</AlertTitle>
+          <UIAlertDescription>You do not have permission to generate reports.</UIAlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -453,12 +481,17 @@ export default function AdminReportsPage() {
                   <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                     <div className="space-y-2">
                         <Label htmlFor="branch-filter">Filter by Branch</Label>
-                        <Select value={selectedBranch} onValueChange={setSelectedBranch} disabled={isLoading}>
-                            <SelectTrigger id="branch-filter">
+                        <Select 
+                            value={selectedBranch} 
+                            onValueChange={setSelectedBranch} 
+                            disabled={isLoading || !canSelectAllBranches}
+                        >
+                            <SelectTrigger id="branch-filter" className={!canSelectAllBranches ? 'cursor-not-allowed' : ''}>
+                                {isLockedToBranch && <Lock className="mr-2 h-4 w-4" />}
                                 <SelectValue placeholder="Select a branch"/>
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">All Branches</SelectItem>
+                                {canSelectAllBranches && <SelectItem value="all">All Branches</SelectItem>}
                                 {branches.map(branch => (
                                     <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
                                 ))}

@@ -23,7 +23,7 @@ const LAST_READ_TIMESTAMP_KEY = "last-read-timestamp";
 
 interface UserProfile {
   id: string;
-  role: 'Admin' | 'Staff';
+  role: string;
   branchName?: string;
   branchId?: string;
   name?: string;
@@ -57,28 +57,43 @@ export function NotificationBell({ user }: NotificationBellProps) {
   }, []);
 
   const relevantNotifications = React.useMemo(() => {
-    // The bell is only for staff members.
-    if (!user || user.role.toLowerCase() !== 'staff') {
-      return [];
+    if (!user) {
+        return [];
+    }
+    const userRole = user.role.toLowerCase();
+
+    // Admins do not see the notification bell.
+    if (userRole === 'admin') {
+        return [];
+    }
+
+    // Head Office Management sees only global notifications.
+    if (userRole === 'head office management') {
+        return notifications
+            .filter(notification => notification.targetBranchId === null)
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+
+    // Staff and Staff Management see global and their branch-specific notifications.
+    const staffBranchId = user.branchId;
+    if (userRole === 'staff' || userRole === 'staff management') {
+        return notifications
+          .filter(notification => {
+            // Show if targeted to 'All Staff'
+            if (notification.targetBranchId === null) {
+                return true;
+            }
+            // Show if targeted to the user's specific branch
+            if (staffBranchId && notification.targetBranchId === staffBranchId) {
+                return true;
+            }
+            return false;
+          })
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
     
-    const staffBranchId = user.branchId; // This can be undefined if branch name doesn't match
-
-    return notifications
-      .filter(notification => {
-        // Notification is for "All Staff" - always show.
-        if (notification.targetBranchId === null) {
-            return true;
-        }
-        // Notification is for a specific branch. Show it ONLY if the user has a matching branchId.
-        if (staffBranchId && notification.targetBranchId === staffBranchId) {
-            return true;
-        }
-        // Otherwise, don't show the notification.
-        return false;
-      })
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
+    // Default case for any other roles.
+    return [];
   }, [notifications, user]);
 
   React.useEffect(() => {

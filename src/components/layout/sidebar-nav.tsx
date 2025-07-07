@@ -97,7 +97,8 @@ function CollapsibleNavItem({ item, pathname }: { item: NavItem; pathname: strin
   // Check if the parent item itself is active (e.g., /foo when current path is /foo)
   const isParentItemActive = item.matcher ? item.matcher(pathname, item.href) : (pathname === item.href);
   
-  const isEffectivelyActive = isAnyChildActive || isParentItemActive;
+  // Only consider the parent item's direct path for its active state, not its children's.
+  const isEffectivelyActive = isParentItemActive;
 
 
   const [isOpen, setIsOpen] = React.useState(isAnyChildActive); // Open if any child is active

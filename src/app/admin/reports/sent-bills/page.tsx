@@ -13,13 +13,15 @@ import {
 import type { DomainBill } from "@/lib/data-store";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
-import { Send } from "lucide-react";
+import { Send, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 export default function SentBillsReportPage() {
   const [bills, setBills] = React.useState<DomainBill[]>([]);
   const [customers, setCustomers] = React.useState<IndividualCustomer[]>([]);
   const [bulkMeters, setBulkMeters] = React.useState<BulkMeter[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [searchTerm, setSearchTerm] = React.useState("");
   
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
@@ -50,11 +52,21 @@ export default function SentBillsReportPage() {
     };
   }, []);
 
-  const sortedBills = React.useMemo(() => {
-    return [...bills].sort((a, b) => new Date(b.billPeriodEndDate).getTime() - new Date(a.billPeriodEndDate).getTime());
-  }, [bills]);
+  const filteredBills = React.useMemo(() => {
+    let searchableBills = [...bills];
+
+    if (searchTerm) {
+      const lowercasedTerm = searchTerm.toLowerCase();
+      searchableBills = searchableBills.filter(bill => {
+        const customerKey = bill.individualCustomerId || bill.bulkMeterId;
+        return customerKey?.toLowerCase().includes(lowercasedTerm);
+      });
+    }
+
+    return searchableBills.sort((a, b) => new Date(b.billPeriodEndDate).getTime() - new Date(a.billPeriodEndDate).getTime());
+  }, [bills, searchTerm]);
   
-  const paginatedBills = sortedBills.slice(
+  const paginatedBills = filteredBills.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
@@ -63,12 +75,24 @@ export default function SentBillsReportPage() {
     <div className="space-y-6">
       <Card className="shadow-lg">
         <CardHeader>
-           <div className="flex items-center gap-3">
-            <Send className="h-8 w-8 text-primary" />
-            <div>
-                <CardTitle>List of All Sent Bills</CardTitle>
-                <CardDescription>A comprehensive, real-time list of all generated bills in the system.</CardDescription>
-            </div>
+           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Send className="h-8 w-8 text-primary" />
+                <div>
+                    <CardTitle>List of All Sent Bills</CardTitle>
+                    <CardDescription>A comprehensive, real-time list of all generated bills in the system.</CardDescription>
+                </div>
+              </div>
+              <div className="relative w-full md:w-auto md:min-w-[250px]">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search by Customer Key..."
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
            </div>
         </CardHeader>
         <CardContent>
@@ -78,9 +102,9 @@ export default function SentBillsReportPage() {
             <BillTable bills={paginatedBills} customers={customers} bulkMeters={bulkMeters} />
           )}
         </CardContent>
-         {sortedBills.length > 0 && (
+         {filteredBills.length > 0 && (
           <TablePagination
-            count={sortedBills.length}
+            count={filteredBills.length}
             page={page}
             rowsPerPage={rowsPerPage}
             onPageChange={setPage}

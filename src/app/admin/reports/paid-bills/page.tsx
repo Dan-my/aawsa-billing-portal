@@ -13,13 +13,15 @@ import {
 import type { DomainBill } from "@/lib/data-store";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 export default function PaidBillsReportPage() {
   const [bills, setBills] = React.useState<DomainBill[]>([]);
   const [customers, setCustomers] = React.useState<IndividualCustomer[]>([]);
   const [bulkMeters, setBulkMeters] = React.useState<BulkMeter[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [searchTerm, setSearchTerm] = React.useState("");
   
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
@@ -50,13 +52,21 @@ export default function PaidBillsReportPage() {
     };
   }, []);
 
-  const paidBills = React.useMemo(() => {
-    return bills
-      .filter(bill => bill.paymentStatus === 'Paid')
-      .sort((a, b) => new Date(b.billPeriodEndDate).getTime() - new Date(a.billPeriodEndDate).getTime());
-  }, [bills]);
+  const filteredBills = React.useMemo(() => {
+    let searchableBills = bills.filter(bill => bill.paymentStatus === 'Paid');
+
+    if (searchTerm) {
+      const lowercasedTerm = searchTerm.toLowerCase();
+      searchableBills = searchableBills.filter(bill => {
+        const customerKey = bill.individualCustomerId || bill.bulkMeterId;
+        return customerKey?.toLowerCase().includes(lowercasedTerm);
+      });
+    }
+
+    return searchableBills.sort((a, b) => new Date(b.billPeriodEndDate).getTime() - new Date(a.billPeriodEndDate).getTime());
+  }, [bills, searchTerm]);
   
-  const paginatedBills = paidBills.slice(
+  const paginatedBills = filteredBills.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
@@ -65,11 +75,23 @@ export default function PaidBillsReportPage() {
     <div className="space-y-6">
       <Card className="shadow-lg">
         <CardHeader>
-          <div className="flex items-center gap-3">
-            <CheckCircle2 className="h-8 w-8 text-primary" />
-            <div>
-              <CardTitle>List of Paid Bills</CardTitle>
-              <CardDescription>A real-time list of all bills that have been marked as paid.</CardDescription>
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="h-8 w-8 text-primary" />
+              <div>
+                <CardTitle>List of Paid Bills</CardTitle>
+                <CardDescription>A real-time list of all bills that have been marked as paid.</CardDescription>
+              </div>
+            </div>
+             <div className="relative w-full md:w-auto md:min-w-[250px]">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search by Customer Key..."
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
           </div>
         </CardHeader>
@@ -80,9 +102,9 @@ export default function PaidBillsReportPage() {
             <BillTable bills={paginatedBills} customers={customers} bulkMeters={bulkMeters} />
           )}
         </CardContent>
-         {paidBills.length > 0 && (
+         {filteredBills.length > 0 && (
           <TablePagination
-            count={paidBills.length}
+            count={filteredBills.length}
             page={page}
             rowsPerPage={rowsPerPage}
             onPageChange={setPage}

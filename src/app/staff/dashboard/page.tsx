@@ -40,6 +40,7 @@ export default function StaffDashboardPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   
   const [waterUsageView, setWaterUsageView] = React.useState<'chart' | 'table'>('chart');
+  const [branchPerformanceView, setBranchPerformanceView] = React.useState<'chart' | 'table'>('chart');
   
   React.useEffect(() => {
     setIsClient(true);
@@ -299,28 +300,65 @@ export default function StaffDashboardPage() {
       
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle>Branch Performance (Bulk Meters)</CardTitle>
-              <CardDescription>Paid vs. Unpaid status for bulk meters in your branch.</CardDescription>
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <div>
+                <CardTitle>Branch Performance (Bulk Meters)</CardTitle>
+                <CardDescription>Paid vs. Unpaid status for bulk meters in your branch.</CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setBranchPerformanceView(prev => prev === 'chart' ? 'table' : 'chart')}>
+                {branchPerformanceView === 'chart' ? <TableIcon className="mr-2 h-4 w-4" /> : <BarChartIcon className="mr-2 h-4 w-4" />}
+                View {branchPerformanceView === 'chart' ? 'Table' : 'Chart'}
+              </Button>
             </CardHeader>
-            <CardContent className="h-[300px]">
-              {isClient && branchStats.monthlyBulkMeterPerformance.length > 0 ? (
-                <ChartContainer config={chartConfig} className="w-full h-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={branchStats.monthlyBulkMeterPerformance}>
-                      <XAxis dataKey="month" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                      <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
-                      <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
-                      <Legend />
-                      <Bar dataKey="paid" stackId="a" fill="var(--color-paid)" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="unpaid" stackId="a" fill="var(--color-unpaid)" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
+            <CardContent>
+              {branchPerformanceView === 'chart' ? (
+                <div className="h-[300px]">
+                  {isClient && branchStats.monthlyBulkMeterPerformance.length > 0 ? (
+                    <ChartContainer config={chartConfig} className="w-full h-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={branchStats.monthlyBulkMeterPerformance}>
+                          <XAxis dataKey="month" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                          <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+                          <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
+                          <Legend />
+                          <Bar dataKey="paid" stackId="a" fill="var(--color-paid)" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="unpaid" stackId="a" fill="var(--color-unpaid)" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </ChartContainer>
+                  ) : (
+                      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                        No bulk meter performance data available.
+                      </div>
+                  )}
+                </div>
               ) : (
-                  <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                    No bulk meter performance data available.
-                  </div>
+                <ScrollArea className="h-[300px]">
+                  {branchStats.monthlyBulkMeterPerformance.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Month</TableHead>
+                          <TableHead className="text-right">Paid</TableHead>
+                          <TableHead className="text-right">Unpaid</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {branchStats.monthlyBulkMeterPerformance.map((item) => (
+                          <TableRow key={item.month}>
+                            <TableCell className="font-medium">{item.month}</TableCell>
+                            <TableCell className="text-right text-green-600 dark:text-green-400">{item.paid}</TableCell>
+                            <TableCell className="text-right text-red-600 dark:text-red-400">{item.unpaid}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="flex h-[300px] items-center justify-center text-xs text-muted-foreground">
+                        No branch performance data available.
+                    </div>
+                  )}
+                </ScrollArea>
               )}
             </CardContent>
         </Card>

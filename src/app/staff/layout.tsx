@@ -43,7 +43,7 @@ const staffSidebarNavItems: NavItemGroup[] = [
   },
 ];
 
-export default function StaffLayout({ children }: { children: ReactNode }) {
+export default function StaffLayout({ children }: { children: React.ReactNode }) {
     const [user, setUser] = React.useState<UserProfile | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
 

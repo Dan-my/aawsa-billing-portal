@@ -206,6 +206,78 @@ const availableReports: ReportType[] = [
     },
   },
   {
+    id: "list-of-paid-bills",
+    name: "List Of Paid Bills (XLSX)",
+    description: "A filtered list showing only the bills that have been marked as 'Paid'.",
+    headers: [
+        "id", "individualCustomerId", "bulkMeterId", "billPeriodStartDate", "billPeriodEndDate", 
+        "monthYear", "previousReadingValue", "currentReadingValue", "usageM3", 
+        "baseWaterCharge", "sewerageCharge", "maintenanceFee", "sanitationFee", 
+        "meterRent", "totalAmountDue", "amountPaid", "balanceDue", "dueDate", 
+        "paymentStatus", "billNumber", "notes", "createdAt", "updatedAt"
+    ],
+    getData: (filters) => {
+      const { branchId, startDate, endDate } = filters;
+      let bills = getBills();
+      
+      if (branchId) {
+        const bulkMetersInBranch = getBulkMeters().filter(bm => bm.branchId === branchId).map(bm => bm.customerKeyNumber);
+        const customersInBranch = getCustomers().filter(c => c.branchId === branchId).map(c => c.customerKeyNumber);
+        bills = bills.filter(b => 
+          (b.bulkMeterId && bulkMetersInBranch.includes(b.bulkMeterId)) ||
+          (b.individualCustomerId && customersInBranch.includes(b.individualCustomerId))
+        );
+      }
+      if (startDate && endDate) {
+         const start = startDate.getTime();
+         const end = endDate.getTime();
+         bills = bills.filter(b => {
+           try {
+             const billDate = new Date(b.billPeriodEndDate).getTime();
+             return billDate >= start && billDate <= end;
+           } catch { return false; }
+         });
+      }
+      return bills.filter(b => b.paymentStatus === 'Paid');
+    },
+  },
+  {
+    id: "list-of-sent-bills",
+    name: "List Of Sent Bills (XLSX)",
+    description: "A comprehensive list of all bills that have been generated, regardless of payment status.",
+    headers: [
+        "id", "individualCustomerId", "bulkMeterId", "billPeriodStartDate", "billPeriodEndDate", 
+        "monthYear", "previousReadingValue", "currentReadingValue", "usageM3", 
+        "baseWaterCharge", "sewerageCharge", "maintenanceFee", "sanitationFee", 
+        "meterRent", "totalAmountDue", "amountPaid", "balanceDue", "dueDate", 
+        "paymentStatus", "billNumber", "notes", "createdAt", "updatedAt"
+    ],
+    getData: (filters) => {
+      const { branchId, startDate, endDate } = filters;
+      let bills = getBills();
+      
+      if (branchId) {
+        const bulkMetersInBranch = getBulkMeters().filter(bm => bm.branchId === branchId).map(bm => bm.customerKeyNumber);
+        const customersInBranch = getCustomers().filter(c => c.branchId === branchId).map(c => c.customerKeyNumber);
+        bills = bills.filter(b => 
+          (b.bulkMeterId && bulkMetersInBranch.includes(b.bulkMeterId)) ||
+          (b.individualCustomerId && customersInBranch.includes(b.individualCustomerId))
+        );
+      }
+      if (startDate && endDate) {
+         const start = startDate.getTime();
+         const end = endDate.getTime();
+         bills = bills.filter(b => {
+           try {
+             const billDate = new Date(b.billPeriodEndDate).getTime();
+             return billDate >= start && billDate <= end;
+           } catch { return false; }
+         });
+      }
+      return bills;
+    },
+  },
+  {
     id: "water-usage",
     name: "Water Usage Report (XLSX)",
     description: "Detailed water consumption report from all meter readings.",

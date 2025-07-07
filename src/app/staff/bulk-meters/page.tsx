@@ -24,6 +24,7 @@ import {
 } from "@/lib/data-store";
 import type { Branch } from "@/app/admin/branches/branch-types";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { usePermissions } from "@/hooks/use-permissions";
 
 interface User {
   email: string;
@@ -33,6 +34,7 @@ interface User {
 }
 
 export default function StaffBulkMetersPage() {
+  const { hasPermission } = usePermissions();
   const { toast } = useToast();
   const [authStatus, setAuthStatus] = React.useState<'loading' | 'unauthorized' | 'authorized'>('loading');
   const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
@@ -208,6 +210,8 @@ export default function StaffBulkMetersPage() {
         onEdit={handleEditBulkMeter}
         onDelete={handleDeleteBulkMeter}
         branches={allBranches}
+        canEdit={hasPermission('bulk_meters_update')}
+        canDelete={hasPermission('bulk_meters_delete')}
       />
     );
   };
@@ -229,9 +233,11 @@ export default function StaffBulkMetersPage() {
               disabled={authStatus !== 'authorized'}
             />
           </div>
-          <Button onClick={handleAddBulkMeter} disabled={authStatus !== 'authorized'}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New Bulk Meter
-          </Button>
+          {hasPermission('bulk_meters_create') && (
+            <Button onClick={handleAddBulkMeter} disabled={authStatus !== 'authorized'}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Add New Bulk Meter
+            </Button>
+          )}
         </div>
       </div>
 
@@ -258,28 +264,34 @@ export default function StaffBulkMetersPage() {
         )}
       </Card>
 
-      <BulkMeterFormDialog
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        onSubmit={handleSubmitBulkMeter}
-        defaultValues={selectedBulkMeter}
-        staffBranchName={staffBranchName || undefined}
-      />
+      {(hasPermission('bulk_meters_create') || hasPermission('bulk_meters_update')) && (
+        <BulkMeterFormDialog
+          open={isFormOpen}
+          onOpenChange={setIsFormOpen}
+          onSubmit={handleSubmitBulkMeter}
+          defaultValues={selectedBulkMeter}
+          staffBranchName={staffBranchName || undefined}
+        />
+      )}
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the bulk meter {bulkMeterToDelete?.name}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setBulkMeterToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {hasPermission('bulk_meters_delete') && (
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the bulk meter {bulkMeterToDelete?.name}.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setBulkMeterToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }
+
+    

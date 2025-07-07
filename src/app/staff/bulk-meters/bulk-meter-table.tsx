@@ -30,9 +30,11 @@ interface BulkMeterTableProps {
   onEdit: (bulkMeter: BulkMeter) => void;
   onDelete: (bulkMeter: BulkMeter) => void;
   branches: Branch[];
+  canEdit: boolean;
+  canDelete: boolean;
 }
 
-export function BulkMeterTable({ data, onEdit, onDelete, branches }: BulkMeterTableProps) {
+export function BulkMeterTable({ data, onEdit, onDelete, branches, canEdit, canDelete }: BulkMeterTableProps) {
   if (data.length === 0) {
     return (
       <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
@@ -48,6 +50,8 @@ export function BulkMeterTable({ data, onEdit, onDelete, branches }: BulkMeterTa
     }
     return fallbackLocation || "-";
   };
+  
+  const showActions = canEdit || canDelete;
 
   return (
     <div className="rounded-md border mt-4">
@@ -96,15 +100,19 @@ export function BulkMeterTable({ data, onEdit, onDelete, branches }: BulkMeterTa
                          View Details
                        </DropdownMenuItem>
                      </Link>
-                    <DropdownMenuItem onClick={() => onEdit(bulkMeter)}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => onDelete(bulkMeter)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
+                    {showActions && <DropdownMenuSeparator />}
+                    {canEdit && (
+                      <DropdownMenuItem onClick={() => onEdit(bulkMeter)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                    )}
+                    {canDelete && (
+                      <DropdownMenuItem onClick={() => onDelete(bulkMeter)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>
@@ -115,3 +123,5 @@ export function BulkMeterTable({ data, onEdit, onDelete, branches }: BulkMeterTa
     </div>
   );
 }
+
+    

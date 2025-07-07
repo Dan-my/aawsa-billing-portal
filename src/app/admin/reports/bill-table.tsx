@@ -9,14 +9,16 @@ import type { IndividualCustomer } from "@/app/admin/individual-customers/indivi
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
+import type { Branch } from "../branches/branch-types";
 
 interface BillTableProps {
   bills: DomainBill[];
   customers: IndividualCustomer[];
   bulkMeters: BulkMeter[];
+  branches: Branch[];
 }
 
-export function BillTable({ bills, customers, bulkMeters }: BillTableProps) {
+export function BillTable({ bills, customers, bulkMeters, branches }: BillTableProps) {
   const getIdentifier = (bill: DomainBill): string => {
     if (bill.individualCustomerId) {
       const customer = customers.find(c => c.customerKeyNumber === bill.individualCustomerId);
@@ -33,6 +35,21 @@ export function BillTable({ bills, customers, bulkMeters }: BillTableProps) {
     return bill.individualCustomerId || bill.bulkMeterId || "N/A";
   };
   
+  const getBranchName = (bill: DomainBill): string => {
+    let branchId: string | undefined;
+    if (bill.individualCustomerId) {
+      const customer = customers.find(c => c.customerKeyNumber === bill.individualCustomerId);
+      branchId = customer?.branchId;
+    } else if (bill.bulkMeterId) {
+      const bulkMeter = bulkMeters.find(bm => bm.customerKeyNumber === bill.bulkMeterId);
+      branchId = bulkMeter?.branchId;
+    }
+
+    if (!branchId) return "N/A";
+    const branch = branches.find(b => b.id === branchId);
+    return branch ? branch.name : "Unknown";
+  };
+
   const formatDate = (dateString: string) => {
     try {
       return format(parseISO(dateString), "PP"); // e.g., Sep 21, 2023
@@ -48,6 +65,7 @@ export function BillTable({ bills, customers, bulkMeters }: BillTableProps) {
           <TableRow>
             <TableHead>Customer/Meter Name</TableHead>
             <TableHead>Customer Key</TableHead>
+            <TableHead>Branch</TableHead>
             <TableHead>Month</TableHead>
             <TableHead className="text-right">Prev Reading</TableHead>
             <TableHead className="text-right">Curr Reading</TableHead>
@@ -65,6 +83,7 @@ export function BillTable({ bills, customers, bulkMeters }: BillTableProps) {
               <TableRow key={bill.id}>
                 <TableCell className="font-medium">{getIdentifier(bill)}</TableCell>
                 <TableCell>{getCustomerKey(bill)}</TableCell>
+                <TableCell>{getBranchName(bill)}</TableCell>
                 <TableCell>{bill.monthYear}</TableCell>
                 <TableCell className="text-right">{bill.previousReadingValue.toFixed(2)}</TableCell>
                 <TableCell className="text-right">{bill.currentReadingValue.toFixed(2)}</TableCell>
@@ -82,7 +101,7 @@ export function BillTable({ bills, customers, bulkMeters }: BillTableProps) {
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={11} className="h-24 text-center">
+              <TableCell colSpan={12} className="h-24 text-center">
                 No bills found for the selected criteria.
               </TableCell>
             </TableRow>

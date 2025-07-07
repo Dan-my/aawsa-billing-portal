@@ -8,7 +8,8 @@ import { BillTable } from "../bill-table";
 import { 
   getBills, initializeBills, subscribeToBills,
   getCustomers, initializeCustomers, subscribeToCustomers,
-  getBulkMeters, initializeBulkMeters, subscribeToBulkMeters 
+  getBulkMeters, initializeBulkMeters, subscribeToBulkMeters,
+  getBranches, initializeBranches, subscribeToBranches 
 } from "@/lib/data-store";
 import type { DomainBill } from "@/lib/data-store";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
@@ -16,6 +17,7 @@ import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import { CheckCircle2, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { StaffMember } from "@/app/admin/staff-management/staff-types";
+import type { Branch } from "@/app/admin/branches/branch-types";
 
 export default function PaidBillsReportPage() {
   const [currentUser, setCurrentUser] = React.useState<StaffMember | null>(null);
@@ -23,6 +25,7 @@ export default function PaidBillsReportPage() {
   const [bills, setBills] = React.useState<DomainBill[]>([]);
   const [customers, setCustomers] = React.useState<IndividualCustomer[]>([]);
   const [bulkMeters, setBulkMeters] = React.useState<BulkMeter[]>([]);
+  const [branches, setBranches] = React.useState<Branch[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
   
@@ -39,10 +42,12 @@ export default function PaidBillsReportPage() {
             initializeBills(),
             initializeCustomers(),
             initializeBulkMeters(),
+            initializeBranches(),
         ]);
         setBills(getBills());
         setCustomers(getCustomers());
         setBulkMeters(getBulkMeters());
+        setBranches(getBranches());
         setIsLoading(false);
     };
     fetchData();
@@ -50,11 +55,13 @@ export default function PaidBillsReportPage() {
     const unsubBills = subscribeToBills(setBills);
     const unsubCustomers = subscribeToCustomers(setCustomers);
     const unsubBms = subscribeToBulkMeters(setBulkMeters);
+    const unsubBranches = subscribeToBranches(setBranches);
 
     return () => {
         unsubBills();
         unsubCustomers();
         unsubBms();
+        unsubBranches();
     };
   }, []);
 
@@ -127,7 +134,7 @@ export default function PaidBillsReportPage() {
           {isLoading ? (
             <div className="text-center p-8 text-muted-foreground">Loading paid bills...</div>
           ) : (
-            <BillTable bills={paginatedBills} customers={customers} bulkMeters={bulkMeters} />
+            <BillTable bills={paginatedBills} customers={customers} bulkMeters={bulkMeters} branches={branches} />
           )}
         </CardContent>
          {filteredBills.length > 0 && (

@@ -65,11 +65,12 @@ const buildSidebarNavItems = (user: UserProfile | null): NavItemGroup[] => {
 
     const navItems: NavItemGroup[] = [];
     const permissions = new Set(user.permissions || []);
+    const userRoleLower = user.role.toLowerCase();
 
     // --- Dashboard ---
     let dashboardHref = "/admin/dashboard"; // Default for Admin
-    if (user.role === 'Head Office Management') dashboardHref = '/admin/head-office-dashboard';
-    if (user.role === 'Staff Management') dashboardHref = '/admin/staff-management-dashboard';
+    if (userRoleLower === 'head office management') dashboardHref = '/admin/head-office-dashboard';
+    if (userRoleLower === 'staff management') dashboardHref = '/admin/staff-management-dashboard';
     
     if (permissions.has('dashboard_view_all') || permissions.has('dashboard_view_branch')) {
         navItems.push({
@@ -105,12 +106,13 @@ const buildSidebarNavItems = (user: UserProfile | null): NavItemGroup[] => {
     if (permissions.has('reports_generate_all') || permissions.has('reports_generate_branch')) {
         dataReportsItems.push({ title: "Reports", href: "/admin/reports", iconName: "BarChart2" });
     }
-    if (permissions.has('reports_view_paid_bills')) {
+    
+    // Add report links based on role for non-admins
+    if (userRoleLower === 'head office management' || userRoleLower === 'staff management') {
         dataReportsItems.push({ title: "List Of Paid Bills", href: "/admin/reports/paid-bills", iconName: "CheckCircle2" });
-    }
-    if (permissions.has('reports_view_sent_bills')) {
         dataReportsItems.push({ title: "List Of Sent Bills", href: "/admin/reports/sent-bills", iconName: "Send" });
     }
+    
 
     if (dataReportsItems.length > 0) {
         navItems.push({ title: "Data & Reports", items: dataReportsItems });

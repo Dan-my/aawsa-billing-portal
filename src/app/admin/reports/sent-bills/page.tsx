@@ -13,15 +13,12 @@ import {
 import type { DomainBill } from "@/lib/data-store";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
-import { Send, Search, AlertCircle } from "lucide-react";
+import { Send, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { usePermissions } from "@/hooks/use-permissions";
-import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
 import type { StaffMember } from "@/app/admin/staff-management/staff-types";
 
 
 export default function SentBillsReportPage() {
-  const { hasPermission } = usePermissions();
   const [currentUser, setCurrentUser] = React.useState<StaffMember | null>(null);
 
   const [bills, setBills] = React.useState<DomainBill[]>([]);
@@ -65,7 +62,7 @@ export default function SentBillsReportPage() {
   const filteredBills = React.useMemo(() => {
     let visibleBills = [...bills];
     
-    if (currentUser?.role === 'Staff Management' && currentUser.branchId) {
+    if (currentUser?.role.toLowerCase() === 'staff management' && currentUser.branchId) {
         const branchBulkMeterKeys = new Set(
             bulkMeters.filter(bm => bm.branchId === currentUser.branchId).map(bm => bm.customerKeyNumber)
         );
@@ -102,25 +99,6 @@ export default function SentBillsReportPage() {
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
-  
-  if (!hasPermission('reports_view_sent_bills')) {
-    return (
-      <div className="space-y-6">
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>List of All Sent Bills</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Access Denied</AlertTitle>
-              <UIAlertDescription>You do not have permission to view this page.</UIAlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">

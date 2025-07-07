@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -28,6 +27,10 @@ export function BillTable({ bills, customers, bulkMeters }: BillTableProps) {
     }
     return "N/A";
   };
+
+  const getCustomerKey = (bill: DomainBill): string => {
+    return bill.individualCustomerId || bill.bulkMeterId || "N/A";
+  };
   
   const formatDate = (dateString: string) => {
     try {
@@ -43,7 +46,13 @@ export function BillTable({ bills, customers, bulkMeters }: BillTableProps) {
         <TableHeader>
           <TableRow>
             <TableHead>Customer/Meter Name</TableHead>
+            <TableHead>Customer Key</TableHead>
             <TableHead>Month</TableHead>
+            <TableHead className="text-right">Prev Reading</TableHead>
+            <TableHead className="text-right">Curr Reading</TableHead>
+            <TableHead className="text-right">Usage (m³)</TableHead>
+            <TableHead className="text-right">Diff. Usage</TableHead>
+            <TableHead className="text-right">Outstanding (ETB)</TableHead>
             <TableHead className="text-right">Total Due (ETB)</TableHead>
             <TableHead>Due Date</TableHead>
             <TableHead>Status</TableHead>
@@ -54,7 +63,13 @@ export function BillTable({ bills, customers, bulkMeters }: BillTableProps) {
             bills.map((bill) => (
               <TableRow key={bill.id}>
                 <TableCell className="font-medium">{getIdentifier(bill)}</TableCell>
+                <TableCell>{getCustomerKey(bill)}</TableCell>
                 <TableCell>{bill.monthYear}</TableCell>
+                <TableCell className="text-right">{bill.previousReadingValue.toFixed(2)}</TableCell>
+                <TableCell className="text-right">{bill.currentReadingValue.toFixed(2)}</TableCell>
+                <TableCell className="text-right">{(bill.usageM3 ?? (bill.currentReadingValue - bill.previousReadingValue)).toFixed(2)}</TableCell>
+                <TableCell className="text-right">{bill.differenceUsage?.toFixed(2) ?? '-'}</TableCell>
+                <TableCell className="text-right">{(bill.balanceCarriedForward ?? 0).toFixed(2)}</TableCell>
                 <TableCell className="text-right font-mono">{((bill.totalAmountDue ?? 0) + (bill.balanceCarriedForward ?? 0)).toFixed(2)}</TableCell>
                 <TableCell>{formatDate(bill.dueDate)}</TableCell>
                 <TableCell>
@@ -66,7 +81,7 @@ export function BillTable({ bills, customers, bulkMeters }: BillTableProps) {
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={5} className="h-24 text-center">
+              <TableCell colSpan={11} className="h-24 text-center">
                 No bills found for the selected criteria.
               </TableCell>
             </TableRow>

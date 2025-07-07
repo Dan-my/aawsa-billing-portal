@@ -94,6 +94,9 @@ export function AuthForm() {
     <Card className="w-full max-w-sm shadow-2xl">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">AAWSA Billing Portal</CardTitle>
+        <CardDescription>
+          Please enter your credentials to access the portal.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>

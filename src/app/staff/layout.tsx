@@ -37,8 +37,6 @@ const staffSidebarNavItems: NavItemGroup[] = [
       { title: "Data Entry", href: "/staff/data-entry", iconName: "FileText" },
       { title: "Meter Readings", href: "/staff/meter-readings", iconName: "ClipboardList" },
       { title: "Reports", href: "/staff/reports", iconName: "BarChart2" },
-      { title: "List Of Paid Bills", href: "/staff/reports/paid-bills", iconName: "CheckCircle2" },
-      { title: "List Of Sent Bills", href: "/staff/reports/sent-bills", iconName: "Send" },
     ],
   },
 ];
@@ -76,7 +74,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
     }
     
     return (
-        <AppShell userRole="staff" sidebar={<SidebarNav items={staffSidebarNavItems} />}>
+        <AppShell userRole="staff" sidebar={<SidebarNav items={staffSidebarNavItems} />} >
             <PermissionsContext.Provider value={permissionsValue}>
                 {children}
             </PermissionsContext.Provider>

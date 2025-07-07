@@ -18,12 +18,6 @@ import { Input } from "@/components/ui/input";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
 
-interface UserProfile {
-  id: string;
-  email: string;
-  role: string;
-  branchId?: string;
-}
 
 export default function SentBillsReportPage() {
   const { hasPermission } = usePermissions();
@@ -32,15 +26,11 @@ export default function SentBillsReportPage() {
   const [bulkMeters, setBulkMeters] = React.useState<BulkMeter[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
-  const [currentUser, setCurrentUser] = React.useState<UserProfile | null>(null);
   
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
   
   React.useEffect(() => {
-    const user = localStorage.getItem("user");
-    if(user) setCurrentUser(JSON.parse(user));
-
     const fetchData = async () => {
         setIsLoading(true);
         await Promise.all([
@@ -67,41 +57,17 @@ export default function SentBillsReportPage() {
   }, []);
 
   const filteredBills = React.useMemo(() => {
-    let visibleBills = [...bills];
-
-    // Filter by branch for Staff Management role
-    if (currentUser && currentUser.role.toLowerCase() === 'staff management' && currentUser.branchId) {
-        const branchBulkMeterKeys = new Set(
-            bulkMeters.filter(bm => bm.branchId === currentUser.branchId).map(bm => bm.customerKeyNumber)
-        );
-        const directBranchCustomerKeys = new Set(
-            customers.filter(c => c.branchId === currentUser.branchId).map(c => c.customerKeyNumber)
-        );
-        const indirectBranchCustomerKeys = new Set(
-            customers.filter(c => c.assignedBulkMeterId && branchBulkMeterKeys.has(c.assignedBulkMeterId)).map(c => c.customerKeyNumber)
-        );
-
-        visibleBills = visibleBills.filter(bill => {
-            if (bill.individualCustomerId) {
-                return directBranchCustomerKeys.has(bill.individualCustomerId) || indirectBranchCustomerKeys.has(bill.individualCustomerId);
-            }
-            if (bill.bulkMeterId) {
-                return branchBulkMeterKeys.has(bill.bulkMeterId);
-            }
-            return false;
-        });
+    if (!searchTerm) {
+        return bills.sort((a, b) => new Date(b.billPeriodEndDate).getTime() - new Date(a.billPeriodEndDate).getTime());
     }
-
-    if (searchTerm) {
-      const lowercasedTerm = searchTerm.toLowerCase();
-      visibleBills = visibleBills.filter(bill => {
+    const lowercasedTerm = searchTerm.toLowerCase();
+    return bills
+      .filter(bill => {
         const customerKey = bill.individualCustomerId || bill.bulkMeterId;
         return customerKey?.toLowerCase().includes(lowercasedTerm);
-      });
-    }
-
-    return visibleBills.sort((a, b) => new Date(b.billPeriodEndDate).getTime() - new Date(a.billPeriodEndDate).getTime());
-  }, [bills, customers, bulkMeters, searchTerm, currentUser]);
+      })
+      .sort((a, b) => new Date(b.billPeriodEndDate).getTime() - new Date(a.billPeriodEndDate).getTime());
+  }, [bills, searchTerm]);
   
   const paginatedBills = filteredBills.slice(
     page * rowsPerPage,

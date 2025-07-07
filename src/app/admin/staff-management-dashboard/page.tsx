@@ -3,15 +3,18 @@
 
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart as BarChartIcon, PieChart as PieChartIcon, Gauge, Users, ArrowRight, FileText, TrendingUp, AlertCircle } from 'lucide-react'; 
+import { BarChart as BarChartIcon, PieChart as PieChartIcon, Gauge, Users, ArrowRight, FileText, TrendingUp, AlertCircle, Table as TableIcon } from 'lucide-react'; 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ResponsiveContainer, BarChart, PieChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Bar } from 'recharts';
+import { ResponsiveContainer, BarChart, PieChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, LineChart, Line, CartesianGrid } from 'recharts';
 import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import { getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, getCustomers, subscribeToCustomers, initializeCustomers, getBranches, initializeBranches, subscribeToBranches } from "@/lib/data-store";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import type { Branch } from "@/app/admin/branches/branch-types";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
 
 interface User {
   email: string;
@@ -22,7 +25,8 @@ interface User {
 
 const chartConfig = {
   paid: { label: "Paid", color: "hsl(var(--chart-1))" }, 
-  unpaid: { label: "Unpaid", color: "hsl(var(--chart-3))" }, 
+  unpaid: { label: "Unpaid", color: "hsl(var(--chart-3))" },
+  waterUsage: { label: "Water Usage (m³)", color: "hsl(var(--chart-1))" }, 
 } satisfies import("@/components/ui/chart").ChartConfig;
 
 export default function StaffManagementDashboardPage() {
@@ -35,6 +39,10 @@ export default function StaffManagementDashboardPage() {
   const [allBulkMeters, setAllBulkMeters] = React.useState<BulkMeter[]>([]);
   const [allCustomers, setAllCustomers] = React.useState<IndividualCustomer[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+
+  // State for toggling views
+  const [branchPerformanceView, setBranchPerformanceView] = React.useState<'chart' | 'table'>('chart');
+  const [waterUsageView, setWaterUsageView] = React.useState<'chart' | 'table'>('chart');
   
   React.useEffect(() => {
     setIsClient(true);
@@ -108,7 +116,7 @@ export default function StaffManagementDashboardPage() {
   // Derived state with useMemo
   const branchStats = React.useMemo(() => {
     if (authStatus !== 'authorized' || !staffBranchId) {
-      return { totalBulkMeters: 0, totalCustomers: 0, totalBills: 0, paidBills: 0, unpaidBills: 0, billsData: [], monthlyPerformance: [], paidPercentage: "0%" };
+      return { totalBulkMeters: 0, totalCustomers: 0, totalBills: 0, paidBills: 0, unpaidBills: 0, billsData: [], monthlyBulkMeterPerformance: [], waterUsageTrendData: [], paidPercentage: "0%" };
     }
 
     const branchBMs = allBulkMeters.filter(bm => bm.branchId === staffBranchId);
@@ -129,28 +137,42 @@ export default function StaffManagementDashboardPage() {
         { name: 'Unpaid', value: unpaidCount, fill: 'hsl(var(--chart-3))' },
     ];
 
-    // Calculate Monthly Performance
-    const monthlyMap = new Map<string, { paid: number; unpaid: number }>();
-    
+    // Calculate Monthly Performance (for Bulk Meters only)
+    const monthlyBMMap = new Map<string, { paid: number; unpaid: number }>();
     branchBMs.forEach(bm => {
         if (!bm.month) return;
-        const entry = monthlyMap.get(bm.month) || { paid: 0, unpaid: 0 };
+        const entry = monthlyBMMap.get(bm.month) || { paid: 0, unpaid: 0 };
         if (bm.paymentStatus === 'Paid') entry.paid++;
         else if (bm.paymentStatus === 'Unpaid') entry.unpaid++;
-        monthlyMap.set(bm.month, entry);
+        monthlyBMMap.set(bm.month, entry);
     });
-
-    branchCustomers.forEach(c => {
-        if (!c.month) return;
-        const entry = monthlyMap.get(c.month) || { paid: 0, unpaid: 0 };
-        if (c.paymentStatus === 'Paid') entry.paid++;
-        else if (c.paymentStatus === 'Unpaid' || c.paymentStatus === 'Pending') entry.unpaid++;
-        monthlyMap.set(c.month, entry);
-    });
-
-    const monthlyPerformance = Array.from(monthlyMap.entries())
+    const monthlyBulkMeterPerformance = Array.from(monthlyBMMap.entries())
         .map(([month, data]) => ({ month, ...data }))
         .sort((a,b) => new Date(a.month + "-01").getTime() - new Date(b.month + "-01").getTime());
+    
+    // Calculate Water Usage Trend Data (Line Chart)
+    const usageMap = new Map<string, number>();
+    branchBMs.forEach(bm => {
+      if (bm.month) {
+        const usage = bm.currentReading - bm.previousReading;
+        if (typeof usage === 'number' && !isNaN(usage)) {
+          const currentMonthUsage = usageMap.get(bm.month) || 0;
+          usageMap.set(bm.month, currentMonthUsage + usage);
+        }
+      }
+    });
+    branchCustomers.forEach(c => {
+        if (c.month) {
+            const usage = c.currentReading - c.previousReading;
+            if(typeof usage === 'number' && !isNaN(usage)) {
+                const currentMonthUsage = usageMap.get(c.month) || 0;
+                usageMap.set(c.month, currentMonthUsage + usage);
+            }
+        }
+    });
+    const waterUsageTrendData = Array.from(usageMap.entries())
+      .map(([month, usage]) => ({ month, usage }))
+      .sort((a, b) => new Date(a.month + "-01").getTime() - new Date(b.month + "-01").getTime());
     
     const paidPercentage = totalBillsCount > 0 ? `${((paidCount / totalBillsCount) * 100).toFixed(0)}%` : "0%";
 
@@ -161,7 +183,8 @@ export default function StaffManagementDashboardPage() {
       paidBills: paidCount,
       unpaidBills: unpaidCount,
       billsData,
-      monthlyPerformance,
+      monthlyBulkMeterPerformance,
+      waterUsageTrendData,
       paidPercentage,
     };
   }, [authStatus, staffBranchId, allBulkMeters, allCustomers]);
@@ -277,32 +300,134 @@ export default function StaffManagementDashboardPage() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>Monthly Billing Performance ({staffBranchName})</CardTitle>
-          <CardDescription>Paid vs. Unpaid bills over the last few months in your branch.</CardDescription>
-        </CardHeader>
-        <CardContent className="h-[300px]">
-          {isClient && branchStats.monthlyPerformance.length > 0 ? (
-            <ChartContainer config={chartConfig} className="w-full h-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={branchStats.monthlyPerformance}>
-                  <XAxis dataKey="month" stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="hsl(var(--foreground))" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
-                  <Legend />
-                  <Bar dataKey="paid" stackId="a" fill="var(--color-paid)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="unpaid" stackId="a" fill="var(--color-unpaid)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          ) : (
-             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                No monthly performance data available to display.
-             </div>
-          )}
-        </CardContent>
-      </Card>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className="shadow-lg">
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div>
+              <CardTitle>Branch Performance (Bulk Meters)</CardTitle>
+              <CardDescription>Paid vs. Unpaid status for bulk meters in your branch.</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setBranchPerformanceView(prev => prev === 'chart' ? 'table' : 'chart')}>
+              {branchPerformanceView === 'chart' ? <TableIcon className="mr-2 h-4 w-4" /> : <BarChartIcon className="mr-2 h-4 w-4" />}
+              View {branchPerformanceView === 'chart' ? 'Table' : 'Chart'}
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {branchPerformanceView === 'chart' ? (
+              <div className="h-[300px]">
+                {isClient && branchStats.monthlyBulkMeterPerformance.length > 0 ? (
+                  <ChartContainer config={chartConfig} className="w-full h-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={branchStats.monthlyBulkMeterPerformance} layout="vertical" margin={{ left: 10, right: 30 }}>
+                        <CartesianGrid horizontal={false} />
+                        <XAxis type="number" hide />
+                        <YAxis dataKey="month" type="category" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} width={80} />
+                        <Tooltip content={<ChartTooltipContent />} />
+                        <Legend content={<ChartLegendContent />} />
+                        <Bar dataKey="paid" stackId="a" fill="var(--color-paid)" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="unpaid" stackId="a" fill="var(--color-unpaid)" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                ) : (
+                  <div className="flex h-[300px] items-center justify-center text-xs text-muted-foreground">
+                    No bulk meter performance data available.
+                  </div>
+                )}
+              </div>
+            ) : (
+              <ScrollArea className="h-[300px]">
+                {branchStats.monthlyBulkMeterPerformance.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Month</TableHead>
+                        <TableHead className="text-right">Paid</TableHead>
+                        <TableHead className="text-right">Unpaid</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {branchStats.monthlyBulkMeterPerformance.map((item) => (
+                        <TableRow key={item.month}>
+                          <TableCell className="font-medium">{item.month}</TableCell>
+                          <TableCell className="text-right text-green-600 dark:text-green-400">{item.paid}</TableCell>
+                          <TableCell className="text-right text-red-600 dark:text-red-400">{item.unpaid}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="flex h-[300px] items-center justify-center text-xs text-muted-foreground">
+                      No bulk meter performance data available.
+                  </div>
+                )}
+              </ScrollArea>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-lg">
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div>
+              <CardTitle>Overall Water Usage Trend ({staffBranchName})</CardTitle>
+              <CardDescription>Monthly water consumption for your branch.</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setWaterUsageView(prev => prev === 'chart' ? 'table' : 'chart')}>
+              {waterUsageView === 'chart' ? <TableIcon className="mr-2 h-4 w-4" /> : <BarChartIcon className="mr-2 h-4 w-4" />}
+              View {waterUsageView === 'chart' ? 'Table' : 'Chart'}
+            </Button>
+          </CardHeader>
+          <CardContent>
+          {waterUsageView === 'chart' ? (
+                <div className="h-[300px]">
+                  {isClient && branchStats.waterUsageTrendData.length > 0 ? (
+                    <ChartContainer config={chartConfig} className="w-full h-full">
+                      <ResponsiveContainer>
+                        <LineChart data={branchStats.waterUsageTrendData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                          <YAxis tickFormatter={(value) => `${value.toLocaleString()}`} tick={{ fontSize: 12 }} />
+                          <Tooltip content={<ChartTooltipContent />} />
+                          <Legend />
+                          <Line type="monotone" dataKey="usage" name="Water Usage" stroke="var(--color-waterUsage)" />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </ChartContainer>
+                  ) : (
+                    <div className="flex h-[300px] items-center justify-center text-xs text-muted-foreground">
+                        No water usage data available for chart.
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <ScrollArea className="h-[300px]">
+                  {branchStats.waterUsageTrendData.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Month</TableHead>
+                          <TableHead className="text-right">Water Usage (m³)</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {branchStats.waterUsageTrendData.map((item) => (
+                          <TableRow key={item.month}>
+                            <TableCell className="font-medium">{item.month}</TableCell>
+                            <TableCell className="text-right">{item.usage.toFixed(2)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="flex h-[300px] items-center justify-center text-xs text-muted-foreground">
+                        No water usage data available.
+                    </div>
+                  )}
+                </ScrollArea>
+              )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

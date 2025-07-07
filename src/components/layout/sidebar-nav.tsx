@@ -118,12 +118,11 @@ function CollapsibleNavItem({ item, pathname }: { item: NavItem; pathname: strin
         onClick={() => {
             if (currentDisplayState === 'expanded') setIsOpen(!isOpen);
         }}
-        // Parent button is active if its own route matches or if it's open AND a child is active
-        isActive={isParentItemActive || (isOpen && isAnyChildActive)}
+        isActive={isEffectivelyActive}
         className={cn(
             "w-full justify-start", 
-             (isParentItemActive || (isOpen && isAnyChildActive)) && "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/90",
-             !(isParentItemActive || (isOpen && isAnyChildActive)) && "hover:bg-sidebar-accent/50"
+             isEffectivelyActive && "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/90",
+             !isEffectivelyActive && "hover:bg-sidebar-accent/50"
         )}
         tooltip={currentDisplayState === 'collapsed' && !isMobile ? item.title : undefined}
       >

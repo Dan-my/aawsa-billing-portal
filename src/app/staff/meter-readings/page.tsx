@@ -4,8 +4,8 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle as UIDialogTitle, DialogDescription as UIDialogDescription } from "@/components/ui/dialog";
-import { PlusCircle, Search, UploadCloud, AlertCircle, FileText } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle as UIDialogTitle, DialogDescription as UIDialogDescription } from "@/components/ui/dialog";
+import { PlusCircle, Search, UploadCloud, FileText } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AddMeterReadingForm, type AddMeterReadingFormValues } from "@/components/add-meter-reading-form";
 import MeterReadingsTable from "@/components/meter-readings-table";
@@ -33,8 +33,9 @@ import { format } from "date-fns";
 import { CsvReadingUploadDialog } from "@/components/csv-reading-upload-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TablePagination } from "@/components/ui/table-pagination";
-import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 
 interface User {
@@ -65,76 +66,85 @@ export default function StaffMeterReadingsPage() {
   const [individualRowsPerPage, setIndividualRowsPerPage] = React.useState(10);
   const [bulkPage, setBulkPage] = React.useState(0);
   const [bulkRowsPerPage, setBulkRowsPerPage] = React.useState(10);
-
-
-  const combineAndSortReadings = React.useCallback(() => {
-    const allCustomers = getCustomers();
-    const allBulkMeters = getBulkMeters();
-    const allIndividualReadings = getIndividualCustomerReadings();
-    const allBulkReadings = getBulkMeterReadings();
-
-    const staffBranchId = currentUser?.branchId;
-    
-    let branchBulkMeters: BulkMeter[] = [];
-    let branchCustomers: IndividualCustomer[] = [];
-
-    if (staffBranchId) {
-        branchBulkMeters = allBulkMeters.filter(bm => bm.branchId === staffBranchId);
-        
-        const branchBulkMeterIds = new Set(branchBulkMeters.map(bm => bm.customerKeyNumber));
-        branchCustomers = allCustomers.filter(c => 
-          c.branchId === staffBranchId ||
-          (c.assignedBulkMeterId && branchBulkMeterIds.has(c.assignedBulkMeterId))
-        );
-    }
-    
-    setBulkMetersForForm(branchBulkMeters);
-    setCustomersForForm(branchCustomers);
-
-    const displayedIndividualReadings: DisplayReading[] = allIndividualReadings
-      .filter(r => branchCustomers.some(c => c.customerKeyNumber === r.individualCustomerId))
-      .map(r => {
-          const customer = allCustomers.find(c => c.customerKeyNumber === r.individualCustomerId);
-          return {
-            id: r.id,
-            meterId: r.individualCustomerId,
-            meterType: 'individual' as const,
-            meterIdentifier: customer ? `${customer.name} (M: ${customer.meterNumber})` : `Cust ID ${r.individualCustomerId}`,
-            readingValue: r.readingValue, readingDate: r.readingDate, monthYear: r.monthYear, notes: r.notes
-          };
-      }).sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
-
-    const displayedBulkReadings: DisplayReading[] = allBulkReadings
-      .filter(r => branchBulkMeters.some(bm => bm.customerKeyNumber === r.bulkMeterId))
-      .map(r => {
-           const bulkMeter = allBulkMeters.find(bm => bm.customerKeyNumber === r.bulkMeterId);
-           return {
-                id: r.id,
-                meterId: r.bulkMeterId,
-                meterType: 'bulk' as const,
-                meterIdentifier: bulkMeter ? `${bulkMeter.name} (M: ${bulkMeter.meterNumber})` : `BM ID ${r.bulkMeterId}`,
-                readingValue: r.readingValue, readingDate: r.readingDate, monthYear: r.monthYear, notes: r.notes
-           };
-      }).sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
-    
-    setIndividualReadings(displayedIndividualReadings);
-    setBulkReadings(displayedBulkReadings);
-  }, [currentUser]);
-
+  
+  // Effect 1: Set user from localStorage, runs once.
   React.useEffect(() => {
-    let isMounted = true;
     const storedUser = localStorage.getItem("user");
-    
     if (storedUser) {
       try {
         const parsedUser: User = JSON.parse(storedUser);
-        if (isMounted) {
-            setCurrentUser(parsedUser);
-        }
-      } catch (e) { console.error("Failed to parse user from localStorage", e); }
+        setCurrentUser(parsedUser);
+      } catch (e) {
+        console.error("Failed to parse user from localStorage", e);
+      }
+    }
+  }, []);
+
+  // Effect 2: Initialize data stores and set up subscriptions that depend on the user.
+  React.useEffect(() => {
+    if (!currentUser) {
+      return;
     }
 
+    let isMounted = true;
     setIsLoading(true);
+
+    const combineAndSortReadings = () => {
+      if (!isMounted) return;
+      
+      const allCustomers = getCustomers();
+      const allBulkMeters = getBulkMeters();
+      const allIndividualReadings = getIndividualCustomerReadings();
+      const allBulkReadings = getBulkMeterReadings();
+
+      const staffBranchId = currentUser?.branchId;
+      
+      let branchBulkMeters: BulkMeter[] = [];
+      let branchCustomers: IndividualCustomer[] = [];
+
+      if (staffBranchId) {
+          branchBulkMeters = allBulkMeters.filter(bm => bm.branchId === staffBranchId);
+          const branchBulkMeterIds = new Set(branchBulkMeters.map(bm => bm.customerKeyNumber));
+          branchCustomers = allCustomers.filter(c => 
+            c.branchId === staffBranchId ||
+            (c.assignedBulkMeterId && branchBulkMeterIds.has(c.assignedBulkMeterId))
+          );
+      }
+      
+      setBulkMetersForForm(branchBulkMeters);
+      setCustomersForForm(branchCustomers);
+
+      const displayedIndividualReadings: DisplayReading[] = allIndividualReadings
+        .filter(r => branchCustomers.some(c => c.customerKeyNumber === r.individualCustomerId))
+        .map(r => {
+            const customer = allCustomers.find(c => c.customerKeyNumber === r.individualCustomerId);
+            return {
+              id: r.id,
+              meterId: r.individualCustomerId,
+              meterType: 'individual' as const,
+              meterIdentifier: customer ? `${customer.name} (M: ${customer.meterNumber})` : `Cust ID ${r.individualCustomerId}`,
+              readingValue: r.readingValue, readingDate: r.readingDate, monthYear: r.monthYear, notes: r.notes
+            };
+        }).sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
+
+      const displayedBulkReadings: DisplayReading[] = allBulkReadings
+        .filter(r => branchBulkMeters.some(bm => bm.customerKeyNumber === r.bulkMeterId))
+        .map(r => {
+             const bulkMeter = allBulkMeters.find(bm => bm.customerKeyNumber === r.bulkMeterId);
+             return {
+                  id: r.id,
+                  meterId: r.bulkMeterId,
+                  meterType: 'bulk' as const,
+                  meterIdentifier: bulkMeter ? `${bulkMeter.name} (M: ${bulkMeter.meterNumber})` : `BM ID ${r.bulkMeterId}`,
+                  readingValue: r.readingValue, readingDate: r.readingDate, monthYear: r.monthYear, notes: r.notes
+             };
+        }).sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
+      
+      setIndividualReadings(displayedIndividualReadings);
+      setBulkReadings(displayedBulkReadings);
+      setIsLoading(false);
+    };
+
     Promise.all([
       initializeCustomers(),
       initializeBulkMeters(),
@@ -142,31 +152,30 @@ export default function StaffMeterReadingsPage() {
       initializeBulkMeterReadings(),
     ]).then(() => {
       if (!isMounted) return;
+      
       combineAndSortReadings();
-      setIsLoading(false);
-    }).catch(error => {
-      if (!isMounted) return;
-      console.error("Error initializing data:", error);
-      toast({ title: "Error Loading Data", variant: "destructive" });
-      setIsLoading(false);
-    });
-    
-    const handleDataUpdate = () => { if(isMounted) combineAndSortReadings(); };
-
-    const unsubIndiReadings = subscribeToIndividualCustomerReadings(handleDataUpdate);
-    const unsubBulkReadings = subscribeToBulkMeterReadings(handleDataUpdate);
-    const unsubCustomers = subscribeToCustomers(handleDataUpdate);
-    const unsubBulkMeters = subscribeToBulkMeters(handleDataUpdate);
-
-    return () => { 
-        isMounted = false; 
+      
+      const unsubIndiReadings = subscribeToIndividualCustomerReadings(combineAndSortReadings);
+      const unsubBulkReadings = subscribeToBulkMeterReadings(combineAndSortReadings);
+      const unsubCustomers = subscribeToCustomers(combineAndSortReadings);
+      const unsubBulkMeters = subscribeToBulkMeters(combineAndSortReadings);
+      
+      return () => { 
         unsubIndiReadings(); 
         unsubBulkReadings();
         unsubCustomers();
         unsubBulkMeters();
-    };
-  }, [toast, combineAndSortReadings]);
+      };
+    }).catch(error => {
+      if (isMounted) {
+        console.error("Error initializing data:", error);
+        toast({ title: "Error Loading Data", variant: "destructive" });
+        setIsLoading(false);
+      }
+    });
 
+    return () => { isMounted = false; };
+  }, [currentUser, toast]);
 
   const handleAddReadingSubmit = async (formData: AddMeterReadingFormValues) => {
     if (!currentUser?.id) {

@@ -17,9 +17,12 @@ import { CheckCircle2, Search, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
+import type { StaffMember } from "@/app/admin/staff-management/staff-types";
 
 export default function PaidBillsReportPage() {
   const { hasPermission } = usePermissions();
+  const [currentUser, setCurrentUser] = React.useState<StaffMember | null>(null);
+
   const [bills, setBills] = React.useState<DomainBill[]>([]);
   const [customers, setCustomers] = React.useState<IndividualCustomer[]>([]);
   const [bulkMeters, setBulkMeters] = React.useState<BulkMeter[]>([]);
@@ -30,6 +33,9 @@ export default function PaidBillsReportPage() {
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
   
   React.useEffect(() => {
+    const user = localStorage.getItem("user");
+    if(user) setCurrentUser(JSON.parse(user));
+
     const fetchData = async () => {
         setIsLoading(true);
         await Promise.all([
@@ -56,18 +62,40 @@ export default function PaidBillsReportPage() {
   }, []);
 
   const filteredBills = React.useMemo(() => {
-    let paidBills = bills.filter(bill => bill.paymentStatus === 'Paid');
+    let visibleBills = bills.filter(bill => bill.paymentStatus === 'Paid');
+
+    if (currentUser?.role === 'Staff Management' && currentUser.branchId) {
+        const branchBulkMeterKeys = new Set(
+            bulkMeters.filter(bm => bm.branchId === currentUser.branchId).map(bm => bm.customerKeyNumber)
+        );
+        const directBranchCustomerKeys = new Set(
+            customers.filter(c => c.branchId === currentUser.branchId).map(c => c.customerKeyNumber)
+        );
+        const indirectBranchCustomerKeys = new Set(
+            customers.filter(c => c.assignedBulkMeterId && branchBulkMeterKeys.has(c.assignedBulkMeterId)).map(c => c.customerKeyNumber)
+        );
+
+        visibleBills = visibleBills.filter(bill => {
+            if (bill.individualCustomerId) {
+                return directBranchCustomerKeys.has(bill.individualCustomerId) || indirectBranchCustomerKeys.has(bill.individualCustomerId);
+            }
+            if (bill.bulkMeterId) {
+                return branchBulkMeterKeys.has(bill.bulkMeterId);
+            }
+            return false;
+        });
+    }
 
     if (searchTerm) {
       const lowercasedTerm = searchTerm.toLowerCase();
-      paidBills = paidBills.filter(bill => {
+      visibleBills = visibleBills.filter(bill => {
         const customerKey = bill.individualCustomerId || bill.bulkMeterId;
         return customerKey?.toLowerCase().includes(lowercasedTerm);
       });
     }
 
-    return paidBills.sort((a, b) => new Date(b.billPeriodEndDate).getTime() - new Date(a.billPeriodEndDate).getTime());
-  }, [bills, searchTerm]);
+    return visibleBills.sort((a, b) => new Date(b.billPeriodEndDate).getTime() - new Date(a.billPeriodEndDate).getTime());
+  }, [bills, customers, bulkMeters, searchTerm, currentUser]);
   
   const paginatedBills = filteredBills.slice(
     page * rowsPerPage,

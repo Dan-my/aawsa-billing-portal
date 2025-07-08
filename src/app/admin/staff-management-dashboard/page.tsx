@@ -138,43 +138,43 @@ export default function StaffManagementDashboardPage() {
   }, [authStatus]);
 
   // Derived state with useMemo
-  const branchStats = React.useMemo(() => {
+  const processedStats = React.useMemo(() => {
     if (authStatus !== 'authorized' || !staffBranchId) {
-      return { totalBulkMeters: 0, totalCustomers: 0, totalBills: 0, paidBills: 0, unpaidBills: 0, billsData: [], monthlyBulkMeterPerformance: [], waterUsageTrendData: [], paidPercentage: "0%" };
+      return { totalBulkMeters: 0, totalCustomers: 0, totalBills: 0, paidBills: 0, unpaidBills: 0, billsData: [], branchPerformanceData: [], waterUsageTrendData: [], paidPercentage: "0%" };
     }
 
+    // --- Data for top cards (filtered by staff manager's branch) ---
     const branchBMs = allBulkMeters.filter(bm => bm.branchId === staffBranchId);
     const branchBMKeys = new Set(branchBMs.map(bm => bm.customerKeyNumber));
-
     const branchCustomers = allCustomers.filter(customer =>
       customer.branchId === staffBranchId ||
       (customer.assignedBulkMeterId && branchBMKeys.has(customer.assignedBulkMeterId))
     );
-      
-    // Calculate Bills Status
     const paidCount = branchBMs.filter(bm => bm.paymentStatus === 'Paid').length + branchCustomers.filter(c => c.paymentStatus === 'Paid').length;
     const unpaidCount = branchBMs.filter(bm => bm.paymentStatus === 'Unpaid').length + branchCustomers.filter(c => c.paymentStatus === 'Unpaid' || c.paymentStatus === 'Pending').length;
     const totalBillsCount = paidCount + unpaidCount;
-    
     const billsData = [
         { name: 'Paid', value: paidCount, fill: 'hsl(var(--chart-1))' },
         { name: 'Unpaid', value: unpaidCount, fill: 'hsl(var(--chart-3))' },
     ];
+    const paidPercentage = totalBillsCount > 0 ? `${((paidCount / totalBillsCount) * 100).toFixed(0)}%` : "0%";
 
-    // Calculate Monthly Performance (for Bulk Meters only)
-    const monthlyBMMap = new Map<string, { paid: number; unpaid: number }>();
-    branchBMs.forEach(bm => {
-        if (!bm.month) return;
-        const entry = monthlyBMMap.get(bm.month) || { paid: 0, unpaid: 0 };
+    // --- NEW: Data for Branch Performance Chart (ALL branches) ---
+    const performanceMap = new Map<string, { branchName: string, paid: number, unpaid: number }>();
+    allBranches.forEach(branch => {
+      performanceMap.set(branch.id, { branchName: branch.name, paid: 0, unpaid: 0 });
+    });
+    allBulkMeters.forEach(bm => {
+      if (bm.branchId && performanceMap.has(bm.branchId)) {
+        const entry = performanceMap.get(bm.branchId)!;
         if (bm.paymentStatus === 'Paid') entry.paid++;
         else if (bm.paymentStatus === 'Unpaid') entry.unpaid++;
-        monthlyBMMap.set(bm.month, entry);
+        performanceMap.set(bm.branchId, entry);
+      }
     });
-    const monthlyBulkMeterPerformance = Array.from(monthlyBMMap.entries())
-        .map(([month, data]) => ({ month, ...data }))
-        .sort((a,b) => new Date(a.month + "-01").getTime() - new Date(b.month + "-01").getTime());
-    
-    // Calculate Water Usage Trend Data (Line Chart)
+    const branchPerformanceData = Array.from(performanceMap.values()).map(p => ({ branch: p.branchName.replace(/ Branch$/i, ""), paid: p.paid, unpaid: p.unpaid }));
+
+    // --- Data for Water Usage Trend Chart (filtered by staff manager's branch) ---
     const usageMap = new Map<string, number>();
     branchBMs.forEach(bm => {
       if (bm.month) {
@@ -198,7 +198,6 @@ export default function StaffManagementDashboardPage() {
       .map(([month, usage]) => ({ month, usage }))
       .sort((a, b) => new Date(a.month + "-01").getTime() - new Date(b.month + "-01").getTime());
     
-    const paidPercentage = totalBillsCount > 0 ? `${((paidCount / totalBillsCount) * 100).toFixed(0)}%` : "0%";
 
     return {
       totalBulkMeters: branchBMs.length,
@@ -207,11 +206,11 @@ export default function StaffManagementDashboardPage() {
       paidBills: paidCount,
       unpaidBills: unpaidCount,
       billsData,
-      monthlyBulkMeterPerformance,
+      branchPerformanceData,
       waterUsageTrendData,
       paidPercentage,
     };
-  }, [authStatus, staffBranchId, allBulkMeters, allCustomers]);
+  }, [authStatus, staffBranchId, allBulkMeters, allCustomers, allBranches]);
 
 
   if (isLoading || authStatus === 'loading') {
@@ -244,15 +243,15 @@ export default function StaffManagementDashboardPage() {
             <FileText className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{branchStats.totalBills.toLocaleString()} Bills</div>
-            <p className="text-xs text-muted-foreground">{branchStats.paidBills} Paid / {branchStats.unpaidBills} Unpaid</p>
+            <div className="text-2xl font-bold">{processedStats.totalBills.toLocaleString()} Bills</div>
+            <p className="text-xs text-muted-foreground">{processedStats.paidBills} Paid / {processedStats.unpaidBills} Unpaid</p>
             <div className="h-[120px] mt-4">
                {isClient && (
                  <ChartContainer config={chartConfig} className="w-full h-full">
                   <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                          <Pie data={branchStats.billsData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={50} label>
-                              {branchStats.billsData.map((entry, index) => (
+                          <Pie data={processedStats.billsData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={50} label>
+                              {processedStats.billsData.map((entry, index) => (
                                   <Cell key={`cell-${index}`} fill={entry.fill} />
                               ))}
                           </Pie>
@@ -272,7 +271,7 @@ export default function StaffManagementDashboardPage() {
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{branchStats.totalCustomers.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{processedStats.totalCustomers.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Total customers assigned to your branch</p>
              <div className="h-[120px] mt-4 flex items-center justify-center">
                 <Users className="h-16 w-16 text-primary opacity-50" />
@@ -286,7 +285,7 @@ export default function StaffManagementDashboardPage() {
             <Gauge className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{branchStats.totalBulkMeters.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{processedStats.totalBulkMeters.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Total bulk meters assigned to your branch</p>
              <div className="h-[120px] mt-4 flex items-center justify-center">
                 <Gauge className="h-16 w-16 text-primary opacity-50" />
@@ -329,7 +328,7 @@ export default function StaffManagementDashboardPage() {
           <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <div>
               <CardTitle>Branch Performance (Bulk Meters)</CardTitle>
-              <CardDescription>Paid vs. Unpaid status for bulk meters in your branch.</CardDescription>
+              <CardDescription>Paid vs. Unpaid status for bulk meters across branches.</CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={() => setBranchPerformanceView(prev => prev === 'chart' ? 'table' : 'chart')}>
               {branchPerformanceView === 'chart' ? <TableIcon className="mr-2 h-4 w-4" /> : <BarChartIcon className="mr-2 h-4 w-4" />}
@@ -339,41 +338,41 @@ export default function StaffManagementDashboardPage() {
           <CardContent>
             {branchPerformanceView === 'chart' ? (
               <div className="h-[300px]">
-                {isClient && branchStats.monthlyBulkMeterPerformance.length > 0 ? (
+                {isClient && processedStats.branchPerformanceData.length > 0 ? (
                   <ChartContainer config={chartConfig} className="w-full h-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={branchStats.monthlyBulkMeterPerformance} layout="vertical" margin={{ left: 10, right: 30 }}>
-                        <CartesianGrid horizontal={false} />
-                        <XAxis type="number" hide />
-                        <YAxis dataKey="month" type="category" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} width={80} />
+                    <ResponsiveContainer>
+                      <BarChart data={processedStats.branchPerformanceData}>
+                        <CartesianGrid vertical={false} />
+                        <XAxis dataKey="branch" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+                        <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
                         <Tooltip content={<ChartTooltipContent />} />
                         <Legend content={<ChartLegendContent />} />
-                        <Bar dataKey="paid" stackId="a" fill="var(--color-paid)" radius={[0, 4, 4, 0]} />
-                        <Bar dataKey="unpaid" stackId="a" fill="var(--color-unpaid)" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="paid" stackId="a" fill="var(--color-paid)" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="unpaid" stackId="a" fill="var(--color-unpaid)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </ChartContainer>
                 ) : (
                   <div className="flex h-[300px] items-center justify-center text-xs text-muted-foreground">
-                    No bulk meter performance data available.
+                    No branch performance data available.
                   </div>
                 )}
               </div>
             ) : (
               <ScrollArea className="h-[300px]">
-                {branchStats.monthlyBulkMeterPerformance.length > 0 ? (
+                {processedStats.branchPerformanceData.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Month</TableHead>
+                        <TableHead>Branch</TableHead>
                         <TableHead className="text-right">Paid</TableHead>
                         <TableHead className="text-right">Unpaid</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {branchStats.monthlyBulkMeterPerformance.map((item) => (
-                        <TableRow key={item.month}>
-                          <TableCell className="font-medium">{item.month}</TableCell>
+                      {processedStats.branchPerformanceData.map((item) => (
+                        <TableRow key={item.branch}>
+                          <TableCell className="font-medium">{item.branch}</TableCell>
                           <TableCell className="text-right text-green-600 dark:text-green-400">{item.paid}</TableCell>
                           <TableCell className="text-right text-red-600 dark:text-red-400">{item.unpaid}</TableCell>
                         </TableRow>
@@ -382,7 +381,7 @@ export default function StaffManagementDashboardPage() {
                   </Table>
                 ) : (
                   <div className="flex h-[300px] items-center justify-center text-xs text-muted-foreground">
-                      No bulk meter performance data available.
+                      No branch performance data available.
                   </div>
                 )}
               </ScrollArea>
@@ -393,7 +392,7 @@ export default function StaffManagementDashboardPage() {
         <Card className="shadow-lg">
           <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <div>
-              <CardTitle>Overall Water Usage Trend ({staffBranchName})</CardTitle>
+              <CardTitle>Water Usage Trend ({staffBranchName})</CardTitle>
               <CardDescription>Monthly water consumption for your branch.</CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={() => setWaterUsageView(prev => prev === 'chart' ? 'table' : 'chart')}>
@@ -404,10 +403,10 @@ export default function StaffManagementDashboardPage() {
           <CardContent>
           {waterUsageView === 'chart' ? (
                 <div className="h-[300px]">
-                  {isClient && branchStats.waterUsageTrendData.length > 0 ? (
+                  {isClient && processedStats.waterUsageTrendData.length > 0 ? (
                     <ChartContainer config={chartConfig} className="w-full h-full">
                       <ResponsiveContainer>
-                        <LineChart data={branchStats.waterUsageTrendData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                        <LineChart data={processedStats.waterUsageTrendData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                           <YAxis tickFormatter={(value) => `${value.toLocaleString()}`} tick={{ fontSize: 12 }} />
@@ -425,7 +424,7 @@ export default function StaffManagementDashboardPage() {
                 </div>
               ) : (
                 <ScrollArea className="h-[300px]">
-                  {branchStats.waterUsageTrendData.length > 0 ? (
+                  {processedStats.waterUsageTrendData.length > 0 ? (
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -434,7 +433,7 @@ export default function StaffManagementDashboardPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {branchStats.waterUsageTrendData.map((item) => (
+                        {processedStats.waterUsageTrendData.map((item) => (
                           <TableRow key={item.month}>
                             <TableCell className="font-medium">{item.month}</TableCell>
                             <TableCell className="text-right">{item.usage.toFixed(2)}</TableCell>
@@ -455,5 +454,3 @@ export default function StaffManagementDashboardPage() {
     </div>
   );
 }
-
-    

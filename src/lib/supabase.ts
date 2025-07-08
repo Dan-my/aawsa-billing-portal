@@ -1,6 +1,5 @@
 
-
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { Pool } from 'pg';
 import type { Database as ActualDatabase } from '@/types/supabase';
 
 export type Json =
@@ -11,6 +10,9 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
+// The existing type definitions are kept to maintain type safety throughout the app.
+// These types should match your self-hosted PostgreSQL schema.
+// ... (The extensive type interface from the original file is maintained here) ...
 export interface Database {
   public: {
     Tables: {
@@ -619,6 +621,7 @@ export interface Database {
   };
 }
 
+
 type ResolvedDatabase = ActualDatabase extends { public: any } ? ActualDatabase : Database;
 
 export type RoleRow = ResolvedDatabase['public']['Tables']['roles']['Row'];
@@ -666,80 +669,133 @@ export type ReportLog = ResolvedDatabase['public']['Tables']['reports']['Row'];
 export type ReportLogInsert = ResolvedDatabase['public']['Tables']['reports']['Insert'];
 export type ReportLogUpdate = ResolvedDatabase['public']['Tables']['reports']['Update'];
 
+const connectionString = process.env.POSTGRES_URL;
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl) {
-  throw new Error("Supabase URL is not defined in environment variables. Please set NEXT_PUBLIC_SUPABASE_URL.");
-}
-if (!supabaseAnonKey) {
-  throw new Error("Supabase Anon Key is not defined in environment variables. Please set NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+if (!connectionString) {
+  throw new Error("PostgreSQL connection string is not defined. Please set POSTGRES_URL.");
 }
 
-export const supabase: SupabaseClient<ResolvedDatabase> = createClient<ResolvedDatabase>(supabaseUrl, supabaseAnonKey);
+export const pool = new Pool({
+  connectionString,
+});
 
-// CRUD for Roles & Permissions
-export const getAllRoles = async () => supabase.from('roles').select('*');
-export const getAllPermissions = async () => supabase.from('permissions').select('*');
-export const getAllRolePermissions = async () => supabase.from('role_permissions').select('*');
-export const getPermissionsForRole = async (roleId: number) => supabase.from('role_permissions').select('permission_id').eq('role_id', roleId);
-export const rpcUpdateRolePermissions = async (roleId: number, permissionIds: number[]) => supabase.rpc('update_role_permissions', { p_role_id: roleId, p_permission_ids: permissionIds });
+async function query<T>(text: string, params: any[] = []) {
+    try {
+        const res = await pool.query<T>(text, params);
+        return { data: res.rows, error: null };
+    } catch (err: any) {
+        console.error('Database query error:', err);
+        return { data: null, error: { message: err.message, code: err.code } };
+    }
+}
 
-// CRUD for Notifications
-export const getAllNotifications = async () => supabase.from('notifications').select('*').order('created_at', { ascending: false });
-export const createNotification = async (notification: NotificationInsert) => supabase.from('notifications').insert(notification).select().single();
+// Helper to build a dynamic SET clause for updates
+function buildUpdateSetClause(payload: Record<string, any>, startingIndex = 1): { clause: string, values: any[] } {
+    const keys = Object.keys(payload);
+    const clause = keys.map((key, index) => `"${key}" = $${index + startingIndex}`).join(', ');
+    const values = keys.map(key => payload[key]);
+    return { clause, values };
+}
 
-// CRUD for Branches
-export const getAllBranches = async () => supabase.from('branches').select('*');
-export const createBranch = async (branch: BranchInsert) => supabase.from('branches').insert(branch).select().single();
-export const updateBranch = async (id: string, branch: BranchUpdate) => supabase.from('branches').update(branch).eq('id', id).select().single();
-export const deleteBranch = async (id: string) => supabase.from('branches').delete().eq('id', id);
+// --- Rewritten CRUD Functions ---
 
-// CRUD for Bulk Meters
-export const getAllBulkMeters = async () => supabase.from('bulk_meters').select('*');
-export const createBulkMeter = async (bulkMeter: BulkMeterInsert) => supabase.from('bulk_meters').insert(bulkMeter).select().single();
-export const updateBulkMeter = async (customerKeyNumber: string, bulkMeter: BulkMeterUpdate) => supabase.from('bulk_meters').update(bulkMeter).eq('customerKeyNumber', customerKeyNumber).select().single();
-export const deleteBulkMeter = async (customerKeyNumber: string) => supabase.from('bulk_meters').delete().eq('customerKeyNumber', customerKeyNumber);
+// Authentication
+export const getStaffMemberForAuth = async (email: string, password?: string) => {
+    const text = `
+        SELECT sm.*, r.role_name
+        FROM staff_members sm
+        LEFT JOIN roles r ON sm.role_id = r.id
+        WHERE sm.email = $1 AND sm.password = $2
+    `;
+    const res = await query<(StaffMember & {role_name: string})>(text, [email, password]);
+    return { data: res.data?.[0] || null, error: res.error };
+}
 
-// CRUD for Individual Customers
-export const getAllCustomers = async () => supabase.from('individual_customers').select('*');
-export const createCustomer = async (customer: IndividualCustomerInsert) => supabase.from('individual_customers').insert(customer).select().single();
-export const updateCustomer = async (customerKeyNumber: string, customer: IndividualCustomerUpdate) => supabase.from('individual_customers').update(customer).eq('customerKeyNumber', customerKeyNumber).select().single();
-export const deleteCustomer = async (customerKeyNumber: string) => supabase.from('individual_customers').delete().eq('customerKeyNumber', customerKeyNumber);
+// Generic CRUD functions
+async function getAll<T>(tableName: string) { return query<T>(`SELECT * FROM ${tableName}`); }
+async function deleteById(tableName: string, id: string | number, idColumn = "id") { return query(`DELETE FROM ${tableName} WHERE "${idColumn}" = $1`, [id]); }
+async function create<T>(tableName: string, payload: Record<string, any>) {
+    const keys = Object.keys(payload).map(k => `"${k}"`);
+    const placeholders = keys.map((_, i) => `$${i + 1}`);
+    const text = `INSERT INTO ${tableName} (${keys.join(', ')}) VALUES (${placeholders.join(', ')}) RETURNING *`;
+    const res = await query<T>(text, Object.values(payload));
+    return { data: res.data?.[0] || null, error: res.error };
+}
+async function update<T>(tableName: string, id: string | number, payload: Record<string, any>, idColumn = "id") {
+    const { clause, values } = buildUpdateSetClause(payload, 2);
+    const text = `UPDATE ${tableName} SET ${clause} WHERE "${idColumn}" = $1 RETURNING *`;
+    const res = await query<T>(text, [id, ...values]);
+    return { data: res.data?.[0] || null, error: res.error };
+}
 
-// CRUD for Staff Members
-export const getAllStaffMembers = async () => supabase.from('staff_members').select('*');
-export const createStaffMember = async (staffMember: StaffMemberInsert) => supabase.from('staff_members').insert(staffMember).select().single();
-export const updateStaffMember = async (email: string, staffMember: StaffMemberUpdate) => supabase.from('staff_members').update(staffMember).eq('email', email).select().single();
-export const deleteStaffMember = async (email: string) => supabase.from('staff_members').delete().eq('email', email);
 
-// CRUD for Bills
-export const getAllBills = async () => supabase.from('bills').select('*');
-export const createBill = async (bill: BillInsert) => supabase.from('bills').insert(bill).select().single();
-export const updateBill = async (id: string, bill: BillUpdate) => supabase.from('bills').update(bill).eq('id', id).select().single();
-export const deleteBill = async (id: string) => supabase.from('bills').delete().eq('id', id);
+// Roles & Permissions
+export const getAllRoles = () => getAll<RoleRow>('roles');
+export const getAllPermissions = () => getAll<PermissionRow>('permissions');
+export const getAllRolePermissions = () => getAll<RolePermissionRow>('role_permissions');
+export const rpcUpdateRolePermissions = async (roleId: number, permissionIds: number[]) => {
+    return query('SELECT update_role_permissions($1, $2)', [roleId, permissionIds]);
+}
 
-// CRUD for Individual Customer Readings
-export const getAllIndividualCustomerReadings = async () => supabase.from('individual_customer_readings').select('*');
-export const createIndividualCustomerReading = async (reading: IndividualCustomerReadingInsert) => supabase.from('individual_customer_readings').insert(reading).select().single();
-export const updateIndividualCustomerReading = async (id: string, reading: IndividualCustomerReadingUpdate) => supabase.from('individual_customer_readings').update(reading).eq('id', id).select().single();
-export const deleteIndividualCustomerReading = async (id: string) => supabase.from('individual_customer_readings').delete().eq('id', id);
+// Notifications
+export const getAllNotifications = () => query<NotificationRow>('SELECT * FROM notifications ORDER BY created_at DESC');
+export const createNotification = (notification: NotificationInsert) => {
+    return query<NotificationRow>(
+        'SELECT insert_notification($1, $2, $3, $4)',
+        [notification.title, notification.message, notification.sender_name, notification.target_branch_id]
+    ).then(res => ({ data: res.data?.[0], error: res.error }));
+}
 
-// CRUD for Bulk Meter Readings
-export const getAllBulkMeterReadings = async () => supabase.from('bulk_meter_readings').select('*');
-export const createBulkMeterReading = async (reading: BulkMeterReadingInsert) => supabase.from('bulk_meter_readings').insert(reading).select().single();
-export const updateBulkMeterReading = async (id: string, reading: BulkMeterReadingUpdate) => supabase.from('bulk_meter_readings').update(reading).eq('id', id).select().single();
-export const deleteBulkMeterReading = async (id: string) => supabase.from('bulk_meter_readings').delete().eq('id', id);
+// Branches
+export const getAllBranches = () => getAll<Branch>('branches');
+export const createBranch = (branch: BranchInsert) => create<Branch>('branches', branch);
+export const updateBranch = (id: string, branch: BranchUpdate) => update<Branch>('branches', id, branch);
+export const deleteBranch = (id: string) => deleteById('branches', id);
 
-// CRUD for Payments
-export const getAllPayments = async () => supabase.from('payments').select('*');
-export const createPayment = async (payment: PaymentInsert) => supabase.from('payments').insert(payment).select().single();
-export const updatePayment = async (id: string, payment: PaymentUpdate) => supabase.from('payments').update(payment).eq('id', id).select().single();
-export const deletePayment = async (id: string) => supabase.from('payments').delete().eq('id', id);
+// Bulk Meters
+export const getAllBulkMeters = () => getAll<BulkMeterRow>('bulk_meters');
+export const createBulkMeter = (bulkMeter: BulkMeterInsert) => create<BulkMeterRow>('bulk_meters', bulkMeter);
+export const updateBulkMeter = (customerKeyNumber: string, bulkMeter: BulkMeterUpdate) => update<BulkMeterRow>('bulk_meters', customerKeyNumber, bulkMeter, 'customerKeyNumber');
+export const deleteBulkMeter = (customerKeyNumber: string) => deleteById('bulk_meters', customerKeyNumber, 'customerKeyNumber');
 
-// CRUD for Report Logs (Table: 'reports')
-export const getAllReportLogs = async () => supabase.from('reports').select('*');
-export const createReportLog = async (reportLog: ReportLogInsert) => supabase.from('reports').insert(reportLog).select().single();
-export const updateReportLog = async (id: string, reportLog: ReportLogUpdate) => supabase.from('reports').update(reportLog).eq('id', id).select().single();
-export const deleteReportLog = async (id: string) => supabase.from('reports').delete().eq('id', id);
+// Individual Customers
+export const getAllCustomers = () => getAll<IndividualCustomer>('individual_customers');
+export const createCustomer = (customer: IndividualCustomerInsert) => create<IndividualCustomer>('individual_customers', customer);
+export const updateCustomer = (customerKeyNumber: string, customer: IndividualCustomerUpdate) => update<IndividualCustomer>('individual_customers', customerKeyNumber, customer, 'customerKeyNumber');
+export const deleteCustomer = (customerKeyNumber: string) => deleteById('individual_customers', customerKeyNumber, 'customerKeyNumber');
+
+// Staff Members
+export const getAllStaffMembers = () => getAll<StaffMember>('staff_members');
+export const createStaffMember = (staffMember: StaffMemberInsert) => create<StaffMember>('staff_members', staffMember);
+export const updateStaffMember = (email: string, staffMember: StaffMemberUpdate) => update<StaffMember>('staff_members', email, staffMember, 'email');
+export const deleteStaffMember = (email: string) => deleteById('staff_members', email, 'email');
+
+// Bills
+export const getAllBills = () => getAll<Bill>('bills');
+export const createBill = (bill: BillInsert) => create<Bill>('bills', bill);
+export const updateBill = (id: string, bill: BillUpdate) => update<Bill>('bills', id, bill);
+export const deleteBill = (id: string) => deleteById('bills', id);
+
+// Individual Customer Readings
+export const getAllIndividualCustomerReadings = () => getAll<IndividualCustomerReading>('individual_customer_readings');
+export const createIndividualCustomerReading = (reading: IndividualCustomerReadingInsert) => create<IndividualCustomerReading>('individual_customer_readings', reading);
+export const updateIndividualCustomerReading = (id: string, reading: IndividualCustomerReadingUpdate) => update<IndividualCustomerReading>('individual_customer_readings', id, reading);
+export const deleteIndividualCustomerReading = (id: string) => deleteById('individual_customer_readings', id);
+
+// Bulk Meter Readings
+export const getAllBulkMeterReadings = () => getAll<BulkMeterReading>('bulk_meter_readings');
+export const createBulkMeterReading = (reading: BulkMeterReadingInsert) => create<BulkMeterReading>('bulk_meter_readings', reading);
+export const updateBulkMeterReading = (id: string, reading: BulkMeterReadingUpdate) => update<BulkMeterReading>('bulk_meter_readings', id, reading);
+export const deleteBulkMeterReading = (id: string) => deleteById('bulk_meter_readings', id);
+
+// Payments
+export const getAllPayments = () => getAll<Payment>('payments');
+export const createPayment = (payment: PaymentInsert) => create<Payment>('payments', payment);
+export const updatePayment = (id: string, payment: PaymentUpdate) => update<Payment>('payments', id, payment);
+export const deletePayment = (id: string) => deleteById('payments', id);
+
+// Report Logs
+export const getAllReportLogs = () => getAll<ReportLog>('reports');
+export const createReportLog = (reportLog: ReportLogInsert) => create<ReportLog>('reports', reportLog);
+export const updateReportLog = (id: string, reportLog: ReportLogUpdate) => update<ReportLog>('reports', id, reportLog);
+export const deleteReportLog = (id: string) => deleteById('reports', id);

@@ -34,7 +34,6 @@ import type {
 } from './supabase';
 
 import {
-  supabase, // Import the supabase client directly
   getAllBranches as supabaseGetAllBranches,
   createBranch as supabaseCreateBranch,
   updateBranch as supabaseUpdateBranch,
@@ -51,6 +50,7 @@ import {
   createStaffMember as supabaseCreateStaffMember,
   updateStaffMember as supabaseUpdateStaffMember,
   deleteStaffMember as supabaseDeleteStaffMember,
+  getStaffMemberForAuth, // Import new function for authentication
   getAllBills as supabaseGetAllBills,
   createBill as supabaseCreateBill,
   updateBill as supabaseUpdateBill,
@@ -527,7 +527,7 @@ const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { customerKeyNumber
 };
 
 
-const mapSupabaseStaffToDomain = (ss: SupabaseStaffMemberRow & { roles?: { role_name: string } | null }): StaffMember => ({
+const mapSupabaseStaffToDomain = (ss: SupabaseStaffMemberRow & { roles?: { role_name: string } | null; role_name?: string }): StaffMember => ({
   id: ss.id,
   name: ss.name,
   email: ss.email,
@@ -536,7 +536,7 @@ const mapSupabaseStaffToDomain = (ss: SupabaseStaffMemberRow & { roles?: { role_
   status: ss.status,
   phone: ss.phone || undefined,
   hireDate: ss.hire_date || undefined,
-  role: ss.roles?.role_name || ss.role,
+  role: ss.role_name || ss.roles?.role_name || ss.role, // Handle direct role_name from auth query
   roleId: ss.role_id || undefined,
 });
 
@@ -1486,12 +1486,12 @@ export const removeReportLog = async (logId: string): Promise<StoreOperationResu
 };
 
 export const addNotification = async (notificationData: Omit<DomainNotification, 'id' | 'createdAt'>): Promise<StoreOperationResult<DomainNotification>> => {
-  const { data, error } = await supabase.rpc('insert_notification', {
-    p_title: notificationData.title,
-    p_message: notificationData.message,
-    p_sender_name: notificationData.senderName,
-    p_target_branch_id: notificationData.targetBranchId
-  }).single();
+  const { data, error } = await supabaseCreateNotification({
+    title: notificationData.title,
+    message: notificationData.message,
+    sender_name: notificationData.senderName,
+    target_branch_id: notificationData.targetBranchId
+  })
 
   if (data && !error) {
     const newNotification = mapSupabaseNotificationToDomain(data as SupabaseNotificationRow);
@@ -1500,7 +1500,7 @@ export const addNotification = async (notificationData: Omit<DomainNotification,
     return { success: true, data: newNotification };
   }
 
-  console.error("DataStore: Failed to add notification via RPC. Supabase error:", JSON.stringify(error, null, 2));
+  console.error("DataStore: Failed to add notification. DB error:", JSON.stringify(error, null, 2));
   
   let userMessage = (error as any)?.message || "Failed to add notification.";
   if (error && (error as any).message?.includes('function public.insert_notification does not exist')) {
@@ -1594,18 +1594,10 @@ export const subscribeToRolePermissions = (listener: Listener<DomainRolePermissi
 
 
 export const authenticateStaffMember = async (email: string, password: string): Promise<StoreOperationResult<StaffMember>> => {
-    const { data: staffData, error: staffError } = await supabase
-        .from('staff_members')
-        .select(`
-            *,
-            roles ( id, role_name )
-        `)
-        .eq('email', email.toLowerCase())
-        .eq('password', password)
-        .single();
+    const { data: staffData, error: staffError } = await getStaffMemberForAuth(email, password);
 
     if (staffError || !staffData) {
-        if (staffError && staffError.code !== 'PGRST116') { // Don't log "No rows found"
+        if (staffError) {
             console.error("DataStore: Authentication error", staffError);
         }
         return { success: false, message: "Invalid email or password.", isNotFoundError: true, error: staffError };
@@ -1615,32 +1607,25 @@ export const authenticateStaffMember = async (email: string, password: string): 
 
     let userRoleId = user.roleId;
 
-    // This is the key fix: If role_id is missing (e.g., for legacy data),
-    // try to find it using the role name.
     if (!userRoleId && user.role) {
         if (!rolesFetched) await initializeRoles();
         const foundRole = roles.find(r => r.role_name === user.role);
         if (foundRole) {
             userRoleId = foundRole.id;
-            user.roleId = userRoleId; // Update the user object for this session
+            user.roleId = userRoleId;
         } else {
             console.error(`DataStore: Could not find a matching role ID for role name "${user.role}" during login for user ${email}.`);
         }
-    } else if (staffData.roles?.role_name) {
-      // If the join worked, ensure the user object has the definitive role name.
-      user.role = staffData.roles.role_name;
     }
     
-    // Fetch permissions for the user's role
     let permissions: string[] = [];
-    if (userRoleId) { // Now use the potentially back-filled role ID
-        const { data: permissionData, error: permissionError } = await supabase
-            .from('role_permissions')
-            .select('permissions(name)')
-            .eq('role_id', userRoleId);
+    if (userRoleId) {
+        const { data: rolePerms, error: permissionError } = await getAllRolePermissions();
+        const { data: allPerms } = await getAllPermissions();
 
-        if (permissionData && !permissionError) {
-            permissions = permissionData.map(p => p.permissions?.name).filter((name): name is string => !!name);
+        if (rolePerms && allPerms && !permissionError) {
+            const permissionIdsForRole = new Set(rolePerms.filter(rp => rp.role_id === userRoleId).map(rp => rp.permission_id));
+            permissions = allPerms.filter(p => permissionIdsForRole.has(p.id)).map(p => p.name);
         } else if (permissionError) {
             console.error("DataStore: Failed to fetch permissions for role.", permissionError);
         }

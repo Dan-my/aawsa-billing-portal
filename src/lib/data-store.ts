@@ -8,11 +8,56 @@ import type { Branch as DomainBranch } from '@/app/admin/branches/branch-types';
 import type { StaffMember as DomainStaffMember } from '@/app/admin/staff-management/staff-types';
 import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult } from '@/lib/billing';
 
+import {
+  getAllBranchesAction,
+  createBranchAction,
+  updateBranchAction,
+  deleteBranchAction,
+  getAllCustomersAction,
+  createCustomerAction,
+  updateCustomerAction,
+  deleteCustomerAction,
+  getAllBulkMetersAction,
+  createBulkMeterAction,
+  updateBulkMeterAction,
+  deleteBulkMeterAction,
+  getAllStaffMembersAction,
+  createStaffMemberAction,
+  updateStaffMemberAction,
+  deleteStaffMemberAction,
+  getStaffMemberForAuthAction,
+  getAllBillsAction,
+  createBillAction,
+  updateBillAction,
+  deleteBillAction,
+  getAllIndividualCustomerReadingsAction,
+  createIndividualCustomerReadingAction,
+  updateIndividualCustomerReadingAction,
+  deleteIndividualCustomerReadingAction,
+  getAllBulkMeterReadingsAction,
+  createBulkMeterReadingAction,
+  updateBulkMeterReadingAction,
+  deleteBulkMeterReadingAction,
+  getAllPaymentsAction,
+  createPaymentAction,
+  updatePaymentAction,
+  deletePaymentAction,
+  getAllReportLogsAction,
+  createReportLogAction,
+  updateReportLogAction,
+  deleteReportLogAction,
+  getAllNotificationsAction,
+  createNotificationAction,
+  getAllRolesAction,
+  getAllPermissionsAction,
+  getAllRolePermissionsAction,
+  rpcUpdateRolePermissionsAction,
+} from './actions';
 
 import type {
   RoleRow, PermissionRow, RolePermissionRow,
-  Branch as SupabaseBranchRow,
-  BulkMeterRow as SupabaseBulkMeterRow,
+  Branch,
+  BulkMeterRow,
   IndividualCustomer as SupabaseIndividualCustomerRow,
   StaffMember as SupabaseStaffMemberRow,
   Bill as SupabaseBillRow,
@@ -31,55 +76,9 @@ import type {
   PaymentInsert, PaymentUpdate,
   ReportLogInsert, ReportLogUpdate,
   NotificationInsert,
-} from './supabase';
+} from './actions';
 
-import {
-  getAllBranches as supabaseGetAllBranches,
-  createBranch as supabaseCreateBranch,
-  updateBranch as supabaseUpdateBranch,
-  deleteBranch as supabaseDeleteBranch,
-  getAllCustomers as supabaseGetAllCustomers,
-  createCustomer as supabaseCreateCustomer,
-  updateCustomer as supabaseUpdateCustomer,
-  deleteCustomer as supabaseDeleteCustomer,
-  getAllBulkMeters as supabaseGetAllBulkMeters,
-  createBulkMeter as supabaseCreateBulkMeter,
-  updateBulkMeter as supabaseUpdateBulkMeter,
-  deleteBulkMeter as supabaseDeleteBulkMeter,
-  getAllStaffMembers as supabaseGetAllStaffMembers,
-  createStaffMember as supabaseCreateStaffMember,
-  updateStaffMember as supabaseUpdateStaffMember,
-  deleteStaffMember as supabaseDeleteStaffMember,
-  getStaffMemberForAuth, // Import new function for authentication
-  getAllBills as supabaseGetAllBills,
-  createBill as supabaseCreateBill,
-  updateBill as supabaseUpdateBill,
-  deleteBill as supabaseDeleteBill,
-  getAllIndividualCustomerReadings as supabaseGetAllIndividualCustomerReadings,
-  createIndividualCustomerReading as supabaseCreateIndividualCustomerReading,
-  updateIndividualCustomerReading as supabaseUpdateIndividualCustomerReading,
-  deleteIndividualCustomerReading as supabaseDeleteIndividualCustomerReading,
-  getAllBulkMeterReadings as supabaseGetAllBulkMeterReadings,
-  createBulkMeterReading as supabaseCreateBulkMeterReading,
-  updateBulkMeterReading as supabaseUpdateBulkMeterReading,
-  deleteBulkMeterReading as supabaseDeleteBulkMeterReading,
-  getAllPayments as supabaseGetAllPayments,
-  createPayment as supabaseCreatePayment,
-  updatePayment as supabaseUpdatePayment,
-  deletePayment as supabaseDeletePayment,
-  getAllReportLogs as supabaseGetAllReportLogs,
-  createReportLog as supabaseCreateReportLog,
-  updateReportLog as supabaseUpdateReportLog,
-  deleteReportLog as supabaseDeleteReportLog,
-  getAllNotifications as supabaseGetAllNotifications,
-  createNotification as supabaseCreateNotification,
-  getAllRoles as supabaseGetAllRoles,
-  getAllPermissions as supabaseGetAllPermissions,
-  getAllRolePermissions as supabaseGetAllRolePermissions,
-  rpcUpdateRolePermissions as supabaseRpcUpdateRolePermissions,
-} from './supabase';
-
-export type { RoleRow as DomainRole, PermissionRow as DomainPermission, RolePermissionRow as DomainRolePermission } from './supabase';
+export type { RoleRow as DomainRole, PermissionRow as DomainPermission, RolePermissionRow as DomainRolePermission } from './actions';
 
 export interface DomainNotification {
   id: string;
@@ -193,9 +192,9 @@ interface StoreOperationResult<T = any> {
 
 type BulkMeter = DomainBulkMeterTypeFromTypes;
 type StaffMember = DomainStaffMember;
-type DomainRole = import('./supabase').RoleRow;
-type DomainPermission = import('./supabase').PermissionRow;
-type DomainRolePermission = import('./supabase').RolePermissionRow;
+type DomainRole = import('./actions').RoleRow;
+type DomainPermission = import('./actions').PermissionRow;
+type DomainRolePermission = import('./actions').RolePermissionRow;
 
 
 let branches: DomainBranch[] = [];
@@ -267,7 +266,7 @@ const mapSupabaseNotificationToDomain = (sn: SupabaseNotificationRow): DomainNot
   targetBranchId: sn.target_branch_id,
 });
 
-const mapSupabaseBranchToDomain = (sb: SupabaseBranchRow): DomainBranch => ({
+const mapSupabaseBranchToDomain = (sb: Branch): DomainBranch => ({
   id: sb.id,
   name: sb.name,
   location: sb.location,
@@ -404,7 +403,7 @@ const mapDomainCustomerToUpdate = (customer: Partial<DomainIndividualCustomer>):
 };
 
 
-const mapSupabaseBulkMeterToDomain = (sbm: SupabaseBulkMeterRow): BulkMeter => {
+const mapSupabaseBulkMeterToDomain = (sbm: BulkMeterRow): BulkMeter => {
   const calculatedBmUsage = (sbm.currentReading ?? 0) - (sbm.previousReading ?? 0);
   const bmUsage = sbm.bulk_usage === null || sbm.bulk_usage === undefined
                   ? calculatedBmUsage
@@ -730,7 +729,7 @@ const mapDomainReportLogToSupabase = (rl: Partial<DomainReportLog>): Partial<Rep
 
 
 async function fetchAllBranches() {
-  const { data, error } = await supabaseGetAllBranches();
+  const { data, error } = await getAllBranchesAction();
   if (data) {
     branches = data.map(mapSupabaseBranchToDomain);
     notifyBranchListeners();
@@ -742,7 +741,7 @@ async function fetchAllBranches() {
 }
 
 async function fetchAllCustomers() {
-  const { data, error } = await supabaseGetAllCustomers();
+  const { data, error } = await getAllCustomersAction();
   if (data) {
     customers = data.map(mapSupabaseCustomerToDomain);
     notifyCustomerListeners();
@@ -754,7 +753,7 @@ async function fetchAllCustomers() {
 }
 
 async function fetchAllBulkMeters() {
-  const { data: rawBulkMeters, error: fetchError } = await supabaseGetAllBulkMeters();
+  const { data: rawBulkMeters, error: fetchError } = await getAllBulkMetersAction();
 
   if (fetchError) {
     console.error("DataStore: Failed to fetch bulk meters. Supabase error:", JSON.stringify(fetchError, null, 2));
@@ -775,7 +774,7 @@ async function fetchAllBulkMeters() {
     await initializeCustomers();
   }
   
-  const updatedRowsFromBackfill: SupabaseBulkMeterRow[] = [];
+  const updatedRowsFromBackfill: BulkMeterRow[] = [];
   let backfillPerformed = false;
 
   for (const sbm of rawBulkMeters) {
@@ -806,7 +805,7 @@ async function fetchAllBulkMeters() {
         difference_bill: calculatedDifferenceBill,
       };
 
-      const { data: updatedRow, error: updateError } = await supabaseUpdateBulkMeter(sbm.customerKeyNumber, updatePayload);
+      const { data: updatedRow, error: updateError } = await updateBulkMeterAction(sbm.customerKeyNumber, updatePayload);
       if (updateError) {
         console.error(`DataStore: Failed to backfill bulk meter ${sbm.customerKeyNumber}. Error:`, JSON.stringify(updateError, null, 2));
         updatedRowsFromBackfill.push(sbm); 
@@ -831,7 +830,7 @@ async function fetchAllBulkMeters() {
 
 
 async function fetchAllStaffMembers() {
-  const { data, error } = await supabaseGetAllStaffMembers();
+  const { data, error } = await getAllStaffMembersAction();
   if (data) {
     staffMembers = data.map(mapSupabaseStaffToDomain);
     notifyStaffMemberListeners();
@@ -843,7 +842,7 @@ async function fetchAllStaffMembers() {
 }
 
 async function fetchAllBills() {
-    const { data, error } = await supabaseGetAllBills();
+    const { data, error } = await getAllBillsAction();
     if (data) {
         bills = data.map(mapSupabaseBillToDomain);
         notifyBillListeners();
@@ -855,7 +854,7 @@ async function fetchAllBills() {
 }
 
 async function fetchAllIndividualCustomerReadings() {
-    const { data, error } = await supabaseGetAllIndividualCustomerReadings();
+    const { data, error } = await getAllIndividualCustomerReadingsAction();
     if (data) {
         individualCustomerReadings = data.map(mapSupabaseIndividualReadingToDomain);
         notifyIndividualCustomerReadingListeners();
@@ -867,7 +866,7 @@ async function fetchAllIndividualCustomerReadings() {
 }
 
 async function fetchAllBulkMeterReadings() {
-    const { data, error } = await supabaseGetAllBulkMeterReadings();
+    const { data, error } = await getAllBulkMeterReadingsAction();
     if (data) {
         bulkMeterReadings = data.map(mapSupabaseBulkReadingToDomain);
         notifyBulkMeterReadingListeners();
@@ -879,7 +878,7 @@ async function fetchAllBulkMeterReadings() {
 }
 
 async function fetchAllPayments() {
-    const { data, error } = await supabaseGetAllPayments();
+    const { data, error } = await getAllPaymentsAction();
     if (data) {
         payments = data.map(mapSupabasePaymentToDomain);
         notifyPaymentListeners();
@@ -891,7 +890,7 @@ async function fetchAllPayments() {
 }
 
 async function fetchAllReportLogs() {
-    const { data, error } = await supabaseGetAllReportLogs();
+    const { data, error } = await getAllReportLogsAction();
     if (data) {
         reportLogs = data.map(mapSupabaseReportLogToDomain);
         notifyReportLogListeners();
@@ -903,7 +902,7 @@ async function fetchAllReportLogs() {
 }
 
 async function fetchAllNotifications() {
-  const { data, error } = await supabaseGetAllNotifications();
+  const { data, error } = await getAllNotificationsAction();
   if (data) {
     notifications = data.map(mapSupabaseNotificationToDomain);
     notifyNotificationListeners();
@@ -915,7 +914,7 @@ async function fetchAllNotifications() {
 }
 
 async function fetchAllRoles() {
-  const { data, error } = await supabaseGetAllRoles();
+  const { data, error } = await getAllRolesAction();
   if (data) {
     roles = data;
     notifyRoleListeners();
@@ -927,7 +926,7 @@ async function fetchAllRoles() {
 }
 
 async function fetchAllPermissions() {
-  const { data, error } = await supabaseGetAllPermissions();
+  const { data, error } = await getAllPermissionsAction();
   if (data) {
     permissions = data;
     notifyPermissionListeners();
@@ -939,7 +938,7 @@ async function fetchAllPermissions() {
 }
 
 async function fetchAllRolePermissions() {
-  const { data, error } = await supabaseGetAllRolePermissions();
+  const { data, error } = await getAllRolePermissionsAction();
   if (data) {
     rolePermissions = data;
     notifyRolePermissionListeners();
@@ -1015,15 +1014,15 @@ export const initializeRolePermissions = async () => {
 };
 
 export async function getBulkMeterByCustomerKey(customerKeyNumber: string): Promise<StoreOperationResult<BulkMeter>> {
-    const { data, error } = await supabase.from('bulk_meters').select('*').eq('customerKeyNumber', customerKeyNumber).single();
-    if (error) {
-        console.error("DataStore: Failed to fetch single bulk meter by customerKeyNumber. Error:", JSON.stringify(error, null, 2));
-        return { success: false, message: "Could not fetch meter data from database.", error };
+    const { data, error } = await getAllBulkMetersAction();
+    if(error) {
+        return { success: false, message: 'Could not fetch meter data', error };
     }
-    if (!data) {
-        return { success: false, message: "Meter not found in database.", isNotFoundError: true };
+    const meter = data?.find(m => m.customerKeyNumber === customerKeyNumber);
+    if (!meter) {
+        return { success: false, message: 'Meter not found', isNotFoundError: true };
     }
-    const domainMeter = mapSupabaseBulkMeterToDomain(data);
+    const domainMeter = mapSupabaseBulkMeterToDomain(meter);
     return { success: true, data: domainMeter };
 }
 
@@ -1059,7 +1058,7 @@ export const getBulkMeterPaymentStatusCounts = (): { totalBMs: number; paidBMs: 
 
 export const addBranch = async (branchData: Omit<DomainBranch, 'id'>): Promise<StoreOperationResult<DomainBranch>> => {
   const payload = mapDomainBranchToInsert(branchData);
-  const { data: newSupabaseBranch, error } = await supabaseCreateBranch(payload);
+  const { data: newSupabaseBranch, error } = await createBranchAction(payload);
   if (newSupabaseBranch && !error) {
     const newBranch = mapSupabaseBranchToDomain(newSupabaseBranch);
     branches = [newBranch, ...branches];
@@ -1072,7 +1071,7 @@ export const addBranch = async (branchData: Omit<DomainBranch, 'id'>): Promise<S
 
 export const updateBranch = async (id: string, branchData: Partial<Omit<DomainBranch, 'id'>>): Promise<StoreOperationResult<void>> => {
   const updatePayload = mapDomainBranchToUpdate(branchData);
-  const { data: updatedSupabaseBranch, error } = await supabaseUpdateBranch(id, updatePayload);
+  const { data: updatedSupabaseBranch, error } = await updateBranchAction(id, updatePayload);
   if (updatedSupabaseBranch && !error) {
     const updatedBranch = mapSupabaseBranchToDomain(updatedSupabaseBranch);
     branches = branches.map(b => b.id === id ? updatedBranch : b);
@@ -1092,7 +1091,7 @@ export const updateBranch = async (id: string, branchData: Partial<Omit<DomainBr
 };
 
 export const deleteBranch = async (branchId: string): Promise<StoreOperationResult<void>> => {
-  const { error } = await supabaseDeleteBranch(branchId);
+  const { error } = await deleteBranchAction(branchId);
   if (!error) {
     branches = branches.filter(b => b.id !== branchId);
     notifyBranchListeners();
@@ -1106,7 +1105,7 @@ export const addCustomer = async (
   customerData: Omit<DomainIndividualCustomer, 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill' | 'arrears'>
 ): Promise<StoreOperationResult<DomainIndividualCustomer>> => {
   const customerPayload = mapDomainCustomerToInsert(customerData);
-  const { data: newSupabaseCustomer, error } = await supabaseCreateCustomer(customerPayload);
+  const { data: newSupabaseCustomer, error } = await createCustomerAction(customerPayload);
 
   if (newSupabaseCustomer && !error) {
     const newCustomer = mapSupabaseCustomerToDomain(newSupabaseCustomer);
@@ -1120,7 +1119,7 @@ export const addCustomer = async (
 
 export const updateCustomer = async (customerKeyNumber: string, customerData: Partial<Omit<DomainIndividualCustomer, 'customerKeyNumber'>>): Promise<StoreOperationResult<void>> => {
   const updatePayloadSupabase = mapDomainCustomerToUpdate({ customerKeyNumber, ...customerData });
-  const { data: updatedSupabaseCustomer, error } = await supabaseUpdateCustomer(customerKeyNumber, updatePayloadSupabase);
+  const { data: updatedSupabaseCustomer, error } = await updateCustomerAction(customerKeyNumber, updatePayloadSupabase);
 
   if (updatedSupabaseCustomer && !error) {
     const updatedCustomer = mapSupabaseCustomerToDomain(updatedSupabaseCustomer);
@@ -1145,7 +1144,7 @@ export const updateCustomer = async (customerKeyNumber: string, customerData: Pa
 };
 
 export const deleteCustomer = async (customerKeyNumber: string): Promise<StoreOperationResult<void>> => {
-  const { error } = await supabaseDeleteCustomer(customerKeyNumber);
+  const { error } = await deleteCustomerAction(customerKeyNumber);
   if (!error) {
     customers = customers.filter(c => c.customerKeyNumber !== customerKeyNumber);
     notifyCustomerListeners();
@@ -1157,7 +1156,7 @@ export const deleteCustomer = async (customerKeyNumber: string): Promise<StoreOp
 
 export const addBulkMeter = async (bulkMeterDomainData: Omit<BulkMeter, 'customerKeyNumber'> & { customerKeyNumber: string }): Promise<StoreOperationResult<BulkMeter>> => {
   const bulkMeterPayload = mapDomainBulkMeterToInsert(bulkMeterDomainData) as BulkMeterInsert;
-  const { data: newSupabaseBulkMeter, error } = await supabaseCreateBulkMeter(bulkMeterPayload);
+  const { data: newSupabaseBulkMeter, error } = await createBulkMeterAction(bulkMeterPayload);
   if (newSupabaseBulkMeter && !error) {
     const newBulkMeter = mapSupabaseBulkMeterToDomain(newSupabaseBulkMeter);
     bulkMeters = [newBulkMeter, ...bulkMeters];
@@ -1170,7 +1169,7 @@ export const addBulkMeter = async (bulkMeterDomainData: Omit<BulkMeter, 'custome
 
 export const updateBulkMeter = async (customerKeyNumber: string, bulkMeterData: Partial<Omit<BulkMeter, 'customerKeyNumber'>>): Promise<StoreOperationResult<BulkMeter>> => {
   const updatePayloadToSend = mapDomainBulkMeterToUpdate({ customerKeyNumber, ...bulkMeterData }) as BulkMeterUpdate;
-  const { data: updatedSupabaseBulkMeter, error } = await supabaseUpdateBulkMeter(customerKeyNumber, updatePayloadToSend);
+  const { data: updatedSupabaseBulkMeter, error } = await updateBulkMeterAction(customerKeyNumber, updatePayloadToSend);
   if (updatedSupabaseBulkMeter && !error) {
     const updatedBulkMeter = mapSupabaseBulkMeterToDomain(updatedSupabaseBulkMeter);
     bulkMeters = bulkMeters.map(bm => bm.customerKeyNumber === customerKeyNumber ? updatedBulkMeter : bm);
@@ -1190,7 +1189,7 @@ export const updateBulkMeter = async (customerKeyNumber: string, bulkMeterData: 
 };
 
 export const deleteBulkMeter = async (customerKeyNumber: string): Promise<StoreOperationResult<void>> => {
-  const { error } = await supabaseDeleteBulkMeter(customerKeyNumber);
+  const { error } = await deleteBulkMeterAction(customerKeyNumber);
   if (!error) {
     bulkMeters = bulkMeters.filter(bm => bm.customerKeyNumber !== customerKeyNumber);
     notifyBulkMeterListeners();
@@ -1212,7 +1211,7 @@ export const addStaffMember = async (staffData: Omit<StaffMember, 'id'> & {id?: 
   const staffDataWithRoleId = { ...staffData, roleId: role.id };
   const payload = mapDomainStaffToInsert(staffDataWithRoleId as StaffMember);
 
-  const { data: newSupabaseStaff, error } = await supabaseCreateStaffMember(payload);
+  const { data: newSupabaseStaff, error } = await createStaffMemberAction(payload);
   
   if (error) {
     // Check for unique constraint violation
@@ -1251,7 +1250,7 @@ export const updateStaffMember = async (email: string, updatedStaffData: Partial
   }
 
   const staffUpdatePayload = mapDomainStaffToUpdate(staffUpdateDataWithRoleId);
-  const { data: updatedSupabaseStaff, error } = await supabaseUpdateStaffMember(email, staffUpdatePayload);
+  const { data: updatedSupabaseStaff, error } = await updateStaffMemberAction(email, staffUpdatePayload);
 
   if (updatedSupabaseStaff && !error) {
     const updatedStaff = mapSupabaseStaffToDomain(updatedSupabaseStaff);
@@ -1266,7 +1265,7 @@ export const updateStaffMember = async (email: string, updatedStaffData: Partial
 
 
 export const deleteStaffMember = async (email: string): Promise<StoreOperationResult<void>> => {
-  const { error } = await supabaseDeleteStaffMember(email);
+  const { error } = await deleteStaffMemberAction(email);
   if (error) {
     console.error("DataStore: Failed to delete staff member profile.", error);
     return { success: false, message: (error as any)?.message || "Failed to delete staff profile." };
@@ -1279,7 +1278,7 @@ export const deleteStaffMember = async (email: string): Promise<StoreOperationRe
 
 export const addBill = async (billData: Omit<DomainBill, 'id' | 'createdAt' | 'updatedAt'>): Promise<StoreOperationResult<DomainBill>> => {
     const payload = mapDomainBillToSupabase(billData) as BillInsert;
-    const { data: newSupabaseBill, error } = await supabaseCreateBill(payload);
+    const { data: newSupabaseBill, error } = await createBillAction(payload);
     if (newSupabaseBill && !error) {
         const newBill = mapSupabaseBillToDomain(newSupabaseBill);
         bills = [newBill, ...bills];
@@ -1292,7 +1291,7 @@ export const addBill = async (billData: Omit<DomainBill, 'id' | 'createdAt' | 'u
 
 export const updateExistingBill = async (id: string, billUpdateData: Partial<Omit<DomainBill, 'id'>>): Promise<StoreOperationResult<void>> => {
     const payload = mapDomainBillToSupabase(billUpdateData) as BillUpdate;
-    const { data: updatedSupabaseBill, error } = await supabaseUpdateBill(id, payload);
+    const { data: updatedSupabaseBill, error } = await updateBillAction(id, payload);
     if (updatedSupabaseBill && !error) {
         const updatedBill = mapSupabaseBillToDomain(updatedSupabaseBill);
         bills = bills.map(b => b.id === id ? updatedBill : b);
@@ -1312,7 +1311,7 @@ export const updateExistingBill = async (id: string, billUpdateData: Partial<Omi
 };
 
 export const removeBill = async (billId: string): Promise<StoreOperationResult<void>> => {
-    const { error } = await supabaseDeleteBill(billId);
+    const { error } = await deleteBillAction(billId);
     if (!error) {
         bills = bills.filter(b => b.id !== billId);
         notifyBillListeners();
@@ -1332,7 +1331,7 @@ export const addIndividualCustomerReading = async (readingData: Omit<DomainIndiv
     }
 
     const payload = mapDomainIndividualReadingToSupabase(readingData) as IndividualCustomerReadingInsert;
-    const { data: newSupabaseReading, error: readingInsertError } = await supabaseCreateIndividualCustomerReading(payload);
+    const { data: newSupabaseReading, error: readingInsertError } = await createIndividualCustomerReadingAction(payload);
 
     if (readingInsertError || !newSupabaseReading) {
         let userMessage = (readingInsertError as any)?.message || "Failed to add reading.";
@@ -1346,7 +1345,7 @@ export const addIndividualCustomerReading = async (readingData: Omit<DomainIndiv
     const updateResult = await updateCustomer(customer.customerKeyNumber, { currentReading: newSupabaseReading.reading_value });
 
     if (!updateResult.success) {
-        await supabaseDeleteIndividualCustomerReading(newSupabaseReading.id);
+        await deleteIndividualCustomerReadingAction(newSupabaseReading.id);
         const errorMessage = `Reading recorded, but failed to update the customer's main record. Error: ${updateResult.message}`;
         console.error(errorMessage, updateResult.error);
         return { success: false, message: errorMessage, error: updateResult.error };
@@ -1369,7 +1368,7 @@ export const addBulkMeterReading = async (readingData: Omit<DomainBulkMeterReadi
     }
 
     const payload = mapDomainBulkReadingToSupabase(readingData) as BulkMeterReadingInsert;
-    const { data: newSupabaseReading, error: readingInsertError } = await supabaseCreateBulkMeterReading(payload);
+    const { data: newSupabaseReading, error: readingInsertError } = await createBulkMeterReadingAction(payload);
 
     if (readingInsertError || !newSupabaseReading) {
         let userMessage = (readingInsertError as any)?.message || "Failed to add reading.";
@@ -1383,7 +1382,7 @@ export const addBulkMeterReading = async (readingData: Omit<DomainBulkMeterReadi
     const updateResult = await updateBulkMeter(bulkMeter.customerKeyNumber, { currentReading: newSupabaseReading.reading_value });
 
     if (!updateResult.success) {
-        await supabaseDeleteBulkMeterReading(newSupabaseReading.id);
+        await deleteBulkMeterReadingAction(newSupabaseReading.id);
 
         const errorMessage = `Failed to update the bulk meter's main record, so the new reading was discarded. Reason: ${updateResult.message}`;
         console.error(errorMessage, updateResult.error);
@@ -1400,7 +1399,7 @@ export const addBulkMeterReading = async (readingData: Omit<DomainBulkMeterReadi
 
 export const addPayment = async (paymentData: Omit<DomainPayment, 'id'>): Promise<StoreOperationResult<DomainPayment>> => {
     const payload = mapDomainPaymentToSupabase(paymentData) as PaymentInsert;
-    const { data: newSupabasePayment, error } = await supabaseCreatePayment(payload);
+    const { data: newSupabasePayment, error } = await createPaymentAction(payload);
     if (newSupabasePayment && !error) {
         const newPayment = mapSupabasePaymentToDomain(newSupabasePayment);
         payments = [newPayment, ...payments];
@@ -1412,7 +1411,7 @@ export const addPayment = async (paymentData: Omit<DomainPayment, 'id'>): Promis
 };
 export const updateExistingPayment = async (id: string, paymentUpdateData: Partial<Omit<DomainPayment, 'id'>>): Promise<StoreOperationResult<void>> => {
     const payload = mapDomainPaymentToSupabase(paymentUpdateData) as PaymentUpdate;
-    const { data: updatedSupabasePayment, error } = await supabaseUpdatePayment(id, payload);
+    const { data: updatedSupabasePayment, error } = await updatePaymentAction(id, payload);
     if (updatedSupabasePayment && !error) {
         const updatedPayment = mapSupabasePaymentToDomain(updatedSupabasePayment);
         payments = payments.map(p => p.id === id ? updatedPayment : p);
@@ -1431,7 +1430,7 @@ export const updateExistingPayment = async (id: string, paymentUpdateData: Parti
     return { success: false, message: userMessage, isNotFoundError, error };
 };
 export const removePayment = async (paymentId: string): Promise<StoreOperationResult<void>> => {
-    const { error } = await supabaseDeletePayment(paymentId);
+    const { error } = await deletePaymentAction(paymentId);
     if (!error) {
         payments = payments.filter(p => p.id !== paymentId);
         notifyPaymentListeners();
@@ -1444,7 +1443,7 @@ export const removePayment = async (paymentId: string): Promise<StoreOperationRe
 export const addReportLog = async (logData: Omit<DomainReportLog, 'id' | 'generatedAt'> & { generatedAt?: string } ): Promise<StoreOperationResult<DomainReportLog>> => {
     const payload = mapDomainReportLogToSupabase(logData) as ReportLogInsert;
     if(!payload.generated_at) payload.generated_at = new Date().toISOString();
-    const { data: newSupabaseLog, error } = await supabaseCreateReportLog(payload);
+    const { data: newSupabaseLog, error } = await createReportLogAction(payload);
     if (newSupabaseLog && !error) {
         const newLog = mapSupabaseReportLogToDomain(newSupabaseLog);
         reportLogs = [newLog, ...reportLogs];
@@ -1456,7 +1455,7 @@ export const addReportLog = async (logData: Omit<DomainReportLog, 'id' | 'genera
 };
 export const updateExistingReportLog = async (id: string, logUpdateData: Partial<Omit<DomainReportLog, 'id'>>): Promise<StoreOperationResult<void>> => {
     const payload = mapDomainReportLogToSupabase(logUpdateData) as ReportLogUpdate;
-    const { data: updatedSupabaseLog, error } = await supabaseUpdateReportLog(id, payload);
+    const { data: updatedSupabaseLog, error } = await updateReportLogAction(id, payload);
     if (updatedSupabaseLog && !error) {
         const updatedLog = mapSupabaseReportLogToDomain(updatedSupabaseLog);
         reportLogs = reportLogs.map(l => l.id === id ? updatedLog : l);
@@ -1475,7 +1474,7 @@ export const updateExistingReportLog = async (id: string, logUpdateData: Partial
     return { success: false, message: userMessage, isNotFoundError, error };
 };
 export const removeReportLog = async (logId: string): Promise<StoreOperationResult<void>> => {
-    const { error } = await supabaseDeleteReportLog(logId);
+    const { error } = await deleteReportLogAction(logId);
     if (!error) {
         reportLogs = reportLogs.filter(l => l.id !== logId);
         notifyReportLogListeners();
@@ -1486,7 +1485,7 @@ export const removeReportLog = async (logId: string): Promise<StoreOperationResu
 };
 
 export const addNotification = async (notificationData: Omit<DomainNotification, 'id' | 'createdAt'>): Promise<StoreOperationResult<DomainNotification>> => {
-  const { data, error } = await supabaseCreateNotification({
+  const { data, error } = await createNotificationAction({
     title: notificationData.title,
     message: notificationData.message,
     sender_name: notificationData.senderName,
@@ -1511,7 +1510,7 @@ export const addNotification = async (notificationData: Omit<DomainNotification,
 };
 
 export const updateRolePermissions = async (roleId: number, permissionIds: number[]): Promise<StoreOperationResult<void>> => {
-    const { error } = await supabaseRpcUpdateRolePermissions(roleId, permissionIds);
+    const { error } = await rpcUpdateRolePermissionsAction(roleId, permissionIds);
     if (!error) {
         await fetchAllRolePermissions();
         return { success: true };
@@ -1594,7 +1593,7 @@ export const subscribeToRolePermissions = (listener: Listener<DomainRolePermissi
 
 
 export const authenticateStaffMember = async (email: string, password: string): Promise<StoreOperationResult<StaffMember>> => {
-    const { data: staffData, error: staffError } = await getStaffMemberForAuth(email, password);
+    const { data: staffData, error: staffError } = await getStaffMemberForAuthAction(email, password);
 
     if (staffError || !staffData) {
         if (staffError) {
@@ -1620,8 +1619,8 @@ export const authenticateStaffMember = async (email: string, password: string): 
     
     let permissions: string[] = [];
     if (userRoleId) {
-        const { data: rolePerms, error: permissionError } = await getAllRolePermissions();
-        const { data: allPerms } = await getAllPermissions();
+        const { data: rolePerms, error: permissionError } = await getAllRolePermissionsAction();
+        const { data: allPerms } = await getAllPermissionsAction();
 
         if (rolePerms && allPerms && !permissionError) {
             const permissionIdsForRole = new Set(rolePerms.filter(rp => rp.role_id === userRoleId).map(rp => rp.permission_id));

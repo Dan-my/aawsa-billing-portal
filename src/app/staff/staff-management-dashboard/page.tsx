@@ -341,7 +341,7 @@ export default function StaffManagementDashboardPage() {
               <div className="h-[300px]">
                 {isClient && branchStats.monthlyBulkMeterPerformance.length > 0 ? (
                   <ChartContainer config={chartConfig} className="w-full h-full">
-                    <ResponsiveContainer>
+                    <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={branchStats.monthlyBulkMeterPerformance}>
                         <CartesianGrid vertical={false} />
                         <XAxis
@@ -465,5 +465,3 @@ export default function StaffManagementDashboardPage() {
     </div>
   );
 }
-
-    

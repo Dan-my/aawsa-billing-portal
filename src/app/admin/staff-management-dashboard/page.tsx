@@ -3,10 +3,34 @@
 
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart as BarChartIcon, PieChart as PieChartIcon, Gauge, Users, ArrowRight, FileText, TrendingUp, AlertCircle, Table as TableIcon } from 'lucide-react'; 
+import { 
+  BarChart as BarChartIcon, 
+  PieChart as PieChartIcon, 
+  Gauge, 
+  Users, 
+  ArrowRight, 
+  FileText, 
+  TrendingUp, 
+  AlertCircle, 
+  Table as TableIcon 
+} from 'lucide-react'; 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ResponsiveContainer, BarChart, PieChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, LineChart, Line, CartesianGrid } from 'recharts';
+import { 
+  ResponsiveContainer, 
+  BarChart, 
+  PieChart, 
+  XAxis, 
+  YAxis, 
+  Tooltip, 
+  Legend, 
+  Pie, 
+  Cell,
+  Bar,
+  LineChart, 
+  Line, 
+  CartesianGrid 
+} from 'recharts';
 import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import { getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, getCustomers, subscribeToCustomers, initializeCustomers, getBranches, initializeBranches, subscribeToBranches } from "@/lib/data-store";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
@@ -431,3 +455,5 @@ export default function StaffManagementDashboardPage() {
     </div>
   );
 }
+
+    

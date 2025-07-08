@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -303,14 +304,14 @@ export default function HeadOfficeDashboardPage() {
                 {isClient && dynamicBranchPerformanceData.length > 0 ? (
                   <ChartContainer config={chartConfig} className="w-full h-full">
                     <ResponsiveContainer>
-                      <BarChart data={dynamicBranchPerformanceData} layout="vertical" margin={{ left: 10, right: 30 }}>
-                        <CartesianGrid horizontal={false} />
-                        <XAxis type="number" hide />
-                        <YAxis dataKey="branch" type="category" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} width={80} />
+                      <BarChart data={dynamicBranchPerformanceData}>
+                        <CartesianGrid vertical={false} />
+                        <XAxis dataKey="branch" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+                        <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
                         <Tooltip content={<ChartTooltipContent />} />
                         <Legend content={<ChartLegendContent />} />
-                        <Bar dataKey="paid" stackId="a" fill="var(--color-paid)" radius={[0, 4, 4, 0]} />
-                        <Bar dataKey="unpaid" stackId="a" fill="var(--color-unpaid)" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="paid" stackId="a" fill="var(--color-paid)" />
+                        <Bar dataKey="unpaid" stackId="a" fill="var(--color-unpaid)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </ChartContainer>
@@ -416,3 +417,5 @@ export default function HeadOfficeDashboardPage() {
     </div>
   );
 }
+
+    

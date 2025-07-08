@@ -39,10 +39,16 @@ const formSchema = z.object({
 
 type NotificationFormValues = z.infer<typeof formSchema>;
 
+interface UserProfile {
+  name?: string;
+  role?: string;
+  branchId?: string;
+}
+
 export default function AdminNotificationsPage() {
   const { hasPermission } = usePermissions();
   const { toast } = useToast();
-  const [user, setUser] = React.useState<{ name?: string } | null>(null);
+  const [user, setUser] = React.useState<UserProfile | null>(null);
   const [sentNotifications, setSentNotifications] = React.useState<DomainNotification[]>([]);
   const [branches, setBranches] = React.useState<Branch[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -52,12 +58,12 @@ export default function AdminNotificationsPage() {
     if (storedUser) setUser(JSON.parse(storedUser));
     
     Promise.all([initializeNotifications(), initializeBranches()]).then(() => {
-      setSentNotifications(getNotifications().sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      setSentNotifications(getNotifications());
       setBranches(getBranches());
       setIsLoading(false);
     });
 
-    const unsubNotifications = subscribeToNotifications((data) => setSentNotifications(data.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())));
+    const unsubNotifications = subscribeToNotifications(setSentNotifications);
     const unsubBranches = subscribeToBranches(setBranches);
     
     return () => {
@@ -74,6 +80,20 @@ export default function AdminNotificationsPage() {
       targetBranchId: ALL_STAFF_VALUE,
     },
   });
+  
+  const filteredAndSortedNotifications = React.useMemo(() => {
+    let notificationsToDisplay = [...sentNotifications];
+    const userRole = user?.role?.toLowerCase();
+
+    if (userRole === 'staff management' && user.branchId) {
+      notificationsToDisplay = sentNotifications.filter(n =>
+        n.targetBranchId === null || n.targetBranchId === user.branchId
+      );
+    }
+
+    return notificationsToDisplay.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [sentNotifications, user]);
+
 
   async function onSubmit(data: NotificationFormValues) {
     if (!user?.name) {
@@ -201,8 +221,8 @@ export default function AdminNotificationsPage() {
                 <TableBody>
                   {isLoading ? (
                     <TableRow><TableCell colSpan={3} className="h-24 text-center">Loading notifications...</TableCell></TableRow>
-                  ) : sentNotifications.length > 0 ? (
-                    sentNotifications.map(n => (
+                  ) : filteredAndSortedNotifications.length > 0 ? (
+                    filteredAndSortedNotifications.map(n => (
                       <TableRow key={n.id}>
                         <TableCell>
                           <p className="font-medium">{n.title}</p>

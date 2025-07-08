@@ -358,7 +358,7 @@ export default function StaffManagementDashboardPage() {
                         />
                         <Tooltip content={<ChartTooltipContent />} />
                         <Legend content={<ChartLegendContent />} />
-                        <Bar dataKey="paid" stackId="a" fill="var(--color-paid)" />
+                        <Bar dataKey="paid" stackId="a" fill="var(--color-paid)" radius={[4, 4, 0, 0]} />
                         <Bar dataKey="unpaid" stackId="a" fill="var(--color-unpaid)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -465,3 +465,6 @@ export default function StaffManagementDashboardPage() {
     </div>
   );
 }
+
+
+    

@@ -24,6 +24,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse } from "date-fns";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 import type { Branch } from "../branches/branch-types";
+import { customerTypes } from "@/lib/billing";
 
 const BRANCH_UNASSIGNED_VALUE = "_SELECT_BRANCH_BULK_METER_";
 
@@ -63,6 +64,7 @@ export function BulkMeterDataEntryForm() {
       location: "", // Will be set by branch selection
       ward: "",
       branchId: undefined, // Initialize branchId
+      chargeGroup: "Non-domestic",
       xCoordinate: undefined,
       yCoordinate: undefined,
     },
@@ -321,6 +323,34 @@ export function BulkMeterDataEntryForm() {
                 />
                 <FormField
                   control={form.control}
+                  name="chargeGroup"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Charge Group *</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        defaultValue="Non-domestic"
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select charge group" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {customerTypes.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
                   name="xCoordinate"
                   render={({ field }) => (
                     <FormItem>
@@ -377,3 +407,5 @@ export function BulkMeterDataEntryForm() {
     </ScrollArea>
   );
 }
+
+    

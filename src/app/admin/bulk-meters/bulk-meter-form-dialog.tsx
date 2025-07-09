@@ -27,7 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { baseBulkMeterDataSchema, meterSizeOptions } from "@/app/admin/data-entry/customer-data-entry-types";
 import type { BulkMeter } from "./bulk-meter-types";
 import { bulkMeterStatuses } from "./bulk-meter-types";
-import { paymentStatuses } from "@/lib/billing"; 
+import { paymentStatuses, customerTypes } from "@/lib/billing"; 
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse } from "date-fns";
 import { getBranches, subscribeToBranches, initializeBranches as initializeAdminBranches } from "@/lib/data-store";
@@ -89,6 +89,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
       location: "",
       ward: "",
       branchId: undefined,
+      chargeGroup: "Non-domestic",
       status: "Active", 
       paymentStatus: "Unpaid", 
       xCoordinate: undefined,
@@ -104,6 +105,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
         previousReading: defaultValues.previousReading ?? undefined,
         currentReading: defaultValues.currentReading ?? undefined,
         branchId: defaultValues.branchId || undefined,
+        chargeGroup: defaultValues.chargeGroup || "Non-domestic",
         status: defaultValues.status || "Active",
         paymentStatus: defaultValues.paymentStatus || "Unpaid",
         xCoordinate: defaultValues.xCoordinate ?? undefined,
@@ -123,6 +125,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
         location: staffBranchName || "", // Use staff branch name for location
         ward: "",
         branchId: undefined,
+        chargeGroup: "Non-domestic",
         status: "Active",
         paymentStatus: "Unpaid",
         xCoordinate: undefined,
@@ -468,6 +471,30 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                   </FormItem>
                 )}
               />
+               <FormField
+                control={form.control}
+                name="chargeGroup"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Charge Group *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value || 'Non-domestic'}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select charge group" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {customerTypes.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -481,3 +508,5 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
     </Dialog>
   );
 }
+
+    

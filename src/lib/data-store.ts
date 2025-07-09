@@ -428,6 +428,7 @@ const mapSupabaseBulkMeterToDomain = (sbm: BulkMeterRow): BulkMeter => {
     branchId: sbm.branch_id || undefined, 
     status: sbm.status,
     paymentStatus: sbm.paymentStatus,
+    chargeGroup: sbm.charge_group,
     bulkUsage: bmUsage,
     totalBulkBill: bmTotalBill,
     differenceUsage: sbm.difference_usage === null || sbm.difference_usage === undefined ? undefined : Number(sbm.difference_usage),
@@ -465,6 +466,7 @@ const mapDomainBulkMeterToInsert = (bm: Omit<BulkMeter, 'customerKeyNumber'> & {
     branch_id: bm.branchId, 
     status: bm.status || 'Active',
     paymentStatus: bm.paymentStatus || 'Unpaid',
+    charge_group: bm.chargeGroup || 'Non-domestic',
     bulk_usage: calculatedBulkUsage,
     total_bulk_bill: calculatedTotalBulkBill,
     difference_usage: differenceUsage,
@@ -492,6 +494,7 @@ const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { customerKeyNumber
     if (bm.branchId !== undefined) updatePayload.branch_id = bm.branchId; 
     if (bm.status !== undefined) updatePayload.status = bm.status;
     if (bm.paymentStatus !== undefined) updatePayload.paymentStatus = bm.paymentStatus;
+    if (bm.chargeGroup !== undefined) updatePayload.charge_group = bm.chargeGroup;
     if (bm.outStandingbill !== undefined) updatePayload.outStandingbill = Number(bm.outStandingbill);
     if (bm.xCoordinate !== undefined) updatePayload.x_coordinate = bm.xCoordinate;
     if (bm.yCoordinate !== undefined) updatePayload.y_coordinate = bm.yCoordinate;
@@ -1675,3 +1678,5 @@ export async function loadInitialData() {
     initializeRolePermissions(),
   ]);
 }
+
+    

@@ -56,6 +56,7 @@ export const baseBulkMeterDataSchema = z.object({
   location: z.string().min(1, { message: "Location / Sub-City is required." }), // Will be set by Branch selection
   ward: z.string().min(1, { message: "Ward / Woreda is required." }),
   branchId: z.string().optional().describe("The ID of the branch this bulk meter belongs to."), // New field
+  chargeGroup: z.enum(customerTypes, { errorMap: () => ({ message: "Please select a valid charge group."}) }),
   xCoordinate: z.coerce.number().optional(),
   yCoordinate: z.coerce.number().optional(),
 });
@@ -68,3 +69,5 @@ export const bulkMeterDataEntrySchema = baseBulkMeterDataSchema.refine(data => d
 export type BulkMeterDataEntryFormValues = z.infer<typeof bulkMeterDataEntrySchema>;
 
 export type MockBulkMeter = { id: string; name: string };
+
+    

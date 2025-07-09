@@ -1,7 +1,7 @@
 
 import type { z } from "zod";
 import type { baseBulkMeterDataSchema } from "@/app/admin/data-entry/customer-data-entry-types";
-import type { PaymentStatus } from "@/lib/billing"; // Import PaymentStatus from new location
+import type { PaymentStatus, CustomerType } from "@/lib/billing"; // Import CustomerType
 
 export const bulkMeterStatuses = ['Active', 'Maintenance', 'Decommissioned'] as const;
 export type BulkMeterStatus = (typeof bulkMeterStatuses)[number];
@@ -21,4 +21,7 @@ export type BulkMeter = z.infer<typeof baseBulkMeterDataSchema> & {
   differenceBill?: number;
   xCoordinate?: number;
   yCoordinate?: number;
+  chargeGroup: CustomerType;
 };
+
+    

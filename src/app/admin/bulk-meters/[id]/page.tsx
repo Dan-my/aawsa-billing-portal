@@ -613,7 +613,7 @@ export default function BulkMeterDetailsPage() {
                 <hr className="print-hr-dashed"/>
                 
                 <div className="print-signature-section">
-                  <div className="print-signature-item"><span>Requested by</span><span>...................................</span></div>
+                  <div className="print-signature-item"><span>Prepared by</span><span>...................................</span></div>
                   <div className="print-signature-item"><span>Checked by</span><span>...................................</span></div>
                   <div className="print-signature-item"><span>Approved by</span><span>...................................</span></div>
                 </div>

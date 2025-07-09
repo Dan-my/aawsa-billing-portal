@@ -145,6 +145,7 @@ export interface Database {
           paymentStatus: 'Paid' | 'Unpaid';
           branch_id?: string | null; 
           charge_group: 'Domestic' | 'Non-domestic';
+          sewerage_connection: 'Yes' | 'No';
           bulk_usage?: number | null;
           total_bulk_bill?: number | null;
           difference_usage?: number | null;
@@ -171,6 +172,7 @@ export interface Database {
           paymentStatus: 'Paid' | 'Unpaid';
           branch_id?: string | null; 
           charge_group: 'Domestic' | 'Non-domestic';
+          sewerage_connection: 'Yes' | 'No';
           bulk_usage?: number | null;
           total_bulk_bill?: number | null;
           difference_usage?: number | null;
@@ -197,6 +199,7 @@ export interface Database {
           paymentStatus?: 'Paid' | 'Unpaid';
           branch_id?: string | null; 
           charge_group?: 'Domestic' | 'Non-domestic';
+          sewerage_connection?: 'Yes' | 'No';
           bulk_usage?: number | null;
           total_bulk_bill?: number | null;
           difference_usage?: number | null;

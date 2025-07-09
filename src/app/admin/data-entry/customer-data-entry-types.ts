@@ -57,6 +57,7 @@ export const baseBulkMeterDataSchema = z.object({
   ward: z.string().min(1, { message: "Ward / Woreda is required." }),
   branchId: z.string().optional().describe("The ID of the branch this bulk meter belongs to."), // New field
   chargeGroup: z.enum(customerTypes, { errorMap: () => ({ message: "Please select a valid charge group."}) }),
+  sewerageConnection: z.enum(sewerageConnections).default("No"),
   xCoordinate: z.coerce.number().optional(),
   yCoordinate: z.coerce.number().optional(),
 });

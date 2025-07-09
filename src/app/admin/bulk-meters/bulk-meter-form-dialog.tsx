@@ -27,7 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { baseBulkMeterDataSchema, meterSizeOptions } from "@/app/admin/data-entry/customer-data-entry-types";
 import type { BulkMeter } from "./bulk-meter-types";
 import { bulkMeterStatuses } from "./bulk-meter-types";
-import { paymentStatuses, customerTypes } from "@/lib/billing"; 
+import { paymentStatuses, customerTypes, sewerageConnections } from "@/lib/billing"; 
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse } from "date-fns";
 import { getBranches, subscribeToBranches, initializeBranches as initializeAdminBranches } from "@/lib/data-store";
@@ -90,6 +90,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
       ward: "",
       branchId: undefined,
       chargeGroup: "Non-domestic",
+      sewerageConnection: "No",
       status: "Active", 
       paymentStatus: "Unpaid", 
       xCoordinate: undefined,
@@ -106,6 +107,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
         currentReading: defaultValues.currentReading ?? undefined,
         branchId: defaultValues.branchId || undefined,
         chargeGroup: defaultValues.chargeGroup || "Non-domestic",
+        sewerageConnection: defaultValues.sewerageConnection || "No",
         status: defaultValues.status || "Active",
         paymentStatus: defaultValues.paymentStatus || "Unpaid",
         xCoordinate: defaultValues.xCoordinate ?? undefined,
@@ -126,6 +128,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
         ward: "",
         branchId: undefined,
         chargeGroup: "Non-domestic",
+        sewerageConnection: "No",
         status: "Active",
         paymentStatus: "Unpaid",
         xCoordinate: undefined,
@@ -485,6 +488,30 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                       </FormControl>
                       <SelectContent>
                         {customerTypes.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="sewerageConnection"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sewerage Connection *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value || 'No'}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select connection status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {sewerageConnections.map((type) => (
                           <SelectItem key={type} value={type}>
                             {type}
                           </SelectItem>

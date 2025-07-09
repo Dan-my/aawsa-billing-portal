@@ -106,8 +106,8 @@ export default function StaffBulkMeterDetailsPage() {
     const bmCurrentReading = bulkMeter.currentReading ?? 0;
     const bulkUsage = bmCurrentReading - bmPreviousReading;
 
-    const effectiveBulkMeterCustomerType: CustomerType = "Non-domestic";
-    const effectiveBulkMeterSewerageConnection: SewerageConnection = "No";
+    const effectiveBulkMeterCustomerType: CustomerType = bulkMeter.chargeGroup || "Non-domestic";
+    const effectiveBulkMeterSewerageConnection: SewerageConnection = bulkMeter.sewerageConnection || "No";
     
     const { totalBill: totalBulkBillForPeriod } = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
     
@@ -129,7 +129,7 @@ export default function StaffBulkMeterDetailsPage() {
 
     const finalBillCardDetails = (() => {
       if (billToRender) {
-          const historicalBillDetails = calculateBill(billToRender.differenceUsage ?? 0, 'Non-domestic', 'No', bulkMeter.meterSize);
+          const historicalBillDetails = calculateBill(billToRender.differenceUsage ?? 0, bulkMeter.chargeGroup, bulkMeter.sewerageConnection, bulkMeter.meterSize);
           return {
               prevReading: billToRender.previousReadingValue,
               currReading: billToRender.currentReadingValue,
@@ -491,7 +491,9 @@ export default function StaffBulkMeterDetailsPage() {
       const bmUsage = (latestMeterData.currentReading ?? 0) - (latestMeterData.previousReading ?? 0);
       const totalIndivUsage = associatedCustomers.reduce((sum, cust) => sum + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
       const differenceUsageForCycle = bmUsage - totalIndivUsage;
-      const { totalBill: billForDifferenceUsage, ...differenceBillBreakdownForCycle } = calculateBill(differenceUsageForCycle, 'Non-domestic', 'No', latestMeterData.meterSize);
+      const chargeGroup = latestMeterData.chargeGroup || 'Non-domestic';
+      const sewerageConn = latestMeterData.sewerageConnection || 'No';
+      const { totalBill: billForDifferenceUsage, ...differenceBillBreakdownForCycle } = calculateBill(differenceUsageForCycle, chargeGroup, sewerageConn, latestMeterData.meterSize);
       const balanceFromPreviousPeriods = latestMeterData.outStandingbill || 0;
       const totalPayableForCycle = billForDifferenceUsage + balanceFromPreviousPeriods;
 
@@ -622,7 +624,8 @@ export default function StaffBulkMeterDetailsPage() {
                 </div>
 
                 <div className="print-section">
-                  <div className="print-row"><span>Bulk Meter Category:</span> <span>Non-domestic</span></div>
+                  <div className="print-row"><span>Bulk Meter Category:</span> <span>{bulkMeter.chargeGroup}</span></div>
+                  <div className="print-row"><span>Sewerage Connection:</span> <span>{bulkMeter.sewerageConnection}</span></div>
                   <div className="print-row"><span>Number of Assigned Individual Customers:</span> <span>{associatedCustomers.length}</span></div>
                   <div className="print-row"><span>Previous and current reading:</span> <span>{billCardDetails.prevReading.toFixed(2)} / {billCardDetails.currReading.toFixed(2)} m³</span></div>
                   <div className="print-row"><span>Bulk usage:</span> <span>{billCardDetails.usage.toFixed(2)} m³</span></div>
@@ -806,7 +809,7 @@ export default function StaffBulkMeterDetailsPage() {
       <AlertDialog open={isCustomerDeleteDialogOpen} onOpenChange={setIsCustomerDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader><AlertDialogTitle>Delete Customer?</AlertDialogTitle><AlertDialogDescription>This will permanently delete {customerToDelete?.name}.</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel onClick={() => setCustomerToDelete(null)}>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteCustomer}>Delete</AlertDialogAction></AlertDialogFooter>
+          <AlertDialogFooter><AlertDialogCancel onClick={() => setCustomerToDelete(null)}>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteCustomer}>Delete Customer</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
       

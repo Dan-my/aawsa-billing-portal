@@ -145,8 +145,9 @@ const availableReports: ReportType[] = [
     description: "Download a comprehensive list of all bulk meters, including their details and readings.",
     headers: [
       "customerKeyNumber", "name", "contractNumber", "meterSize", "meterNumber",
-      "previousReading", "currentReading", "month", "specificArea", "location", "ward", "status", "paymentStatus",
-      "Assigned Branch Name", "bulkUsage", "totalBulkBill", "differenceUsage", "differenceBill"
+      "previousReading", "currentReading", "month", "specificArea", "location", "ward", "status", 
+      "paymentStatus", "chargeGroup", "sewerageConnection", "Assigned Branch Name", 
+      "bulkUsage", "totalBulkBill", "differenceUsage", "differenceBill"
     ],
     getData: (filters) => {
       const { branchId, startDate, endDate } = filters;

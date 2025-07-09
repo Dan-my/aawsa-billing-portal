@@ -24,7 +24,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse } from "date-fns";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 import type { Branch } from "../branches/branch-types";
-import { customerTypes } from "@/lib/billing";
+import { customerTypes, sewerageConnections } from "@/lib/billing";
 
 const BRANCH_UNASSIGNED_VALUE = "_SELECT_BRANCH_BULK_METER_";
 
@@ -65,6 +65,7 @@ export function BulkMeterDataEntryForm() {
       ward: "",
       branchId: undefined, // Initialize branchId
       chargeGroup: "Non-domestic",
+      sewerageConnection: "No",
       xCoordinate: undefined,
       yCoordinate: undefined,
     },
@@ -321,7 +322,7 @@ export function BulkMeterDataEntryForm() {
                     </FormItem>
                   )}
                 />
-                <FormField
+                 <FormField
                   control={form.control}
                   name="chargeGroup"
                   render={({ field }) => (
@@ -339,6 +340,34 @@ export function BulkMeterDataEntryForm() {
                         </FormControl>
                         <SelectContent>
                           {customerTypes.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="sewerageConnection"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sewerage Connection *</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        defaultValue="No"
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select connection status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {sewerageConnections.map((type) => (
                             <SelectItem key={type} value={type}>
                               {type}
                             </SelectItem>
@@ -407,5 +436,3 @@ export function BulkMeterDataEntryForm() {
     </ScrollArea>
   );
 }
-
-    

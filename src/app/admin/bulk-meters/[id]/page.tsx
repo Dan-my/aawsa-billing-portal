@@ -117,7 +117,7 @@ export default function BulkMeterDetailsPage() {
 
     const finalBillCardDetails = (() => {
       if (billToRender) {
-          const historicalBillDetails = calculateBill(billToRender.differenceUsage ?? 0, 'Non-domestic', 'No', bulkMeter.meterSize);
+          const historicalBillDetails = calculateBill(billToRender.differenceUsage ?? 0, bulkMeter.chargeGroup, bulkMeter.sewerageConnection, bulkMeter.meterSize);
           return {
               prevReading: billToRender.previousReadingValue,
               currReading: billToRender.currentReadingValue,
@@ -584,7 +584,8 @@ export default function BulkMeterDetailsPage() {
                 </div>
 
                 <div className="print-section">
-                  <div className="print-row"><span>Bulk Meter Category:</span> <span>Non-domestic</span></div>
+                  <div className="print-row"><span>Bulk Meter Category:</span> <span>{bulkMeter.chargeGroup}</span></div>
+                  <div className="print-row"><span>Sewerage Connection:</span> <span>{bulkMeter.sewerageConnection}</span></div>
                   <div className="print-row"><span>Number of Assigned Individual Customers:</span> <span>{associatedCustomers.length}</span></div>
                   <div className="print-row"><span>Previous and current reading:</span> <span>{billCardDetails.prevReading.toFixed(2)} / {billCardDetails.currReading.toFixed(2)} m³</span></div>
                   <div className="print-row"><span>Bulk usage:</span> <span>{billCardDetails.usage.toFixed(2)} m³</span></div>

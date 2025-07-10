@@ -6,7 +6,7 @@ import type { IndividualCustomer as DomainIndividualCustomer, IndividualCustomer
 import type { BulkMeter as DomainBulkMeterTypeFromTypes } from '@/app/admin/bulk-meters/bulk-meter-types'; 
 import type { Branch as DomainBranch } from '@/app/admin/branches/branch-types';
 import type { StaffMember as DomainStaffMember } from '@/app/admin/staff-management/staff-types';
-import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult } from '@/lib/billing';
+import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult, getTariffInfo as getTariffFromBilling, METER_RENT_STORAGE_KEY, DEFAULT_METER_RENT_PRICES } from '@/lib/billing';
 
 import {
   getAllBranchesAction,
@@ -52,10 +52,14 @@ import {
   getAllPermissionsAction,
   getAllRolePermissionsAction,
   rpcUpdateRolePermissionsAction,
+  getAllTariffsAction,
+  updateTariffAction,
 } from './actions';
 
 import type {
-  RoleRow, PermissionRow, RolePermissionRow,
+  RoleRow,
+  PermissionRow,
+  RolePermissionRow,
   Branch,
   BulkMeterRow,
   IndividualCustomer as SupabaseIndividualCustomerRow,
@@ -76,9 +80,12 @@ import type {
   PaymentInsert, PaymentUpdate,
   ReportLogInsert, ReportLogUpdate,
   NotificationInsert,
+  TariffRow,
+  TariffUpdate,
 } from './actions';
 
 export type { RoleRow as DomainRole, PermissionRow as DomainPermission, RolePermissionRow as DomainRolePermission } from './actions';
+export type { TariffInfo } from './billing';
 
 export interface DomainNotification {
   id: string;
@@ -210,6 +217,8 @@ let notifications: DomainNotification[] = [];
 let roles: DomainRole[] = [];
 let permissions: DomainPermission[] = [];
 let rolePermissions: DomainRolePermission[] = [];
+let tariffs: TariffRow[] = [];
+
 
 let branchesFetched = false;
 let customersFetched = false;
@@ -224,6 +233,7 @@ let notificationsFetched = false;
 let rolesFetched = false;
 let permissionsFetched = false;
 let rolePermissionsFetched = false;
+let tariffsFetched = false;
 
 
 type Listener<T> = (data: T[]) => void;
@@ -240,6 +250,7 @@ const notificationListeners: Set<Listener<DomainNotification>> = new Set();
 const roleListeners: Set<Listener<DomainRole>> = new Set();
 const permissionListeners: Set<Listener<DomainPermission>> = new Set();
 const rolePermissionListeners: Set<Listener<DomainRolePermission>> = new Set();
+const tariffListeners: Set<Listener<TariffRow>> = new Set();
 
 const notifyBranchListeners = () => branchListeners.forEach(listener => listener([...branches]));
 const notifyCustomerListeners = () => customerListeners.forEach(listener => listener([...customers]));
@@ -254,6 +265,7 @@ const notifyNotificationListeners = () => notificationListeners.forEach(listener
 const notifyRoleListeners = () => roleListeners.forEach(listener => listener([...roles]));
 const notifyPermissionListeners = () => permissionListeners.forEach(listener => listener([...permissions]));
 const notifyRolePermissionListeners = () => rolePermissionListeners.forEach(listener => listener([...rolePermissions]));
+const notifyTariffListeners = () => tariffListeners.forEach(listener => listener([...tariffs]));
 
 
 // --- Mappers ---
@@ -733,6 +745,18 @@ const mapDomainReportLogToSupabase = (rl: Partial<DomainReportLog>): Partial<Rep
     return payload;
 };
 
+async function fetchAllTariffs() {
+    const { data, error } = await getAllTariffsAction();
+    if (data) {
+        tariffs = data;
+        notifyTariffListeners();
+    } else {
+        console.error("DataStore: Failed to fetch tariffs. Supabase error:", JSON.stringify(error, null, 2));
+    }
+    tariffsFetched = true;
+    return tariffs;
+}
+
 
 async function fetchAllBranches() {
   const { data, error } = await getAllBranchesAction();
@@ -1031,6 +1055,62 @@ export async function getBulkMeterByCustomerKey(customerKeyNumber: string): Prom
     const domainMeter = mapSupabaseBulkMeterToDomain(meter);
     return { success: true, data: domainMeter };
 }
+
+export const initializeTariffs = async () => {
+    if (!tariffsFetched) {
+        await fetchAllTariffs();
+    }
+};
+
+export const getTariff = (type: CustomerType): TariffRow | undefined => {
+    const tariff = tariffs.find(t => t.customer_type === type);
+    if (!tariff) {
+        // This case should ideally not happen if defaults are seeded correctly
+        console.warn(`Tariff for customer type "${type}" not found in local store. Using hardcoded fallback.`);
+        if (type === 'Domestic') {
+            return {
+                id: 'fallback-domestic',
+                customer_type: 'Domestic',
+                tiers: [
+                    {"limit": 5, "rate": 10.21},
+                    {"limit": 14, "rate": 17.87},
+                    {"limit": 23, "rate": 33.19},
+                    {"limit": 32, "rate": 51.07},
+                    {"limit": 41, "rate": 61.28},
+                    {"limit": 50, "rate": 71.49},
+                    {"limit": Infinity, "rate": 81.71}
+                ],
+                maintenance_percentage: 0.01,
+                sanitation_percentage: 0.07,
+                sewerage_rate_per_m3: 6.25,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+        }
+        if (type === 'Non-domestic') {
+            return {
+                id: 'fallback-nondomestic',
+                customer_type: 'Non-domestic',
+                tiers: [
+                    {"limit": 5, "rate": 10.21},
+                    {"limit": 14, "rate": 17.87},
+                    {"limit": 23, "rate": 33.19},
+                    {"limit": 32, "rate": 51.07},
+                    {"limit": 41, "rate": 61.28},
+                    {"limit": 50, "rate": 71.49},
+                    {"limit": Infinity, "rate": 81.71}
+                ],
+                maintenance_percentage: 0.01,
+                sanitation_percentage: 0.10,
+                sewerage_rate_per_m3: 8.75,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+        }
+    }
+    return tariff;
+};
+
 
 export const getBranches = (): DomainBranch[] => [...branches];
 export const getCustomers = (): DomainIndividualCustomer[] => [...customers];
@@ -1525,6 +1605,27 @@ export const updateRolePermissions = async (roleId: number, permissionIds: numbe
     return { success: false, message: (error as any)?.message || "Failed to update permissions.", error };
 };
 
+export const updateTariff = async (id: string, tariffData: TariffUpdate): Promise<StoreOperationResult<void>> => {
+    const { data: updatedSupabaseTariff, error } = await updateTariffAction(id, tariffData);
+    if (updatedSupabaseTariff && !error) {
+        tariffs = tariffs.map(t => t.id === id ? updatedSupabaseTariff : t);
+        notifyTariffListeners();
+        return { success: true };
+    }
+    console.error("DataStore: Failed to update tariff. Error:", JSON.stringify(error, null, 2));
+    return { success: false, message: (error as any)?.message || "Failed to update tariff.", error };
+};
+
+export const resetTariffsToDefault = async (): Promise<StoreOperationResult<void>> => {
+    // This is a client-side action that assumes the presence of a seeding function in the DB
+    // that can be called if needed, or it can be implemented here if preferred.
+    // For now, we'll just remove the local storage override for meter rent and re-fetch.
+    localStorage.removeItem(METER_RENT_STORAGE_KEY);
+    await fetchAllTariffs();
+    return { success: true };
+};
+
+
 export const subscribeToBranches = (listener: Listener<DomainBranch>): (() => void) => {
   branchListeners.add(listener);
   if (branchesFetched) listener([...branches]); else initializeBranches().then(() => listener([...branches]));
@@ -1597,13 +1698,19 @@ export const subscribeToRolePermissions = (listener: Listener<DomainRolePermissi
   return () => rolePermissionListeners.delete(listener);
 };
 
+export const subscribeToTariffs = (listener: Listener<TariffRow>): (() => void) => {
+    tariffListeners.add(listener);
+    if (tariffsFetched) listener([...tariffs]); else initializeTariffs().then(() => listener([...tariffs]));
+    return () => tariffListeners.delete(listener);
+};
+
 
 export const authenticateStaffMember = async (email: string, password: string): Promise<StoreOperationResult<StaffMember>> => {
     const { data: staffData, error: staffError } = await getStaffMemberForAuthAction(email, password);
 
     if (staffError || !staffData) {
         if (staffError) {
-            console.error("DataStore: Authentication error", staffError);
+            console.error("DataStore: Authentication error:", JSON.stringify(staffError, null, 2));
         }
         return { success: false, message: "Invalid email or password.", isNotFoundError: true, error: staffError };
     }
@@ -1679,7 +1786,7 @@ export async function loadInitialData() {
     initializeRoles(),
     initializePermissions(),
     initializeRolePermissions(),
+    initializeTariffs(),
   ]);
 }
-
     

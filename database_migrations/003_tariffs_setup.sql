@@ -21,18 +21,13 @@ FOR SELECT USING (true);
 -- Allow admins to update
 DROP POLICY IF EXISTS "Allow admin update access" ON public.tariffs;
 CREATE POLICY "Allow admin update access" ON public.tariffs
-FOR UPDATE USING (auth.uid()::text IN (
-    SELECT sm.id
-    FROM public.staff_members sm
-    JOIN public.roles r ON sm.role_id = r.id
-    WHERE r.role_name = 'Admin'
-))
-WITH CHECK (auth.uid()::text IN (
-    SELECT sm.id
-    FROM public.staff_members sm
-    JOIN public.roles r ON sm.role_id = r.id
-    WHERE r.role_name = 'Admin'
-));
+FOR UPDATE USING (
+    (auth.jwt() ->> 'user_role')::text = 'Admin'
+)
+WITH CHECK (
+    (auth.jwt() ->> 'user_role')::text = 'Admin'
+);
+
 
 -- Function to seed default tariff data if it doesn't exist
 CREATE OR REPLACE FUNCTION seed_default_tariffs()

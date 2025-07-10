@@ -144,23 +144,13 @@ export async function getAllRolesAction() { return supabaseGetAllRoles(); }
 export async function getAllPermissionsAction() { return supabaseGetAllPermissions(); }
 export async function getAllRolePermissionsAction() { return supabaseGetAllRolePermissions(); }
 
-export async function rpcUpdateRolePermissionsAction(roleId: number, permissionIds: number[]) {
-    // Re-authenticate inside the server action to ensure the call is made by the current user.
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      throw new Error("Authentication required.");
-    }
-    // Re-create the client with the user's token for this specific call.
-    const userSupabase = createClient<ActualDatabase>(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        { global: { headers: { Authorization: `Bearer ${session.access_token}` } } }
-    );
-    return userSupabase.rpc('update_role_permissions', { p_role_id: roleId, p_permission_ids: permissionIds });
+export async function rpcUpdateRolePermissionsAction(roleId: number, permissionIds: number[], session: any) {
+  if (!session?.access_token) {
+    throw new Error("Authentication required.");
+  }
+  return supabaseRpcUpdateRolePermissions(roleId, permissionIds, session.access_token);
 }
 
 
 export async function getAllTariffsAction() { return supabaseGetAllTariffs(); }
 export async function updateTariffAction(customerType: string, tariff: TariffUpdate) { return supabaseUpdateTariff(customerType, tariff); }
-
-type ActualDatabase = import('../types/supabase').Database;

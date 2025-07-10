@@ -54,6 +54,7 @@ import {
   rpcUpdateRolePermissionsAction,
   getAllTariffsAction,
   updateTariffAction,
+  supabase,
 } from './actions';
 
 import type {
@@ -1594,7 +1595,8 @@ export const addNotification = async (notificationData: Omit<DomainNotification,
 };
 
 export const updateRolePermissions = async (roleId: number, permissionIds: number[]): Promise<StoreOperationResult<void>> => {
-    const { error } = await rpcUpdateRolePermissionsAction(roleId, permissionIds);
+    const { data: { session } } = await supabase.auth.getSession();
+    const { error } = await rpcUpdateRolePermissionsAction(roleId, permissionIds, session);
     if (!error) {
         await fetchAllRolePermissions();
         return { success: true };

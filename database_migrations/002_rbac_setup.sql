@@ -181,7 +181,7 @@ BEGIN
     SELECT admin_role_id, p.id FROM public.permissions p
     ON CONFLICT DO NOTHING;
 
-    -- Assign permissions for Head Office Management
+    -- Assign permissions for Head Office Management (View all, report, notify)
     INSERT INTO public.role_permissions (role_id, permission_id)
     SELECT ho_mgmt_role_id, p.id FROM public.permissions p
     WHERE p.name IN (
@@ -192,10 +192,13 @@ BEGIN
         'bulk_meters_view_all',
         'reports_generate_all',
         'notifications_view',
-        'notifications_create'
+        'notifications_create',
+        'meter_readings_view_all',
+        'tariffs_view',
+        'settings_view'
     ) ON CONFLICT DO NOTHING;
     
-    -- Assign permissions for Staff Management
+    -- Assign permissions for Staff Management (Full CRUD on their branch)
     INSERT INTO public.role_permissions (role_id, permission_id)
     SELECT staff_mgmt_role_id, p.id FROM public.permissions p
     WHERE p.name IN (
@@ -207,7 +210,7 @@ BEGIN
         'notifications_view', 'notifications_create'
     ) ON CONFLICT DO NOTHING;
 
-    -- Assign permissions for Staff
+    -- Assign permissions for Staff (Data entry and view for their branch)
     INSERT INTO public.role_permissions (role_id, permission_id)
     SELECT staff_role_id, p.id FROM public.permissions p
     WHERE p.name IN (
@@ -215,7 +218,8 @@ BEGIN
         'customers_view_branch',
         'bulk_meters_view_branch',
         'data_entry_access',
-        'meter_readings_view_branch', 'meter_readings_create',
+        'meter_readings_view_branch',
+        'meter_readings_create',
         'reports_generate_branch',
         'notifications_view'
     ) ON CONFLICT DO NOTHING;

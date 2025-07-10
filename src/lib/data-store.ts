@@ -7,7 +7,7 @@ import type { BulkMeter as DomainBulkMeterTypeFromTypes } from '@/app/admin/bulk
 import type { Branch as DomainBranch } from '@/app/admin/branches/branch-types';
 import type { StaffMember as DomainStaffMember } from '@/app/admin/staff-management/staff-types';
 import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult, getTariffInfo as getTariffFromBilling, METER_RENT_STORAGE_KEY, DEFAULT_METER_RENT_PRICES } from '@/lib/billing';
-
+import { supabase } from '@/lib/supabase'; // Direct import of supabase client
 import {
   getAllBranchesAction,
   createBranchAction,
@@ -54,7 +54,6 @@ import {
   rpcUpdateRolePermissionsAction,
   getAllTariffsAction,
   updateTariffAction,
-  supabase,
 } from './actions';
 
 import type {
@@ -1596,7 +1595,11 @@ export const addNotification = async (notificationData: Omit<DomainNotification,
 
 export const updateRolePermissions = async (roleId: number, permissionIds: number[]): Promise<StoreOperationResult<void>> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const { error } = await rpcUpdateRolePermissionsAction(roleId, permissionIds, session);
+    if (!session?.access_token) {
+        return { success: false, message: "Authentication required." };
+    }
+
+    const { error } = await rpcUpdateRolePermissionsAction(roleId, permissionIds, session.access_token);
     if (!error) {
         await fetchAllRolePermissions();
         return { success: true };
@@ -1604,6 +1607,7 @@ export const updateRolePermissions = async (roleId: number, permissionIds: numbe
     console.error("DataStore: Failed to update role permissions. RPC error:", JSON.stringify(error, null, 2));
     return { success: false, message: (error as any)?.message || "Failed to update permissions.", error };
 };
+
 
 export const updateTariff = async (customerType: string, tariffData: TariffUpdate): Promise<StoreOperationResult<void>> => {
     const { data: updatedSupabaseTariff, error } = await updateTariffAction(customerType, tariffData);

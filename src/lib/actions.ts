@@ -48,7 +48,6 @@ import {
   rpcUpdateRolePermissions as supabaseRpcUpdateRolePermissions,
   getAllTariffs as supabaseGetAllTariffs,
   updateTariff as supabaseUpdateTariff,
-  supabase, // Import the supabase client instance
 } from './supabase';
 
 import type {
@@ -144,11 +143,11 @@ export async function getAllRolesAction() { return supabaseGetAllRoles(); }
 export async function getAllPermissionsAction() { return supabaseGetAllPermissions(); }
 export async function getAllRolePermissionsAction() { return supabaseGetAllRolePermissions(); }
 
-export async function rpcUpdateRolePermissionsAction(roleId: number, permissionIds: number[], session: any) {
-  if (!session?.access_token) {
-    throw new Error("Authentication required.");
-  }
-  return supabaseRpcUpdateRolePermissions(roleId, permissionIds, session.access_token);
+export async function rpcUpdateRolePermissionsAction(roleId: number, permissionIds: number[], auth_token: string) {
+    if (!auth_token) {
+        throw new Error("Authentication required.");
+    }
+    return supabaseRpcUpdateRolePermissions(roleId, permissionIds, auth_token);
 }
 
 

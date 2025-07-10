@@ -1594,8 +1594,7 @@ export const addNotification = async (notificationData: Omit<DomainNotification,
 };
 
 export const updateRolePermissions = async (roleId: number, permissionIds: number[]): Promise<StoreOperationResult<void>> => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const { error } = await rpcUpdateRolePermissionsAction(roleId, permissionIds, session?.access_token ?? null);
+    const { error } = await rpcUpdateRolePermissionsAction(roleId, permissionIds);
     if (!error) {
         await fetchAllRolePermissions();
         return { success: true };

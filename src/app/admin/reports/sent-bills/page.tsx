@@ -19,9 +19,11 @@ import { Input } from "@/components/ui/input";
 import type { StaffMember } from "@/app/admin/staff-management/staff-types";
 import type { Branch } from "@/app/admin/branches/branch-types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { usePermissions } from "@/hooks/use-permissions";
 
 
 export default function SentBillsReportPage() {
+  const { hasPermission } = usePermissions();
   const [currentUser, setCurrentUser] = React.useState<StaffMember | null>(null);
 
   const [bills, setBills] = React.useState<DomainBill[]>([]);
@@ -133,19 +135,21 @@ export default function SentBillsReportPage() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
-                <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
-                    <SelectTrigger className="w-full md:w-[200px]">
-                        <SelectValue placeholder="Select Branch" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Branches</SelectItem>
-                        {branches.map((branch) => (
-                            <SelectItem key={branch.id} value={branch.id}>
-                            {branch.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+                {hasPermission('reports_generate_all') && (
+                  <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+                      <SelectTrigger className="w-full md:w-[200px]">
+                          <SelectValue placeholder="Select Branch" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="all">All Branches</SelectItem>
+                          {branches.map((branch) => (
+                              <SelectItem key={branch.id} value={branch.id}>
+                              {branch.name}
+                              </SelectItem>
+                          ))}
+                      </SelectContent>
+                  </Select>
+                )}
               </div>
            </div>
         </CardHeader>

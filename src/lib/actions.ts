@@ -143,11 +143,9 @@ export async function getAllRolesAction() { return supabaseGetAllRoles(); }
 export async function getAllPermissionsAction() { return supabaseGetAllPermissions(); }
 export async function getAllRolePermissionsAction() { return supabaseGetAllRolePermissions(); }
 
-export async function rpcUpdateRolePermissionsAction(roleId: number, permissionIds: number[], authToken: string | null) {
-    if (!authToken) {
-        throw new Error("Authentication required.");
-    }
-    return supabaseRpcUpdateRolePermissions(roleId, permissionIds, authToken);
+export async function rpcUpdateRolePermissionsAction(roleId: number, permissionIds: number[]) {
+    // Authentication token is no longer needed for this public-policy based action
+    return supabaseRpcUpdateRolePermissions(roleId, permissionIds);
 }
 
 

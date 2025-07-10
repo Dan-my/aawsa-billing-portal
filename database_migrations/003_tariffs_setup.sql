@@ -14,28 +14,25 @@ CREATE TABLE IF NOT EXISTS public.tariffs (
 ALTER TABLE public.tariffs ENABLE ROW LEVEL SECURITY;
 
 -- Allow public read access
+DROP POLICY IF EXISTS "Allow public read access" ON public.tariffs;
 CREATE POLICY "Allow public read access" ON public.tariffs
 FOR SELECT USING (true);
 
--- Allow admins to update by checking their role name from the roles table
+-- Allow admins to update
+DROP POLICY IF EXISTS "Allow admin update access" ON public.tariffs;
 CREATE POLICY "Allow admin update access" ON public.tariffs
-FOR UPDATE USING (
-  auth.uid() IN (
+FOR UPDATE USING (auth.uid()::text IN (
     SELECT sm.id
     FROM public.staff_members sm
     JOIN public.roles r ON sm.role_id = r.id
     WHERE r.role_name = 'Admin'
-  )
-)
-WITH CHECK (
-  auth.uid() IN (
+))
+WITH CHECK (auth.uid()::text IN (
     SELECT sm.id
     FROM public.staff_members sm
     JOIN public.roles r ON sm.role_id = r.id
     WHERE r.role_name = 'Admin'
-  )
-);
-
+));
 
 -- Function to seed default tariff data if it doesn't exist
 CREATE OR REPLACE FUNCTION seed_default_tariffs()

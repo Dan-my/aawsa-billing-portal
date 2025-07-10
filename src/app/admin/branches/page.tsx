@@ -20,6 +20,8 @@ import {
   initializeBranches
 } from "@/lib/data-store";
 import { usePermissions } from "@/hooks/use-permissions";
+import { Alert, AlertTitle } from "@/components/ui/alert";
+import { Lock } from "lucide-react";
 
 export default function BranchesPage() {
   const { hasPermission } = usePermissions();
@@ -31,6 +33,11 @@ export default function BranchesPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [selectedBranch, setSelectedBranch] = React.useState<Branch | null>(null);
   const [branchToDelete, setBranchToDelete] = React.useState<Branch | null>(null);
+  
+  const canCreate = hasPermission('branches_create');
+  const canUpdate = hasPermission('branches_update');
+  const canDelete = hasPermission('branches_delete');
+  const canView = hasPermission('branches_view');
 
   React.useEffect(() => {
     setIsLoading(true);
@@ -87,6 +94,19 @@ export default function BranchesPage() {
     branch.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (branch.contactPerson && branch.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+  
+  if (!canView) {
+      return (
+          <div className="space-y-6">
+              <h1 className="text-2xl md:text-3xl font-bold">Branch Management</h1>
+              <Alert variant="destructive">
+                  <Lock className="h-4 w-4" />
+                  <AlertTitle>Access Denied</AlertTitle>
+                  <CardDescription>You do not have permission to view this page.</CardDescription>
+              </Alert>
+          </div>
+      )
+  }
 
   return (
     <div className="space-y-6">
@@ -103,7 +123,7 @@ export default function BranchesPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          {hasPermission('branches_create') && (
+          {canCreate && (
             <Button onClick={handleAddBranch}>
               <PlusCircle className="mr-2 h-4 w-4" /> Add New Branch
             </Button>
@@ -130,23 +150,23 @@ export default function BranchesPage() {
               data={filteredBranches}
               onEdit={handleEditBranch}
               onDelete={handleDeleteBranch}
-              canEdit={hasPermission('branches_update')}
-              canDelete={hasPermission('branches_delete')}
+              canEdit={canUpdate}
+              canDelete={canDelete}
             />
           )}
         </CardContent>
       </Card>
 
-      {hasPermission('branches_create') || hasPermission('branches_update') ? (
+      {(canCreate || canUpdate) && (
         <BranchFormDialog
           open={isFormOpen}
           onOpenChange={setIsFormOpen}
           onSubmit={handleSubmitBranch}
           defaultValues={selectedBranch}
         />
-      ) : null}
+      )}
 
-      {hasPermission('branches_delete') && (
+      {canDelete && (
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>

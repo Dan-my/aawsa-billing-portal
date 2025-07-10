@@ -143,11 +143,11 @@ export async function getAllRolesAction() { return supabaseGetAllRoles(); }
 export async function getAllPermissionsAction() { return supabaseGetAllPermissions(); }
 export async function getAllRolePermissionsAction() { return supabaseGetAllRolePermissions(); }
 
-export async function rpcUpdateRolePermissionsAction(roleId: number, permissionIds: number[], auth_token: string) {
-    if (!auth_token) {
+export async function rpcUpdateRolePermissionsAction(roleId: number, permissionIds: number[], authToken: string | null) {
+    if (!authToken) {
         throw new Error("Authentication required.");
     }
-    return supabaseRpcUpdateRolePermissions(roleId, permissionIds, auth_token);
+    return supabaseRpcUpdateRolePermissions(roleId, permissionIds, authToken);
 }
 
 

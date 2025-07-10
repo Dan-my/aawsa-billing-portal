@@ -145,4 +145,4 @@ export async function getAllRolePermissionsAction() { return supabaseGetAllRoleP
 export async function rpcUpdateRolePermissionsAction(roleId: number, permissionIds: number[]) { return supabaseRpcUpdateRolePermissions(roleId, permissionIds); }
 
 export async function getAllTariffsAction() { return supabaseGetAllTariffs(); }
-export async function updateTariffAction(id: string, tariff: TariffUpdate) { return supabaseUpdateTariff(id, tariff); }
+export async function updateTariffAction(customerType: string, tariff: TariffUpdate) { return supabaseUpdateTariff(customerType, tariff); }

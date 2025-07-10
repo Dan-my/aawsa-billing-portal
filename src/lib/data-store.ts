@@ -1078,7 +1078,7 @@ export const getTariff = (type: CustomerType): TariffRow | undefined => {
                     {"limit": 32, "rate": 51.07},
                     {"limit": 41, "rate": 61.28},
                     {"limit": 50, "rate": 71.49},
-                    {"limit": Infinity, "rate": 81.71}
+                    {"limit": "Infinity", "rate": 81.71}
                 ],
                 maintenance_percentage: 0.01,
                 sanitation_percentage: 0.07,
@@ -1098,7 +1098,7 @@ export const getTariff = (type: CustomerType): TariffRow | undefined => {
                     {"limit": 32, "rate": 51.07},
                     {"limit": 41, "rate": 61.28},
                     {"limit": 50, "rate": 71.49},
-                    {"limit": Infinity, "rate": 81.71}
+                    {"limit": "Infinity", "rate": 81.71}
                 ],
                 maintenance_percentage: 0.01,
                 sanitation_percentage: 0.10,
@@ -1605,10 +1605,10 @@ export const updateRolePermissions = async (roleId: number, permissionIds: numbe
     return { success: false, message: (error as any)?.message || "Failed to update permissions.", error };
 };
 
-export const updateTariff = async (id: string, tariffData: TariffUpdate): Promise<StoreOperationResult<void>> => {
-    const { data: updatedSupabaseTariff, error } = await updateTariffAction(id, tariffData);
+export const updateTariff = async (customerType: string, tariffData: TariffUpdate): Promise<StoreOperationResult<void>> => {
+    const { data: updatedSupabaseTariff, error } = await updateTariffAction(customerType, tariffData);
     if (updatedSupabaseTariff && !error) {
-        tariffs = tariffs.map(t => t.id === id ? updatedSupabaseTariff : t);
+        tariffs = tariffs.map(t => t.customer_type === customerType ? updatedSupabaseTariff : t);
         notifyTariffListeners();
         return { success: true };
     }

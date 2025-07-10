@@ -724,7 +724,7 @@ export const supabase = createClient<ResolvedDatabase>(supabaseUrl, supabaseKey)
 
 // Tariffs
 export const getAllTariffs = () => supabase.from('tariffs').select('*');
-export const updateTariff = (id: string, tariff: TariffUpdate) => supabase.from('tariffs').update(tariff).eq('id', id).select().single();
+export const updateTariff = (customerType: string, tariff: TariffUpdate) => supabase.from('tariffs').update(tariff).eq('customer_type', customerType).select().single();
 
 // Authentication
 export const getStaffMemberForAuth = async (email: string, password?: string) => {

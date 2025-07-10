@@ -106,7 +106,7 @@ export default function TariffManagementPage() {
           tiers: newTiers,
       };
 
-      const result = await updateTariff(activeTariffInfo.id, newTariffInfo);
+      const result = await updateTariff(activeTariffInfo.customer_type, newTariffInfo);
       if (result.success) {
           toast({ title: "Tariff Updated", description: `${currentTariffType} tariff has been successfully saved.` });
       } else {

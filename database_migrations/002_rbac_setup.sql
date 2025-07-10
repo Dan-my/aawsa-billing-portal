@@ -74,7 +74,7 @@ FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Allow admin full access on role_permissions" ON public.role_permissions;
 CREATE POLICY "Allow admin full access on role_permissions" ON public.role_permissions
 FOR ALL USING (
-    (auth.jwt() ->> 'user_role')::text = 'Admin'
+    (SELECT (auth.jwt() ->> 'user_role')::text) = 'Admin'
 );
 
 -- Policies for 'staff_members' table
@@ -85,15 +85,15 @@ FOR SELECT USING (auth.uid()::text = id);
 DROP POLICY IF EXISTS "Allow admin users to access all staff data" ON public.staff_members;
 CREATE POLICY "Allow admin users to access all staff data" ON public.staff_members
 FOR ALL USING (
-    (auth.jwt() ->> 'user_role')::text = 'Admin'
+    (SELECT (auth.jwt() ->> 'user_role')::text) = 'Admin'
 );
 
 DROP POLICY IF EXISTS "Allow staff managers to view staff in their own branch" ON public.staff_members;
 CREATE POLICY "Allow staff managers to view staff in their own branch" ON public.staff_members
 FOR SELECT USING (
-    (auth.jwt() ->> 'user_role')::text = 'Staff Management'
+    (SELECT (auth.jwt() ->> 'user_role')::text) = 'Staff Management'
     AND
-    branch = (auth.jwt() -> 'user_metadata' ->> 'branch_name')
+    branch = (SELECT branch FROM public.staff_members WHERE id = auth.uid()::text)
 );
 
 
@@ -160,7 +160,7 @@ DECLARE
         'settings_view,View application settings,Settings',
         'settings_update,Update application settings,Settings'
     ];
-    perm_info text; -- Corrected declaration: text instead of text[]
+    perm_info text;
     perm_name text;
     perm_desc text;
     perm_cat text;
@@ -254,7 +254,12 @@ SECURITY DEFINER
 AS $$
 BEGIN
     -- Only allow Admins to execute this function fully
-    IF (auth.jwt() ->> 'user_role')::text <> 'Admin' THEN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM public.staff_members sm
+        JOIN public.roles r ON sm.role_id = r.id
+        WHERE sm.id = auth.uid()::text AND r.role_name = 'Admin'
+    ) THEN
         RAISE EXCEPTION 'You do not have permission to modify roles.';
     END IF;
 
@@ -275,3 +280,5 @@ $$;
 SELECT seed_roles();
 SELECT seed_permissions();
 SELECT assign_permissions_to_roles();
+
+```

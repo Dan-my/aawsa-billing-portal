@@ -18,15 +18,11 @@ DROP POLICY IF EXISTS "Allow public read access" ON public.tariffs;
 CREATE POLICY "Allow public read access" ON public.tariffs
 FOR SELECT USING (true);
 
--- Allow admins to update
+-- Allow admins to update, checking the role from the JWT
 DROP POLICY IF EXISTS "Allow admin update access" ON public.tariffs;
 CREATE POLICY "Allow admin update access" ON public.tariffs
-FOR UPDATE USING (
-    (auth.jwt() ->> 'user_role')::text = 'Admin'
-)
-WITH CHECK (
-    (auth.jwt() ->> 'user_role')::text = 'Admin'
-);
+FOR UPDATE USING ((SELECT (auth.jwt() ->> 'user_role')::text) = 'Admin')
+WITH CHECK ((SELECT (auth.jwt() ->> 'user_role')::text) = 'Admin');
 
 
 -- Function to seed default tariff data if it doesn't exist
@@ -44,7 +40,7 @@ BEGIN
             {"limit": 32, "rate": 51.07},
             {"limit": 41, "rate": 61.28},
             {"limit": 50, "rate": 71.49},
-            {"limit": Infinity, "rate": 81.71}
+            {"limit": "Infinity", "rate": 81.71}
         ]',
         0.01,
         0.07,
@@ -62,7 +58,7 @@ BEGIN
             {"limit": 32, "rate": 51.07},
             {"limit": 41, "rate": 61.28},
             {"limit": 50, "rate": 71.49},
-            {"limit": Infinity, "rate": 81.71}
+            {"limit": "Infinity", "rate": 81.71}
         ]',
         0.01,
         0.10,
@@ -73,3 +69,4 @@ $$ LANGUAGE plpgsql;
 
 -- Execute the seed function
 SELECT seed_default_tariffs();
+```

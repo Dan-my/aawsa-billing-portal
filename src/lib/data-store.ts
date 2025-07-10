@@ -1069,7 +1069,6 @@ export const getTariff = (type: CustomerType): TariffRow | undefined => {
         console.warn(`Tariff for customer type "${type}" not found in local store. Using hardcoded fallback.`);
         if (type === 'Domestic') {
             return {
-                id: 'fallback-domestic',
                 customer_type: 'Domestic',
                 tiers: [
                     {"limit": 5, "rate": 10.21},
@@ -1089,7 +1088,6 @@ export const getTariff = (type: CustomerType): TariffRow | undefined => {
         }
         if (type === 'Non-domestic') {
             return {
-                id: 'fallback-nondomestic',
                 customer_type: 'Non-domestic',
                 tiers: [
                     {"limit": 5, "rate": 10.21},
@@ -1789,4 +1787,3 @@ export async function loadInitialData() {
     initializeTariffs(),
   ]);
 }
-    

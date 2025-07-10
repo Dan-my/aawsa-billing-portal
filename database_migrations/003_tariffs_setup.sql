@@ -1,5 +1,8 @@
--- Create the tariffs table to store billing rates
-CREATE TABLE IF NOT EXISTS public.tariffs (
+-- Drop the table if it exists to change the primary key
+DROP TABLE IF EXISTS public.tariffs;
+
+-- Create the tariffs table with customer_type as the primary key
+CREATE TABLE public.tariffs (
     customer_type text NOT NULL PRIMARY KEY,
     tiers jsonb NOT NULL,
     maintenance_percentage numeric NOT NULL,
@@ -68,4 +71,3 @@ $$ LANGUAGE plpgsql;
 
 -- Execute the seed function
 SELECT seed_default_tariffs();
-

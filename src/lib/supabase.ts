@@ -805,5 +805,3 @@ export const getAllReportLogs = () => supabase.from('reports').select('*');
 export const createReportLog = (reportLog: ReportLogInsert) => supabase.from('reports').insert(reportLog).select().single();
 export const updateReportLog = (id: string, reportLog: ReportLogUpdate) => supabase.from('reports').update(reportLog).eq('id', id).select().single();
 export const deleteReportLog = (id: string) => supabase.from('reports').delete().eq('id', id);
-
-    

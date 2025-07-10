@@ -10,7 +10,6 @@ export interface Database {
     Tables: {
       tariffs: {
         Row: {
-          id: string;
           customer_type: 'Domestic' | 'Non-domestic';
           tiers: Json; // JSONB will be parsed
           maintenance_percentage: number;
@@ -20,7 +19,6 @@ export interface Database {
           updated_at: string;
         };
         Insert: {
-          id?: string;
           customer_type: 'Domestic' | 'Non-domestic';
           tiers: Json;
           maintenance_percentage: number;
@@ -30,7 +28,6 @@ export interface Database {
           updated_at?: string;
         };
         Update: {
-          id?: string;
           customer_type?: 'Domestic' | 'Non-domestic';
           tiers?: Json;
           maintenance_percentage?: number;

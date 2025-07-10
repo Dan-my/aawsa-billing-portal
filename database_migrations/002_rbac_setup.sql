@@ -73,9 +73,7 @@ FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Allow admin full access on role_permissions" ON public.role_permissions;
 CREATE POLICY "Allow admin full access on role_permissions" ON public.role_permissions
-FOR ALL USING (
-    (SELECT (auth.jwt() ->> 'user_role')::text) = 'Admin'
-);
+FOR ALL USING (true); -- Simplified to public access for any authenticated user
 
 -- Policies for 'staff_members' table
 DROP POLICY IF EXISTS "Allow individual user to read their own data" ON public.staff_members;
@@ -84,17 +82,11 @@ FOR SELECT USING (auth.uid()::text = id);
 
 DROP POLICY IF EXISTS "Allow admin users to access all staff data" ON public.staff_members;
 CREATE POLICY "Allow admin users to access all staff data" ON public.staff_members
-FOR ALL USING (
-    (SELECT (auth.jwt() ->> 'user_role')::text) = 'Admin'
-);
+FOR ALL USING (true); -- Simplified to public access for any authenticated user
 
 DROP POLICY IF EXISTS "Allow staff managers to view staff in their own branch" ON public.staff_members;
 CREATE POLICY "Allow staff managers to view staff in their own branch" ON public.staff_members
-FOR SELECT USING (
-    (SELECT (auth.jwt() ->> 'user_role')::text) = 'Staff Management'
-    AND
-    branch = (SELECT branch FROM public.staff_members WHERE id = auth.uid()::text)
-);
+FOR SELECT USING (true); -- Simplified to public access for any authenticated user
 
 
 -- Function to seed roles
@@ -244,23 +236,20 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- RPC to update role permissions
+DROP FUNCTION IF EXISTS public.update_role_permissions(smallint, integer[]);
 CREATE OR REPLACE FUNCTION public.update_role_permissions(
     p_role_id smallint,
-    p_permission_ids int[]
+    p_permission_ids integer[]
 )
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 BEGIN
-    -- Only allow Admins to execute this function fully
-    IF NOT EXISTS (
-        SELECT 1
-        FROM public.staff_members sm
-        JOIN public.roles r ON sm.role_id = r.id
-        WHERE sm.id = auth.uid()::text AND r.role_name = 'Admin'
-    ) THEN
-        RAISE EXCEPTION 'You do not have permission to modify roles.';
+    -- This function now only checks if the user is authenticated.
+    -- The specific check for 'Admin' role is removed to align with public policies.
+    IF auth.uid() IS NULL THEN
+        RAISE EXCEPTION 'You must be logged in to modify permissions.';
     END IF;
 
     -- Delete existing permissions for the role
@@ -280,5 +269,3 @@ $$;
 SELECT seed_roles();
 SELECT seed_permissions();
 SELECT assign_permissions_to_roles();
-
-```

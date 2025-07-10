@@ -1,7 +1,4 @@
--- This script is designed to be idempotent and can be run multiple times safely.
--- It creates roles, permissions, and their associations, and sets up RLS.
-
--- 1. Create tables if they don't exist
+-- Create the roles table
 CREATE TABLE IF NOT EXISTS public.roles (
     id SERIAL PRIMARY KEY,
     role_name TEXT NOT NULL UNIQUE,
@@ -10,232 +7,189 @@ CREATE TABLE IF NOT EXISTS public.roles (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Create the permissions table
 CREATE TABLE IF NOT EXISTS public.permissions (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL UNIQUE,
     description TEXT,
-    category TEXT NOT NULL,
+    category TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Create the role_permissions join table
 CREATE TABLE IF NOT EXISTS public.role_permissions (
-    role_id INT NOT NULL REFERENCES public.roles(id) ON DELETE CASCADE,
-    permission_id INT NOT NULL REFERENCES public.permissions(id) ON DELETE CASCADE,
+    role_id INTEGER REFERENCES public.roles(id) ON DELETE CASCADE,
+    permission_id INTEGER REFERENCES public.permissions(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (role_id, permission_id)
 );
 
--- 2. Add role_id to staff_members if it doesn't exist
+-- Add role_id to staff_members table if it doesn't exist
+-- This is wrapped in a DO block to prevent errors if run multiple times.
 DO $$
 BEGIN
-    IF NOT EXISTS (
-        SELECT 1
-        FROM information_schema.columns
-        WHERE table_schema = 'public'
-        AND table_name = 'staff_members'
-        AND column_name = 'role_id'
-    ) THEN
-        ALTER TABLE public.staff_members ADD COLUMN role_id INT REFERENCES public.roles(id);
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='staff_members' AND column_name='role_id') THEN
+        ALTER TABLE public.staff_members ADD COLUMN role_id INTEGER REFERENCES public.roles(id);
     END IF;
 END $$;
 
 
--- 3. Seed roles
+-- Seed Roles
 INSERT INTO public.roles (role_name, description) VALUES
-('Admin', 'Has all permissions and can manage the entire system.'),
-('Head Office Management', 'Can view all data and manage high-level settings.'),
-('Staff Management', 'Can manage staff and data within a specific branch.'),
-('Staff', 'Can perform daily data entry and operational tasks within their branch.')
+('Admin', 'Full access to all system features.'),
+('Head Office Management', 'View-only access to all data across all branches.'),
+('Staff Management', 'Manages a specific branch, including its staff and customers.'),
+('Staff', 'Data entry and viewing permissions for a specific branch.')
 ON CONFLICT (role_name) DO NOTHING;
 
--- 4. Seed permissions
-INSERT INTO public.permissions (name, description, category) VALUES
+-- Seed Permissions
+INSERT INTO public.permissions (name, category) VALUES
 -- Dashboard
-('dashboard_view_all', 'Can view the main admin dashboard with all data.', 'Dashboard'),
-('dashboard_view_branch', 'Can view the branch-specific dashboard (Staff & Staff Management).', 'Dashboard'),
+('dashboard_view_all', 'Dashboard'),
+('dashboard_view_branch', 'Dashboard'),
 -- Branches
-('branches_create', 'Can create new branches.', 'Branch Management'),
-('branches_view', 'Can view all branches.', 'Branch Management'),
-('branches_update', 'Can edit existing branches.', 'Branch Management'),
-('branches_delete', 'Can delete branches.', 'Branch Management'),
+('branches_view', 'Branch Management'),
+('branches_create', 'Branch Management'),
+('branches_update', 'Branch Management'),
+('branches_delete', 'Branch Management'),
 -- Staff
-('staff_create', 'Can create new staff member accounts.', 'Staff Management'),
-('staff_view', 'Can view all staff members.', 'Staff Management'),
-('staff_update', 'Can edit staff member details.', 'Staff Management'),
-('staff_delete', 'Can delete staff members.', 'Staff Management'),
--- Permissions
-('permissions_view', 'Can view roles and their assigned permissions.', 'Permissions'),
-('permissions_update', 'Can edit the permissions assigned to a role.', 'Permissions'),
--- Notifications
-('notifications_create', 'Can send notifications to staff.', 'Notifications'),
-('notifications_view', 'Can view the history of sent notifications.', 'Notifications'),
--- Tariffs
-('tariffs_view', 'Can view tariff rate settings.', 'Tariffs'),
-('tariffs_update', 'Can update tariff rate settings.', 'Tariffs'),
+('staff_view', 'Staff Management'),
+('staff_create', 'Staff Management'),
+('staff_update', 'Staff Management'),
+('staff_delete', 'Staff Management'),
+-- Roles & Permissions
+('permissions_view', 'Permissions'),
+('permissions_update', 'Permissions'),
+-- Customers
+('customers_view_all', 'Customers'),
+('customers_view_branch', 'Customers'),
+('customers_create', 'Customers'),
+('customers_update', 'Customers'),
+('customers_delete', 'Customers'),
 -- Bulk Meters
-('bulk_meters_create', 'Can create new bulk meters.', 'Metering'),
-('bulk_meters_view_all', 'Can view all bulk meters across all branches.', 'Metering'),
-('bulk_meters_view_branch', 'Can view bulk meters assigned to their branch.', 'Metering'),
-('bulk_meters_update', 'Can edit bulk meter details.', 'Metering'),
-('bulk_meters_delete', 'Can delete bulk meters.', 'Metering'),
--- Individual Customers
-('customers_create', 'Can create new individual customers.', 'Metering'),
-('customers_view_all', 'Can view all customers across all branches.', 'Metering'),
-('customers_view_branch', 'Can view customers within their branch.', 'Metering'),
-('customers_update', 'Can edit individual customer details.', 'Metering'),
-('customers_delete', 'Can delete individual customers.', 'Metering'),
--- Data Entry & Readings
-('data_entry_access', 'Can access the main data entry page (manual and CSV).', 'Data & Reports'),
-('meter_readings_create', 'Can add new meter readings.', 'Data & Reports'),
-('meter_readings_view_all', 'Can view all meter readings.', 'Data & Reports'),
-('meter_readings_view_branch', 'Can view meter readings for their branch.', 'Data & Reports'),
+('bulk_meters_view_all', 'Bulk Meters'),
+('bulk_meters_view_branch', 'Bulk Meters'),
+('bulk_meters_create', 'Bulk Meters'),
+('bulk_meters_update', 'Bulk Meters'),
+('bulk_meters_delete', 'Bulk Meters'),
+-- Data Entry
+('data_entry_access', 'Data Entry'),
+-- Meter Readings
+('meter_readings_view_all', 'Meter Readings'),
+('meter_readings_view_branch', 'Meter Readings'),
+('meter_readings_create', 'Meter Readings'),
 -- Reports
-('reports_generate_all', 'Can generate and download reports for all branches.', 'Data & Reports'),
-('reports_generate_branch', 'Can generate and download reports for their branch.', 'Data & Reports'),
-('reports_view_paid_bills', 'Can view the on-screen "List of Paid Bills" report.', 'Data & Reports'),
-('reports_view_sent_bills', 'Can view the on-screen "List of Sent Bills" report.', 'Data & Reports'),
+('reports_generate_all', 'Reports'),
+('reports_generate_branch', 'Reports'),
+-- Notifications
+('notifications_view', 'Notifications'),
+('notifications_create', 'Notifications'),
 -- Settings
-('settings_view', 'Can view and modify application settings.', 'Settings')
+('settings_view', 'Settings'),
+('tariffs_view', 'Tariff Management'),
+('tariffs_update', 'Tariff Management')
 ON CONFLICT (name) DO NOTHING;
 
-
--- 5. Helper function to assign permissions
-CREATE OR REPLACE FUNCTION assign_permission(p_role_name TEXT, p_permission_name TEXT)
-RETURNS VOID AS $$
+-- Function to seed role_permissions
+CREATE OR REPLACE FUNCTION seed_role_permissions()
+RETURNS void AS $$
 DECLARE
-    v_role_id INT;
-    v_permission_id INT;
+    admin_role_id int;
+    ho_mgmt_role_id int;
+    staff_mgmt_role_id int;
+    staff_role_id int;
 BEGIN
-    SELECT id INTO v_role_id FROM public.roles WHERE role_name = p_role_name;
-    SELECT id INTO v_permission_id FROM public.permissions WHERE name = p_permission_name;
+    -- Get role IDs
+    SELECT id INTO admin_role_id FROM public.roles WHERE role_name = 'Admin';
+    SELECT id INTO ho_mgmt_role_id FROM public.roles WHERE role_name = 'Head Office Management';
+    SELECT id INTO staff_mgmt_role_id FROM public.roles WHERE role_name = 'Staff Management';
+    SELECT id INTO staff_role_id FROM public.roles WHERE role_name = 'Staff';
 
-    IF v_role_id IS NOT NULL AND v_permission_id IS NOT NULL THEN
-        INSERT INTO public.role_permissions (role_id, permission_id)
-        VALUES (v_role_id, v_permission_id)
-        ON CONFLICT (role_id, permission_id) DO NOTHING;
-    END IF;
+    -- Clear existing permissions to ensure a clean slate on re-run
+    DELETE FROM public.role_permissions;
+
+    -- Admin Permissions (All)
+    INSERT INTO public.role_permissions (role_id, permission_id)
+    SELECT admin_role_id, id FROM public.permissions
+    ON CONFLICT DO NOTHING;
+
+    -- Head Office Management Permissions (View All)
+    INSERT INTO public.role_permissions (role_id, permission_id)
+    SELECT ho_mgmt_role_id, id FROM public.permissions WHERE name IN (
+        'dashboard_view_all', 'branches_view', 'staff_view',
+        'customers_view_all', 'bulk_meters_view_all', 'meter_readings_view_all',
+        'reports_generate_all', 'notifications_view', 'notifications_create', 'tariffs_view'
+    ) ON CONFLICT DO NOTHING;
+
+    -- Staff Management Permissions (Branch-level CRUD)
+    INSERT INTO public.role_permissions (role_id, permission_id)
+    SELECT staff_mgmt_role_id, id FROM public.permissions WHERE name IN (
+        'dashboard_view_branch', 'staff_view', 'staff_create', 'staff_update', 'staff_delete',
+        'customers_view_branch', 'customers_create', 'customers_update', 'customers_delete',
+        'bulk_meters_view_branch', 'bulk_meters_create', 'bulk_meters_update', 'bulk_meters_delete',
+        'data_entry_access', 'meter_readings_view_branch', 'meter_readings_create',
+        'reports_generate_branch', 'notifications_view', 'notifications_create'
+    ) ON CONFLICT DO NOTHING;
+
+    -- Staff Permissions (Branch-level Data Entry & View)
+    INSERT INTO public.role_permissions (role_id, permission_id)
+    SELECT staff_role_id, id FROM public.permissions WHERE name IN (
+        'dashboard_view_branch', 'customers_view_branch', 'bulk_meters_view_branch',
+        'data_entry_access', 'meter_readings_view_branch', 'meter_readings_create',
+        'reports_generate_branch'
+    ) ON CONFLICT DO NOTHING;
+
 END;
 $$ LANGUAGE plpgsql;
 
--- 6. Assign all permissions to Admin
-DO $$
-DECLARE
-    v_admin_role_id INT;
-    rec RECORD;
-BEGIN
-    SELECT id INTO v_admin_role_id FROM public.roles WHERE role_name = 'Admin';
-    IF v_admin_role_id IS NOT NULL THEN
-        FOR rec IN SELECT id FROM public.permissions LOOP
-            INSERT INTO public.role_permissions (role_id, permission_id)
-            VALUES (v_admin_role_id, rec.id)
-            ON CONFLICT (role_id, permission_id) DO NOTHING;
-        END LOOP;
-    END IF;
-END $$;
+-- Execute the seed function
+SELECT seed_role_permissions();
 
 
--- 7. Assign permissions for Head Office Management
--- Can do almost everything except create other admins or change fundamental permissions.
-SELECT assign_permission('Head Office Management', 'dashboard_view_all');
-SELECT assign_permission('Head Office Management', 'branches_create');
-SELECT assign_permission('Head Office Management', 'branches_view');
-SELECT assign_permission('Head Office Management', 'branches_update');
-SELECT assign_permission('Head Office Management', 'branches_delete');
-SELECT assign_permission('Head Office Management', 'staff_create');
-SELECT assign_permission('Head Office Management', 'staff_view');
-SELECT assign_permission('Head Office Management', 'staff_update');
-SELECT assign_permission('Head Office Management', 'staff_delete');
-SELECT assign_permission('Head Office Management', 'permissions_view');
--- Does NOT get permissions_update
-SELECT assign_permission('Head Office Management', 'notifications_create');
-SELECT assign_permission('Head Office Management', 'notifications_view');
-SELECT assign_permission('Head Office Management', 'tariffs_view');
-SELECT assign_permission('Head Office Management', 'tariffs_update');
-SELECT assign_permission('Head Office Management', 'bulk_meters_create');
-SELECT assign_permission('Head Office Management', 'bulk_meters_view_all');
-SELECT assign_permission('Head Office Management', 'bulk_meters_update');
-SELECT assign_permission('Head Office Management', 'bulk_meters_delete');
-SELECT assign_permission('Head Office Management', 'customers_create');
-SELECT assign_permission('Head Office Management', 'customers_view_all');
-SELECT assign_permission('Head Office Management', 'customers_update');
-SELECT assign_permission('Head Office Management', 'customers_delete');
-SELECT assign_permission('Head Office Management', 'data_entry_access');
-SELECT assign_permission('Head Office Management', 'meter_readings_create');
-SELECT assign_permission('Head Office Management', 'meter_readings_view_all');
-SELECT assign_permission('Head Office Management', 'reports_generate_all');
-SELECT assign_permission('Head Office Management', 'reports_view_paid_bills');
-SELECT assign_permission('Head Office Management', 'reports_view_sent_bills');
-SELECT assign_permission('Head Office Management', 'settings_view');
-
--- 8. Assign permissions for Staff Management
--- Focused on managing their own branch
-SELECT assign_permission('Staff Management', 'dashboard_view_branch');
-SELECT assign_permission('Staff Management', 'staff_create');
-SELECT assign_permission('Staff Management', 'staff_view');
-SELECT assign_permission('Staff Management', 'staff_update');
-SELECT assign_permission('Staff Management', 'staff_delete');
-SELECT assign_permission('Staff Management', 'notifications_view'); -- Can see notifications
-SELECT assign_permission('Staff Management', 'bulk_meters_create');
-SELECT assign_permission('Staff Management', 'bulk_meters_view_branch');
-SELECT assign_permission('Staff Management', 'bulk_meters_update');
-SELECT assign_permission('Staff Management', 'bulk_meters_delete');
-SELECT assign_permission('Staff Management', 'customers_create');
-SELECT assign_permission('Staff Management', 'customers_view_branch');
-SELECT assign_permission('Staff Management', 'customers_update');
-SELECT assign_permission('Staff Management', 'customers_delete');
-SELECT assign_permission('Staff Management', 'data_entry_access');
-SELECT assign_permission('Staff Management', 'meter_readings_create');
-SELECT assign_permission('Staff Management', 'meter_readings_view_branch');
-SELECT assign_permission('Staff Management', 'reports_generate_branch');
-SELECT assign_permission('Staff Management', 'reports_view_paid_bills');
-SELECT assign_permission('Staff Management', 'reports_view_sent_bills');
-
--- 9. Assign permissions for Staff
--- Basic data entry and viewing for their branch
-SELECT assign_permission('Staff', 'dashboard_view_branch');
-SELECT assign_permission('Staff', 'notifications_view');
-SELECT assign_permission('Staff', 'bulk_meters_view_branch');
-SELECT assign_permission('Staff', 'customers_view_branch');
-SELECT assign_permission('Staff', 'data_entry_access');
-SELECT assign_permission('Staff', 'meter_readings_create');
-SELECT assign_permission('Staff', 'meter_readings_view_branch');
-SELECT assign_permission('Staff', 'reports_generate_branch');
-
--- 10. Enable Row Level Security (RLS) on permission tables
+-- Enable Row Level Security on all relevant tables
+ALTER TABLE public.branches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.staff_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.individual_customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bulk_meters ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bills ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.individual_customer_readings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bulk_meter_readings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.permissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.role_permissions ENABLE ROW LEVEL SECURITY;
 
--- 11. Create RLS Policies
--- Allow authenticated users to read roles, permissions, and their links.
-CREATE POLICY "Allow authenticated read access to roles"
-ON public.roles FOR SELECT
-TO authenticated
-USING (true);
+-- Policies for roles, permissions, role_permissions
+DROP POLICY IF EXISTS "Allow public read access" ON public.roles;
+CREATE POLICY "Allow public read access" ON public.roles FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public read access" ON public.permissions;
+CREATE POLICY "Allow public read access" ON public.permissions FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public read access" ON public.role_permissions;
+CREATE POLICY "Allow public read access" ON public.role_permissions FOR SELECT USING (true);
 
-CREATE POLICY "Allow authenticated read access to permissions"
-ON public.permissions FOR SELECT
-TO authenticated
-USING (true);
+DROP POLICY IF EXISTS "Allow admin full access" ON public.role_permissions;
+CREATE POLICY "Allow admin full access" ON public.role_permissions
+FOR ALL USING (auth.uid() IN (SELECT id FROM public.staff_members WHERE role_id = (SELECT id FROM roles WHERE role_name = 'Admin')));
 
-CREATE POLICY "Allow authenticated read access to role_permissions"
-ON public.role_permissions FOR SELECT
-TO authenticated
-USING (true);
 
--- Deny all modifications for non-admins (or a specific super-role if you had one)
--- This is a safeguard. The primary protection is your API logic.
-CREATE POLICY "Deny modification of roles for non-admins"
-ON public.roles FOR ALL
-USING (false)
-WITH CHECK (false);
+-- Policies for staff_members
+DROP POLICY IF EXISTS "Allow users to view their own data" ON public.staff_members;
+CREATE POLICY "Allow users to view their own data" ON public.staff_members
+FOR SELECT USING (auth.uid() = id);
 
-CREATE POLICY "Deny modification of permissions for non-admins"
-ON public.permissions FOR ALL
-USING (false)
-WITH CHECK (false);
+DROP POLICY IF EXISTS "Allow admins and branch managers to view staff" ON public.staff_members;
+CREATE POLICY "Allow admins and branch managers to view staff" ON public.staff_members
+FOR SELECT USING (
+    -- Admin can see all
+    (EXISTS (SELECT 1 FROM public.staff_members sm JOIN public.roles r ON sm.role_id = r.id WHERE sm.id = auth.uid() AND r.role_name = 'Admin')) OR
+    -- Staff Manager can see staff in their own branch
+    (EXISTS (SELECT 1 FROM public.staff_members WHERE id = auth.uid() AND role_id = (SELECT id FROM roles WHERE role_name = 'Staff Management') AND branch = (SELECT branch FROM public.staff_members WHERE id = auth.uid())))
+);
 
-CREATE POLICY "Deny modification of role_permissions for non-admins"
-ON public.role_permissions FOR ALL
-USING (false)
-WITH CHECK (false);
+DROP POLICY IF EXISTS "Admins can manage all staff" ON public.staff_members;
+CREATE POLICY "Admins can manage all staff" ON public.staff_members
+FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.staff_members sm JOIN public.roles r ON sm.role_id = r.id WHERE sm.id = auth.uid() AND r.role_name = 'Admin')
+);

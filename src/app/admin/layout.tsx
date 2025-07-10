@@ -22,6 +22,7 @@ const buildSidebarNavItems = (user: UserProfile | null): NavItemGroup[] => {
     if (!user) return [];
     
     const permissions = new Set(user.permissions || []);
+    // Admin role always has permission, otherwise check the permissions set.
     const hasPermission = (p: string) => user.role.toLowerCase() === 'admin' || permissions.has(p);
 
     const navItems: NavItemGroup[] = [];
@@ -32,6 +33,7 @@ const buildSidebarNavItems = (user: UserProfile | null): NavItemGroup[] => {
     if (userRoleLower === 'head office management') dashboardHref = '/admin/head-office-dashboard';
     if (userRoleLower === 'staff management') dashboardHref = '/admin/staff-management-dashboard';
     
+    // Only show dashboard if user has either of the dashboard view permissions
     if (hasPermission('dashboard_view_all') || hasPermission('dashboard_view_branch')) {
         navItems.push({
             items: [{ title: "Dashboard", href: dashboardHref, iconName: "LayoutDashboard" }]

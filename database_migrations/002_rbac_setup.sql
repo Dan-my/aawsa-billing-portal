@@ -237,13 +237,16 @@ $$ LANGUAGE plpgsql;
 
 -- RPC to update role permissions
 DROP FUNCTION IF EXISTS public.update_role_permissions(smallint, integer[]);
+DROP FUNCTION IF EXISTS public.update_role_permissions(bigint, bigint[]);
+DROP FUNCTION IF EXISTS public.update_role_permissions(integer, integer[]);
 CREATE OR REPLACE FUNCTION public.update_role_permissions(
-    p_role_id smallint,
+    p_role_id integer,
     p_permission_ids integer[]
 )
 RETURNS void
 LANGUAGE plpgsql
-SECURITY DEFINER
+-- SECURITY INVOKER is crucial here. It makes the function run as the calling user.
+SECURITY INVOKER
 AS $$
 BEGIN
     -- This function now only checks if the user is authenticated.

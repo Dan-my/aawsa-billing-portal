@@ -173,7 +173,7 @@ BEGIN
     SELECT id INTO staff_mgmt_role_id FROM public.roles WHERE role_name = 'Staff Management';
     SELECT id INTO staff_role_id FROM public.roles WHERE role_name = 'Staff';
 
-    -- Clear existing permissions to prevent duplicates
+    -- Clear existing permissions to prevent duplicates on re-run
     TRUNCATE public.role_permissions;
 
     -- Assign all permissions to Admin
@@ -181,7 +181,7 @@ BEGIN
     SELECT admin_role_id, p.id FROM public.permissions p
     ON CONFLICT DO NOTHING;
 
-    -- Assign permissions for Head Office Management (View all, report, notify)
+    -- Assign permissions for Head Office Management (View all, report all, send notifications)
     INSERT INTO public.role_permissions (role_id, permission_id)
     SELECT ho_mgmt_role_id, p.id FROM public.permissions p
     WHERE p.name IN (
@@ -194,11 +194,10 @@ BEGIN
         'notifications_view',
         'notifications_create',
         'meter_readings_view_all',
-        'tariffs_view',
-        'settings_view'
+        'tariffs_view'
     ) ON CONFLICT DO NOTHING;
     
-    -- Assign permissions for Staff Management (Full CRUD on their branch)
+    -- Assign permissions for Staff Management (Full CRUD for their branch)
     INSERT INTO public.role_permissions (role_id, permission_id)
     SELECT staff_mgmt_role_id, p.id FROM public.permissions p
     WHERE p.name IN (
@@ -206,11 +205,13 @@ BEGIN
         'staff_view', 'staff_create', 'staff_update', 'staff_delete',
         'customers_view_branch', 'customers_create', 'customers_update', 'customers_delete',
         'bulk_meters_view_branch', 'bulk_meters_create', 'bulk_meters_update', 'bulk_meters_delete',
-        'data_entry_access', 'meter_readings_view_branch', 'meter_readings_create', 'reports_generate_branch',
+        'data_entry_access', 
+        'meter_readings_view_branch', 'meter_readings_create', 
+        'reports_generate_branch',
         'notifications_view', 'notifications_create'
     ) ON CONFLICT DO NOTHING;
 
-    -- Assign permissions for Staff (Data entry and view for their branch)
+    -- Assign permissions for Staff (View and Data Entry for their branch)
     INSERT INTO public.role_permissions (role_id, permission_id)
     SELECT staff_role_id, p.id FROM public.permissions p
     WHERE p.name IN (
@@ -218,8 +219,7 @@ BEGIN
         'customers_view_branch',
         'bulk_meters_view_branch',
         'data_entry_access',
-        'meter_readings_view_branch',
-        'meter_readings_create',
+        'meter_readings_view_branch', 'meter_readings_create',
         'reports_generate_branch',
         'notifications_view'
     ) ON CONFLICT DO NOTHING;

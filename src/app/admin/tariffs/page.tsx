@@ -8,7 +8,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from "@/hooks/use-toast";
 import { LibraryBig, ListChecks, PlusCircle, RotateCcw, DollarSign, Percent } from "lucide-react";
 import type { TariffTier } from "@/lib/billing";
-import { DomesticTariffInfo, NonDomesticTariffInfo, getMeterRentPrices, DEFAULT_METER_RENT_PRICES, METER_RENT_STORAGE_KEY } from "@/lib/billing";
+import { 
+    DomesticTariffInfo, NonDomesticTariffInfo, getMeterRentPrices, DEFAULT_METER_RENT_PRICES, 
+    METER_RENT_STORAGE_KEY, getTariffInfo, saveTariffInfo, TARIFF_DOMESTIC_STORAGE_KEY, 
+    TARIFF_NON_DOMESTIC_STORAGE_KEY, DEFAULT_DOMESTIC_TIERS, DEFAULT_NON_DOMESTIC_TIERS 
+} from "@/lib/billing";
 import { TariffRateTable, type DisplayTariffRate } from "./tariff-rate-table";
 import { TariffFormDialog, type TariffFormValues } from "./tariff-form-dialog";
 import { Label } from "@/components/ui/label";
@@ -44,22 +48,13 @@ const mapTariffTierToDisplay = (tier: TariffTier, index: number, prevTier?: Tari
   };
 };
 
-const getDefaultDomesticDisplayTiers = (): DisplayTariffRate[] => {
-  let previousTier: TariffTier | undefined;
-  return DomesticTariffInfo.tiers.map((tier, index) => {
-    const displayTier = mapTariffTierToDisplay(tier, index, previousTier);
-    previousTier = tier;
-    return displayTier;
-  });
-};
-
-const getDefaultNonDomesticDisplayTiers = (): DisplayTariffRate[] => {
-  let previousTier: TariffTier | undefined;
-  return NonDomesticTariffInfo.tiers.map((tier, index) => {
-    const displayTier = mapTariffTierToDisplay(tier, index, previousTier);
-    previousTier = tier;
-    return displayTier;
-  });
+const getDisplayTiersFromData = (tiers: TariffTier[]): DisplayTariffRate[] => {
+    let previousTier: TariffTier | undefined;
+    return tiers.map((tier, index) => {
+        const displayTier = mapTariffTierToDisplay(tier, index, previousTier);
+        previousTier = tier;
+        return displayTier;
+    });
 };
 
 
@@ -68,8 +63,8 @@ export default function TariffManagementPage() {
   const { toast } = useToast();
   const [currentTariffType, setCurrentTariffType] = React.useState<'Domestic' | 'Non-domestic'>('Domestic');
   
-  const [domesticTiers, setDomesticTiers] = React.useState<DisplayTariffRate[]>(getDefaultDomesticDisplayTiers());
-  const [nonDomesticTiers, setNonDomesticTiers] = React.useState<DisplayTariffRate[]>(getDefaultNonDomesticDisplayTiers());
+  const [domesticTiers, setDomesticTiers] = React.useState<DisplayTariffRate[]>([]);
+  const [nonDomesticTiers, setNonDomesticTiers] = React.useState<DisplayTariffRate[]>([]);
   
   const activeTiers = currentTariffType === 'Domestic' ? domesticTiers : nonDomesticTiers;
   const setActiveTiers = currentTariffType === 'Domestic' ? setDomesticTiers : setNonDomesticTiers;
@@ -82,6 +77,30 @@ export default function TariffManagementPage() {
 
   const [meterRentPrices, setMeterRentPrices] = React.useState(() => getMeterRentPrices());
   const [isMeterRentDialogOpen, setIsMeterRentDialogOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    // Load tariffs from localStorage on component mount
+    const savedDomestic = getTariffInfo('Domestic');
+    setDomesticTiers(getDisplayTiersFromData(savedDomestic.tiers));
+    
+    const savedNonDomestic = getTariffInfo('Non-domestic');
+    setNonDomesticTiers(getDisplayTiersFromData(savedNonDomestic.tiers));
+  }, []);
+
+  const saveTiers = (tiersToSave: DisplayTariffRate[], type: 'Domestic' | 'Non-domestic') => {
+      const newTariffTiers: TariffTier[] = tiersToSave.map(dt => ({
+        limit: dt.originalLimit,
+        rate: dt.originalRate,
+      })).sort((a,b) => a.limit - b.limit);
+
+      const tariffInfoToSave = {
+        ...(type === 'Domestic' ? DomesticTariffInfo : NonDomesticTariffInfo),
+        tiers: newTariffTiers
+      };
+
+      saveTariffInfo(type, tariffInfoToSave);
+      setActiveTiers(getDisplayTiersFromData(newTariffTiers)); // Re-sync state
+  };
 
 
   const reprocessTiersForDisplay = (tiers: DisplayTariffRate[]): DisplayTariffRate[] => {
@@ -127,10 +146,8 @@ export default function TariffManagementPage() {
 
   const confirmDelete = () => {
     if (rateToDelete) {
-      setActiveTiers(prev => {
-        const newRatesList = prev.filter(r => r.id !== rateToDelete.id);
-        return reprocessTiersForDisplay(newRatesList);
-      });
+      const newRatesList = activeTiers.filter(r => r.id !== rateToDelete.id);
+      saveTiers(newRatesList, currentTariffType);
       toast({ title: "Tariff Tier Deleted", description: `Tier "${rateToDelete.description}" has been removed from ${currentTariffType} tariffs.` });
       setRateToDelete(null);
     }
@@ -141,34 +158,30 @@ export default function TariffManagementPage() {
     const newMaxConsumptionValue = data.maxConsumption === "Infinity" ? Infinity : parseFloat(data.maxConsumption);
 
     if (editingRate) {
-      setActiveTiers(prevRates => {
-        const updatedRatesList = prevRates.map(r => 
-          r.id === editingRate.id 
-            ? { 
-                ...r, 
-                description: data.description,
-                rate: newRateValue, 
-                originalRate: newRateValue, 
-                originalLimit: newMaxConsumptionValue,
-              }
-            : r
-        );
-        return reprocessTiersForDisplay(updatedRatesList);
-      });
+      const updatedRatesList = activeTiers.map(r => 
+        r.id === editingRate.id 
+          ? { 
+              ...r, 
+              description: data.description,
+              rate: newRateValue, 
+              originalRate: newRateValue, 
+              originalLimit: newMaxConsumptionValue,
+            }
+          : r
+      );
+      saveTiers(updatedRatesList, currentTariffType);
       toast({ title: "Tariff Tier Updated", description: `Tier "${data.description}" updated for ${currentTariffType} tariffs.` });
 
     } else {
-      setActiveTiers(prevRates => {
-        const newTier: Omit<DisplayTariffRate, 'minConsumption' | 'maxConsumption'> = { 
-            id: `new-tier-${Date.now()}`, 
-            description: data.description,
-            rate: newRateValue, 
-            originalRate: newRateValue, 
-            originalLimit: newMaxConsumptionValue,
-        };
-        const newRatesList = [...prevRates, newTier as DisplayTariffRate];
-        return reprocessTiersForDisplay(newRatesList);
-      });
+      const newTier: Omit<DisplayTariffRate, 'minConsumption' | 'maxConsumption'> = { 
+          id: `new-tier-${Date.now()}`, 
+          description: data.description,
+          rate: newRateValue, 
+          originalRate: newRateValue, 
+          originalLimit: newMaxConsumptionValue,
+      };
+      const newRatesList = [...activeTiers, newTier as DisplayTariffRate];
+      saveTiers(newRatesList, currentTariffType);
       toast({ title: "Tariff Tier Added", description: `New tier "${data.description}" added to ${currentTariffType} tariffs.` });
     }
     setIsFormOpen(false);
@@ -183,13 +196,13 @@ export default function TariffManagementPage() {
   };
 
   const handleResetToDefaults = () => {
-    if (currentTariffType === 'Domestic') {
-        setDomesticTiers(getDefaultDomesticDisplayTiers());
-    } else {
-        setNonDomesticTiers(getDefaultNonDomesticDisplayTiers());
-    }
-    setMeterRentPrices(DEFAULT_METER_RENT_PRICES);
+    localStorage.removeItem(currentTariffType === 'Domestic' ? TARIFF_DOMESTIC_STORAGE_KEY : TARIFF_NON_DOMESTIC_STORAGE_KEY);
     localStorage.removeItem(METER_RENT_STORAGE_KEY);
+
+    setDomesticTiers(getDisplayTiersFromData(DEFAULT_DOMESTIC_TIERS));
+    setNonDomesticTiers(getDisplayTiersFromData(DEFAULT_NON_DOMESTIC_TIERS));
+    setMeterRentPrices(DEFAULT_METER_RENT_PRICES);
+
     toast({ title: "Settings Reset", description: `${currentTariffType} tariff rates and meter rent prices have been reset to system defaults.` });
     setIsResetDialogOpen(false);
   };

@@ -12,7 +12,13 @@ export type PaymentStatus = (typeof paymentStatuses)[number];
 export interface TariffTier {
   limit: number; // Upper limit of this tier (m³)
   rate: number; // Price per m³ in this tier
-  cumulativeUsage?: number; // For display purposes in settings
+}
+
+export interface TariffInfo {
+    tiers: TariffTier[];
+    maintenancePercentage: number;
+    sanitationPercentage: number;
+    sewerageRatePerM3: number;
 }
 
 // Renamed to indicate these are the default, fallback values.
@@ -52,42 +58,73 @@ export function getMeterRentPrices(): { [key: string]: number } {
 }
 
 
-// Tariff Tiers based on the provided image
-export const DomesticTariffTiersData: TariffTier[] = [
-  { limit: 5, rate: 10.21, cumulativeUsage: 0 },
-  { limit: 14, rate: 17.87, cumulativeUsage: 5 },
-  { limit: 23, rate: 33.19, cumulativeUsage: 14 },
-  { limit: 32, rate: 51.07, cumulativeUsage: 23 },
-  { limit: 41, rate: 61.28, cumulativeUsage: 32 },
-  { limit: 50, rate: 71.49, cumulativeUsage: 41 },
-  { limit: 56, rate: 81.71, cumulativeUsage: 50 },
-  { limit: Infinity, rate: 81.71, cumulativeUsage: 56 },
+// Default Tariff Tiers
+export const DEFAULT_DOMESTIC_TIERS: TariffTier[] = [
+  { limit: 5, rate: 10.21 },
+  { limit: 14, rate: 17.87 },
+  { limit: 23, rate: 33.19 },
+  { limit: 32, rate: 51.07 },
+  { limit: 41, rate: 61.28 },
+  { limit: 50, rate: 71.49 },
+  { limit: 56, rate: 81.71 },
+  { limit: Infinity, rate: 81.71 },
 ];
 
-export const NonDomesticTariffTiersData: TariffTier[] = [
-  { limit: 5, rate: 10.21, cumulativeUsage: 0 },
-  { limit: 14, rate: 17.87, cumulativeUsage: 5 },
-  { limit: 23, rate: 33.19, cumulativeUsage: 14 },
-  { limit: 32, rate: 51.07, cumulativeUsage: 23 },
-  { limit: 41, rate: 61.28, cumulativeUsage: 32 },
-  { limit: 50, rate: 71.49, cumulativeUsage: 41 },
-  { limit: 56, rate: 81.71, cumulativeUsage: 50 },
-  { limit: Infinity, rate: 81.71, cumulativeUsage: 56 },
+export const DEFAULT_NON_DOMESTIC_TIERS: TariffTier[] = [
+  { limit: 5, rate: 10.21 },
+  { limit: 14, rate: 17.87 },
+  { limit: 23, rate: 33.19 },
+  { limit: 32, rate: 51.07 },
+  { limit: 41, rate: 61.28 },
+  { limit: 50, rate: 71.49 },
+  { limit: 56, rate: 81.71 },
+  { limit: Infinity, rate: 81.71 },
 ];
 
-export const DomesticTariffInfo = {
-  tiers: DomesticTariffTiersData,
+export const DomesticTariffInfo: TariffInfo = {
+  tiers: DEFAULT_DOMESTIC_TIERS,
   maintenancePercentage: 0.01, // 1%
   sanitationPercentage: 0.07,  // 7%
   sewerageRatePerM3: 6.25, // If sewerage connection is "Yes"
 };
 
-export const NonDomesticTariffInfo = {
-  tiers: NonDomesticTariffTiersData,
+export const NonDomesticTariffInfo: TariffInfo = {
+  tiers: DEFAULT_NON_DOMESTIC_TIERS,
   maintenancePercentage: 0.01, // 1%
   sanitationPercentage: 0.10, // 10%
   sewerageRatePerM3: 8.75, // If sewerage connection is "Yes"
 };
+
+export const TARIFF_DOMESTIC_STORAGE_KEY = 'aawsa-tariff-domestic';
+export const TARIFF_NON_DOMESTIC_STORAGE_KEY = 'aawsa-tariff-non-domestic';
+
+export function getTariffInfo(type: CustomerType): TariffInfo {
+  if (typeof window === 'undefined') {
+    return type === 'Domestic' ? DomesticTariffInfo : NonDomesticTariffInfo;
+  }
+  const key = type === 'Domestic' ? TARIFF_DOMESTIC_STORAGE_KEY : TARIFF_NON_DOMESTIC_STORAGE_KEY;
+  const storedInfo = localStorage.getItem(key);
+  if (storedInfo) {
+    try {
+      const parsed = JSON.parse(storedInfo);
+      // Basic validation
+      if (Array.isArray(parsed.tiers) && typeof parsed.maintenancePercentage === 'number') {
+        return parsed;
+      }
+    } catch (e) {
+      console.error(`Failed to parse custom tariff for ${type}, using defaults.`, e);
+    }
+  }
+  return type === 'Domestic' ? DomesticTariffInfo : NonDomesticTariffInfo;
+}
+
+export function saveTariffInfo(type: CustomerType, info: TariffInfo): void {
+  if (typeof window !== 'undefined') {
+    const key = type === 'Domestic' ? TARIFF_DOMESTIC_STORAGE_KEY : TARIFF_NON_DOMESTIC_STORAGE_KEY;
+    localStorage.setItem(key, JSON.stringify(info));
+  }
+}
+
 
 const VAT_RATE = 0.15; // 15% VAT
 
@@ -108,7 +145,7 @@ export function calculateBill(
   meterSize: number
 ): BillCalculationResult {
   let baseWaterCharge = 0;
-  const tariffConfig = customerType === "Domestic" ? DomesticTariffInfo : NonDomesticTariffInfo;
+  const tariffConfig = getTariffInfo(customerType);
   const tiers = tariffConfig.tiers;
 
   // --- Base Water Charge Calculation ---

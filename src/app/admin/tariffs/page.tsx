@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -7,12 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { LibraryBig, ListChecks, PlusCircle, RotateCcw, DollarSign, Percent } from "lucide-react";
-import type { TariffTier } from "@/lib/billing";
+import type { TariffTier, TariffInfo } from "@/lib/billing";
 import { 
-    DomesticTariffInfo, NonDomesticTariffInfo, getMeterRentPrices, DEFAULT_METER_RENT_PRICES, 
-    METER_RENT_STORAGE_KEY, getTariffInfo, saveTariffInfo, TARIFF_DOMESTIC_STORAGE_KEY, 
-    TARIFF_NON_DOMESTIC_STORAGE_KEY, DEFAULT_DOMESTIC_TIERS, DEFAULT_NON_DOMESTIC_TIERS 
+    getMeterRentPrices, DEFAULT_METER_RENT_PRICES, 
+    METER_RENT_STORAGE_KEY
 } from "@/lib/billing";
+import { 
+    getTariff, initializeTariffs, subscribeToTariffs, updateTariff, resetTariffsToDefault 
+} from "@/lib/data-store";
 import { TariffRateTable, type DisplayTariffRate } from "./tariff-rate-table";
 import { TariffFormDialog, type TariffFormValues } from "./tariff-form-dialog";
 import { Label } from "@/components/ui/label";
@@ -48,9 +51,10 @@ const mapTariffTierToDisplay = (tier: TariffTier, index: number, prevTier?: Tari
   };
 };
 
-const getDisplayTiersFromData = (tiers: TariffTier[]): DisplayTariffRate[] => {
+const getDisplayTiersFromData = (tariffInfo?: TariffInfo): DisplayTariffRate[] => {
+    if (!tariffInfo || !tariffInfo.tiers) return [];
     let previousTier: TariffTier | undefined;
-    return tiers.map((tier, index) => {
+    return tariffInfo.tiers.map((tier, index) => {
         const displayTier = mapTariffTierToDisplay(tier, index, previousTier);
         previousTier = tier;
         return displayTier;
@@ -63,11 +67,12 @@ export default function TariffManagementPage() {
   const { toast } = useToast();
   const [currentTariffType, setCurrentTariffType] = React.useState<'Domestic' | 'Non-domestic'>('Domestic');
   
-  const [domesticTiers, setDomesticTiers] = React.useState<DisplayTariffRate[]>([]);
-  const [nonDomesticTiers, setNonDomesticTiers] = React.useState<DisplayTariffRate[]>([]);
-  
-  const activeTiers = currentTariffType === 'Domestic' ? domesticTiers : nonDomesticTiers;
-  const setActiveTiers = currentTariffType === 'Domestic' ? setDomesticTiers : setNonDomesticTiers;
+  const [domesticTariffInfo, setDomesticTariffInfo] = React.useState<TariffInfo | undefined>(undefined);
+  const [nonDomesticTariffInfo, setNonDomesticTariffInfo] = React.useState<TariffInfo | undefined>(undefined);
+  const [isDataLoading, setIsDataLoading] = React.useState(true);
+
+  const activeTariffInfo = currentTariffType === 'Domestic' ? domesticTariffInfo : nonDomesticTariffInfo;
+  const activeTiers = getDisplayTiersFromData(activeTariffInfo);
   
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingRate, setEditingRate] = React.useState<DisplayTariffRate | null>(null);
@@ -79,54 +84,34 @@ export default function TariffManagementPage() {
   const [isMeterRentDialogOpen, setIsMeterRentDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
-    // Load tariffs from localStorage on component mount
-    const savedDomestic = getTariffInfo('Domestic');
-    setDomesticTiers(getDisplayTiersFromData(savedDomestic.tiers));
-    
-    const savedNonDomestic = getTariffInfo('Non-domestic');
-    setNonDomesticTiers(getDisplayTiersFromData(savedNonDomestic.tiers));
+    setIsDataLoading(true);
+    initializeTariffs().then(() => {
+      setDomesticTariffInfo(getTariff('Domestic'));
+      setNonDomesticTariffInfo(getTariff('Non-domestic'));
+      setIsDataLoading(false);
+    });
+
+    const unsubscribe = subscribeToTariffs((tariffs) => {
+        setDomesticTariffInfo(tariffs.find(t => t.customer_type === 'Domestic'));
+        setNonDomesticTariffInfo(tariffs.find(t => t.customer_type === 'Non-domestic'));
+    });
+    return () => unsubscribe();
   }, []);
 
-  const saveTiers = (tiersToSave: DisplayTariffRate[], type: 'Domestic' | 'Non-domestic') => {
-      const newTariffTiers: TariffTier[] = tiersToSave.map(dt => ({
-        limit: dt.originalLimit,
-        rate: dt.originalRate,
-      })).sort((a,b) => a.limit - b.limit);
+  const handleTierUpdate = async (newTiers: TariffTier[]) => {
+      if (!activeTariffInfo) return;
 
-      const tariffInfoToSave = {
-        ...(type === 'Domestic' ? DomesticTariffInfo : NonDomesticTariffInfo),
-        tiers: newTariffTiers
+      const newTariffInfo: TariffInfo = {
+          ...activeTariffInfo,
+          tiers: newTiers,
       };
 
-      saveTariffInfo(type, tariffInfoToSave);
-      setActiveTiers(getDisplayTiersFromData(newTariffTiers)); // Re-sync state
-  };
-
-
-  const reprocessTiersForDisplay = (tiers: DisplayTariffRate[]): DisplayTariffRate[] => {
-      const sorted = [...tiers].sort((a, b) => a.originalLimit - b.originalLimit);
-      
-      return sorted.map((tier, index) => {
-          const prevTier = index > 0 ? sorted[index - 1] : null;
-          
-          let minConsumption: number;
-          if (index === 0) {
-              minConsumption = 1; 
-          } else if (prevTier) {
-              minConsumption = prevTier.originalLimit === Infinity ? Infinity : Math.floor(prevTier.originalLimit) + 1;
-          } else {
-              minConsumption = 1;
-          }
-          
-          const maxConsumptionDisplay = tier.originalLimit === Infinity ? "Above" : String(Math.floor(tier.originalLimit));
-          const minConsumptionDisplay = minConsumption === Infinity ? "N/A" : String(minConsumption);
-          
-          return {
-              ...tier,
-              minConsumption: minConsumptionDisplay,
-              maxConsumption: maxConsumptionDisplay,
-          };
-      });
+      const result = await updateTariff(activeTariffInfo.id, newTariffInfo);
+      if (result.success) {
+          toast({ title: "Tariff Updated", description: `${currentTariffType} tariff has been successfully saved.` });
+      } else {
+          toast({ variant: "destructive", title: "Update Failed", description: result.message });
+      }
   };
 
 
@@ -145,9 +130,13 @@ export default function TariffManagementPage() {
   };
 
   const confirmDelete = () => {
-    if (rateToDelete) {
-      const newRatesList = activeTiers.filter(r => r.id !== rateToDelete.id);
-      saveTiers(newRatesList, currentTariffType);
+    if (rateToDelete && activeTiers) {
+      const newRatesList = activeTiers
+        .filter(r => r.id !== rateToDelete.id)
+        .map(dt => ({ limit: dt.originalLimit, rate: dt.originalRate }))
+        .sort((a,b) => a.limit - b.limit);
+      
+      handleTierUpdate(newRatesList);
       toast({ title: "Tariff Tier Deleted", description: `Tier "${rateToDelete.description}" has been removed from ${currentTariffType} tariffs.` });
       setRateToDelete(null);
     }
@@ -157,33 +146,24 @@ export default function TariffManagementPage() {
     const newRateValue = parseFloat(data.rate);
     const newMaxConsumptionValue = data.maxConsumption === "Infinity" ? Infinity : parseFloat(data.maxConsumption);
 
-    if (editingRate) {
-      const updatedRatesList = activeTiers.map(r => 
-        r.id === editingRate.id 
-          ? { 
-              ...r, 
-              description: data.description,
-              rate: newRateValue, 
-              originalRate: newRateValue, 
-              originalLimit: newMaxConsumptionValue,
-            }
-          : r
-      );
-      saveTiers(updatedRatesList, currentTariffType);
-      toast({ title: "Tariff Tier Updated", description: `Tier "${data.description}" updated for ${currentTariffType} tariffs.` });
+    let updatedTiers: TariffTier[];
 
+    if (editingRate) {
+      updatedTiers = activeTiers.map(r => 
+        r.id === editingRate.id 
+          ? { rate: newRateValue, limit: newMaxConsumptionValue }
+          : { rate: r.originalRate, limit: r.originalLimit }
+      );
     } else {
-      const newTier: Omit<DisplayTariffRate, 'minConsumption' | 'maxConsumption'> = { 
-          id: `new-tier-${Date.now()}`, 
-          description: data.description,
-          rate: newRateValue, 
-          originalRate: newRateValue, 
-          originalLimit: newMaxConsumptionValue,
-      };
-      const newRatesList = [...activeTiers, newTier as DisplayTariffRate];
-      saveTiers(newRatesList, currentTariffType);
-      toast({ title: "Tariff Tier Added", description: `New tier "${data.description}" added to ${currentTariffType} tariffs.` });
+      updatedTiers = [
+        ...activeTiers.map(r => ({ rate: r.originalRate, limit: r.originalLimit })),
+        { rate: newRateValue, limit: newMaxConsumptionValue }
+      ];
     }
+    
+    updatedTiers.sort((a,b) => a.limit - b.limit);
+    handleTierUpdate(updatedTiers);
+    
     setIsFormOpen(false);
     setEditingRate(null);
   };
@@ -195,15 +175,12 @@ export default function TariffManagementPage() {
     setIsMeterRentDialogOpen(false);
   };
 
-  const handleResetToDefaults = () => {
-    localStorage.removeItem(currentTariffType === 'Domestic' ? TARIFF_DOMESTIC_STORAGE_KEY : TARIFF_NON_DOMESTIC_STORAGE_KEY);
+  const handleResetToDefaults = async () => {
+    await resetTariffsToDefault();
     localStorage.removeItem(METER_RENT_STORAGE_KEY);
-
-    setDomesticTiers(getDisplayTiersFromData(DEFAULT_DOMESTIC_TIERS));
-    setNonDomesticTiers(getDisplayTiersFromData(DEFAULT_NON_DOMESTIC_TIERS));
     setMeterRentPrices(DEFAULT_METER_RENT_PRICES);
 
-    toast({ title: "Settings Reset", description: `${currentTariffType} tariff rates and meter rent prices have been reset to system defaults.` });
+    toast({ title: "Settings Reset", description: `Tariff rates and meter rent prices have been reset to system defaults.` });
     setIsResetDialogOpen(false);
   };
 
@@ -259,6 +236,7 @@ export default function TariffManagementPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {isDataLoading ? <p>Loading tariffs...</p> : 
             <TariffRateTable 
               rates={activeTiers} 
               onEdit={handleEditTier} 
@@ -266,6 +244,7 @@ export default function TariffManagementPage() {
               currency="ETB"
               canUpdate={hasPermission('tariffs_update')}
             />
+            }
           </CardContent>
       </Card>
 
@@ -280,33 +259,22 @@ export default function TariffManagementPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm pt-4">
-          {currentTariffType === 'Domestic' ? (
+          {activeTariffInfo ? (
             <>
               <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
                 <span className="text-muted-foreground">Maintenance Fee</span>
-                <span className="font-semibold">{(DomesticTariffInfo.maintenancePercentage * 100).toFixed(0)}% of Base Water Charge</span>
+                <span className="font-semibold">{(activeTariffInfo.maintenance_percentage * 100).toFixed(0)}% of Base Water Charge</span>
               </div>
               <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
                 <span className="text-muted-foreground">Sanitation Fee</span>
-                <span className="font-semibold">{(DomesticTariffInfo.sanitationPercentage * 100).toFixed(0)}% of Base Water Charge</span>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
-                 <span className="text-muted-foreground">Maintenance Fee</span>
-                <span className="font-semibold">{(NonDomesticTariffInfo.maintenancePercentage * 100).toFixed(0)}% of Base Water Charge</span>
+                <span className="font-semibold">{(activeTariffInfo.sanitation_percentage * 100).toFixed(0)}% of Base Water Charge</span>
               </div>
               <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
-                <span className="text-muted-foreground">Sanitation Fee</span>
-                <span className="font-semibold">{(NonDomesticTariffInfo.sanitationPercentage * 100).toFixed(0)}% of Base Water Charge</span>
+                <span className="text-muted-foreground">Sewerage Fee <span className="text-xs">(if applicable)</span></span>
+                <span className="font-semibold">{activeTariffInfo.sewerage_rate_per_m3.toFixed(2)} ETB / m³</span>
               </div>
             </>
-          )}
-           <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
-            <span className="text-muted-foreground">Sewerage Fee <span className="text-xs">(if applicable)</span></span>
-            <span className="font-semibold">{currentTariffType === 'Domestic' ? DomesticTariffInfo.sewerageRatePerM3.toFixed(2) : NonDomesticTariffInfo.sewerageRatePerM3.toFixed(2)} ETB / m³</span>
-          </div>
+          ) : <p>Loading fee information...</p>}
            <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
             <span className="text-muted-foreground">Meter Rent Fee</span>
             <span className="font-semibold text-muted-foreground italic">Varies by meter size</span>
@@ -348,14 +316,14 @@ export default function TariffManagementPage() {
           <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure you want to reset settings?</AlertDialogTitle>
+                <AlertDialogTitle>Are you sure you want to reset all tariffs?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will reset the tariff configuration for <span className="font-semibold">{currentTariffType}</span> AND all meter rent prices to the system defaults. This action cannot be undone.
+                  This will reset both Domestic and Non-domestic tariffs AND all meter rent prices to the system defaults. This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleResetToDefaults} className="bg-destructive hover:bg-destructive/90">Reset Settings</AlertDialogAction>
+                <AlertDialogAction onClick={handleResetToDefaults} className="bg-destructive hover:bg-destructive/90">Reset All Settings</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>

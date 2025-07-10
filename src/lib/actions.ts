@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import {
@@ -45,6 +46,8 @@ import {
   getAllPermissions as supabaseGetAllPermissions,
   getAllRolePermissions as supabaseGetAllRolePermissions,
   rpcUpdateRolePermissions as supabaseRpcUpdateRolePermissions,
+  getAllTariffs as supabaseGetAllTariffs,
+  updateTariff as supabaseUpdateTariff,
 } from './supabase';
 
 import type {
@@ -80,9 +83,11 @@ import type {
   ReportLogInsert,
   ReportLogUpdate,
   NotificationInsert,
+  TariffRow,
+  TariffUpdate
 } from './supabase';
 
-export type { RoleRow, PermissionRow, RolePermissionRow, Branch, BulkMeterRow, IndividualCustomer, StaffMember, Bill, IndividualCustomerReading, BulkMeterReading, Payment, ReportLog, NotificationRow, BranchInsert, BranchUpdate, BulkMeterInsert, BulkMeterUpdate, IndividualCustomerInsert, IndividualCustomerUpdate, StaffMemberInsert, StaffMemberUpdate, BillInsert, BillUpdate, IndividualCustomerReadingInsert, IndividualCustomerReadingUpdate, BulkMeterReadingInsert, BulkMeterReadingUpdate, PaymentInsert, PaymentUpdate, ReportLogInsert, ReportLogUpdate, NotificationInsert };
+export type { RoleRow, PermissionRow, RolePermissionRow, Branch, BulkMeterRow, IndividualCustomer, StaffMember, Bill, IndividualCustomerReading, BulkMeterReading, Payment, ReportLog, NotificationRow, BranchInsert, BranchUpdate, BulkMeterInsert, BulkMeterUpdate, IndividualCustomerInsert, IndividualCustomerUpdate, StaffMemberInsert, StaffMemberUpdate, BillInsert, BillUpdate, IndividualCustomerReadingInsert, IndividualCustomerReadingUpdate, BulkMeterReadingInsert, BulkMeterReadingUpdate, PaymentInsert, PaymentUpdate, ReportLogInsert, ReportLogUpdate, NotificationInsert, TariffRow, TariffUpdate };
 
 
 export async function getAllBranchesAction() { return supabaseGetAllBranches(); }
@@ -138,3 +143,6 @@ export async function getAllRolesAction() { return supabaseGetAllRoles(); }
 export async function getAllPermissionsAction() { return supabaseGetAllPermissions(); }
 export async function getAllRolePermissionsAction() { return supabaseGetAllRolePermissions(); }
 export async function rpcUpdateRolePermissionsAction(roleId: number, permissionIds: number[]) { return supabaseRpcUpdateRolePermissions(roleId, permissionIds); }
+
+export async function getAllTariffsAction() { return supabaseGetAllTariffs(); }
+export async function updateTariffAction(id: string, tariff: TariffUpdate) { return supabaseUpdateTariff(id, tariff); }

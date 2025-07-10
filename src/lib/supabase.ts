@@ -1,4 +1,5 @@
 
+
 import { createClient } from '@supabase/supabase-js';
 import type { Database as ActualDatabase } from '@/types/supabase';
 
@@ -7,6 +8,38 @@ import type { Database as ActualDatabase } from '@/types/supabase';
 export interface Database {
   public: {
     Tables: {
+      tariffs: {
+        Row: {
+          id: string;
+          customer_type: 'Domestic' | 'Non-domestic';
+          tiers: Json; // JSONB will be parsed
+          maintenance_percentage: number;
+          sanitation_percentage: number;
+          sewerage_rate_per_m3: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          customer_type: 'Domestic' | 'Non-domestic';
+          tiers: Json;
+          maintenance_percentage: number;
+          sanitation_percentage: number;
+          sewerage_rate_per_m3: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          customer_type?: 'Domestic' | 'Non-domestic';
+          tiers?: Json;
+          maintenance_percentage?: number;
+          sanitation_percentage?: number;
+          sewerage_rate_per_m3?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       roles: {
         Row: {
           id: number;
@@ -620,6 +653,10 @@ export interface Database {
 
 type ResolvedDatabase = ActualDatabase extends { public: any } ? ActualDatabase : Database;
 
+export type TariffRow = ResolvedDatabase['public']['Tables']['tariffs']['Row'];
+export type TariffInsert = ResolvedDatabase['public']['Tables']['tariffs']['Insert'];
+export type TariffUpdate = ResolvedDatabase['public']['Tables']['tariffs']['Update'];
+
 export type RoleRow = ResolvedDatabase['public']['Tables']['roles']['Row'];
 export type PermissionRow = ResolvedDatabase['public']['Tables']['permissions']['Row'];
 export type RolePermissionRow = ResolvedDatabase['public']['Tables']['role_permissions']['Row'];
@@ -665,6 +702,15 @@ export type ReportLog = ResolvedDatabase['public']['Tables']['reports']['Row'];
 export type ReportLogInsert = ResolvedDatabase['public']['Tables']['reports']['Insert'];
 export type ReportLogUpdate = ResolvedDatabase['public']['Tables']['reports']['Update'];
 
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -675,6 +721,10 @@ if (!supabaseUrl || !supabaseKey) {
 export const supabase = createClient<ResolvedDatabase>(supabaseUrl, supabaseKey);
 
 // --- Rewritten CRUD Functions with Supabase Client ---
+
+// Tariffs
+export const getAllTariffs = () => supabase.from('tariffs').select('*');
+export const updateTariff = (id: string, tariff: TariffUpdate) => supabase.from('tariffs').update(tariff).eq('id', id).select().single();
 
 // Authentication
 export const getStaffMemberForAuth = async (email: string, password?: string) => {

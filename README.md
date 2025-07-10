@@ -201,3 +201,29 @@ This update fixes two critical bugs in the notification system.
     *   Click the **"RUN"** button.
 
 You should see a "Success. No rows returned" message. After running this script, the notification system will function correctly.
+
+---
+
+### **Migration: Add Tariff Table (Required)**
+
+This update moves the tariff rates from being hard-coded in the application to a proper database table. This makes them centrally managed and editable through the "Tariff Management" page in the admin panel.
+
+**What it does:**
+*   Creates a new `tariffs` table to store billing rates.
+*   Sets up Row-Level Security to allow public read access but restricts updates to users with the 'Admin' role.
+*   Seeds the table with the default domestic and non-domestic tariff rates if they don't already exist.
+
+**To apply this update:**
+
+1.  **Navigate to the SQL Editor:**
+    *   Go to your Supabase project dashboard.
+    *   In the left-hand menu, click on the **SQL Editor** icon.
+2.  **Run the Script:**
+    *   Click on **"+ New query"**.
+    *   Open the newly added file `database_migrations/003_tariffs_setup.sql` in this project.
+    *   Copy the entire content of that file.
+    *   Paste the content into the query window in the Supabase SQL Editor.
+    *   Click the **"RUN"** button.
+
+You should see a "Success. No rows returned" message. After running this, tariff management will be fully database-driven.
+

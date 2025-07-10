@@ -1,5 +1,7 @@
 // src/lib/billing.ts
 
+import { getTariff } from "./data-store";
+
 export const customerTypes = ["Domestic", "Non-domestic"] as const;
 export type CustomerType = (typeof customerTypes)[number];
 
@@ -10,16 +12,19 @@ export const paymentStatuses = ['Paid', 'Unpaid', 'Pending'] as const;
 export type PaymentStatus = (typeof paymentStatuses)[number];
 
 export interface TariffTier {
-  limit: number; // Upper limit of this tier (m³)
-  rate: number; // Price per m³ in this tier
+  limit: number | typeof Infinity; 
+  rate: number;
 }
 
 export interface TariffInfo {
+    id: string;
+    customer_type: CustomerType;
     tiers: TariffTier[];
-    maintenancePercentage: number;
-    sanitationPercentage: number;
-    sewerageRatePerM3: number;
+    maintenance_percentage: number;
+    sanitation_percentage: number;
+    sewerage_rate_per_m3: number;
 }
+
 
 // Renamed to indicate these are the default, fallback values.
 export const DEFAULT_METER_RENT_PRICES: { [key: string]: number } = {
@@ -57,72 +62,8 @@ export function getMeterRentPrices(): { [key: string]: number } {
   return DEFAULT_METER_RENT_PRICES;
 }
 
-
-// Default Tariff Tiers
-export const DEFAULT_DOMESTIC_TIERS: TariffTier[] = [
-  { limit: 5, rate: 10.21 },
-  { limit: 14, rate: 17.87 },
-  { limit: 23, rate: 33.19 },
-  { limit: 32, rate: 51.07 },
-  { limit: 41, rate: 61.28 },
-  { limit: 50, rate: 71.49 },
-  { limit: 56, rate: 81.71 },
-  { limit: Infinity, rate: 81.71 },
-];
-
-export const DEFAULT_NON_DOMESTIC_TIERS: TariffTier[] = [
-  { limit: 5, rate: 10.21 },
-  { limit: 14, rate: 17.87 },
-  { limit: 23, rate: 33.19 },
-  { limit: 32, rate: 51.07 },
-  { limit: 41, rate: 61.28 },
-  { limit: 50, rate: 71.49 },
-  { limit: 56, rate: 81.71 },
-  { limit: Infinity, rate: 81.71 },
-];
-
-export const DomesticTariffInfo: TariffInfo = {
-  tiers: DEFAULT_DOMESTIC_TIERS,
-  maintenancePercentage: 0.01, // 1%
-  sanitationPercentage: 0.07,  // 7%
-  sewerageRatePerM3: 6.25, // If sewerage connection is "Yes"
-};
-
-export const NonDomesticTariffInfo: TariffInfo = {
-  tiers: DEFAULT_NON_DOMESTIC_TIERS,
-  maintenancePercentage: 0.01, // 1%
-  sanitationPercentage: 0.10, // 10%
-  sewerageRatePerM3: 8.75, // If sewerage connection is "Yes"
-};
-
-export const TARIFF_DOMESTIC_STORAGE_KEY = 'aawsa-tariff-domestic';
-export const TARIFF_NON_DOMESTIC_STORAGE_KEY = 'aawsa-tariff-non-domestic';
-
-export function getTariffInfo(type: CustomerType): TariffInfo {
-  if (typeof window === 'undefined') {
-    return type === 'Domestic' ? DomesticTariffInfo : NonDomesticTariffInfo;
-  }
-  const key = type === 'Domestic' ? TARIFF_DOMESTIC_STORAGE_KEY : TARIFF_NON_DOMESTIC_STORAGE_KEY;
-  const storedInfo = localStorage.getItem(key);
-  if (storedInfo) {
-    try {
-      const parsed = JSON.parse(storedInfo);
-      // Basic validation
-      if (Array.isArray(parsed.tiers) && typeof parsed.maintenancePercentage === 'number') {
-        return parsed;
-      }
-    } catch (e) {
-      console.error(`Failed to parse custom tariff for ${type}, using defaults.`, e);
-    }
-  }
-  return type === 'Domestic' ? DomesticTariffInfo : NonDomesticTariffInfo;
-}
-
-export function saveTariffInfo(type: CustomerType, info: TariffInfo): void {
-  if (typeof window !== 'undefined') {
-    const key = type === 'Domestic' ? TARIFF_DOMESTIC_STORAGE_KEY : TARIFF_NON_DOMESTIC_STORAGE_KEY;
-    localStorage.setItem(key, JSON.stringify(info));
-  }
+export const getTariffInfo = (type: CustomerType): TariffInfo | undefined => {
+    return getTariff(type);
 }
 
 
@@ -146,6 +87,12 @@ export function calculateBill(
 ): BillCalculationResult {
   let baseWaterCharge = 0;
   const tariffConfig = getTariffInfo(customerType);
+  
+  if (!tariffConfig) {
+      console.error(`Tariff information for customer type "${customerType}" not found. Bill calculation will be incorrect.`);
+      return { totalBill: 0, baseWaterCharge: 0, maintenanceFee: 0, sanitationFee: 0, vatAmount: 0, meterRent: 0, sewerageCharge: 0 };
+  }
+  
   const tiers = tariffConfig.tiers;
 
   // --- Base Water Charge Calculation ---
@@ -157,12 +104,13 @@ export function calculateBill(
     for (const tier of tiers) {
       if (remainingUsage <= 0) break;
 
-      const usageInThisTier = Math.min(remainingUsage, tier.limit - lastTierLimit);
+      const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
+      const usageInThisTier = Math.min(remainingUsage, tierLimit - lastTierLimit);
       baseWaterCharge += usageInThisTier * tier.rate;
       remainingUsage -= usageInThisTier;
-      lastTierLimit = tier.limit;
+      lastTierLimit = tierLimit;
 
-      if (tier.limit === Infinity) {
+      if (tierLimit === Infinity) {
         if (remainingUsage > 0) {
           baseWaterCharge += remainingUsage * tier.rate;
         }
@@ -173,7 +121,8 @@ export function calculateBill(
     // Non-progressive (flat rate based on consumption tier) for Non-domestic customers
     let applicableRate = 0;
     for (const tier of tiers) {
-        if (usageM3 <= tier.limit) {
+        const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
+        if (usageM3 <= tierLimit) {
             applicableRate = tier.rate;
             break;
         }
@@ -186,8 +135,8 @@ export function calculateBill(
   }
 
   // --- Service Fees Calculation (based on total water charge) ---
-  const maintenanceFee = (tariffConfig.maintenancePercentage ?? 0) * baseWaterCharge;
-  const sanitationFee = tariffConfig.sanitationPercentage ? baseWaterCharge * tariffConfig.sanitationPercentage : 0;
+  const maintenanceFee = (tariffConfig.maintenance_percentage ?? 0) * baseWaterCharge;
+  const sanitationFee = tariffConfig.sanitation_percentage ? baseWaterCharge * tariffConfig.sanitation_percentage : 0;
   
   // --- VAT Calculation ---
   let vatAmount = 0;
@@ -199,7 +148,7 @@ export function calculateBill(
 
       // Recalculate water charge on the taxable portion only
       for (const tier of tiers) {
-        const tierUpperLimit = tier.limit === Infinity ? usageM3 : tier.limit;
+        const tierUpperLimit = tier.limit === Infinity ? usageM3 : Number(tier.limit);
         const consumptionInTier = Math.min(usageM3, tierUpperLimit) - cumulativeUsage;
 
         if (consumptionInTier <= 0) break;
@@ -226,7 +175,7 @@ export function calculateBill(
   // --- Other Charges ---
   const METER_RENT_PRICES = getMeterRentPrices();
   const meterRent = METER_RENT_PRICES[String(meterSize)] || 0;
-  const sewerageCharge = (sewerageConnection === "Yes" && tariffConfig.sewerageRatePerM3) ? usageM3 * tariffConfig.sewerageRatePerM3 : 0;
+  const sewerageCharge = (sewerageConnection === "Yes" && tariffConfig.sewerage_rate_per_m3) ? usageM3 * tariffConfig.sewerage_rate_per_m3 : 0;
 
   // --- Final Total Bill ---
   const totalBill = baseWaterCharge + maintenanceFee + sanitationFee + vatAmount + meterRent + sewerageCharge;

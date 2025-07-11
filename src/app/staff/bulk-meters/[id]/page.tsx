@@ -129,7 +129,7 @@ export default function StaffBulkMeterDetailsPage() {
 
     const finalBillCardDetails = (() => {
       if (billToRender) {
-          const historicalBillDetails = calculateBill(billToRender.differenceUsage ?? 0, bulkMeter.chargeGroup, bulkMeter.sewerageConnection, bulkMeter.meterSize);
+          const historicalBillDetails = calculateBill(billToRender.differenceUsage ?? 0, bulkMeter.chargeGroup || "Non-domestic", bulkMeter.sewerageConnection || "No", bulkMeter.meterSize);
           return {
               prevReading: billToRender.previousReadingValue,
               currReading: billToRender.currentReadingValue,
@@ -822,8 +822,7 @@ export default function StaffBulkMeterDetailsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setBillToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteBillingRecord} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Delete</AlertDialogAction>
+            <AlertDialogCancel onClick={() => setBillToDelete(null)}>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteBillingRecord} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

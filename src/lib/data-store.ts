@@ -421,7 +421,7 @@ const mapSupabaseBulkMeterToDomain = (sbm: BulkMeterRow): BulkMeter => {
                   ? calculatedBmUsage
                   : Number(sbm.bulk_usage);
 
-  const { totalBill: calculatedBmTotalBill } = calculateBill(bmUsage, "Non-domestic", "No", Number(sbm.meterSize));
+  const { totalBill: calculatedBmTotalBill } = calculateBill(bmUsage, sbm.charge_group || 'Non-domestic', sbm.sewerage_connection || 'No', Number(sbm.meterSize));
   const bmTotalBill = sbm.total_bulk_bill === null || sbm.total_bulk_bill === undefined
                       ? calculatedBmTotalBill
                       : Number(sbm.total_bulk_bill);

@@ -5,7 +5,7 @@ import * as React from "react";
 import * as XLSX from 'xlsx';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileSpreadsheet, Info, AlertCircle, Lock } from "lucide-react";
+import { Download, FileSpreadsheet, Info, AlertCircle, Lock, Archive, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -24,7 +24,8 @@ import {
   getStaffMembers, 
   initializeStaffMembers,
   getBranches,
-  initializeBranches
+  initializeBranches,
+  removeBill,
 } from "@/lib/data-store";
 import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
@@ -34,6 +35,10 @@ import type { Branch } from "../branches/branch-types";
 import type { DateRange } from "react-day-picker";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { usePermissions } from "@/hooks/use-permissions";
+import { DatePicker } from "@/components/ui/date-picker";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import type { DomainBill } from "@/lib/data-store";
+
 
 interface ReportFilters {
   branchId?: string;
@@ -419,6 +424,10 @@ export default function AdminReportsPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [user, setUser] = React.useState<StaffMember | null>(null);
 
+  const [archiveCutoffDate, setArchiveCutoffDate] = React.useState<Date | undefined>();
+  const [archivableBills, setArchivableBills] = React.useState<DomainBill[]>([]);
+  const [isArchiveDeleteConfirmationOpen, setIsArchiveDeleteConfirmationOpen] = React.useState(false);
+
   const canSelectAllBranches = hasPermission('reports_generate_all');
   const isLockedToBranch = !canSelectAllBranches && hasPermission('reports_generate_branch');
 
@@ -499,6 +508,56 @@ export default function AdminReportsPage() {
       setIsGenerating(false);
     }
   };
+  
+  const handleGenerateArchiveFile = () => {
+    if (!archiveCutoffDate) {
+      toast({ variant: "destructive", title: "Date Required", description: "Please select a cutoff date for the archive." });
+      return;
+    }
+
+    const billsToArchive = getBills().filter(b => new Date(b.billPeriodEndDate) < archiveCutoffDate);
+
+    if (billsToArchive.length === 0) {
+      toast({ title: "No Data", description: `No bills found before the selected date to archive.` });
+      setArchivableBills([]);
+      return;
+    }
+
+    setArchivableBills(billsToArchive);
+    
+    const archiveHeaders = Object.keys(billsToArchive[0]);
+    const xlsxBlob = arrayToXlsxBlob(billsToArchive, archiveHeaders);
+    const fileName = `archive_bills_before_${archiveCutoffDate.toISOString().split('T')[0]}.xlsx`;
+    downloadFile(xlsxBlob, fileName);
+
+    toast({ title: "Archive File Generated", description: `${billsToArchive.length} bill records have been exported.` });
+  };
+  
+  const handleConfirmArchiveDeletion = async () => {
+    if (archivableBills.length === 0) return;
+
+    setIsGenerating(true);
+    const billIdsToDelete = archivableBills.map(b => b.id);
+    let successCount = 0;
+    
+    for (const billId of billIdsToDelete) {
+      const result = await removeBill(billId);
+      if (result.success) {
+        successCount++;
+      } else {
+        toast({ variant: "destructive", title: "Deletion Error", description: `Could not delete bill ID ${billId}. Aborting.` });
+        break;
+      }
+    }
+
+    toast({ title: "Archive Complete", description: `Successfully deleted ${successCount} out of ${billIdsToDelete.length} archived records from the database.` });
+    
+    setIsGenerating(false);
+    setArchivableBills([]);
+    setArchiveCutoffDate(undefined);
+    setIsArchiveDeleteConfirmationOpen(false);
+  };
+
 
   if (!hasPermission('reports_generate_all') && !hasPermission('reports_generate_branch')) {
     return (
@@ -606,6 +665,55 @@ export default function AdminReportsPage() {
           )}
         </CardContent>
       </Card>
+      
+      {/* Data Archiving Section */}
+      <Card className="shadow-lg border-amber-500/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Archive className="h-6 w-6 text-amber-600"/> Data Archiving</CardTitle>
+          <CardDescription>Free up database storage by archiving old records. This is a two-step process: first export the data, then confirm deletion.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>1. Export Bill Records Before Date</Label>
+             <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+              <DatePicker date={archiveCutoffDate} setDate={setArchiveCutoffDate} />
+              <Button onClick={handleGenerateArchiveFile} disabled={isGenerating || !archiveCutoffDate}>
+                <Download className="mr-2 h-4 w-4" /> Export Archive File
+              </Button>
+            </div>
+             <p className="text-xs text-muted-foreground">
+                This will generate and download an XLSX file of all bill records before the selected date.
+            </p>
+          </div>
+          
+          {archivableBills.length > 0 && (
+            <div className="space-y-2 p-4 border-l-4 border-destructive rounded-r-md bg-destructive/10">
+              <Label className="text-destructive">2. Confirm Deletion of Archived Records</Label>
+               <p className="text-sm text-destructive/80">
+                  You have exported {archivableBills.length} records. Please ensure you have securely saved the downloaded file. This action is irreversible.
+               </p>
+               <Button variant="destructive" onClick={() => setIsArchiveDeleteConfirmationOpen(true)} disabled={isGenerating}>
+                  <Trash2 className="mr-2 h-4 w-4" /> Permanently Delete {archivableBills.length} Records
+               </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={isArchiveDeleteConfirmationOpen} onOpenChange={setIsArchiveDeleteConfirmationOpen}>
+          <AlertDialogContent>
+              <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                      This action cannot be undone. You are about to permanently delete {archivableBills.length} bill records from the database. Have you downloaded and verified the archive file?
+                  </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleConfirmArchiveDeletion} className="bg-destructive hover:bg-destructive/90">Yes, Delete Records</AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

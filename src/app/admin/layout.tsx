@@ -66,7 +66,7 @@ const buildSidebarNavItems = (user: UserProfile | null): NavItemGroup[] => {
     if (hasPermission('data_entry_access')) dataReportsItems.push({ title: "Data Entry", href: "/admin/data-entry", iconName: "FileText" });
     if (hasPermission('meter_readings_view_all') || hasPermission('meter_readings_view_branch')) dataReportsItems.push({ title: "Meter Readings", href: "/admin/meter-readings", iconName: "ClipboardList" });
     if (hasPermission('reports_generate_all') || hasPermission('reports_generate_branch')) {
-        dataReportsItems.push({ title: "Reports", href: "/admin/reports", iconName: "BarChart2", matcher: (pathname, href) => pathname === href });
+        dataReportsItems.push({ title: "Reports", href: "/admin/reports", iconName: "BarChart2" });
         dataReportsItems.push({ title: "List Of Paid Bills", href: "/admin/reports/paid-bills", iconName: "CheckCircle2" });
         dataReportsItems.push({ title: "List Of Sent Bills", href: "/admin/reports/sent-bills", iconName: "Send" });
     }

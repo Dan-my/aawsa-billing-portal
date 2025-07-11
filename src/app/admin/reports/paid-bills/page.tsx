@@ -38,7 +38,14 @@ export default function PaidBillsReportPage() {
   
   React.useEffect(() => {
     const user = localStorage.getItem("user");
-    if(user) setCurrentUser(JSON.parse(user));
+    if(user) {
+      const parsedUser = JSON.parse(user);
+      setCurrentUser(parsedUser);
+       // If user is Staff Management, lock filter to their branch
+      if (parsedUser.role?.toLowerCase() === 'staff management' && parsedUser.branchId) {
+        setSelectedBranchId(parsedUser.branchId);
+      }
+    }
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -72,24 +79,29 @@ export default function PaidBillsReportPage() {
   const filteredBills = React.useMemo(() => {
     let visibleBills = bills.filter(bill => bill.paymentStatus === 'Paid');
     
-    // Branch filter based on UI selection
-    if (selectedBranchId !== "all") {
+    // Branch filter based on UI selection or locked user role
+    const branchIdToFilter = currentUser?.role?.toLowerCase() === 'staff management' ? currentUser.branchId : selectedBranchId;
+    
+    if (branchIdToFilter && branchIdToFilter !== "all") {
         visibleBills = visibleBills.filter(bill => {
             const entityId = bill.individualCustomerId || bill.bulkMeterId;
             if (!entityId) return false;
 
             const customer = customers.find(c => c.customerKeyNumber === entityId);
             if (customer) {
-                if (customer.branchId === selectedBranchId) return true;
+                // Direct match on customer's branch
+                if (customer.branchId === branchIdToFilter) return true;
+                // Indirect match via customer's bulk meter's branch
                 if (customer.assignedBulkMeterId) {
                     const bm = bulkMeters.find(b => b.customerKeyNumber === customer.assignedBulkMeterId);
-                    if (bm?.branchId === selectedBranchId) return true;
+                    if (bm?.branchId === branchIdToFilter) return true;
                 }
                 return false;
             }
 
+            // Direct match on bulk meter's branch
             const bulkMeter = bulkMeters.find(b => b.customerKeyNumber === entityId);
-            if (bulkMeter?.branchId === selectedBranchId) return true;
+            if (bulkMeter?.branchId === branchIdToFilter) return true;
 
             return false;
         });
@@ -104,7 +116,7 @@ export default function PaidBillsReportPage() {
     }
 
     return visibleBills.sort((a, b) => new Date(b.billPeriodEndDate).getTime() - new Date(a.billPeriodEndDate).getTime());
-  }, [bills, customers, bulkMeters, searchTerm, selectedBranchId]);
+  }, [bills, customers, bulkMeters, searchTerm, selectedBranchId, currentUser]);
   
   const paginatedBills = filteredBills.slice(
     page * rowsPerPage,

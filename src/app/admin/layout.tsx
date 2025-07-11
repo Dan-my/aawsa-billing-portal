@@ -86,7 +86,7 @@ const buildSidebarNavItems = (user: UserProfile | null): NavItemGroup[] => {
 }
 
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const [user, setUser] = React.useState<UserProfile | null>(null);
     const [navItems, setNavItems] = React.useState<NavItemGroup[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);

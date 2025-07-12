@@ -329,8 +329,8 @@ export default function TariffManagementPage() {
                 <span className="font-semibold">{(activeTariffInfo.sanitation_percentage * 100).toFixed(0)}% of Base Water Charge</span>
               </div>
               <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
-                <span className="text-muted-foreground">Sewerage Fee <span className="text-xs">(if applicable)</span></span>
-                <span className="font-semibold">{activeTariffInfo.sewerage_rate_per_m3.toFixed(2)} ETB / m³</span>
+                 <span className="text-muted-foreground">Sewerage Fee <span className="text-xs">(if applicable)</span></span>
+                 <span className="font-semibold">{currentTariffType === 'Domestic' ? '6.25' : '8.75'} ETB / m³</span>
               </div>
                <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
                 <span className="text-muted-foreground">Meter Rent Fee</span>

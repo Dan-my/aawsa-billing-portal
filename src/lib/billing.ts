@@ -189,7 +189,9 @@ export function calculateBill(
   // --- Other Charges ---
   const METER_RENT_PRICES = getMeterRentPrices();
   const meterRent = METER_RENT_PRICES[String(meterSize)] || 0;
-  const sewerageCharge = (sewerageConnection === "Yes" && tariffConfig.sewerage_rate_per_m3) ? usageM3 * tariffConfig.sewerage_rate_per_m3 : 0;
+  
+  const sewerageChargeRate = customerType === 'Domestic' ? 6.25 : 8.75;
+  const sewerageCharge = (sewerageConnection === "Yes") ? usageM3 * sewerageChargeRate : 0;
 
   // --- Final Total Bill ---
   const totalBill = baseWaterCharge + maintenanceFee + sanitationFee + vatAmount + meterRent + sewerageCharge;

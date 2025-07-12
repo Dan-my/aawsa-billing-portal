@@ -1064,6 +1064,11 @@ export const initializeTariffs = async () => {
     if (!tariffsFetched) {
         await fetchAllTariffs();
     }
+    if (tariffs.length === 0) {
+      console.warn("No tariffs found in DB, seeding with defaults.");
+      await resetTariffsToDefault();
+      await fetchAllTariffs();
+    }
     return tariffs;
 };
 

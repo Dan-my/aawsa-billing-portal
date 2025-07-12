@@ -89,7 +89,7 @@ export function calculateBill(
 ): BillCalculationResult {
   let baseWaterCharge = 0;
   
-  if (!billingMonth || typeof billingMonth !== 'string') {
+  if (!billingMonth || typeof billingMonth !== 'string' || !billingMonth.match(/^\d{4}-\d{2}$/)) {
     console.error(`Invalid billingMonth provided: ${billingMonth}. Calculation cannot proceed.`);
     return { totalBill: 0, baseWaterCharge: 0, maintenanceFee: 0, sanitationFee: 0, vatAmount: 0, meterRent: 0, sewerageCharge: 0 };
   }

@@ -17,7 +17,7 @@ export interface TariffTier {
 }
 
 export interface TariffInfo {
-    id?: string; // id is not present on TariffRow, making it optional
+    id: string; 
     year: number;
     customer_type: CustomerType;
     tiers: TariffTier[];
@@ -89,6 +89,11 @@ export function calculateBill(
 ): BillCalculationResult {
   let baseWaterCharge = 0;
   
+  if (!billingMonth || typeof billingMonth !== 'string') {
+    console.error(`Invalid billingMonth provided: ${billingMonth}. Calculation cannot proceed.`);
+    return { totalBill: 0, baseWaterCharge: 0, maintenanceFee: 0, sanitationFee: 0, vatAmount: 0, meterRent: 0, sewerageCharge: 0 };
+  }
+
   const year = parseInt(billingMonth.split('-')[0], 10);
   if (isNaN(year)) {
       console.error(`Invalid billingMonth format: "${billingMonth}". Could not extract year.`);

@@ -6,7 +6,7 @@ import type { IndividualCustomer as DomainIndividualCustomer, IndividualCustomer
 import type { BulkMeter as DomainBulkMeterTypeFromTypes } from '@/app/admin/bulk-meters/bulk-meter-types'; 
 import type { Branch as DomainBranch } from '@/app/admin/branches/branch-types';
 import type { StaffMember as DomainStaffMember } from '@/app/admin/staff-management/staff-types';
-import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult, getTariffInfo as getTariffFromBilling, METER_RENT_STORAGE_KEY, DEFAULT_METER_RENT_PRICES } from '@/lib/billing';
+import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult, getTariffInfo as getTariffFromBilling, METER_RENT_STORAGE_KEY, DEFAULT_METER_RENT_PRICES, TariffInfo } from '@/lib/billing';
 import { supabase } from '@/lib/supabase'; // Direct import of supabase client
 import {
   getAllBranchesAction,
@@ -54,6 +54,7 @@ import {
   rpcUpdateRolePermissionsAction,
   getAllTariffsAction,
   updateTariffAction,
+  createTariffAction as createTariffActionSupabase,
 } from './actions';
 
 import type {
@@ -81,6 +82,7 @@ import type {
   ReportLogInsert, ReportLogUpdate,
   NotificationInsert,
   TariffRow,
+  TariffInsert,
   TariffUpdate,
 } from './actions';
 
@@ -316,7 +318,7 @@ const mapDomainBranchToUpdate = (branch: Partial<Omit<DomainBranch, 'id'>>): Bra
 
 const mapSupabaseCustomerToDomain = (sc: SupabaseIndividualCustomerRow): DomainIndividualCustomer => {
   const usage = sc.currentReading - sc.previousReading;
-  const { totalBill: bill } = calculateBill(usage, sc.customerType, sc.sewerageConnection, Number(sc.meterSize));
+  const { totalBill: bill } = calculateBill(usage, sc.customerType, sc.sewerageConnection, Number(sc.meterSize), sc.month);
   return {
     customerKeyNumber: sc.customerKeyNumber,
     name: sc.name,
@@ -348,7 +350,7 @@ const mapDomainCustomerToInsert = (
   customer: Omit<DomainIndividualCustomer, 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill' | 'arrears'>
 ): IndividualCustomerInsert => {
   const usage = customer.currentReading - customer.previousReading;
-  const { totalBill: bill } = calculateBill(usage, customer.customerType, customer.sewerageConnection, Number(customer.meterSize));
+  const { totalBill: bill } = calculateBill(usage, customer.customerType, customer.sewerageConnection, Number(customer.meterSize), customer.month);
   return {
     name: customer.name,
     customerKeyNumber: customer.customerKeyNumber,
@@ -398,7 +400,7 @@ const mapDomainCustomerToUpdate = (customer: Partial<DomainIndividualCustomer>):
   
   // Note: We do not update 'arrears' here as it does not exist in the DB.
 
-  if (customer.currentReading !== undefined || customer.previousReading !== undefined || customer.customerType !== undefined || customer.sewerageConnection !== undefined || customer.meterSize !== undefined) {
+  if (customer.currentReading !== undefined || customer.previousReading !== undefined || customer.customerType !== undefined || customer.sewerageConnection !== undefined || customer.meterSize !== undefined || customer.month !== undefined) {
     const existingCustomer = customers.find(c => c.customerKeyNumber === customer.customerKeyNumber);
     if (existingCustomer) {
         const usage = (customer.currentReading ?? existingCustomer.currentReading) - (customer.previousReading ?? existingCustomer.previousReading);
@@ -406,7 +408,8 @@ const mapDomainCustomerToUpdate = (customer: Partial<DomainIndividualCustomer>):
             usage,
             customer.customerType ?? existingCustomer.customerType,
             customer.sewerageConnection ?? existingCustomer.sewerageConnection,
-            Number(customer.meterSize ?? existingCustomer.meterSize)
+            Number(customer.meterSize ?? existingCustomer.meterSize),
+            customer.month ?? existingCustomer.month
         );
         updatePayload.calculatedBill = totalBill;
     }
@@ -421,7 +424,7 @@ const mapSupabaseBulkMeterToDomain = (sbm: BulkMeterRow): BulkMeter => {
                   ? calculatedBmUsage
                   : Number(sbm.bulk_usage);
 
-  const { totalBill: calculatedBmTotalBill } = calculateBill(bmUsage, sbm.charge_group || 'Non-domestic', sbm.sewerage_connection || 'No', Number(sbm.meterSize));
+  const { totalBill: calculatedBmTotalBill } = calculateBill(bmUsage, sbm.charge_group || 'Non-domestic', sbm.sewerage_connection || 'No', Number(sbm.meterSize), sbm.month);
   const bmTotalBill = sbm.total_bulk_bill === null || sbm.total_bulk_bill === undefined
                       ? calculatedBmTotalBill
                       : Number(sbm.total_bulk_bill);
@@ -455,14 +458,14 @@ const mapSupabaseBulkMeterToDomain = (sbm: BulkMeterRow): BulkMeter => {
 
 const mapDomainBulkMeterToInsert = (bm: Omit<BulkMeter, 'customerKeyNumber'> & { customerKeyNumber: string }): BulkMeterInsert => {
   const calculatedBulkUsage = (bm.currentReading ?? 0) - (bm.previousReading ?? 0);
-  const { totalBill: calculatedTotalBulkBill } = calculateBill(calculatedBulkUsage, "Non-domestic", "No", Number(bm.meterSize));
+  const { totalBill: calculatedTotalBulkBill } = calculateBill(calculatedBulkUsage, "Non-domestic", "No", Number(bm.meterSize), bm.month);
 
   const allIndividualCustomers = getCustomers();
   const associatedCustomers = allIndividualCustomers.filter(c => c.assignedBulkMeterId === bm.customerKeyNumber);
   const sumIndividualUsage = associatedCustomers.reduce((acc, cust) => acc + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
 
   const differenceUsage = calculatedBulkUsage - sumIndividualUsage;
-  const { totalBill: differenceBill } = calculateBill(differenceUsage, "Non-domestic", "No", Number(bm.meterSize));
+  const { totalBill: differenceBill } = calculateBill(differenceUsage, "Non-domestic", "No", Number(bm.meterSize), bm.month);
 
   return {
     name: bm.name,
@@ -514,14 +517,15 @@ const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { customerKeyNumber
     if (bm.xCoordinate !== undefined) updatePayload.x_coordinate = bm.xCoordinate;
     if (bm.yCoordinate !== undefined) updatePayload.y_coordinate = bm.yCoordinate;
 
-    if (bm.customerKeyNumber && (bm.currentReading !== undefined || bm.previousReading !== undefined || bm.meterSize !== undefined)) {
+    if (bm.customerKeyNumber && (bm.currentReading !== undefined || bm.previousReading !== undefined || bm.meterSize !== undefined || bm.month !== undefined)) {
         const existingBM = bulkMeters.find(b => b.customerKeyNumber === bm.customerKeyNumber);
         const currentReading = bm.currentReading ?? existingBM?.currentReading ?? 0;
         const previousReading = bm.previousReading ?? existingBM?.previousReading ?? 0;
         const meterSize = bm.meterSize ?? existingBM?.meterSize ?? 0;
+        const billingMonth = bm.month ?? existingBM?.month ?? new Date().toISOString().slice(0, 7);
         
         const newBulkUsage = currentReading - previousReading;
-        const { totalBill: newTotalBulkBill } = calculateBill(newBulkUsage, "Non-domestic", "No", Number(meterSize));
+        const { totalBill: newTotalBulkBill } = calculateBill(newBulkUsage, "Non-domestic", "No", Number(meterSize), billingMonth);
 
         updatePayload.bulk_usage = newBulkUsage;
         updatePayload.total_bulk_bill = newTotalBulkBill;
@@ -537,7 +541,7 @@ const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { customerKeyNumber
         const newDifferenceUsage = newBulkUsage - sumIndividualUsage;
         updatePayload.difference_usage = newDifferenceUsage;
         
-        const { totalBill: newDifferenceBill } = calculateBill(newDifferenceUsage, "Non-domestic", "No", Number(meterSize));
+        const { totalBill: newDifferenceBill } = calculateBill(newDifferenceUsage, "Non-domestic", "No", Number(meterSize), billingMonth);
         updatePayload.difference_bill = newDifferenceBill;
     }
     return updatePayload;
@@ -819,13 +823,13 @@ async function fetchAllBulkMeters() {
       const previousReading = Number(sbm.previousReading) || 0;
 
       const calculatedBulkUsage = currentReading - previousReading;
-      const { totalBill: calculatedTotalBulkBill } = calculateBill(calculatedBulkUsage, "Non-domestic", "No", Number(sbm.meterSize));
+      const { totalBill: calculatedTotalBulkBill } = calculateBill(calculatedBulkUsage, "Non-domestic", "No", Number(sbm.meterSize), sbm.month);
 
       const associatedCustomersData = getCustomers().filter(c => c.assignedBulkMeterId === sbm.customerKeyNumber);
       const sumIndividualUsage = associatedCustomersData.reduce((acc, cust) => acc + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
       
       const calculatedDifferenceUsage = calculatedBulkUsage - sumIndividualUsage;
-      const { totalBill: calculatedDifferenceBill } = calculateBill(calculatedDifferenceUsage, "Non-domestic", "No", Number(sbm.meterSize));
+      const { totalBill: calculatedDifferenceBill } = calculateBill(calculatedDifferenceUsage, "Non-domestic", "No", Number(sbm.meterSize), sbm.month);
 
 
       const updatePayload: BulkMeterUpdate = {
@@ -1060,54 +1064,40 @@ export const initializeTariffs = async () => {
     if (!tariffsFetched) {
         await fetchAllTariffs();
     }
+    return tariffs;
 };
 
-export const getTariff = (type: CustomerType): TariffRow | undefined => {
-    const tariff = tariffs.find(t => t.customer_type === type);
+export const getTariff = (customerType: CustomerType, year: number): TariffInfo | undefined => {
+    const tariff = tariffs.find(t => t.customer_type === customerType && t.year === year);
     if (!tariff) {
-        // This case should ideally not happen if defaults are seeded correctly
-        console.warn(`Tariff for customer type "${type}" not found in local store. Using hardcoded fallback.`);
-        if (type === 'Domestic') {
-            return {
-                customer_type: 'Domestic',
-                tiers: [
-                    {"limit": 5, "rate": 10.21},
-                    {"limit": 14, "rate": 17.87},
-                    {"limit": 23, "rate": 33.19},
-                    {"limit": 32, "rate": 51.07},
-                    {"limit": 41, "rate": 61.28},
-                    {"limit": 50, "rate": 71.49},
-                    {"limit": "Infinity", "rate": 81.71}
-                ],
-                maintenance_percentage: 0.01,
-                sanitation_percentage: 0.07,
-                sewerage_rate_per_m3: 6.25,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            };
-        }
-        if (type === 'Non-domestic') {
-            return {
-                customer_type: 'Non-domestic',
-                tiers: [
-                    {"limit": 5, "rate": 10.21},
-                    {"limit": 14, "rate": 17.87},
-                    {"limit": 23, "rate": 33.19},
-                    {"limit": 32, "rate": 51.07},
-                    {"limit": 41, "rate": 61.28},
-                    {"limit": 50, "rate": 71.49},
-                    {"limit": "Infinity", "rate": 81.71}
-                ],
-                maintenance_percentage: 0.01,
-                sanitation_percentage: 0.10,
-                sewerage_rate_per_m3: 8.75,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            };
-        }
+        console.warn(`Tariff for customer type "${customerType}" and year "${year}" not found in local store.`);
+        return undefined;
     }
-    return tariff;
+    
+    // Ensure tiers is parsed from JSON if it's a string
+    let parsedTiers;
+    if (typeof tariff.tiers === 'string') {
+        try {
+            parsedTiers = JSON.parse(tariff.tiers);
+        } catch (e) {
+            console.error(`Failed to parse tiers JSON for tariff ${customerType}/${year}`, e);
+            parsedTiers = [];
+        }
+    } else {
+        parsedTiers = tariff.tiers;
+    }
+
+    return {
+        id: `${customerType}-${year}`,
+        customer_type: tariff.customer_type as CustomerType,
+        year: tariff.year,
+        tiers: parsedTiers,
+        maintenance_percentage: tariff.maintenance_percentage,
+        sanitation_percentage: tariff.sanitation_percentage,
+        sewerage_rate_per_m3: tariff.sewerage_rate_per_m3,
+    };
 };
+
 
 
 export const getBranches = (): DomainBranch[] => [...branches];
@@ -1426,7 +1416,7 @@ export const addIndividualCustomerReading = async (readingData: Omit<DomainIndiv
         return { success: false, message: userMessage, error: readingInsertError };
     }
 
-    const updateResult = await updateCustomer(customer.customerKeyNumber, { currentReading: newSupabaseReading.reading_value });
+    const updateResult = await updateCustomer(customer.customerKeyNumber, { currentReading: newSupabaseReading.reading_value, month: newSupabaseReading.month_year });
 
     if (!updateResult.success) {
         await deleteIndividualCustomerReadingAction(newSupabaseReading.id);
@@ -1463,7 +1453,7 @@ export const addBulkMeterReading = async (readingData: Omit<DomainBulkMeterReadi
         return { success: false, message: userMessage, error: readingInsertError };
     }
     
-    const updateResult = await updateBulkMeter(bulkMeter.customerKeyNumber, { currentReading: newSupabaseReading.reading_value });
+    const updateResult = await updateBulkMeter(bulkMeter.customerKeyNumber, { currentReading: newSupabaseReading.reading_value, month: newSupabaseReading.month_year });
 
     if (!updateResult.success) {
         await deleteBulkMeterReadingAction(newSupabaseReading.id);
@@ -1604,15 +1594,34 @@ export const updateRolePermissions = async (roleId: number, permissionIds: numbe
 };
 
 
-export const updateTariff = async (customerType: string, tariffData: TariffUpdate): Promise<StoreOperationResult<void>> => {
-    const { data: updatedSupabaseTariff, error } = await updateTariffAction(customerType, tariffData);
+export const updateTariff = async (customerType: CustomerType, year: number, tariff: TariffUpdate): Promise<StoreOperationResult<void>> => {
+    const { data: updatedSupabaseTariff, error } = await updateTariffAction(customerType, year, tariff);
     if (updatedSupabaseTariff && !error) {
-        tariffs = tariffs.map(t => t.customer_type === customerType ? updatedSupabaseTariff : t);
+        tariffs = tariffs.map(t => (t.customer_type === customerType && t.year === year) ? updatedSupabaseTariff : t);
         notifyTariffListeners();
         return { success: true };
     }
     console.error("DataStore: Failed to update tariff. Error:", JSON.stringify(error, null, 2));
     return { success: false, message: (error as any)?.message || "Failed to update tariff.", error };
+};
+
+export const addTariff = async (tariffData: Omit<TariffInfo, 'id'>): Promise<StoreOperationResult<TariffInfo>> => {
+    const payload: TariffInsert = {
+        customer_type: tariffData.customer_type,
+        year: tariffData.year,
+        tiers: tariffData.tiers,
+        maintenance_percentage: tariffData.maintenance_percentage,
+        sanitation_percentage: tariffData.sanitation_percentage,
+        sewerage_rate_per_m3: tariffData.sewerage_rate_per_m3,
+    };
+    const { data, error } = await createTariffActionSupabase(payload);
+    if (data && !error) {
+        tariffs = [...tariffs, data];
+        notifyTariffListeners();
+        return { success: true, data: getTariff(data.customer_type as CustomerType, data.year)! };
+    }
+    console.error("DataStore: Failed to add tariff. Error:", JSON.stringify(error, null, 2));
+    return { success: false, message: (error as any)?.message || "Failed to add tariff.", error };
 };
 
 export const resetTariffsToDefault = async (): Promise<StoreOperationResult<void>> => {

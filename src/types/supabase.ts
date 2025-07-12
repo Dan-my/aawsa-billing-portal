@@ -756,6 +756,7 @@ export type Database = {
           sewerage_rate_per_m3: number
           tiers: Json
           updated_at: string
+          year: number
         }
         Insert: {
           created_at?: string
@@ -765,6 +766,7 @@ export type Database = {
           sewerage_rate_per_m3: number
           tiers: Json
           updated_at?: string
+          year: number
         }
         Update: {
           created_at?: string
@@ -774,6 +776,7 @@ export type Database = {
           sewerage_rate_per_m3?: number
           tiers?: Json
           updated_at?: string
+          year?: number
         }
         Relationships: []
       }

@@ -47,6 +47,7 @@ import {
   getAllRolePermissions as supabaseGetAllRolePermissions,
   rpcUpdateRolePermissions as supabaseRpcUpdateRolePermissions,
   getAllTariffs as supabaseGetAllTariffs,
+  createTariff as supabaseCreateTariff,
   updateTariff as supabaseUpdateTariff,
 } from './supabase';
 
@@ -84,10 +85,11 @@ import type {
   ReportLogUpdate,
   NotificationInsert,
   TariffRow,
+  TariffInsert,
   TariffUpdate
 } from './supabase';
 
-export type { RoleRow, PermissionRow, RolePermissionRow, Branch, BulkMeterRow, IndividualCustomer, StaffMember, Bill, IndividualCustomerReading, BulkMeterReading, Payment, ReportLog, NotificationRow, BranchInsert, BranchUpdate, BulkMeterInsert, BulkMeterUpdate, IndividualCustomerInsert, IndividualCustomerUpdate, StaffMemberInsert, StaffMemberUpdate, BillInsert, BillUpdate, IndividualCustomerReadingInsert, IndividualCustomerReadingUpdate, BulkMeterReadingInsert, BulkMeterReadingUpdate, PaymentInsert, PaymentUpdate, ReportLogInsert, ReportLogUpdate, NotificationInsert, TariffRow, TariffUpdate };
+export type { RoleRow, PermissionRow, RolePermissionRow, Branch, BulkMeterRow, IndividualCustomer, StaffMember, Bill, IndividualCustomerReading, BulkMeterReading, Payment, ReportLog, NotificationRow, BranchInsert, BranchUpdate, BulkMeterInsert, BulkMeterUpdate, IndividualCustomerInsert, IndividualCustomerUpdate, StaffMemberInsert, StaffMemberUpdate, BillInsert, BillUpdate, IndividualCustomerReadingInsert, IndividualCustomerReadingUpdate, BulkMeterReadingInsert, BulkMeterReadingUpdate, PaymentInsert, PaymentUpdate, ReportLogInsert, ReportLogUpdate, NotificationInsert, TariffRow, TariffInsert, TariffUpdate };
 
 
 export async function getAllBranchesAction() { return supabaseGetAllBranches(); }
@@ -150,4 +152,5 @@ export async function rpcUpdateRolePermissionsAction(roleId: number, permissionI
 
 
 export async function getAllTariffsAction() { return supabaseGetAllTariffs(); }
-export async function updateTariffAction(customerType: string, tariff: TariffUpdate) { return supabaseUpdateTariff(customerType, tariff); }
+export async function createTariffAction(tariff: TariffInsert) { return supabaseCreateTariff(tariff); }
+export async function updateTariffAction(customerType: string, year: number, tariff: TariffUpdate) { return supabaseUpdateTariff(customerType, year, tariff); }

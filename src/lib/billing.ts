@@ -17,7 +17,8 @@ export interface TariffTier {
 }
 
 export interface TariffInfo {
-    id: string;
+    id?: string; // id is not present on TariffRow, making it optional
+    year: number;
     customer_type: CustomerType;
     tiers: TariffTier[];
     maintenance_percentage: number;
@@ -62,8 +63,8 @@ export function getMeterRentPrices(): { [key: string]: number } {
   return DEFAULT_METER_RENT_PRICES;
 }
 
-export const getTariffInfo = (type: CustomerType): TariffInfo | undefined => {
-    return getTariff(type);
+export const getTariffInfo = (type: CustomerType, year: number): TariffInfo | undefined => {
+    return getTariff(type, year);
 }
 
 
@@ -83,13 +84,21 @@ export function calculateBill(
   usageM3: number,
   customerType: CustomerType,
   sewerageConnection: SewerageConnection,
-  meterSize: number
+  meterSize: number,
+  billingMonth: string // e.g., "2024-05"
 ): BillCalculationResult {
   let baseWaterCharge = 0;
-  const tariffConfig = getTariffInfo(customerType);
+  
+  const year = parseInt(billingMonth.split('-')[0], 10);
+  if (isNaN(year)) {
+      console.error(`Invalid billingMonth format: "${billingMonth}". Could not extract year.`);
+      return { totalBill: 0, baseWaterCharge: 0, maintenanceFee: 0, sanitationFee: 0, vatAmount: 0, meterRent: 0, sewerageCharge: 0 };
+  }
+
+  const tariffConfig = getTariffInfo(customerType, year);
   
   if (!tariffConfig) {
-      console.error(`Tariff information for customer type "${customerType}" not found. Bill calculation will be incorrect.`);
+      console.error(`Tariff information for customer type "${customerType}" for year ${year} not found. Bill calculation will be incorrect.`);
       return { totalBill: 0, baseWaterCharge: 0, maintenanceFee: 0, sanitationFee: 0, vatAmount: 0, meterRent: 0, sewerageCharge: 0 };
   }
   

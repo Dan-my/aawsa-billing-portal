@@ -205,6 +205,64 @@ type DomainRole = import('./actions').RoleRow;
 type DomainPermission = import('./actions').PermissionRow;
 type DomainRolePermission = import('./actions').RolePermissionRow;
 
+// This constant holds the default tariff structures.
+const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
+  {
+    customer_type: 'Domestic',
+    year: 2024,
+    tiers: JSON.stringify([
+      { limit: 7, rate: 7.85 },
+      { limit: 15, rate: 10.21 },
+      { limit: 25, rate: 15.02 },
+      { limit: 50, rate: 18.28 },
+      { limit: Infinity, rate: 21.05 },
+    ]),
+    maintenance_percentage: 0.01,
+    sanitation_percentage: 0.07,
+    sewerage_rate_per_m3: 6.25,
+  },
+  {
+    customer_type: 'Domestic',
+    year: 2025,
+    tiers: JSON.stringify([
+      { limit: 5, rate: 10.21 },
+      { limit: 14, rate: 17.87 },
+      { limit: 23, rate: 33.19 },
+      { limit: 32, rate: 51.07 },
+      { limit: 41, rate: 61.28 },
+      { limit: 50, rate: 71.49 },
+      { limit: Infinity, rate: 81.71 },
+    ]),
+    maintenance_percentage: 0.01,
+    sanitation_percentage: 0.07,
+    sewerage_rate_per_m3: 6.25,
+  },
+  {
+    customer_type: 'Non-domestic',
+    year: 2024,
+    tiers: JSON.stringify([
+      { limit: 50, rate: 17.79 },
+      { limit: 100, rate: 21.05 },
+      { limit: Infinity, rate: 24.56 },
+    ]),
+    maintenance_percentage: 0.01,
+    sanitation_percentage: 0.10,
+    sewerage_rate_per_m3: 8.75,
+  },
+  {
+    customer_type: 'Non-domestic',
+    year: 2025,
+    tiers: JSON.stringify([
+      { limit: 50, rate: 17.79 },
+      { limit: 100, rate: 21.05 },
+      { limit: Infinity, rate: 24.56 },
+    ]),
+    maintenance_percentage: 0.01,
+    sanitation_percentage: 0.10,
+    sewerage_rate_per_m3: 8.75,
+  },
+];
+
 
 let branches: DomainBranch[] = [];
 let customers: DomainIndividualCustomer[] = [];
@@ -1630,12 +1688,34 @@ export const addTariff = async (tariffData: Omit<TariffInfo, 'id'>): Promise<Sto
 };
 
 export const resetTariffsToDefault = async (): Promise<StoreOperationResult<void>> => {
-    // This is a client-side action that assumes the presence of a seeding function in the DB
-    // that can be called if needed, or it can be implemented here if preferred.
-    // For now, we'll just remove the local storage override for meter rent and re-fetch.
-    localStorage.removeItem(METER_RENT_STORAGE_KEY);
-    await fetchAllTariffs();
-    return { success: true };
+    try {
+        // Clear existing tariffs in the database
+        const { error: deleteError } = await supabase.from('tariffs').delete().neq('year', 0); // Deletes all rows
+        if (deleteError) throw deleteError;
+
+        // Repopulate with defaults
+        for (const defaultTariff of DEFAULT_TARIFFS) {
+            const { error: insertError } = await supabase.from('tariffs').insert(defaultTariff as any); // Type assertion needed here
+            if (insertError) {
+                console.error("Error seeding default tariff:", insertError);
+                // Decide on error handling: continue or throw?
+            }
+        }
+        
+        // Re-fetch the newly seeded tariffs
+        await fetchAllTariffs();
+
+        // Also reset meter rent in local storage
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem(METER_RENT_STORAGE_KEY);
+        }
+        
+        return { success: true };
+
+    } catch (error) {
+        console.error("Failed to reset tariffs to default:", error);
+        return { success: false, message: (error as any).message, error };
+    }
 };
 
 

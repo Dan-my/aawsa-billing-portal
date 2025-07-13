@@ -1,6 +1,5 @@
 // src/lib/billing.ts
 
-import { getTariff } from "./data-store";
 import { supabase } from './supabase'; // Import supabase client
 
 export const customerTypes = ["Domestic", "Non-domestic"] as const;

@@ -29,8 +29,8 @@ export const baseIndividualCustomerDataSchema = z.object({
   currentReading: z.coerce.number().min(0, { message: "Current Reading cannot be negative." }),
   month: z.string().regex(/^\d{4}-\d{2}$/, { message: "Month must be in YYYY-MM format." }), 
   specificArea: z.string().min(1, { message: "Specific Area is required." }),
-  location: z.string().min(1, { message: "Location / Sub-City is required." }), // Will be set by Branch selection
-  ward: z.string().min(1, { message: "Ward / Woreda is required." }),
+  location: z.string().min(1, { message: "Sub-City is required." }), // Will be set by Branch selection
+  ward: z.string().min(1, { message: "Woreda is required." }),
   sewerageConnection: z.enum(sewerageConnections, { errorMap: () => ({ message: "Please select sewerage connection status."}) }),
   assignedBulkMeterId: z.string().optional().describe("The ID of the bulk meter this individual customer is assigned to."),
   branchId: z.string().optional().describe("The ID of the branch this customer belongs to."), // New field
@@ -53,8 +53,8 @@ export const baseBulkMeterDataSchema = z.object({
   currentReading: z.coerce.number().min(0, { message: "Current Reading cannot be negative." }),
   month: z.string().regex(/^\d{4}-\d{2}$/, { message: "Month must be in YYYY-MM format." }),
   specificArea: z.string().min(1, { message: "Specific Area is required." }),
-  location: z.string().min(1, { message: "Location / Sub-City is required." }), // Will be set by Branch selection
-  ward: z.string().min(1, { message: "Ward / Woreda is required." }),
+  location: z.string().min(1, { message: "Sub-City is required." }),
+  ward: z.string().min(1, { message: "Woreda is required." }),
   branchId: z.string().optional().describe("The ID of the branch this bulk meter belongs to."), // New field
   chargeGroup: z.enum(customerTypes, { errorMap: () => ({ message: "Please select a valid charge group."}) }),
   sewerageConnection: z.enum(sewerageConnections).default("No"),

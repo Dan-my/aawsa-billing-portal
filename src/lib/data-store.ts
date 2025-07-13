@@ -209,57 +209,74 @@ type DomainRolePermission = import('./actions').RolePermissionRow;
 const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
   {
     customer_type: 'Domestic',
+    year: 2022,
+    tiers: JSON.stringify([
+      { limit: 5, rate: 10.21 }, { limit: 14, rate: 17.87 }, { limit: 23, rate: 33.19 },
+      { limit: 32, rate: 51.07 }, { limit: 41, rate: 61.28 }, { limit: 50, rate: 71.49 },
+      { limit: Infinity, rate: 81.71 },
+    ]),
+    maintenance_percentage: 0.01, sanitation_percentage: 0.07, sewerage_rate_per_m3: 6.25,
+  },
+  {
+    customer_type: 'Non-domestic',
+    year: 2022,
+    tiers: JSON.stringify([
+      { limit: 50, rate: 17.79 }, { limit: 100, rate: 21.05 }, { limit: Infinity, rate: 24.56 },
+    ]),
+    maintenance_percentage: 0.01, sanitation_percentage: 0.10, sewerage_rate_per_m3: 8.75,
+  },
+  {
+    customer_type: 'Domestic',
+    year: 2023,
+    tiers: JSON.stringify([
+      { limit: 5, rate: 10.21 }, { limit: 14, rate: 17.87 }, { limit: 23, rate: 33.19 },
+      { limit: 32, rate: 51.07 }, { limit: 41, rate: 61.28 }, { limit: 50, rate: 71.49 },
+      { limit: Infinity, rate: 81.71 },
+    ]),
+    maintenance_percentage: 0.01, sanitation_percentage: 0.07, sewerage_rate_per_m3: 6.25,
+  },
+  {
+    customer_type: 'Non-domestic',
+    year: 2023,
+    tiers: JSON.stringify([
+      { limit: 50, rate: 17.79 }, { limit: 100, rate: 21.05 }, { limit: Infinity, rate: 24.56 },
+    ]),
+    maintenance_percentage: 0.01, sanitation_percentage: 0.10, sewerage_rate_per_m3: 8.75,
+  },
+  {
+    customer_type: 'Domestic',
     year: 2024,
     tiers: JSON.stringify([
-      { limit: 7, rate: 7.85 },
-      { limit: 15, rate: 10.21 },
-      { limit: 25, rate: 15.02 },
-      { limit: 50, rate: 18.28 },
-      { limit: Infinity, rate: 21.05 },
+      { limit: 7, rate: 7.85 }, { limit: 15, rate: 10.21 }, { limit: 25, rate: 15.02 },
+      { limit: 50, rate: 18.28 }, { limit: Infinity, rate: 21.05 },
     ]),
-    maintenance_percentage: 0.01,
-    sanitation_percentage: 0.07,
-    sewerage_rate_per_m3: 6.25,
+    maintenance_percentage: 0.01, sanitation_percentage: 0.07, sewerage_rate_per_m3: 6.25,
+  },
+  {
+    customer_type: 'Non-domestic',
+    year: 2024,
+    tiers: JSON.stringify([
+      { limit: 50, rate: 17.79 }, { limit: 100, rate: 21.05 }, { limit: Infinity, rate: 24.56 },
+    ]),
+    maintenance_percentage: 0.01, sanitation_percentage: 0.10, sewerage_rate_per_m3: 8.75,
   },
   {
     customer_type: 'Domestic',
     year: 2025,
     tiers: JSON.stringify([
-      { limit: 5, rate: 10.21 },
-      { limit: 14, rate: 17.87 },
-      { limit: 23, rate: 33.19 },
-      { limit: 32, rate: 51.07 },
-      { limit: 41, rate: 61.28 },
-      { limit: 50, rate: 71.49 },
+      { limit: 5, rate: 10.21 }, { limit: 14, rate: 17.87 }, { limit: 23, rate: 33.19 },
+      { limit: 32, rate: 51.07 }, { limit: 41, rate: 61.28 }, { limit: 50, rate: 71.49 },
       { limit: Infinity, rate: 81.71 },
     ]),
-    maintenance_percentage: 0.01,
-    sanitation_percentage: 0.07,
-    sewerage_rate_per_m3: 6.25,
+    maintenance_percentage: 0.01, sanitation_percentage: 0.07, sewerage_rate_per_m3: 6.25,
   },
   {
     customer_type: 'Non-domestic',
-    year: 2024,
+    year: 2025,
     tiers: JSON.stringify([
-      { limit: 50, rate: 17.79 },
-      { limit: 100, rate: 21.05 },
-      { limit: Infinity, rate: 24.56 },
+      { limit: 50, rate: 17.79 }, { limit: 100, rate: 21.05 }, { limit: Infinity, rate: 24.56 },
     ]),
-    maintenance_percentage: 0.01,
-    sanitation_percentage: 0.10,
-    sewerage_rate_per_m3: 8.75,
-  },
-  {
-    customer_type: 'Non-domestic',
-    year: 2025, // FIX: Added Non-domestic tariff for 2025
-    tiers: JSON.stringify([
-      { limit: 50, rate: 17.79 }, // Using 2024 rates as a default, can be changed in UI
-      { limit: 100, rate: 21.05 },
-      { limit: Infinity, rate: 24.56 },
-    ]),
-    maintenance_percentage: 0.01,
-    sanitation_percentage: 0.10,
-    sewerage_rate_per_m3: 8.75,
+    maintenance_percentage: 0.01, sanitation_percentage: 0.10, sewerage_rate_per_m3: 8.75,
   },
 ];
 

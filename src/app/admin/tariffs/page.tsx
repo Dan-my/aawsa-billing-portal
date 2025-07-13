@@ -142,7 +142,7 @@ export default function TariffManagementPage() {
     if (rateToDelete && activeTiers) {
       const newRatesList = activeTiers
         .filter(r => r.id !== rateToDelete.id)
-        .map(dt => ({ limit: dt.originalLimit, rate: dt.originalRate }))
+        .map(dt => ({ rate: dt.originalRate, limit: dt.originalLimit }))
         .sort((a,b) => a.limit - b.limit);
       
       handleTierUpdate(newRatesList);

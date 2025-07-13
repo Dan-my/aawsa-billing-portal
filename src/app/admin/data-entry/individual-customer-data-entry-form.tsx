@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { baseIndividualCustomerDataSchema, meterSizeOptions } from "./customer-data-entry-types"; 
+import { baseIndividualCustomerDataSchema, meterSizeOptions, subCityOptions, woredaOptions } from "./customer-data-entry-types"; 
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
@@ -263,8 +263,59 @@ export function IndividualCustomerDataEntryForm() {
                 <FormField control={form.control} name="month" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Reading Month *</FormLabel><DatePicker date={field.value && isValid(parse(field.value, "yyyy-MM", new Date())) ? parse(field.value, "yyyy-MM", new Date()) : undefined} setDate={(date) => field.onChange(date ? format(date, "yyyy-MM") : "")} disabledTrigger={form.formState.isSubmitting} /><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="specificArea" render={({ field }) => (<FormItem><FormLabel>Specific Area *</FormLabel><FormControl><Input {...field} disabled={form.formState.isSubmitting} /></FormControl><FormMessage /></FormItem>)} />
                 
-                <FormField control={form.control} name="location" render={({ field }) => (<FormItem><FormLabel>Sub-City *</FormLabel><FormControl><Input {...field} disabled={form.formState.isSubmitting} readOnly={!!form.getValues().branchId && form.getValues().branchId !== BRANCH_UNASSIGNED_VALUE} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="ward" render={({ field }) => (<FormItem><FormLabel>Woreda *</FormLabel><FormControl><Input {...field} disabled={form.formState.isSubmitting} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sub-City *</FormLabel>
+                       <Select 
+                          onValueChange={field.onChange} 
+                          value={field.value} 
+                          disabled={form.formState.isSubmitting || !!form.getValues().branchId}
+                        >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a Sub-City" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {subCityOptions.map(option => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="ward"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Woreda *</FormLabel>
+                       <Select onValueChange={field.onChange} value={field.value} disabled={form.formState.isSubmitting}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a Woreda" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {woredaOptions.map(option => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField control={form.control} name="sewerageConnection" render={({ field }) => (<FormItem><FormLabel>Sewerage Conn. *</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={form.formState.isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select connection" /></SelectTrigger></FormControl><SelectContent>{sewerageConnections.map(conn => <SelectItem key={conn} value={conn}>{conn}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
               </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

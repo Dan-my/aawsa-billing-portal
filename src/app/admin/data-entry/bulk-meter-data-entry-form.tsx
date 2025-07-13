@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { bulkMeterDataEntrySchema, type BulkMeterDataEntryFormValues, meterSizeOptions } from "./customer-data-entry-types";
+import { bulkMeterDataEntrySchema, type BulkMeterDataEntryFormValues, meterSizeOptions, subCityOptions, woredaOptions } from "./customer-data-entry-types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 import { addBulkMeter as addBulkMeterToStore, initializeBulkMeters, initializeCustomers, getBranches, subscribeToBranches, initializeBranches as initializeAdminBranches } from "@/lib/data-store";
@@ -61,9 +61,9 @@ export function BulkMeterDataEntryForm() {
       currentReading: undefined,
       month: "", 
       specificArea: "",
-      location: "", // Will be set by branch selection
+      location: "",
       ward: "",
-      branchId: undefined, // Initialize branchId
+      branchId: undefined,
       chargeGroup: "Non-domestic",
       sewerageConnection: "No",
       xCoordinate: undefined,
@@ -119,9 +119,9 @@ export function BulkMeterDataEntryForm() {
                   name="branchId" 
                   render={({ field }) => ( 
                     <FormItem>
-                      <FormLabel>Assign to Branch (sets Location)</FormLabel>
+                      <FormLabel>Assign to Branch</FormLabel>
                       <Select
-                        onValueChange={(value) => handleBranchChange(value)}
+                        onValueChange={field.onChange}
                         value={field.value || BRANCH_UNASSIGNED_VALUE}
                         disabled={isLoadingBranches || form.formState.isSubmitting}
                       >
@@ -131,7 +131,7 @@ export function BulkMeterDataEntryForm() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value={BRANCH_UNASSIGNED_VALUE}>None (Manual Location)</SelectItem>
+                          <SelectItem value={BRANCH_UNASSIGNED_VALUE}>None</SelectItem>
                           {availableBranches.map((branch) => (
                             <SelectItem key={branch.id} value={branch.id}>
                               {branch.name}
@@ -303,9 +303,20 @@ export function BulkMeterDataEntryForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Sub-City *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Set by Branch selection or enter manually" {...field} readOnly={!!form.getValues().branchId && form.getValues().branchId !== BRANCH_UNASSIGNED_VALUE} />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a Sub-City" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {subCityOptions.map(option => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -316,9 +327,20 @@ export function BulkMeterDataEntryForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Woreda *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter woreda" {...field} />
-                      </FormControl>
+                       <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a Woreda" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {woredaOptions.map(option => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

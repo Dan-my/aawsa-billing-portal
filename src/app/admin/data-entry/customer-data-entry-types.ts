@@ -16,6 +16,13 @@ export const meterSizeOptions = [
   { value: '6', label: '6"' },
 ];
 
+export const subCityOptions = [
+  "Addis Ketema", "Akaky Kaliti", "Arada", "Bole", "Gullele", 
+  "Kirkos", "Kolfe Keranio", "Lideta", "Nifas Silk-Lafto", "Yeka", "Lemi Kura"
+];
+
+export const woredaOptions = Array.from({ length: 20 }, (_, i) => String(i + 1));
+
 export const baseIndividualCustomerDataSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   customerKeyNumber: z.string().min(1, { message: "Customer Key Number is required." }),
@@ -29,7 +36,7 @@ export const baseIndividualCustomerDataSchema = z.object({
   currentReading: z.coerce.number().min(0, { message: "Current Reading cannot be negative." }),
   month: z.string().regex(/^\d{4}-\d{2}$/, { message: "Month must be in YYYY-MM format." }), 
   specificArea: z.string().min(1, { message: "Specific Area is required." }),
-  location: z.string().min(1, { message: "Sub-City is required." }), // Will be set by Branch selection
+  location: z.string().min(1, { message: "Sub-City is required." }),
   ward: z.string().min(1, { message: "Woreda is required." }),
   sewerageConnection: z.enum(sewerageConnections, { errorMap: () => ({ message: "Please select sewerage connection status."}) }),
   assignedBulkMeterId: z.string().optional().describe("The ID of the bulk meter this individual customer is assigned to."),
@@ -55,7 +62,7 @@ export const baseBulkMeterDataSchema = z.object({
   specificArea: z.string().min(1, { message: "Specific Area is required." }),
   location: z.string().min(1, { message: "Sub-City is required." }),
   ward: z.string().min(1, { message: "Woreda is required." }),
-  branchId: z.string().optional().describe("The ID of the branch this bulk meter belongs to."), // New field
+  branchId: z.string().optional().describe("The ID of the branch this bulk meter belongs to."),
   chargeGroup: z.enum(customerTypes, { errorMap: () => ({ message: "Please select a valid charge group."}) }),
   sewerageConnection: z.enum(sewerageConnections).default("No"),
   xCoordinate: z.coerce.number().optional(),

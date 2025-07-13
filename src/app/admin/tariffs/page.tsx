@@ -62,9 +62,8 @@ const getDisplayTiersFromData = (tariffInfo?: TariffInfo): DisplayTariffRate[] =
 };
 
 const generateYearOptions = () => {
-    const currentYear = new Date().getFullYear();
     const years = [];
-    for (let i = 2021; i <= currentYear + 5; i++) {
+    for (let i = 2021; i <= 2050; i++) {
         years.push(i);
     }
     return years;

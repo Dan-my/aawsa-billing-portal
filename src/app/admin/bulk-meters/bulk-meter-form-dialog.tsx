@@ -41,7 +41,10 @@ const bulkMeterFormObjectSchema = baseBulkMeterDataSchema.extend({
   branchId: z.string().optional(), // Add branchId to schema
 });
 
-const bulkMeterFormSchema = bulkMeterFormObjectSchema.refine(data => data.currentReading >= data.previousReading, {
+const bulkMeterFormSchema = bulkMeterFormObjectSchema.refine(data => {
+    if (data.currentReading === undefined || data.previousReading === undefined) return true;
+    return data.currentReading >= data.previousReading;
+}, {
   message: "Current Reading must be greater than or equal to Previous Reading.",
   path: ["currentReading"],
 });
@@ -365,9 +368,9 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 name="location"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Location / Sub-City * {staffBranchName ? '' : '(set by Branch selection)'}</FormLabel>
+                    <FormLabel>Sub-City *</FormLabel>
                     <FormControl>
-                      <Input {...field} readOnly={!!staffBranchName || (!!form.getValues().branchId && form.getValues().branchId !== BRANCH_UNASSIGNED_VALUE)} />
+                      <Input {...field} readOnly={!!staffBranchName || (!!form.getValues().branchId && form.getValues().branchId !== BRANCH_UNASSIGNED_VALUE)} placeholder="Set by Branch selection or enter manually" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -378,9 +381,9 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 name="ward"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ward / Woreda *</FormLabel>
+                    <FormLabel>Woreda *</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} placeholder="Enter woreda" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

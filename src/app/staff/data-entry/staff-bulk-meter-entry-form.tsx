@@ -22,6 +22,7 @@ import { addBulkMeter as addBulkMeterToStore, initializeBulkMeters, getBulkMeter
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse } from "date-fns";
+import { customerTypes, sewerageConnections } from "@/lib/billing";
 
 interface StaffBulkMeterEntryFormProps {
   branchName: string; 
@@ -61,6 +62,10 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
       specificArea: "",
       location: branchName || "", 
       ward: "",
+      chargeGroup: "Non-domestic",
+      sewerageConnection: "No",
+      xCoordinate: undefined,
+      yCoordinate: undefined,
     },
   });
 
@@ -97,6 +102,10 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
         specificArea: "",
         location: branchName || "", // Reset location to current branchName
         ward: "",
+        chargeGroup: "Non-domestic",
+        sewerageConnection: "No",
+        xCoordinate: undefined,
+        yCoordinate: undefined,
     }); 
   }
 
@@ -265,7 +274,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
               name="location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Location / Sub-City *</FormLabel>
+                  <FormLabel>Sub-City *</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -278,9 +287,79 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
               name="ward"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Ward / Woreda *</FormLabel>
+                  <FormLabel>Woreda *</FormLabel>
                   <FormControl>
                     <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="chargeGroup"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Charge Group *</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} defaultValue="Non-domestic">
+                    <FormControl>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {customerTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="sewerageConnection"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sewerage Connection *</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} defaultValue="No">
+                    <FormControl>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {sewerageConnections.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="xCoordinate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>X Coordinate (Optional)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" step="any" placeholder="e.g., 9.005401" {...field}
+                      value={field.value ?? ""}
+                      onChange={e => { const val = e.target.value; field.onChange(val === "" ? undefined : parseFloat(val)); }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="yCoordinate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Y Coordinate (Optional)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" step="any" placeholder="e.g., 38.763611" {...field}
+                      value={field.value ?? ""}
+                      onChange={e => { const val = e.target.value; field.onChange(val === "" ? undefined : parseFloat(val)); }}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

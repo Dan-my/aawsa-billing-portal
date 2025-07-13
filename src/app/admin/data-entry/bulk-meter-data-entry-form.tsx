@@ -77,6 +77,7 @@ export function BulkMeterDataEntryForm() {
       branchId: data.branchId === BRANCH_UNASSIGNED_VALUE ? undefined : data.branchId,
       status: "Active", 
       paymentStatus: "Unpaid", 
+      outStandingbill: 0
     };
     
     const result = await addBulkMeterToStore(bulkMeterDataForStore);
@@ -301,9 +302,9 @@ export function BulkMeterDataEntryForm() {
                   name="location"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Location / Sub-City * (set by Branch selection)</FormLabel>
+                      <FormLabel>Sub-City *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter location / sub-city" {...field} readOnly={!!form.getValues().branchId && form.getValues().branchId !== BRANCH_UNASSIGNED_VALUE} />
+                        <Input placeholder="Set by Branch selection or enter manually" {...field} readOnly={!!form.getValues().branchId && form.getValues().branchId !== BRANCH_UNASSIGNED_VALUE} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -314,9 +315,9 @@ export function BulkMeterDataEntryForm() {
                   name="ward"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Ward / Woreda *</FormLabel>
+                      <FormLabel>Woreda *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter ward / woreda" {...field} />
+                        <Input placeholder="Enter woreda" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

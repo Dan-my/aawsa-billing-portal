@@ -251,9 +251,9 @@ const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
   },
   {
     customer_type: 'Non-domestic',
-    year: 2025,
+    year: 2025, // FIX: Added Non-domestic tariff for 2025
     tiers: JSON.stringify([
-      { limit: 50, rate: 17.79 },
+      { limit: 50, rate: 17.79 }, // Using 2024 rates as a default, can be changed in UI
       { limit: 100, rate: 21.05 },
       { limit: Infinity, rate: 24.56 },
     ]),

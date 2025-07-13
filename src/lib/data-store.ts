@@ -6,7 +6,7 @@ import type { IndividualCustomer as DomainIndividualCustomer, IndividualCustomer
 import type { BulkMeter as DomainBulkMeterTypeFromTypes } from '@/app/admin/bulk-meters/bulk-meter-types'; 
 import type { Branch as DomainBranch } from '@/app/admin/branches/branch-types';
 import type { StaffMember as DomainStaffMember } from '@/app/admin/staff-management/staff-types';
-import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult, getTariffInfo as getTariffFromBilling, METER_RENT_STORAGE_KEY, DEFAULT_METER_RENT_PRICES, TariffInfo } from '@/lib/billing';
+import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult, getTariffInfo as getTariffInfoFromBilling, METER_RENT_STORAGE_KEY, DEFAULT_METER_RENT_PRICES, TariffInfo } from '@/lib/billing';
 import { supabase } from '@/lib/supabase'; // Direct import of supabase client
 import {
   getAllBranchesAction,
@@ -374,9 +374,9 @@ const mapDomainBranchToUpdate = (branch: Partial<Omit<DomainBranch, 'id'>>): Bra
 };
 
 
-const mapSupabaseCustomerToDomain = (sc: SupabaseIndividualCustomerRow): DomainIndividualCustomer => {
+const mapSupabaseCustomerToDomain = async (sc: SupabaseIndividualCustomerRow): Promise<DomainIndividualCustomer> => {
   const usage = sc.currentReading - sc.previousReading;
-  const { totalBill: bill } = calculateBill(usage, sc.customerType, sc.sewerageConnection, Number(sc.meterSize), sc.month);
+  const { totalBill: bill } = await calculateBill(usage, sc.customerType, sc.sewerageConnection, Number(sc.meterSize), sc.month);
   return {
     customerKeyNumber: sc.customerKeyNumber,
     name: sc.name,
@@ -404,11 +404,11 @@ const mapSupabaseCustomerToDomain = (sc: SupabaseIndividualCustomerRow): DomainI
   };
 };
 
-const mapDomainCustomerToInsert = (
+const mapDomainCustomerToInsert = async (
   customer: Omit<DomainIndividualCustomer, 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill' | 'arrears'>
-): IndividualCustomerInsert => {
+): Promise<IndividualCustomerInsert> => {
   const usage = customer.currentReading - customer.previousReading;
-  const { totalBill: bill } = calculateBill(usage, customer.customerType, customer.sewerageConnection, Number(customer.meterSize), customer.month);
+  const { totalBill: bill } = await calculateBill(usage, customer.customerType, customer.sewerageConnection, Number(customer.meterSize), customer.month);
   return {
     name: customer.name,
     customerKeyNumber: customer.customerKeyNumber,
@@ -433,7 +433,7 @@ const mapDomainCustomerToInsert = (
   };
 };
 
-const mapDomainCustomerToUpdate = (customer: Partial<DomainIndividualCustomer>): IndividualCustomerUpdate => {
+const mapDomainCustomerToUpdate = async (customer: Partial<DomainIndividualCustomer>): Promise<IndividualCustomerUpdate> => {
   const updatePayload: IndividualCustomerUpdate = {};
 
   if(customer.name !== undefined) updatePayload.name = customer.name;
@@ -462,7 +462,7 @@ const mapDomainCustomerToUpdate = (customer: Partial<DomainIndividualCustomer>):
     const existingCustomer = customers.find(c => c.customerKeyNumber === customer.customerKeyNumber);
     if (existingCustomer) {
         const usage = (customer.currentReading ?? existingCustomer.currentReading) - (customer.previousReading ?? existingCustomer.previousReading);
-        const { totalBill } = calculateBill(
+        const { totalBill } = await calculateBill(
             usage,
             customer.customerType ?? existingCustomer.customerType,
             customer.sewerageConnection ?? existingCustomer.sewerageConnection,
@@ -476,13 +476,13 @@ const mapDomainCustomerToUpdate = (customer: Partial<DomainIndividualCustomer>):
 };
 
 
-const mapSupabaseBulkMeterToDomain = (sbm: BulkMeterRow): BulkMeter => {
+const mapSupabaseBulkMeterToDomain = async (sbm: BulkMeterRow): Promise<BulkMeter> => {
   const calculatedBmUsage = (sbm.currentReading ?? 0) - (sbm.previousReading ?? 0);
   const bmUsage = sbm.bulk_usage === null || sbm.bulk_usage === undefined
                   ? calculatedBmUsage
                   : Number(sbm.bulk_usage);
 
-  const { totalBill: calculatedBmTotalBill } = calculateBill(bmUsage, sbm.charge_group || 'Non-domestic', sbm.sewerage_connection || 'No', Number(sbm.meterSize), sbm.month);
+  const { totalBill: calculatedBmTotalBill } = await calculateBill(bmUsage, sbm.charge_group || 'Non-domestic', sbm.sewerage_connection || 'No', Number(sbm.meterSize), sbm.month);
   const bmTotalBill = sbm.total_bulk_bill === null || sbm.total_bulk_bill === undefined
                       ? calculatedBmTotalBill
                       : Number(sbm.total_bulk_bill);
@@ -514,16 +514,16 @@ const mapSupabaseBulkMeterToDomain = (sbm: BulkMeterRow): BulkMeter => {
 };
 
 
-const mapDomainBulkMeterToInsert = (bm: Omit<BulkMeter, 'customerKeyNumber'> & { customerKeyNumber: string }): BulkMeterInsert => {
+const mapDomainBulkMeterToInsert = async (bm: Omit<BulkMeter, 'customerKeyNumber'> & { customerKeyNumber: string }): Promise<BulkMeterInsert> => {
   const calculatedBulkUsage = (bm.currentReading ?? 0) - (bm.previousReading ?? 0);
-  const { totalBill: calculatedTotalBulkBill } = calculateBill(calculatedBulkUsage, "Non-domestic", "No", Number(bm.meterSize), bm.month);
+  const { totalBill: calculatedTotalBulkBill } = await calculateBill(calculatedBulkUsage, "Non-domestic", "No", Number(bm.meterSize), bm.month);
 
   const allIndividualCustomers = getCustomers();
   const associatedCustomers = allIndividualCustomers.filter(c => c.assignedBulkMeterId === bm.customerKeyNumber);
   const sumIndividualUsage = associatedCustomers.reduce((acc, cust) => acc + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
 
   const differenceUsage = calculatedBulkUsage - sumIndividualUsage;
-  const { totalBill: differenceBill } = calculateBill(differenceUsage, "Non-domestic", "No", Number(bm.meterSize), bm.month);
+  const { totalBill: differenceBill } = await calculateBill(differenceUsage, "Non-domestic", "No", Number(bm.meterSize), bm.month);
 
   return {
     name: bm.name,
@@ -553,7 +553,7 @@ const mapDomainBulkMeterToInsert = (bm: Omit<BulkMeter, 'customerKeyNumber'> & {
 };
 
 
-const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { customerKeyNumber?: string } ): BulkMeterUpdate => {
+const mapDomainBulkMeterToUpdate = async (bm: Partial<BulkMeter> & { customerKeyNumber?: string } ): Promise<BulkMeterUpdate> => {
     const updatePayload: BulkMeterUpdate = {};
     if (bm.name !== undefined) updatePayload.name = bm.name;
     if (bm.customerKeyNumber !== undefined) updatePayload.customerKeyNumber = bm.customerKeyNumber;
@@ -583,7 +583,7 @@ const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { customerKeyNumber
         const billingMonth = bm.month ?? existingBM?.month ?? new Date().toISOString().slice(0, 7);
         
         const newBulkUsage = currentReading - previousReading;
-        const { totalBill: newTotalBulkBill } = calculateBill(newBulkUsage, "Non-domestic", "No", Number(meterSize), billingMonth);
+        const { totalBill: newTotalBulkBill } = await calculateBill(newBulkUsage, "Non-domestic", "No", Number(meterSize), billingMonth);
 
         updatePayload.bulk_usage = newBulkUsage;
         updatePayload.total_bulk_bill = newTotalBulkBill;
@@ -599,7 +599,7 @@ const mapDomainBulkMeterToUpdate = (bm: Partial<BulkMeter> & { customerKeyNumber
         const newDifferenceUsage = newBulkUsage - sumIndividualUsage;
         updatePayload.difference_usage = newDifferenceUsage;
         
-        const { totalBill: newDifferenceBill } = calculateBill(newDifferenceUsage, "Non-domestic", "No", Number(meterSize), billingMonth);
+        const { totalBill: newDifferenceBill } = await calculateBill(newDifferenceUsage, "Non-domestic", "No", Number(meterSize), billingMonth);
         updatePayload.difference_bill = newDifferenceBill;
     }
     return updatePayload;
@@ -835,7 +835,7 @@ async function fetchAllBranches() {
 async function fetchAllCustomers() {
   const { data, error } = await getAllCustomersAction();
   if (data) {
-    customers = data.map(mapSupabaseCustomerToDomain);
+    customers = await Promise.all(data.map(mapSupabaseCustomerToDomain));
     notifyCustomerListeners();
   } else {
     console.error("DataStore: Failed to fetch customers. Supabase error:", JSON.stringify(error, null, 2));
@@ -881,13 +881,13 @@ async function fetchAllBulkMeters() {
       const previousReading = Number(sbm.previousReading) || 0;
 
       const calculatedBulkUsage = currentReading - previousReading;
-      const { totalBill: calculatedTotalBulkBill } = calculateBill(calculatedBulkUsage, "Non-domestic", "No", Number(sbm.meterSize), sbm.month);
+      const { totalBill: calculatedTotalBulkBill } = await calculateBill(calculatedBulkUsage, "Non-domestic", "No", Number(sbm.meterSize), sbm.month);
 
       const associatedCustomersData = getCustomers().filter(c => c.assignedBulkMeterId === sbm.customerKeyNumber);
       const sumIndividualUsage = associatedCustomersData.reduce((acc, cust) => acc + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
       
       const calculatedDifferenceUsage = calculatedBulkUsage - sumIndividualUsage;
-      const { totalBill: calculatedDifferenceBill } = calculateBill(calculatedDifferenceUsage, "Non-domestic", "No", Number(sbm.meterSize), sbm.month);
+      const { totalBill: calculatedDifferenceBill } = await calculateBill(calculatedDifferenceUsage, "Non-domestic", "No", Number(sbm.meterSize), sbm.month);
 
 
       const updatePayload: BulkMeterUpdate = {
@@ -914,7 +914,7 @@ async function fetchAllBulkMeters() {
       processedBulkMeters = updatedRowsFromBackfill; 
   }
   
-  bulkMeters = processedBulkMeters.map(mapSupabaseBulkMeterToDomain);
+  bulkMeters = await Promise.all(processedBulkMeters.map(mapSupabaseBulkMeterToDomain));
   notifyBulkMeterListeners();
   bulkMetersFetched = true;
   return bulkMeters;
@@ -1114,7 +1114,7 @@ export async function getBulkMeterByCustomerKey(customerKeyNumber: string): Prom
     if (!meter) {
         return { success: false, message: 'Meter not found', isNotFoundError: true };
     }
-    const domainMeter = mapSupabaseBulkMeterToDomain(meter);
+    const domainMeter = await mapSupabaseBulkMeterToDomain(meter);
     return { success: true, data: domainMeter };
 }
 
@@ -1241,11 +1241,11 @@ export const deleteBranch = async (branchId: string): Promise<StoreOperationResu
 export const addCustomer = async (
   customerData: Omit<DomainIndividualCustomer, 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill' | 'arrears'>
 ): Promise<StoreOperationResult<DomainIndividualCustomer>> => {
-  const customerPayload = mapDomainCustomerToInsert(customerData);
+  const customerPayload = await mapDomainCustomerToInsert(customerData);
   const { data: newSupabaseCustomer, error } = await createCustomerAction(customerPayload);
 
   if (newSupabaseCustomer && !error) {
-    const newCustomer = mapSupabaseCustomerToDomain(newSupabaseCustomer);
+    const newCustomer = await mapSupabaseCustomerToDomain(newSupabaseCustomer);
     customers = [newCustomer, ...customers];
     notifyCustomerListeners();
     return { success: true, data: newCustomer };
@@ -1255,11 +1255,11 @@ export const addCustomer = async (
 };
 
 export const updateCustomer = async (customerKeyNumber: string, customerData: Partial<Omit<DomainIndividualCustomer, 'customerKeyNumber'>>): Promise<StoreOperationResult<void>> => {
-  const updatePayloadSupabase = mapDomainCustomerToUpdate({ customerKeyNumber, ...customerData });
+  const updatePayloadSupabase = await mapDomainCustomerToUpdate({ customerKeyNumber, ...customerData });
   const { data: updatedSupabaseCustomer, error } = await updateCustomerAction(customerKeyNumber, updatePayloadSupabase);
 
   if (updatedSupabaseCustomer && !error) {
-    const updatedCustomer = mapSupabaseCustomerToDomain(updatedSupabaseCustomer);
+    const updatedCustomer = await mapSupabaseCustomerToDomain(updatedSupabaseCustomer);
     customers = customers.map(c => c.customerKeyNumber === customerKeyNumber ? updatedCustomer : c);
     notifyCustomerListeners();
     return { success: true };
@@ -1292,10 +1292,10 @@ export const deleteCustomer = async (customerKeyNumber: string): Promise<StoreOp
 };
 
 export const addBulkMeter = async (bulkMeterDomainData: Omit<BulkMeter, 'customerKeyNumber'> & { customerKeyNumber: string }): Promise<StoreOperationResult<BulkMeter>> => {
-  const bulkMeterPayload = mapDomainBulkMeterToInsert(bulkMeterDomainData) as BulkMeterInsert;
+  const bulkMeterPayload = await mapDomainBulkMeterToInsert(bulkMeterDomainData);
   const { data: newSupabaseBulkMeter, error } = await createBulkMeterAction(bulkMeterPayload);
   if (newSupabaseBulkMeter && !error) {
-    const newBulkMeter = mapSupabaseBulkMeterToDomain(newSupabaseBulkMeter);
+    const newBulkMeter = await mapSupabaseBulkMeterToDomain(newSupabaseBulkMeter);
     bulkMeters = [newBulkMeter, ...bulkMeters];
     notifyBulkMeterListeners();
     return { success: true, data: newBulkMeter };
@@ -1305,10 +1305,10 @@ export const addBulkMeter = async (bulkMeterDomainData: Omit<BulkMeter, 'custome
 };
 
 export const updateBulkMeter = async (customerKeyNumber: string, bulkMeterData: Partial<Omit<BulkMeter, 'customerKeyNumber'>>): Promise<StoreOperationResult<BulkMeter>> => {
-  const updatePayloadToSend = mapDomainBulkMeterToUpdate({ customerKeyNumber, ...bulkMeterData }) as BulkMeterUpdate;
+  const updatePayloadToSend = await mapDomainBulkMeterToUpdate({ customerKeyNumber, ...bulkMeterData });
   const { data: updatedSupabaseBulkMeter, error } = await updateBulkMeterAction(customerKeyNumber, updatePayloadToSend);
   if (updatedSupabaseBulkMeter && !error) {
-    const updatedBulkMeter = mapSupabaseBulkMeterToDomain(updatedSupabaseBulkMeter);
+    const updatedBulkMeter = await mapSupabaseBulkMeterToDomain(updatedSupabaseBulkMeter);
     bulkMeters = bulkMeters.map(bm => bm.customerKeyNumber === customerKeyNumber ? updatedBulkMeter : bm);
     notifyBulkMeterListeners();
     return { success: true, data: updatedBulkMeter };

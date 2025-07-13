@@ -1,6 +1,7 @@
 // src/lib/billing.ts
 
 import { getTariff } from "./data-store";
+import { supabase } from './supabase'; // Import supabase client
 
 export const customerTypes = ["Domestic", "Non-domestic"] as const;
 export type CustomerType = (typeof customerTypes)[number];
@@ -63,9 +64,42 @@ export function getMeterRentPrices(): { [key: string]: number } {
   return DEFAULT_METER_RENT_PRICES;
 }
 
-export const getTariffInfo = (type: CustomerType, year: number): TariffInfo | undefined => {
-    return getTariff(type, year);
-}
+// This function now fetches directly from the database for the given year.
+export const getTariffInfo = async (type: CustomerType, year: number): Promise<TariffInfo | undefined> => {
+    const { data: tariff, error } = await supabase
+        .from('tariffs')
+        .select('*')
+        .eq('customer_type', type)
+        .eq('year', year)
+        .single();
+
+    if (error || !tariff) {
+        console.warn(`DB Fetch: Tariff for customer type "${type}" and year "${year}" not found.`, error);
+        return undefined;
+    }
+
+    let parsedTiers;
+    if (typeof tariff.tiers === 'string') {
+        try {
+            parsedTiers = JSON.parse(tariff.tiers);
+        } catch (e) {
+            console.error(`Failed to parse tiers JSON from DB for tariff ${type}/${year}`, e);
+            parsedTiers = [];
+        }
+    } else {
+        parsedTiers = tariff.tiers;
+    }
+
+    return {
+        id: `${type}-${year}`,
+        customer_type: tariff.customer_type as CustomerType,
+        year: tariff.year,
+        tiers: parsedTiers,
+        maintenance_percentage: tariff.maintenance_percentage,
+        sanitation_percentage: tariff.sanitation_percentage,
+        sewerage_rate_per_m3: tariff.sewerage_rate_per_m3,
+    };
+};
 
 
 const VAT_RATE = 0.15; // 15% VAT
@@ -80,13 +114,13 @@ export interface BillCalculationResult {
   sewerageCharge: number;
 }
 
-export function calculateBill(
+export async function calculateBill(
   usageM3: number,
   customerType: CustomerType,
   sewerageConnection: SewerageConnection,
   meterSize: number,
   billingMonth: string // e.g., "2024-05"
-): BillCalculationResult {
+): Promise<BillCalculationResult> {
   let baseWaterCharge = 0;
   
   if (!billingMonth || typeof billingMonth !== 'string' || !billingMonth.match(/^\d{4}-\d{2}$/)) {
@@ -100,10 +134,11 @@ export function calculateBill(
       return { totalBill: 0, baseWaterCharge: 0, maintenanceFee: 0, sanitationFee: 0, vatAmount: 0, meterRent: 0, sewerageCharge: 0 };
   }
 
-  const tariffConfig = getTariffInfo(customerType, year);
+  // Fetch the tariff configuration directly from the database for the given year.
+  const tariffConfig = await getTariffInfo(customerType, year);
   
   if (!tariffConfig) {
-      console.error(`Tariff information for customer type "${customerType}" for year ${year} not found. Bill calculation will be incorrect.`);
+      console.error(`Tariff information for customer type "${customerType}" for year ${year} not found in database. Bill calculation will be incorrect.`);
       return { totalBill: 0, baseWaterCharge: 0, maintenanceFee: 0, sanitationFee: 0, vatAmount: 0, meterRent: 0, sewerageCharge: 0 };
   }
   

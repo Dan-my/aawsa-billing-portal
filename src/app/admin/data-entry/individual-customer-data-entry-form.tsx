@@ -37,6 +37,8 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse, isValid } from "date-fns";
 import { customerTypes, sewerageConnections, paymentStatuses } from "@/lib/billing";
 import { individualCustomerStatuses } from "../individual-customers/individual-customer-types";
+import { AiMeterReaderDialog } from "@/components/ai-meter-reader-dialog";
+import { Wand2 } from "lucide-react";
 
 
 const FormSchemaForAdminDataEntry = baseIndividualCustomerDataSchema.extend({
@@ -55,6 +57,8 @@ export function IndividualCustomerDataEntryForm() {
   const [isLoadingBulkMeters, setIsLoadingBulkMeters] = React.useState(true);
   const [availableBranches, setAvailableBranches] = React.useState<Branch[]>([]);
   const [isLoadingBranches, setIsLoadingBranches] = React.useState(true);
+  const [isAiDialogOpen, setIsAiDialogOpen] = React.useState(false);
+
 
   React.useEffect(() => {
     setIsLoadingBulkMeters(true);
@@ -151,6 +155,14 @@ export function IndividualCustomerDataEntryForm() {
 
 
   return (
+    <>
+    <AiMeterReaderDialog
+        open={isAiDialogOpen}
+        onOpenChange={setIsAiDialogOpen}
+        onReadingSuccess={(reading) => {
+            form.setValue('currentReading', reading, { shouldValidate: true });
+        }}
+    />
     <ScrollArea className="h-[calc(100vh-280px)]">
       <Card className="shadow-lg w-full">
         <CardContent className="pt-6">
@@ -259,7 +271,21 @@ export function IndividualCustomerDataEntryForm() {
                 <FormField control={form.control} name="meterNumber" render={({ field }) => (<FormItem><FormLabel>Meter No. *</FormLabel><FormControl><Input {...field} disabled={form.formState.isSubmitting} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="previousReading" render={({ field }) => (<FormItem><FormLabel>Previous Reading *</FormLabel><FormControl><Input type="number" step="0.01" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseFloat(e.target.value))} disabled={form.formState.isSubmitting} /></FormControl><FormMessage /></FormItem>)} />
                 
-                <FormField control={form.control} name="currentReading" render={({ field }) => (<FormItem><FormLabel>Current Reading *</FormLabel><FormControl><Input type="number" step="0.01" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseFloat(e.target.value))} disabled={form.formState.isSubmitting} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="currentReading" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Current Reading *</FormLabel>
+                         <div className="flex items-center gap-2">
+                            <FormControl>
+                                <Input type="number" step="0.01" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseFloat(e.target.value))} disabled={form.formState.isSubmitting} />
+                            </FormControl>
+                            <Button type="button" variant="outline" size="icon" onClick={() => setIsAiDialogOpen(true)}>
+                                <Wand2 className="h-4 w-4" />
+                                <span className="sr-only">AI Read</span>
+                            </Button>
+                        </div>
+                        <FormMessage />
+                    </FormItem>
+                )} />
                 <FormField control={form.control} name="month" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Reading Month *</FormLabel><DatePicker date={field.value && isValid(parse(field.value, "yyyy-MM", new Date())) ? parse(field.value, "yyyy-MM", new Date()) : undefined} setDate={(date) => field.onChange(date ? format(date, "yyyy-MM") : "")} disabledTrigger={form.formState.isSubmitting} /><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="specificArea" render={({ field }) => (<FormItem><FormLabel>Specific Area *</FormLabel><FormControl><Input {...field} disabled={form.formState.isSubmitting} /></FormControl><FormMessage /></FormItem>)} />
                 
@@ -331,5 +357,6 @@ export function IndividualCustomerDataEntryForm() {
         </CardContent>
       </Card>
     </ScrollArea>
+    </>
   );
 }

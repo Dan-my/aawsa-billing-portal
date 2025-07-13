@@ -25,6 +25,9 @@ import { format, parse } from "date-fns";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 import type { Branch } from "../branches/branch-types";
 import { customerTypes, sewerageConnections } from "@/lib/billing";
+import { AiMeterReaderDialog } from "@/components/ai-meter-reader-dialog";
+import { Wand2 } from "lucide-react";
+
 
 const BRANCH_UNASSIGNED_VALUE = "_SELECT_BRANCH_BULK_METER_";
 
@@ -32,6 +35,7 @@ export function BulkMeterDataEntryForm() {
   const { toast } = useToast();
   const [availableBranches, setAvailableBranches] = React.useState<Branch[]>([]);
   const [isLoadingBranches, setIsLoadingBranches] = React.useState(true);
+  const [isAiDialogOpen, setIsAiDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
     initializeCustomers();
@@ -108,6 +112,14 @@ export function BulkMeterDataEntryForm() {
   };
 
   return (
+    <>
+    <AiMeterReaderDialog
+        open={isAiDialogOpen}
+        onOpenChange={setIsAiDialogOpen}
+        onReadingSuccess={(reading) => {
+            form.setValue('currentReading', reading, { shouldValidate: true });
+        }}
+    />
     <ScrollArea className="h-[calc(100vh-280px)]"> 
       <Card className="shadow-lg w-full">
         <CardContent className="pt-6">
@@ -251,19 +263,25 @@ export function BulkMeterDataEntryForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Current Reading *</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          step="0.01" 
-                          placeholder="Enter current reading"
-                          {...field} 
-                          value={field.value ?? ""}
-                          onChange={e => {
-                            const val = e.target.value;
-                            field.onChange(val === "" ? undefined : parseFloat(val));
-                          }}
-                        />
-                      </FormControl>
+                        <div className="flex items-center gap-2">
+                          <FormControl>
+                              <Input 
+                              type="number" 
+                              step="0.01" 
+                              placeholder="Enter current reading"
+                              {...field} 
+                              value={field.value ?? ""}
+                              onChange={e => {
+                                  const val = e.target.value;
+                                  field.onChange(val === "" ? undefined : parseFloat(val));
+                              }}
+                              />
+                          </FormControl>
+                           <Button type="button" variant="outline" size="icon" onClick={() => setIsAiDialogOpen(true)}>
+                                <Wand2 className="h-4 w-4" />
+                                <span className="sr-only">AI Read</span>
+                            </Button>
+                        </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -457,5 +475,6 @@ export function BulkMeterDataEntryForm() {
         </CardContent>
       </Card>
     </ScrollArea>
+    </>
   );
 }

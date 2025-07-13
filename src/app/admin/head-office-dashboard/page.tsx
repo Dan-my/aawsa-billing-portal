@@ -99,7 +99,9 @@ export default function HeadOfficeDashboardPage() {
 
     // 3. Branch Performance Data (Bulk Meters ONLY)
     const performanceMap = new Map<string, { branchName: string, paid: number, unpaid: number }>();
-    currentBranches.forEach(branch => {
+    const displayableBranches = currentBranches.filter(branch => branch.name.toLowerCase() !== 'head office');
+
+    displayableBranches.forEach(branch => {
       performanceMap.set(branch.id, { branchName: branch.name, paid: 0, unpaid: 0 });
     });
 

@@ -159,11 +159,14 @@ export default function StaffManagementDashboardPage() {
     ];
     const paidPercentage = totalBillsCount > 0 ? `${((paidCount / totalBillsCount) * 100).toFixed(0)}%` : "0%";
 
-    // --- NEW: Data for Branch Performance Chart (ALL branches) ---
+    // --- Data for Branch Performance Chart (ALL branches, excluding Head Office) ---
     const performanceMap = new Map<string, { branchName: string, paid: number, unpaid: number }>();
-    allBranches.forEach(branch => {
+    const displayableBranches = allBranches.filter(b => b.name.toLowerCase() !== 'head office');
+    
+    displayableBranches.forEach(branch => {
       performanceMap.set(branch.id, { branchName: branch.name, paid: 0, unpaid: 0 });
     });
+
     allBulkMeters.forEach(bm => {
       if (bm.branchId && performanceMap.has(bm.branchId)) {
         const entry = performanceMap.get(bm.branchId)!;
@@ -301,7 +304,7 @@ export default function StaffManagementDashboardPage() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Button asChild variant="outline" className="w-full justify-start p-4 h-auto quick-access-btn">
-                <Link href="/admin/bulk-meters">
+                <Link href="/staff/bulk-meters">
                     <Gauge className="mr-3 h-6 w-6" />
                     <div>
                         <p className="font-semibold text-base">View Bulk Meters</p>
@@ -311,7 +314,7 @@ export default function StaffManagementDashboardPage() {
                 </Link>
             </Button>
             <Button asChild variant="outline" className="w-full justify-start p-4 h-auto quick-access-btn">
-                <Link href="/admin/individual-customers">
+                <Link href="/staff/individual-customers">
                     <Users className="mr-3 h-6 w-6" />
                     <div>
                         <p className="font-semibold text-base">View Individual Customers</p>
@@ -322,7 +325,7 @@ export default function StaffManagementDashboardPage() {
             </Button>
         </CardContent>
       </Card>
-
+      
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="shadow-lg">
           <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">

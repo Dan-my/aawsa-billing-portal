@@ -29,7 +29,7 @@ import type { BulkMeter } from "./bulk-meter-types";
 import { bulkMeterStatuses } from "./bulk-meter-types";
 import { paymentStatuses, customerTypes, sewerageConnections } from "@/lib/billing"; 
 import { DatePicker } from "@/components/ui/date-picker";
-import { format, parse } from "date-fns";
+import { format, parse, isValid } from "date-fns";
 import { getBranches, subscribeToBranches, initializeBranches as initializeAdminBranches } from "@/lib/data-store";
 import type { Branch } from "../branches/branch-types";
 
@@ -338,7 +338,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                   <FormItem className="flex flex-col">
                     <FormLabel>Initial Reading Month *</FormLabel>
                      <DatePicker
-                        date={field.value ? parse(field.value, "yyyy-MM", new Date()) : undefined}
+                        date={field.value && isValid(parse(field.value, 'yyyy-MM', new Date())) ? parse(field.value, 'yyyy-MM', new Date()) : undefined}
                         setDate={(selectedDate) => {
                           field.onChange(selectedDate ? format(selectedDate, "yyyy-MM") : "");
                         }}

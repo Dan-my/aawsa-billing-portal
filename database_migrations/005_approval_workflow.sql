@@ -1,45 +1,37 @@
--- Migration: Add Approval Workflow for Individual Customers
--- This script adds the necessary database changes to support a multi-step
--- approval process for newly created individual customer records.
 
--- Step 1: Add new status values to the 'individual_customer_status_enum'.
--- We use a DO block with exception handling to safely add the new values,
--- preventing errors if the script is run more than once.
+-- This script adds an approval workflow for new customer creation.
+-- It adds new statuses and tracking columns to the individual_customers table.
+
+-- Add new statuses 'Pending Approval' and 'Rejected' to the enum type for individual customers.
+-- This block ensures the script can be run multiple times without causing "type exists" errors.
 DO $$
 BEGIN
-  -- Add 'Pending Approval' status for newly created records awaiting review.
-  ALTER TYPE public.individual_customer_status_enum ADD VALUE IF NOT EXISTS 'Pending Approval';
-EXCEPTION
-  WHEN duplicate_object THEN
-    RAISE NOTICE 'Value "Pending Approval" already exists in enum type, skipping.';
-END
-$$;
+    -- Check if 'Pending Approval' exists and add it if it doesn't
+    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumtypid = 'public.individual_customer_status'::regtype AND enumlabel = 'Pending Approval') THEN
+        ALTER TYPE public.individual_customer_status ADD VALUE 'Pending Approval' AFTER 'Suspended';
+    END IF;
 
-DO $$
-BEGIN
-  -- Add 'Rejected' status for records that fail the review process.
-  ALTER TYPE public.individual_customer_status_enum ADD VALUE IF NOT EXISTS 'Rejected';
-EXCEPTION
-  WHEN duplicate_object THEN
-    RAISE NOTICE 'Value "Rejected" already exists in enum type, skipping.';
-END
+    -- Check if 'Rejected' exists and add it if it doesn't
+    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumtypid = 'public.individual_customer_status'::regtype AND enumlabel = 'Rejected') THEN
+        ALTER TYPE public.individual_customer_status ADD VALUE 'Rejected' AFTER 'Pending Approval';
+    END IF;
+END;
 $$;
 
 
--- Step 2: Add new columns to the 'individual_customers' table to track approvals.
-
--- Add 'approved_by' column to store the ID of the staff member who approves the record.
--- This column is nullable because it will be empty until an approval occurs.
--- It references the 'id' in the 'staff_members' table.
+-- Add tracking columns to the individual_customers table.
+-- These will store who approved a customer record and when.
 ALTER TABLE public.individual_customers
-ADD COLUMN IF NOT EXISTS approved_by UUID REFERENCES public.staff_members(id) ON DELETE SET NULL;
+ADD COLUMN IF NOT EXISTS approved_by uuid,
+ADD COLUMN IF NOT EXISTS approved_at timestamptz;
 
--- Add 'approved_at' column to store the timestamp of when the approval happened.
--- This column is also nullable and will be populated upon approval.
+
+-- Drop the foreign key constraint if it exists, to ensure a clean re-creation.
 ALTER TABLE public.individual_customers
-ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ;
+DROP CONSTRAINT IF EXISTS individual_customers_approved_by_fkey;
 
--- Add comments to the new columns for clarity within the database schema.
-COMMENT ON COLUMN public.individual_customers.approved_by IS 'ID of the staff member who approved this customer record.';
-COMMENT ON COLUMN public.individual_customers.approved_at IS 'Timestamp of when the customer record was approved.';
-
+-- Add a foreign key constraint to link the approver to a staff member.
+-- This ensures data integrity.
+ALTER TABLE public.individual_customers
+ADD CONSTRAINT individual_customers_approved_by_fkey
+FOREIGN KEY (approved_by) REFERENCES public.staff_members(id) ON DELETE SET NULL;

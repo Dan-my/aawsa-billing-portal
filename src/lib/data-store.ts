@@ -6,7 +6,7 @@ import type { IndividualCustomer as DomainIndividualCustomer, IndividualCustomer
 import type { BulkMeter as DomainBulkMeterTypeFromTypes } from '@/app/admin/bulk-meters/bulk-meter-types'; 
 import type { Branch as DomainBranch } from '@/app/admin/branches/branch-types';
 import type { StaffMember as DomainStaffMember } from '@/app/admin/staff-management/staff-types';
-import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult, getTariffInfo as getTariffInfoFromBilling, METER_RENT_STORAGE_KEY, DEFAULT_METER_RENT_PRICES, TariffInfo } from '@/lib/billing';
+import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult, getTariffInfo as getTariffInfoFromBilling, DEFAULT_METER_RENT_PRICES, TariffInfo } from '@/lib/billing';
 import { supabase } from '@/lib/supabase'; // Direct import of supabase client
 import {
   getAllBranchesAction,
@@ -216,6 +216,7 @@ const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
       { limit: Infinity, rate: 81.71 },
     ]),
     maintenance_percentage: 0.01, sanitation_percentage: 0.07, sewerage_rate_per_m3: 6.25,
+    meter_rent_prices: JSON.stringify(DEFAULT_METER_RENT_PRICES),
   },
   {
     customer_type: 'Non-domestic',
@@ -224,6 +225,7 @@ const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
       { limit: 50, rate: 17.79 }, { limit: 100, rate: 21.05 }, { limit: Infinity, rate: 24.56 },
     ]),
     maintenance_percentage: 0.01, sanitation_percentage: 0.10, sewerage_rate_per_m3: 8.75,
+    meter_rent_prices: JSON.stringify(DEFAULT_METER_RENT_PRICES),
   },
   {
     customer_type: 'Domestic',
@@ -234,6 +236,7 @@ const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
       { limit: Infinity, rate: 81.71 },
     ]),
     maintenance_percentage: 0.01, sanitation_percentage: 0.07, sewerage_rate_per_m3: 6.25,
+    meter_rent_prices: JSON.stringify(DEFAULT_METER_RENT_PRICES),
   },
   {
     customer_type: 'Non-domestic',
@@ -242,6 +245,7 @@ const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
       { limit: 50, rate: 17.79 }, { limit: 100, rate: 21.05 }, { limit: Infinity, rate: 24.56 },
     ]),
     maintenance_percentage: 0.01, sanitation_percentage: 0.10, sewerage_rate_per_m3: 8.75,
+    meter_rent_prices: JSON.stringify(DEFAULT_METER_RENT_PRICES),
   },
   {
     customer_type: 'Domestic',
@@ -252,6 +256,7 @@ const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
       { limit: Infinity, rate: 81.71 },
     ]),
     maintenance_percentage: 0.01, sanitation_percentage: 0.07, sewerage_rate_per_m3: 6.25,
+    meter_rent_prices: JSON.stringify(DEFAULT_METER_RENT_PRICES),
   },
   {
     customer_type: 'Non-domestic',
@@ -260,6 +265,7 @@ const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
       { limit: 50, rate: 17.79 }, { limit: 100, rate: 21.05 }, { limit: Infinity, rate: 24.56 },
     ]),
     maintenance_percentage: 0.01, sanitation_percentage: 0.10, sewerage_rate_per_m3: 8.75,
+    meter_rent_prices: JSON.stringify(DEFAULT_METER_RENT_PRICES),
   },
   {
     customer_type: 'Domestic',
@@ -269,6 +275,7 @@ const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
       { limit: 50, rate: 18.28 }, { limit: Infinity, rate: 21.05 },
     ]),
     maintenance_percentage: 0.01, sanitation_percentage: 0.07, sewerage_rate_per_m3: 6.25,
+    meter_rent_prices: JSON.stringify(DEFAULT_METER_RENT_PRICES),
   },
   {
     customer_type: 'Non-domestic',
@@ -277,6 +284,7 @@ const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
       { limit: 50, rate: 17.79 }, { limit: 100, rate: 21.05 }, { limit: Infinity, rate: 24.56 },
     ]),
     maintenance_percentage: 0.01, sanitation_percentage: 0.10, sewerage_rate_per_m3: 8.75,
+    meter_rent_prices: JSON.stringify(DEFAULT_METER_RENT_PRICES),
   },
   {
     customer_type: 'Domestic',
@@ -287,6 +295,7 @@ const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
       { limit: Infinity, rate: 81.71 }
     ]),
     maintenance_percentage: 0.01, sanitation_percentage: 0.07, sewerage_rate_per_m3: 6.25,
+    meter_rent_prices: JSON.stringify(DEFAULT_METER_RENT_PRICES),
   },
   {
     customer_type: 'Non-domestic',
@@ -295,6 +304,7 @@ const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
       { limit: 50, rate: 17.79 }, { limit: 100, rate: 21.05 }, { limit: Infinity, rate: 24.56 },
     ]),
     maintenance_percentage: 0.01, sanitation_percentage: 0.10, sewerage_rate_per_m3: 8.75,
+    meter_rent_prices: JSON.stringify(DEFAULT_METER_RENT_PRICES),
   },
 ];
 
@@ -1184,6 +1194,18 @@ export const getTariff = (customerType: CustomerType, year: number): TariffInfo 
     } else {
         parsedTiers = tariff.tiers;
     }
+    
+    let parsedMeterRents;
+    if (typeof tariff.meter_rent_prices === 'string') {
+        try {
+            parsedMeterRents = JSON.parse(tariff.meter_rent_prices);
+        } catch(e) {
+            console.error(`Failed to parse meter_rent_prices JSON from DB for tariff ${customerType}/${year}`, e);
+            parsedMeterRents = DEFAULT_METER_RENT_PRICES;
+        }
+    } else {
+        parsedMeterRents = tariff.meter_rent_prices || DEFAULT_METER_RENT_PRICES;
+    }
 
     return {
         id: `${customerType}-${year}`,
@@ -1193,6 +1215,7 @@ export const getTariff = (customerType: CustomerType, year: number): TariffInfo 
         maintenance_percentage: tariff.maintenance_percentage,
         sanitation_percentage: tariff.sanitation_percentage,
         sewerage_rate_per_m3: tariff.sewerage_rate_per_m3,
+        meter_rent_prices: parsedMeterRents,
     };
 };
 
@@ -1692,8 +1715,15 @@ export const updateRolePermissions = async (roleId: number, permissionIds: numbe
 };
 
 
-export const updateTariff = async (customerType: CustomerType, year: number, tariff: TariffUpdate): Promise<StoreOperationResult<void>> => {
-    const { data: updatedSupabaseTariff, error } = await updateTariffAction(customerType, year, tariff);
+export const updateTariff = async (customerType: CustomerType, year: number, tariff: Partial<TariffInfo>): Promise<StoreOperationResult<void>> => {
+    const updatePayload: TariffUpdate = {};
+    if (tariff.tiers) updatePayload.tiers = tariff.tiers;
+    if (tariff.maintenance_percentage) updatePayload.maintenance_percentage = tariff.maintenance_percentage;
+    if (tariff.sanitation_percentage) updatePayload.sanitation_percentage = tariff.sanitation_percentage;
+    if (tariff.sewerage_rate_per_m3) updatePayload.sewerage_rate_per_m3 = tariff.sewerage_rate_per_m3;
+    if (tariff.meter_rent_prices) updatePayload.meter_rent_prices = tariff.meter_rent_prices;
+
+    const { data: updatedSupabaseTariff, error } = await updateTariffAction(customerType, year, updatePayload);
     if (updatedSupabaseTariff && !error) {
         tariffs = tariffs.map(t => (t.customer_type === customerType && t.year === year) ? updatedSupabaseTariff : t);
         notifyTariffListeners();
@@ -1711,12 +1741,18 @@ export const addTariff = async (tariffData: Omit<TariffInfo, 'id'>): Promise<Sto
         maintenance_percentage: tariffData.maintenance_percentage,
         sanitation_percentage: tariffData.sanitation_percentage,
         sewerage_rate_per_m3: tariffData.sewerage_rate_per_m3,
+        meter_rent_prices: tariffData.meter_rent_prices,
     };
     const { data, error } = await createTariffActionSupabase(payload);
     if (data && !error) {
         tariffs = [...tariffs, data];
         notifyTariffListeners();
-        return { success: true, data: getTariff(data.customer_type as CustomerType, data.year)! };
+        const mappedData = getTariff(data.customer_type as CustomerType, data.year);
+        if (mappedData) {
+          return { success: true, data: mappedData };
+        } else {
+          return { success: false, message: "Failed to map new tariff after creation." };
+        }
     }
     console.error("DataStore: Failed to add tariff. Error:", JSON.stringify(error, null, 2));
     return { success: false, message: (error as any)?.message || "Failed to add tariff.", error };
@@ -1739,11 +1775,6 @@ export const resetTariffsToDefault = async (): Promise<StoreOperationResult<void
         
         // Re-fetch the newly seeded tariffs
         await fetchAllTariffs();
-
-        // Also reset meter rent in local storage
-        if (typeof window !== 'undefined') {
-            localStorage.removeItem(METER_RENT_STORAGE_KEY);
-        }
         
         return { success: true };
 

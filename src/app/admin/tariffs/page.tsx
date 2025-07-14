@@ -10,10 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 import { LibraryBig, ListChecks, PlusCircle, RotateCcw, DollarSign, Percent, Copy } from "lucide-react";
 import type { TariffTier, TariffInfo } from "@/lib/billing";
 import { 
-    getMeterRentPrices, DEFAULT_METER_RENT_PRICES, 
-    METER_RENT_STORAGE_KEY
-} from "@/lib/billing";
-import { 
     getTariff, initializeTariffs, subscribeToTariffs, updateTariff, resetTariffsToDefault, addTariff 
 } from "@/lib/data-store";
 import { TariffRateTable, type DisplayTariffRate } from "./tariff-rate-table";
@@ -85,7 +81,6 @@ export default function TariffManagementPage() {
   const [isResetDialogOpen, setIsResetDialogOpen] = React.useState(false);
   const [rateToDelete, setRateToDelete] = React.useState<DisplayTariffRate | null>(null);
 
-  const [meterRentPrices, setMeterRentPrices] = React.useState(() => getMeterRentPrices());
   const [isMeterRentDialogOpen, setIsMeterRentDialogOpen] = React.useState(false);
 
   const activeTariffInfo = React.useMemo(() => {
@@ -109,14 +104,13 @@ export default function TariffManagementPage() {
   const handleTierUpdate = async (newTiers: TariffTier[]) => {
       if (!activeTariffInfo) return;
 
-      const newTariffInfo: TariffInfo = {
-          ...activeTariffInfo,
+      const newTariffInfo: Partial<TariffInfo> = {
           tiers: newTiers,
       };
 
       const result = await updateTariff(activeTariffInfo.customer_type, activeTariffInfo.year, newTariffInfo);
       if (result.success) {
-          toast({ title: "Tariff Updated", description: `${currentTariffType} tariff for ${currentYear} has been successfully saved.` });
+          toast({ title: "Tariff Updated", description: `${currentTariffType} tariff rates for ${currentYear} have been saved.` });
       } else {
           toast({ variant: "destructive", title: "Update Failed", description: result.message });
       }
@@ -176,19 +170,29 @@ export default function TariffManagementPage() {
     setEditingRate(null);
   };
   
-  const handleSaveMeterRents = (newPrices: { [key: string]: number }) => {
-    localStorage.setItem(METER_RENT_STORAGE_KEY, JSON.stringify(newPrices));
-    setMeterRentPrices(newPrices);
-    toast({ title: "Meter Rent Prices Updated", description: "The new prices will be used for all future calculations." });
-    setIsMeterRentDialogOpen(false);
+  const handleSaveMeterRents = async (newPrices: { [key: string]: number }) => {
+    if (!activeTariffInfo) {
+      toast({ variant: "destructive", title: "Error", description: "No active tariff selected to save meter rents." });
+      return;
+    }
+    
+    const updatePayload: Partial<TariffInfo> = {
+        meter_rent_prices: newPrices,
+    };
+    
+    const result = await updateTariff(activeTariffInfo.customer_type, activeTariffInfo.year, updatePayload);
+    
+    if (result.success) {
+      toast({ title: "Meter Rent Prices Updated", description: `New prices for ${currentYear} have been saved.` });
+      setIsMeterRentDialogOpen(false);
+    } else {
+      toast({ variant: "destructive", title: "Update Failed", description: result.message });
+    }
   };
 
   const handleResetToDefaults = async () => {
     await resetTariffsToDefault();
-    localStorage.removeItem(METER_RENT_STORAGE_KEY);
-    setMeterRentPrices(DEFAULT_METER_RENT_PRICES);
-
-    toast({ title: "Settings Reset", description: `Tariff rates and meter rent prices have been reset to system defaults.` });
+    toast({ title: "Settings Reset", description: `All tariffs and meter rent prices have been reset to system defaults.` });
     setIsResetDialogOpen(false);
   };
 
@@ -206,7 +210,7 @@ export default function TariffManagementPage() {
       return;
     }
     
-    const newTariffData: Omit<TariffInfo, 'id' | 'created_at' | 'updated_at'> = {
+    const newTariffData: Omit<TariffInfo, 'id'> = {
       ...activeTariffInfo,
       year: newYear,
     };
@@ -237,7 +241,7 @@ export default function TariffManagementPage() {
                 <Button onClick={handleAddTier} className="bg-primary hover:bg-primary/90" disabled={!activeTariffInfo}>
                     <PlusCircle className="mr-2 h-4 w-4" /> Add New Tier
                 </Button>
-                <Button onClick={() => setIsMeterRentDialogOpen(true)} variant="default">
+                <Button onClick={() => setIsMeterRentDialogOpen(true)} variant="default" disabled={!activeTariffInfo}>
                     <DollarSign className="mr-2 h-4 w-4" /> Manage Meter Rent
                 </Button>
                 <Button variant="destructive" onClick={() => setIsResetDialogOpen(true)}>
@@ -329,11 +333,11 @@ export default function TariffManagementPage() {
               </div>
               <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
                  <span className="text-muted-foreground">Sewerage Fee <span className="text-xs">(if applicable)</span></span>
-                 <span className="font-semibold">{currentTariffType === 'Domestic' ? '6.25' : '8.75'} ETB / m³</span>
+                 <span className="font-semibold">{activeTariffInfo.sewerage_rate_per_m3} ETB / m³</span>
               </div>
                <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
                 <span className="text-muted-foreground">Meter Rent Fee</span>
-                <span className="font-semibold text-muted-foreground italic">Varies by meter size</span>
+                <span className="font-semibold text-muted-foreground italic">Varies by meter size. Managed via "Manage Meter Rent" button.</span>
               </div>
                <div className="flex justify-between items-center p-2 rounded-md bg-muted/50 border border-primary/20">
                 <div className="flex-1 pr-4">
@@ -342,14 +346,14 @@ export default function TariffManagementPage() {
                     <p className="text-xs text-muted-foreground italic">For Domestic customers, VAT only applies if consumption is 16 m³ or more.</p>
                     )}
                 </div>
-                <span className="font-semibold text-primary text-right">15% on (Base + Service Fees)</span>
+                <span className="font-semibold text-primary text-right">15%</span>
               </div>
             </CardContent>
           </Card>
         </>
       )}
       
-      {hasPermission('tariffs_update') && (
+      {hasPermission('tariffs_update') && activeTariffInfo && (
         <>
           <TariffFormDialog
             open={isFormOpen}
@@ -367,8 +371,9 @@ export default function TariffManagementPage() {
             open={isMeterRentDialogOpen}
             onOpenChange={setIsMeterRentDialogOpen}
             onSubmit={handleSaveMeterRents}
-            defaultPrices={meterRentPrices}
+            defaultPrices={activeTariffInfo.meter_rent_prices as { [key: string]: number }}
             currency="ETB"
+            year={currentYear}
           />
 
           <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
@@ -376,7 +381,7 @@ export default function TariffManagementPage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure you want to reset all tariffs?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will reset both Domestic and Non-domestic tariffs AND all meter rent prices to the system defaults. This action cannot be undone.
+                  This will reset both Domestic and Non-domestic tariffs AND all meter rent prices for all years to the system defaults. This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

@@ -24,44 +24,15 @@ export interface TariffInfo {
     maintenance_percentage: number;
     sanitation_percentage: number;
     sewerage_rate_per_m3: number;
+    meter_rent_prices: { [key: string]: number }; // Added this line
 }
 
 
-// Renamed to indicate these are the default, fallback values.
 export const DEFAULT_METER_RENT_PRICES: { [key: string]: number } = {
-  "0.5": 15,    // 1/2"
-  "0.75": 20,   // 3/4"
-  "1": 33,      // 1"
-  "1.25": 36,   // 1 1/4"
-  "1.5": 57,    // 1 1/2"
-  "2": 98,      // 2"
-  "2.5": 112,   // 2 1/2"
-  "3": 148,     // 3"
-  "4": 177,     // 4"
-  "5": 228,     // 5"
-  "6": 259,     // 6"
+  "0.5": 15, "0.75": 20, "1": 33, "1.25": 36, "1.5": 57, "2": 98,
+  "2.5": 112, "3": 148, "4": 177, "5": 228, "6": 259,
 };
 
-export const METER_RENT_STORAGE_KEY = 'aawsa-meter-rent-prices';
-
-// New function to get current meter rent prices, checking localStorage first.
-export function getMeterRentPrices(): { [key: string]: number } {
-  if (typeof window === 'undefined') {
-    return DEFAULT_METER_RENT_PRICES;
-  }
-  const storedPrices = localStorage.getItem(METER_RENT_STORAGE_KEY);
-  if (storedPrices) {
-    try {
-      const parsed = JSON.parse(storedPrices);
-      if (Object.values(parsed).every(v => typeof v === 'number')) {
-         return parsed;
-      }
-    } catch (e) {
-      console.error("Failed to parse custom meter rent prices, using default.", e);
-    }
-  }
-  return DEFAULT_METER_RENT_PRICES;
-}
 
 // This function now fetches directly from the database for the given year.
 export const getTariffInfo = async (type: CustomerType, year: number): Promise<TariffInfo | undefined> => {
@@ -88,6 +59,19 @@ export const getTariffInfo = async (type: CustomerType, year: number): Promise<T
     } else {
         parsedTiers = tariff.tiers;
     }
+    
+    let parsedMeterRents;
+    if (typeof tariff.meter_rent_prices === 'string') {
+        try {
+            parsedMeterRents = JSON.parse(tariff.meter_rent_prices);
+        } catch(e) {
+            console.error(`Failed to parse meter_rent_prices JSON from DB for tariff ${type}/${year}`, e);
+            parsedMeterRents = DEFAULT_METER_RENT_PRICES;
+        }
+    } else {
+        parsedMeterRents = tariff.meter_rent_prices || DEFAULT_METER_RENT_PRICES;
+    }
+
 
     return {
         id: `${type}-${year}`,
@@ -97,6 +81,7 @@ export const getTariffInfo = async (type: CustomerType, year: number): Promise<T
         maintenance_percentage: tariff.maintenance_percentage,
         sanitation_percentage: tariff.sanitation_percentage,
         sewerage_rate_per_m3: tariff.sewerage_rate_per_m3,
+        meter_rent_prices: parsedMeterRents,
     };
 };
 
@@ -221,7 +206,7 @@ export async function calculateBill(
   }
 
   // --- Other Charges ---
-  const METER_RENT_PRICES = getMeterRentPrices();
+  const METER_RENT_PRICES = tariffConfig.meter_rent_prices || DEFAULT_METER_RENT_PRICES;
   const meterRent = METER_RENT_PRICES[String(meterSize)] || 0;
   
   const sewerageChargeRate = tariffConfig.sewerage_rate_per_m3;

@@ -752,6 +752,7 @@ export type Database = {
           created_at: string
           customer_type: string
           maintenance_percentage: number
+          meter_rent_prices: Json | null
           sanitation_percentage: number
           sewerage_rate_per_m3: number
           tiers: Json
@@ -762,6 +763,7 @@ export type Database = {
           created_at?: string
           customer_type: string
           maintenance_percentage: number
+          meter_rent_prices?: Json | null
           sanitation_percentage: number
           sewerage_rate_per_m3: number
           tiers: Json
@@ -772,6 +774,7 @@ export type Database = {
           created_at?: string
           customer_type?: string
           maintenance_percentage?: number
+          meter_rent_prices?: Json | null
           sanitation_percentage?: number
           sewerage_rate_per_m3?: number
           tiers?: Json

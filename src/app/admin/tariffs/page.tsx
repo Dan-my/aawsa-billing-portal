@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { LibraryBig, ListChecks, PlusCircle, RotateCcw, DollarSign, Percent, Copy } from "lucide-react";
 import type { TariffTier, TariffInfo } from "@/lib/billing";
 import { 
-    getTariff, initializeTariffs, subscribeToTariffs, updateTariff, resetTariffsToDefault, addTariff 
+    getTariff, initializeTariffs, subscribeToTariffs, updateTariff, addTariff 
 } from "@/lib/data-store";
 import { TariffRateTable, type DisplayTariffRate } from "./tariff-rate-table";
 import { TariffFormDialog, type TariffFormValues } from "./tariff-form-dialog";
@@ -78,7 +78,6 @@ export default function TariffManagementPage() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingRate, setEditingRate] = React.useState<DisplayTariffRate | null>(null);
   
-  const [isResetDialogOpen, setIsResetDialogOpen] = React.useState(false);
   const [rateToDelete, setRateToDelete] = React.useState<DisplayTariffRate | null>(null);
 
   const [isMeterRentDialogOpen, setIsMeterRentDialogOpen] = React.useState(false);
@@ -93,11 +92,11 @@ export default function TariffManagementPage() {
   React.useEffect(() => {
     setIsDataLoading(true);
     initializeTariffs().then((tariffs) => {
-      setAllTariffs(tariffs);
+      setAllTariffs(tariffs as any); // Type assertion needed for now
       setIsDataLoading(false);
     });
 
-    const unsubscribe = subscribeToTariffs(setAllTariffs);
+    const unsubscribe = subscribeToTariffs(setAllTariffs as any);
     return () => unsubscribe();
   }, []);
 
@@ -190,12 +189,6 @@ export default function TariffManagementPage() {
     }
   };
 
-  const handleResetToDefaults = async () => {
-    await resetTariffsToDefault();
-    toast({ title: "Settings Reset", description: `All tariffs and meter rent prices have been reset to system defaults.` });
-    setIsResetDialogOpen(false);
-  };
-
   const handleCreateNewYearTariff = async () => {
     if (!activeTariffInfo) {
       toast({ variant: "destructive", title: "Cannot Create Tariff", description: `No base tariff found for ${currentTariffType} in ${currentYear} to copy from.` });
@@ -243,9 +236,6 @@ export default function TariffManagementPage() {
                 </Button>
                 <Button onClick={() => setIsMeterRentDialogOpen(true)} variant="default" disabled={!activeTariffInfo}>
                     <DollarSign className="mr-2 h-4 w-4" /> Manage Meter Rent
-                </Button>
-                <Button variant="destructive" onClick={() => setIsResetDialogOpen(true)}>
-                    <RotateCcw className="mr-2 h-4 w-4" /> Reset Defaults
                 </Button>
             </div>
         )}
@@ -375,22 +365,6 @@ export default function TariffManagementPage() {
             currency="ETB"
             year={currentYear}
           />
-
-          <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure you want to reset all tariffs?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will reset both Domestic and Non-domestic tariffs AND all meter rent prices for all years to the system defaults. This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleResetToDefaults} className="bg-destructive hover:bg-destructive/90">Reset All Settings</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-
           <AlertDialog open={!!rateToDelete} onOpenChange={(open) => !open && setRateToDelete(null)}>
             <AlertDialogContent>
               <AlertDialogHeader>

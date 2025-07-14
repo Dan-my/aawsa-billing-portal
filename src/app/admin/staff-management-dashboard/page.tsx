@@ -12,7 +12,8 @@ import {
   FileText, 
   TrendingUp, 
   AlertCircle, 
-  Table as TableIcon 
+  Table as TableIcon,
+  UserCheck
 } from 'lucide-react'; 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,7 @@ import type { IndividualCustomer } from "@/app/admin/individual-customers/indivi
 import type { Branch } from "@/app/admin/branches/branch-types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
+import { Badge } from "@/components/ui/badge";
 
 interface User {
   email: string;
@@ -140,18 +141,21 @@ export default function StaffManagementDashboardPage() {
   // Derived state with useMemo
   const processedStats = React.useMemo(() => {
     if (authStatus !== 'authorized' || !staffBranchId) {
-      return { totalBulkMeters: 0, totalCustomers: 0, totalBills: 0, paidBills: 0, unpaidBills: 0, billsData: [], branchPerformanceData: [], waterUsageTrendData: [], paidPercentage: "0%" };
+      return { totalBulkMeters: 0, totalCustomers: 0, totalBills: 0, paidBills: 0, unpaidBills: 0, billsData: [], branchPerformanceData: [], waterUsageTrendData: [], paidPercentage: "0%", pendingApprovals: 0 };
     }
-
-    // --- Data for top cards (filtered by staff manager's branch) ---
+    
     const branchBMs = allBulkMeters.filter(bm => bm.branchId === staffBranchId);
     const branchBMKeys = new Set(branchBMs.map(bm => bm.customerKeyNumber));
     const branchCustomers = allCustomers.filter(customer =>
       customer.branchId === staffBranchId ||
       (customer.assignedBulkMeterId && branchBMKeys.has(customer.assignedBulkMeterId))
     );
-    const paidCount = branchBMs.filter(bm => bm.paymentStatus === 'Paid').length + branchCustomers.filter(c => c.paymentStatus === 'Paid').length;
-    const unpaidCount = branchBMs.filter(bm => bm.paymentStatus === 'Unpaid').length + branchCustomers.filter(c => c.paymentStatus === 'Unpaid' || c.paymentStatus === 'Pending').length;
+
+    const activeCustomers = branchCustomers.filter(c => c.status === 'Active');
+    const pendingCustomers = branchCustomers.filter(c => c.status === 'Pending Approval').length;
+    
+    const paidCount = branchBMs.filter(bm => bm.paymentStatus === 'Paid').length + activeCustomers.filter(c => c.paymentStatus === 'Paid').length;
+    const unpaidCount = branchBMs.filter(bm => bm.paymentStatus === 'Unpaid').length + activeCustomers.filter(c => c.paymentStatus === 'Unpaid' || c.paymentStatus === 'Pending').length;
     const totalBillsCount = paidCount + unpaidCount;
     const billsData = [
         { name: 'Paid', value: paidCount, fill: 'hsl(var(--chart-1))' },
@@ -159,7 +163,6 @@ export default function StaffManagementDashboardPage() {
     ];
     const paidPercentage = totalBillsCount > 0 ? `${((paidCount / totalBillsCount) * 100).toFixed(0)}%` : "0%";
 
-    // --- Data for Branch Performance Chart (ALL branches, excluding Head Office) ---
     const performanceMap = new Map<string, { branchName: string, paid: number, unpaid: number }>();
     const displayableBranches = allBranches.filter(b => b.name.toLowerCase() !== 'head office');
     
@@ -177,7 +180,6 @@ export default function StaffManagementDashboardPage() {
     });
     const branchPerformanceData = Array.from(performanceMap.values()).map(p => ({ branch: p.branchName.replace(/ Branch$/i, ""), paid: p.paid, unpaid: p.unpaid }));
 
-    // --- Data for Water Usage Trend Chart (filtered by staff manager's branch) ---
     const usageMap = new Map<string, number>();
     branchBMs.forEach(bm => {
       if (bm.month) {
@@ -188,7 +190,7 @@ export default function StaffManagementDashboardPage() {
         }
       }
     });
-    branchCustomers.forEach(c => {
+    activeCustomers.forEach(c => {
         if (c.month) {
             const usage = c.currentReading - c.previousReading;
             if(typeof usage === 'number' && !isNaN(usage)) {
@@ -204,7 +206,7 @@ export default function StaffManagementDashboardPage() {
 
     return {
       totalBulkMeters: branchBMs.length,
-      totalCustomers: branchCustomers.length,
+      totalCustomers: activeCustomers.length,
       totalBills: totalBillsCount,
       paidBills: paidCount,
       unpaidBills: unpaidCount,
@@ -212,6 +214,7 @@ export default function StaffManagementDashboardPage() {
       branchPerformanceData,
       waterUsageTrendData,
       paidPercentage,
+      pendingApprovals: pendingCustomers,
     };
   }, [authStatus, staffBranchId, allBulkMeters, allCustomers, allBranches]);
 
@@ -239,10 +242,26 @@ export default function StaffManagementDashboardPage() {
     <div className="space-y-6">
       <h1 className="text-2xl md:text-3xl font-bold">Staff Management Dashboard - {staffBranchName}</h1>
       
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bills Status (Current Cycle)</CardTitle>
+            <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
+            <UserCheck className="h-5 w-5 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{processedStats.pendingApprovals}</div>
+            <p className="text-xs text-muted-foreground">New customers awaiting approval</p>
+            <div className="h-[120px] mt-4 flex items-center justify-center">
+                <Link href="/admin/approvals" className="w-full">
+                  <Button variant="outline" className="w-full">View Approvals</Button>
+                </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-lg">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Bills Status (Active)</CardTitle>
             <FileText className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -270,12 +289,12 @@ export default function StaffManagementDashboardPage() {
 
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Customers in {staffBranchName}</CardTitle>
+            <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{processedStats.totalCustomers.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Total customers assigned to your branch</p>
+            <p className="text-xs text-muted-foreground">Total active customers in your branch</p>
              <div className="h-[120px] mt-4 flex items-center justify-center">
                 <Users className="h-16 w-16 text-primary opacity-50" />
             </div>
@@ -284,47 +303,18 @@ export default function StaffManagementDashboardPage() {
 
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bulk Meters in {staffBranchName}</CardTitle>
+            <CardTitle className="text-sm font-medium">Bulk Meters</CardTitle>
             <Gauge className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{processedStats.totalBulkMeters.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Total bulk meters assigned to your branch</p>
+            <p className="text-xs text-muted-foreground">Total bulk meters in your branch</p>
              <div className="h-[120px] mt-4 flex items-center justify-center">
                 <Gauge className="h-16 w-16 text-primary opacity-50" />
             </div>
           </CardContent>
         </Card>
       </div>
-
-      <Card className="shadow-lg">
-        <CardHeader>
-            <CardTitle>Quick Access</CardTitle>
-            <CardDescription>Navigate quickly to key management areas for your branch.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button asChild variant="outline" className="w-full justify-start p-4 h-auto quick-access-btn">
-                <Link href="/staff/bulk-meters">
-                    <Gauge className="mr-3 h-6 w-6" />
-                    <div>
-                        <p className="font-semibold text-base">View Bulk Meters</p>
-                        <p className="text-xs text-muted-foreground">Manage bulk water meters in your branch.</p>
-                    </div>
-                    <ArrowRight className="ml-auto h-5 w-5" />
-                </Link>
-            </Button>
-            <Button asChild variant="outline" className="w-full justify-start p-4 h-auto quick-access-btn">
-                <Link href="/staff/individual-customers">
-                    <Users className="mr-3 h-6 w-6" />
-                    <div>
-                        <p className="font-semibold text-base">View Individual Customers</p>
-                        <p className="text-xs text-muted-foreground">Manage individual customer accounts in your branch.</p>
-                    </div>
-                    <ArrowRight className="ml-auto h-5 w-5" />
-                </Link>
-            </Button>
-        </CardContent>
-      </Card>
       
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="shadow-lg">

@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { MoreHorizontal, Edit, Trash2, User, CheckCircle, XCircle, Clock } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, User, CheckCircle, XCircle, Clock, Hourglass } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -111,10 +111,14 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
                   <Badge
                      variant={
                       customer.status === 'Active' ? 'default'
-                      : customer.status === 'Inactive' ? 'secondary'
+                      : customer.status === 'Pending Approval' ? 'secondary'
                       : 'destructive'
                     }
+                    className={cn(
+                        customer.status === 'Pending Approval' && "bg-amber-500 text-white hover:bg-amber-600"
+                    )}
                   >
+                    {customer.status === 'Pending Approval' && <Hourglass className="mr-1 h-3.5 w-3.5"/>}
                     {customer.status}
                   </Badge>
                 </TableCell>

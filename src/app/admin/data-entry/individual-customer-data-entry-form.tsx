@@ -37,6 +37,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse, isValid } from "date-fns";
 import { customerTypes, sewerageConnections, paymentStatuses } from "@/lib/billing";
 import { individualCustomerStatuses } from "../individual-customers/individual-customer-types";
+import type { StaffMember } from "../staff-management/staff-types";
 
 
 const FormSchemaForAdminDataEntry = baseIndividualCustomerDataSchema.extend({
@@ -51,6 +52,7 @@ const BRANCH_UNASSIGNED_VALUE = "_SELECT_BRANCH_INDIVIDUAL_";
 
 export function IndividualCustomerDataEntryForm() {
   const { toast } = useToast();
+  const [currentUser, setCurrentUser] = React.useState<StaffMember | null>(null);
   const [availableBulkMeters, setAvailableBulkMeters] = React.useState<{customerKeyNumber: string, name: string}[]>([]);
   const [isLoadingBulkMeters, setIsLoadingBulkMeters] = React.useState(true);
   const [availableBranches, setAvailableBranches] = React.useState<Branch[]>([]);
@@ -58,6 +60,11 @@ export function IndividualCustomerDataEntryForm() {
 
 
   React.useEffect(() => {
+    const userJson = localStorage.getItem('user');
+    if (userJson) {
+      setCurrentUser(JSON.parse(userJson));
+    }
+    
     setIsLoadingBulkMeters(true);
     Promise.all([
         initializeBulkMeters(),
@@ -113,13 +120,17 @@ export function IndividualCustomerDataEntryForm() {
   });
 
   async function onSubmit(data: AdminDataEntryFormValues) {
+    if (!currentUser) {
+        toast({ variant: 'destructive', title: 'Error', description: 'User information not found.' });
+        return;
+    }
     const submissionData = {
       ...data,
       assignedBulkMeterId: data.assignedBulkMeterId === UNASSIGNED_BULK_METER_VALUE ? undefined : data.assignedBulkMeterId,
       branchId: data.branchId === BRANCH_UNASSIGNED_VALUE ? undefined : data.branchId,
     };
     
-    const result = await addCustomerToStore(submissionData as Omit<IndividualCustomer, 'created_at' | 'updated_at' | 'calculatedBill' | 'arrears'>);
+    const result = await addCustomerToStore(submissionData as Omit<IndividualCustomer, 'created_at' | 'updated_at' | 'calculatedBill' | 'arrears'>, currentUser);
     if (result.success && result.data) {
         toast({
         title: "Data Entry Submitted",

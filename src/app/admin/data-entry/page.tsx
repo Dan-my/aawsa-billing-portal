@@ -20,6 +20,7 @@ import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Alert, AlertTitle } from "@/components/ui/alert";
+import type { StaffMember } from "../staff-management/staff-types";
 
 const bulkMeterCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward", "branchId", "chargeGroup", "sewerageConnection", "xCoordinate", "yCoordinate"];
 const individualCustomerCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward", "sewerageConnection", "assignedBulkMeterId", "branchId"];
@@ -27,10 +28,15 @@ const individualCustomerCsvHeaders = ["name", "customerKeyNumber", "contractNumb
 
 export default function AdminDataEntryPage() {
   const { hasPermission } = usePermissions();
+  const [currentUser, setCurrentUser] = React.useState<StaffMember | null>(null);
 
   React.useEffect(() => {
     initializeBulkMeters();
     initializeCustomers();
+    const userJson = localStorage.getItem('user');
+    if (userJson) {
+      setCurrentUser(JSON.parse(userJson));
+    }
   }, []);
 
   const handleBulkMeterCsvUpload = async (data: BulkMeterDataEntryFormValues) => {
@@ -41,10 +47,11 @@ export default function AdminDataEntryPage() {
   };
 
   const handleIndividualCustomerCsvUpload = async (data: IndividualCustomerDataEntryFormValues) => {
+     if (!currentUser) return;
      const customerDataForStore = {
         ...data,
     } as Omit<IndividualCustomer, 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill' | 'arrears'>;
-    await addCustomer(customerDataForStore);
+    await addCustomer(customerDataForStore, currentUser);
   };
 
   const downloadCsvTemplate = (headers: string[], fileName: string) => {

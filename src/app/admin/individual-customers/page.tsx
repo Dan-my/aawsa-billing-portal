@@ -30,10 +30,12 @@ import type { PaymentStatus, CustomerType, SewerageConnection } from "@/lib/bill
 import type { Branch } from "../branches/branch-types";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { usePermissions } from "@/hooks/use-permissions";
+import type { StaffMember } from "../staff-management/staff-types";
 
 export default function IndividualCustomersPage() {
   const { hasPermission } = usePermissions();
   const { toast } = useToast();
+  const [currentUser, setCurrentUser] = React.useState<StaffMember | null>(null);
   const [customers, setCustomers] = React.useState<IndividualCustomer[]>([]);
   const [bulkMetersList, setBulkMetersList] = React.useState<{customerKeyNumber: string, name: string}[]>([]);
   const [branches, setBranches] = React.useState<Branch[]>([]);
@@ -48,6 +50,11 @@ export default function IndividualCustomersPage() {
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
   React.useEffect(() => {
+    const userJson = localStorage.getItem('user');
+    if (userJson) {
+      setCurrentUser(JSON.parse(userJson));
+    }
+
     setIsLoading(true);
     Promise.all([
       initializeBulkMeters(),
@@ -106,6 +113,11 @@ export default function IndividualCustomersPage() {
   };
 
   const handleSubmitCustomer = async (data: IndividualCustomerFormValues) => {
+    if (!currentUser) {
+        toast({ variant: 'destructive', title: 'Error', description: 'User information not found.' });
+        return;
+    }
+    
     if (selectedCustomer) {
       const updatedCustomerData: Partial<Omit<IndividualCustomer, 'customerKeyNumber'>> = {
         ...data, 
@@ -138,7 +150,7 @@ export default function IndividualCustomersPage() {
         currentReading: Number(data.currentReading),
       } as Omit<IndividualCustomer, 'created_at' | 'updated_at' | 'calculatedBill'>;
 
-      const result = await addCustomerToStore(newCustomerData);
+      const result = await addCustomerToStore(newCustomerData, currentUser);
       if (result.success && result.data) {
         toast({ title: "Customer Added", description: `${result.data.name} has been added.` });
       } else {
@@ -158,6 +170,7 @@ export default function IndividualCustomersPage() {
   };
 
   const filteredCustomers = customers.filter(customer => {
+    if (customer.status !== 'Active') return false;
     const branchName = getBranchNameFromList(customer.branchId, customer.location);
     return (
         customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -198,8 +211,8 @@ export default function IndividualCustomersPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Customer List</CardTitle>
-          <CardDescription>View, edit, and manage individual customer information.</CardDescription>
+          <CardTitle>Active Customer List</CardTitle>
+          <CardDescription>View, edit, and manage active individual customer information.</CardDescription>
         </CardHeader>
         <CardContent>
            {isLoading ? (

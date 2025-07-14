@@ -3,7 +3,7 @@ import type { z } from "zod";
 import type { individualCustomerDataEntrySchema } from "@/app/admin/data-entry/customer-data-entry-types";
 import type { PaymentStatus, CustomerType, SewerageConnection } from "@/lib/billing";
 
-export const individualCustomerStatuses = ['Active', 'Inactive', 'Suspended'] as const;
+export const individualCustomerStatuses = ['Active', 'Inactive', 'Suspended', 'Pending Approval', 'Rejected'] as const;
 export type IndividualCustomerStatus = (typeof individualCustomerStatuses)[number];
 
 // This type represents the data structure for an individual customer entity.
@@ -18,4 +18,6 @@ export type IndividualCustomer = z.infer<typeof individualCustomerDataEntrySchem
   branchId?: string; // New field for branch association
   created_at?: string | null;
   updated_at?: string | null;
+  approved_by?: string | null;
+  approved_at?: string | null;
 };

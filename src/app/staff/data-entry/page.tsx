@@ -23,6 +23,7 @@ import {
 } from "@/lib/data-store";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
+import type { StaffMember } from "@/app/admin/staff-management/staff-types";
 
 const bulkMeterCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward"];
 const individualCustomerCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward", "sewerageConnection", "assignedBulkMeterId"];
@@ -35,6 +36,7 @@ interface User {
 }
 
 export default function StaffDataEntryPage() {
+  const [currentUser, setCurrentUser] = React.useState<StaffMember | null>(null);
   const [staffBranchName, setStaffBranchName] = React.useState<string>("Your Branch");
   const [staffBranchId, setStaffBranchId] = React.useState<string | null>(null);
   const [isBranchDetermined, setIsBranchDetermined] = React.useState(false);
@@ -47,6 +49,7 @@ export default function StaffDataEntryPage() {
     if (storedUser) {
       try {
         const parsedUser: User = JSON.parse(storedUser);
+        setCurrentUser(parsedUser as StaffMember);
         if (parsedUser.role.toLowerCase() === "staff" && parsedUser.branchId && parsedUser.branchName) {
           setStaffBranchName(parsedUser.branchName);
           setStaffBranchId(parsedUser.branchId);
@@ -71,15 +74,16 @@ export default function StaffDataEntryPage() {
       status: "Active",
       paymentStatus: "Unpaid",
     };
-    await addBulkMeter(bulkMeterDataForStore);
+    await addBulkMeter(bulkMeterDataForStore as BulkMeter);
   };
 
   const handleIndividualCustomerCsvUpload = async (data: IndividualCustomerDataEntryFormValues) => {
+     if (!currentUser) return;
      const customerDataForStore = {
         ...data,
         branchId: staffBranchId || undefined, // Use the stored branch ID
     } as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill'>;
-    await addCustomer(customerDataForStore);
+    await addCustomer(customerDataForStore, currentUser);
   };
   
   const downloadCsvTemplate = (headers: string[], fileName: string) => {

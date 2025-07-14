@@ -24,15 +24,8 @@ export interface TariffInfo {
     maintenance_percentage: number;
     sanitation_percentage: number;
     sewerage_rate_per_m3: number;
-    meter_rent_prices: { [key: string]: number }; // Added this line
+    meter_rent_prices: { [key: string]: number };
 }
-
-
-export const DEFAULT_METER_RENT_PRICES: { [key: string]: number } = {
-  "0.5": 15, "0.75": 20, "1": 33, "1.25": 36, "1.5": 57, "2": 98,
-  "2.5": 112, "3": 148, "4": 177, "5": 228, "6": 259,
-};
-
 
 // This function now fetches directly from the database for the given year.
 export const getTariffInfo = async (type: CustomerType, year: number): Promise<TariffInfo | undefined> => {
@@ -66,10 +59,10 @@ export const getTariffInfo = async (type: CustomerType, year: number): Promise<T
             parsedMeterRents = JSON.parse(tariff.meter_rent_prices);
         } catch(e) {
             console.error(`Failed to parse meter_rent_prices JSON from DB for tariff ${type}/${year}`, e);
-            parsedMeterRents = DEFAULT_METER_RENT_PRICES;
+            parsedMeterRents = {}; // Fallback to an empty object, not defaults
         }
     } else {
-        parsedMeterRents = tariff.meter_rent_prices || DEFAULT_METER_RENT_PRICES;
+        parsedMeterRents = tariff.meter_rent_prices || {}; // Fallback to an empty object
     }
 
 
@@ -106,16 +99,17 @@ export async function calculateBill(
   billingMonth: string // e.g., "2024-05"
 ): Promise<BillCalculationResult> {
   let baseWaterCharge = 0;
+  const emptyResult = { totalBill: 0, baseWaterCharge: 0, maintenanceFee: 0, sanitationFee: 0, vatAmount: 0, meterRent: 0, sewerageCharge: 0 };
   
   if (!billingMonth || typeof billingMonth !== 'string' || !billingMonth.match(/^\d{4}-\d{2}$/)) {
     console.error(`Invalid billingMonth provided: ${billingMonth}. Calculation cannot proceed.`);
-    return { totalBill: 0, baseWaterCharge: 0, maintenanceFee: 0, sanitationFee: 0, vatAmount: 0, meterRent: 0, sewerageCharge: 0 };
+    return emptyResult;
   }
 
   const year = parseInt(billingMonth.split('-')[0], 10);
   if (isNaN(year)) {
       console.error(`Invalid billingMonth format: "${billingMonth}". Could not extract year.`);
-      return { totalBill: 0, baseWaterCharge: 0, maintenanceFee: 0, sanitationFee: 0, vatAmount: 0, meterRent: 0, sewerageCharge: 0 };
+      return emptyResult;
   }
 
   // Fetch the tariff configuration directly from the database for the given year.
@@ -123,7 +117,7 @@ export async function calculateBill(
   
   if (!tariffConfig) {
       console.error(`Tariff information for customer type "${customerType}" for year ${year} not found in database. Bill calculation will be incorrect.`);
-      return { totalBill: 0, baseWaterCharge: 0, maintenanceFee: 0, sanitationFee: 0, vatAmount: 0, meterRent: 0, sewerageCharge: 0 };
+      return emptyResult;
   }
   
   const tiers = tariffConfig.tiers;
@@ -206,8 +200,9 @@ export async function calculateBill(
   }
 
   // --- Other Charges ---
-  const METER_RENT_PRICES = tariffConfig.meter_rent_prices || DEFAULT_METER_RENT_PRICES;
-  const meterRent = METER_RENT_PRICES[String(meterSize)] || 0;
+  // Use only the prices from the fetched tariff. No defaults.
+  const meterRentPrices = tariffConfig.meter_rent_prices || {};
+  const meterRent = meterRentPrices[String(meterSize)] || 0; // If no price for size, rent is 0
   
   const sewerageChargeRate = tariffConfig.sewerage_rate_per_m3;
   const sewerageCharge = (sewerageConnection === "Yes") ? usageM3 * sewerageChargeRate : 0;

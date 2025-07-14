@@ -6,7 +6,7 @@ import type { IndividualCustomer as DomainIndividualCustomer, IndividualCustomer
 import type { BulkMeter as DomainBulkMeterTypeFromTypes } from '@/app/admin/bulk-meters/bulk-meter-types'; 
 import type { Branch as DomainBranch } from '@/app/admin/branches/branch-types';
 import type { StaffMember as DomainStaffMember } from '@/app/admin/staff-management/staff-types';
-import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult, getTariffInfo as getTariffInfoFromBilling, DEFAULT_METER_RENT_PRICES, TariffInfo } from '@/lib/billing';
+import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult, getTariffInfo as getTariffInfoFromBilling, TariffInfo } from '@/lib/billing';
 import { supabase } from '@/lib/supabase'; // Direct import of supabase client
 import {
   getAllBranchesAction,
@@ -216,7 +216,7 @@ const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
       { limit: Infinity, rate: 81.71 },
     ]),
     maintenance_percentage: 0.01, sanitation_percentage: 0.07, sewerage_rate_per_m3: 6.25,
-    meter_rent_prices: JSON.stringify(DEFAULT_METER_RENT_PRICES),
+    meter_rent_prices: JSON.stringify({ "0.5": 15, "0.75": 20, "1": 33, "1.25": 36, "1.5": 57, "2": 98, "2.5": 112, "3": 148, "4": 177, "5": 228, "6": 259 }),
   },
   {
     customer_type: 'Non-domestic',
@@ -225,7 +225,7 @@ const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
       { limit: 50, rate: 17.79 }, { limit: 100, rate: 21.05 }, { limit: Infinity, rate: 24.56 },
     ]),
     maintenance_percentage: 0.01, sanitation_percentage: 0.10, sewerage_rate_per_m3: 8.75,
-    meter_rent_prices: JSON.stringify(DEFAULT_METER_RENT_PRICES),
+    meter_rent_prices: JSON.stringify({ "0.5": 15, "0.75": 20, "1": 33, "1.25": 36, "1.5": 57, "2": 98, "2.5": 112, "3": 148, "4": 177, "5": 228, "6": 259 }),
   },
   {
     customer_type: 'Domestic',
@@ -236,7 +236,7 @@ const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
       { limit: Infinity, rate: 81.71 },
     ]),
     maintenance_percentage: 0.01, sanitation_percentage: 0.07, sewerage_rate_per_m3: 6.25,
-    meter_rent_prices: JSON.stringify(DEFAULT_METER_RENT_PRICES),
+    meter_rent_prices: JSON.stringify({ "0.5": 15, "0.75": 20, "1": 33, "1.25": 36, "1.5": 57, "2": 98, "2.5": 112, "3": 148, "4": 177, "5": 228, "6": 259 }),
   },
   {
     customer_type: 'Non-domestic',
@@ -245,7 +245,7 @@ const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
       { limit: 50, rate: 17.79 }, { limit: 100, rate: 21.05 }, { limit: Infinity, rate: 24.56 },
     ]),
     maintenance_percentage: 0.01, sanitation_percentage: 0.10, sewerage_rate_per_m3: 8.75,
-    meter_rent_prices: JSON.stringify(DEFAULT_METER_RENT_PRICES),
+    meter_rent_prices: JSON.stringify({ "0.5": 15, "0.75": 20, "1": 33, "1.25": 36, "1.5": 57, "2": 98, "2.5": 112, "3": 148, "4": 177, "5": 228, "6": 259 }),
   },
   {
     customer_type: 'Domestic',
@@ -256,7 +256,7 @@ const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
       { limit: Infinity, rate: 81.71 },
     ]),
     maintenance_percentage: 0.01, sanitation_percentage: 0.07, sewerage_rate_per_m3: 6.25,
-    meter_rent_prices: JSON.stringify(DEFAULT_METER_RENT_PRICES),
+    meter_rent_prices: JSON.stringify({ "0.5": 15, "0.75": 20, "1": 33, "1.25": 36, "1.5": 57, "2": 98, "2.5": 112, "3": 148, "4": 177, "5": 228, "6": 259 }),
   },
   {
     customer_type: 'Non-domestic',
@@ -265,7 +265,7 @@ const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
       { limit: 50, rate: 17.79 }, { limit: 100, rate: 21.05 }, { limit: Infinity, rate: 24.56 },
     ]),
     maintenance_percentage: 0.01, sanitation_percentage: 0.10, sewerage_rate_per_m3: 8.75,
-    meter_rent_prices: JSON.stringify(DEFAULT_METER_RENT_PRICES),
+    meter_rent_prices: JSON.stringify({ "0.5": 15, "0.75": 20, "1": 33, "1.25": 36, "1.5": 57, "2": 98, "2.5": 112, "3": 148, "4": 177, "5": 228, "6": 259 }),
   },
   {
     customer_type: 'Domestic',
@@ -275,7 +275,7 @@ const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
       { limit: 50, rate: 18.28 }, { limit: Infinity, rate: 21.05 },
     ]),
     maintenance_percentage: 0.01, sanitation_percentage: 0.07, sewerage_rate_per_m3: 6.25,
-    meter_rent_prices: JSON.stringify(DEFAULT_METER_RENT_PRICES),
+    meter_rent_prices: JSON.stringify({ "0.5": 15, "0.75": 20, "1": 33, "1.25": 36, "1.5": 57, "2": 98, "2.5": 112, "3": 148, "4": 177, "5": 228, "6": 259 }),
   },
   {
     customer_type: 'Non-domestic',
@@ -284,7 +284,7 @@ const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
       { limit: 50, rate: 17.79 }, { limit: 100, rate: 21.05 }, { limit: Infinity, rate: 24.56 },
     ]),
     maintenance_percentage: 0.01, sanitation_percentage: 0.10, sewerage_rate_per_m3: 8.75,
-    meter_rent_prices: JSON.stringify(DEFAULT_METER_RENT_PRICES),
+    meter_rent_prices: JSON.stringify({ "0.5": 15, "0.75": 20, "1": 33, "1.25": 36, "1.5": 57, "2": 98, "2.5": 112, "3": 148, "4": 177, "5": 228, "6": 259 }),
   },
   {
     customer_type: 'Domestic',
@@ -295,7 +295,7 @@ const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
       { limit: Infinity, rate: 81.71 }
     ]),
     maintenance_percentage: 0.01, sanitation_percentage: 0.07, sewerage_rate_per_m3: 6.25,
-    meter_rent_prices: JSON.stringify(DEFAULT_METER_RENT_PRICES),
+    meter_rent_prices: JSON.stringify({ "0.5": 16, "0.75": 20, "1": 33, "1.25": 36, "1.5": 57, "2": 98, "2.5": 112, "3": 148, "4": 177, "5": 228, "6": 259 }),
   },
   {
     customer_type: 'Non-domestic',
@@ -304,7 +304,7 @@ const DEFAULT_TARIFFS: Omit<TariffRow, 'created_at' | 'updated_at'>[] = [
       { limit: 50, rate: 17.79 }, { limit: 100, rate: 21.05 }, { limit: Infinity, rate: 24.56 },
     ]),
     maintenance_percentage: 0.01, sanitation_percentage: 0.10, sewerage_rate_per_m3: 8.75,
-    meter_rent_prices: JSON.stringify(DEFAULT_METER_RENT_PRICES),
+    meter_rent_prices: JSON.stringify({ "0.5": 15, "0.75": 20, "1": 33, "1.25": 36, "1.5": 57, "2": 98, "2.5": 112, "3": 148, "4": 177, "5": 228, "6": 259 }),
   },
 ];
 
@@ -1201,10 +1201,10 @@ export const getTariff = (customerType: CustomerType, year: number): TariffInfo 
             parsedMeterRents = JSON.parse(tariff.meter_rent_prices);
         } catch(e) {
             console.error(`Failed to parse meter_rent_prices JSON from DB for tariff ${customerType}/${year}`, e);
-            parsedMeterRents = DEFAULT_METER_RENT_PRICES;
+            parsedMeterRents = {};
         }
     } else {
-        parsedMeterRents = tariff.meter_rent_prices || DEFAULT_METER_RENT_PRICES;
+        parsedMeterRents = tariff.meter_rent_prices || {};
     }
 
     return {

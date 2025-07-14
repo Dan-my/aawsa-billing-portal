@@ -1,14 +1,13 @@
--- Step 1: Add new status values to the individual_customer_status enum
--- The 'IF NOT EXISTS' clause prevents an error if the values have already been added.
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'Pending Approval' AND enumtypid = 'individual_customer_status'::regtype) THEN
-    ALTER TYPE individual_customer_status ADD VALUE 'Pending Approval' AFTER 'Suspended';
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'Rejected' AND enumtypid = 'individual_customer_status'::regtype) THEN
-    ALTER TYPE individual_customer_status ADD VALUE 'Rejected' AFTER 'Pending Approval';
-  END IF;
-END$$;
+-- Step 1: Alter the CHECK constraint to include new status values
+-- First, we drop the existing constraint. The name might vary, but 'individual_customers_status_check' is a common default.
+-- You can verify the exact name in your Supabase table definitions if this fails.
+ALTER TABLE public.individual_customers
+DROP CONSTRAINT IF EXISTS individual_customers_status_check;
+
+-- Next, we add the constraint back with the new allowed values.
+ALTER TABLE public.individual_customers
+ADD CONSTRAINT individual_customers_status_check
+CHECK (status IN ('Active', 'Inactive', 'Suspended', 'Pending Approval', 'Rejected'));
 
 
 -- Step 2: Add new columns to the individual_customers table for tracking approvals

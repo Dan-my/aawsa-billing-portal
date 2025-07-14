@@ -1,37 +1,44 @@
-
--- This script adds an approval workflow for new customer creation.
--- It adds new statuses and tracking columns to the individual_customers table.
-
--- Add new statuses 'Pending Approval' and 'Rejected' to the enum type for individual customers.
--- This block ensures the script can be run multiple times without causing "type exists" errors.
+-- Step 1: Add new status values to the individual_customer_status enum
+-- The 'IF NOT EXISTS' clause prevents an error if the values have already been added.
 DO $$
 BEGIN
-    -- Check if 'Pending Approval' exists and add it if it doesn't
-    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumtypid = 'public.individual_customer_status'::regtype AND enumlabel = 'Pending Approval') THEN
-        ALTER TYPE public.individual_customer_status ADD VALUE 'Pending Approval' AFTER 'Suspended';
-    END IF;
-
-    -- Check if 'Rejected' exists and add it if it doesn't
-    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumtypid = 'public.individual_customer_status'::regtype AND enumlabel = 'Rejected') THEN
-        ALTER TYPE public.individual_customer_status ADD VALUE 'Rejected' AFTER 'Pending Approval';
-    END IF;
-END;
-$$;
+  IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'Pending Approval' AND enumtypid = 'individual_customer_status'::regtype) THEN
+    ALTER TYPE individual_customer_status ADD VALUE 'Pending Approval' AFTER 'Suspended';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'Rejected' AND enumtypid = 'individual_customer_status'::regtype) THEN
+    ALTER TYPE individual_customer_status ADD VALUE 'Rejected' AFTER 'Pending Approval';
+  END IF;
+END$$;
 
 
--- Add tracking columns to the individual_customers table.
--- These will store who approved a customer record and when.
+-- Step 2: Add new columns to the individual_customers table for tracking approvals
+-- The 'IF NOT EXISTS' check ensures the script can be run multiple times without error.
+
+-- Column to store the ID of the staff member who approved the record.
+-- Corrected data type to UUID to match the staff_members.id column.
 ALTER TABLE public.individual_customers
-ADD COLUMN IF NOT EXISTS approved_by uuid,
-ADD COLUMN IF NOT EXISTS approved_at timestamptz;
+ADD COLUMN IF NOT EXISTS approved_by UUID;
 
-
--- Drop the foreign key constraint if it exists, to ensure a clean re-creation.
+-- Column to store the timestamp of when the approval happened.
 ALTER TABLE public.individual_customers
-DROP CONSTRAINT IF EXISTS individual_customers_approved_by_fkey;
+ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ;
 
--- Add a foreign key constraint to link the approver to a staff member.
+-- Add a foreign key constraint to link 'approved_by' to the 'staff_members' table.
 -- This ensures data integrity.
-ALTER TABLE public.individual_customers
-ADD CONSTRAINT individual_customers_approved_by_fkey
-FOREIGN KEY (approved_by) REFERENCES public.staff_members(id) ON DELETE SET NULL;
+-- A check is added to avoid adding the constraint if it already exists.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_approved_by_staff' AND conrelid = 'public.individual_customers'::regclass
+  ) THEN
+    ALTER TABLE public.individual_customers
+    ADD CONSTRAINT fk_approved_by_staff
+    FOREIGN KEY (approved_by)
+    REFERENCES public.staff_members(id)
+    ON DELETE SET NULL; -- If the approving staff member is deleted, keep the customer record but nullify the reference.
+  END IF;
+END$$;
+
+-- Add a comment to the new column for clarity in database tools.
+COMMENT ON COLUMN public.individual_customers.approved_by IS 'Foreign key referencing the staff member who approved this customer record.';

@@ -140,7 +140,7 @@ You can also deploy this application to major cloud providers, although these me
 
 ## Database Migrations
 
-From time to time, application updates may require changes to the database structure or functions. These changes are provided as SQL scripts that you need to run in your Supabase project's SQL Editor.
+From time to to time, application updates may require changes to the database structure or functions. These changes are provided as SQL scripts that you need to run in your Supabase project's SQL Editor.
 
 ### **Important: Always back up your data before running any migration script.**
 
@@ -220,3 +220,27 @@ This update moves the tariff rates from being hard-coded in the application to a
 
 You should see a "Success. No rows returned" message. After running this, tariff management will be fully database-driven.
 
+---
+
+### **Migration: Add Meter Rent Prices to Tariffs Table (Required)**
+
+This update makes meter rent prices year-specific and editable by moving them into the `tariffs` database table.
+
+**What it does:**
+*   Adds a new `meter_rent_prices` column to the `tariffs` table to store a JSON object of meter sizes and their corresponding rent prices.
+*   Populates the new column with default rent prices for all existing tariff records.
+*   This makes meter rent prices editable on a per-year basis through the "Manage Meter Rent" dialog in the Tariff Management page.
+
+**To apply this update:**
+
+1.  **Navigate to the SQL Editor:**
+    *   Go to your Supabase project dashboard.
+    *   In the left-hand menu, click on the **SQL Editor** icon.
+2.  **Run the Script:**
+    *   Click on **"+ New query"**.
+    *   Open the newly added file `database_migrations/004_add_meter_rent_to_tariffs.sql` in this project.
+    *   Copy the entire content of that file.
+    *   Paste the content into the query window in the Supabase SQL Editor.
+    *   Click the **"RUN"** button.
+
+You should see a "Success. No rows returned" message. After running this, meter rent prices will be fully database-driven and year-specific.

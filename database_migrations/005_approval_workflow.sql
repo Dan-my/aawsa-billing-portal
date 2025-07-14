@@ -1,20 +1,32 @@
--- Step 1: Alter the CHECK constraint to include new status values
--- First, we drop the existing constraint. The name might vary, but 'individual_customers_status_check' is a common default.
--- You can verify the exact name in your Supabase table definitions if this fails.
-ALTER TABLE public.individual_customers
-DROP CONSTRAINT IF EXISTS individual_customers_status_check;
+-- This script modifies the individual_customers table to support an approval workflow.
 
--- Next, we add the constraint back with the new allowed values.
+-- Step 1: Drop the existing status constraint to redefine it.
+-- A name for the constraint is assumed here ('individual_customers_status_check').
+-- If your constraint has a different name, you may need to update it.
+-- You can find the name by inspecting the table constraints in the Supabase UI.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'individual_customers_status_check' AND conrelid = 'public.individual_customers'::regclass
+  ) THEN
+    ALTER TABLE public.individual_customers DROP CONSTRAINT individual_customers_status_check;
+  END IF;
+END$$;
+
+
+-- Step 2: Re-add the status constraint with the new values.
+-- This ensures existing data remains valid while allowing new statuses.
 ALTER TABLE public.individual_customers
 ADD CONSTRAINT individual_customers_status_check
 CHECK (status IN ('Active', 'Inactive', 'Suspended', 'Pending Approval', 'Rejected'));
 
 
--- Step 2: Add new columns to the individual_customers table for tracking approvals
--- The 'IF NOT EXISTS' check ensures the script can be run multiple times without error.
+-- Step 3: Add new columns to the individual_customers table for tracking approvals.
+-- The 'IF NOT EXISTS' check ensures these columns are only added once.
 
 -- Column to store the ID of the staff member who approved the record.
--- Corrected data type to UUID to match the staff_members.id column.
+-- Data type is UUID to match the staff_members.id column.
 ALTER TABLE public.individual_customers
 ADD COLUMN IF NOT EXISTS approved_by UUID;
 
@@ -22,9 +34,8 @@ ADD COLUMN IF NOT EXISTS approved_by UUID;
 ALTER TABLE public.individual_customers
 ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ;
 
--- Add a foreign key constraint to link 'approved_by' to the 'staff_members' table.
--- This ensures data integrity.
--- A check is added to avoid adding the constraint if it already exists.
+-- Step 4: Add a foreign key constraint to link 'approved_by' to the 'staff_members' table.
+-- This ensures data integrity. A check prevents adding the constraint if it already exists.
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -39,5 +50,6 @@ BEGIN
   END IF;
 END$$;
 
--- Add a comment to the new column for clarity in database tools.
+-- Step 5: Add comments to the new columns for clarity in database tools.
 COMMENT ON COLUMN public.individual_customers.approved_by IS 'Foreign key referencing the staff member who approved this customer record.';
+COMMENT ON COLUMN public.individual_customers.approved_at IS 'The timestamp when the customer record was approved.';

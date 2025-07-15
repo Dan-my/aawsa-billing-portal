@@ -22,13 +22,14 @@ const buildSidebarNavItems = (user: UserProfile | null): NavItemGroup[] => {
     if (!user) return [];
     
     const permissions = new Set(user.permissions || []);
+    const userRoleLower = user.role.toLowerCase();
+    
     // Admin role always has permission, otherwise check the permissions set.
-    const hasPermission = (p: string) => user.role.toLowerCase() === 'admin' || permissions.has(p);
+    const hasPermission = (p: string) => userRoleLower === 'admin' || permissions.has(p);
 
     const navItems: NavItemGroup[] = [];
 
     // --- Dashboard ---
-    const userRoleLower = user.role.toLowerCase();
     let dashboardHref = "/admin/dashboard"; // Default for Admin
     if (userRoleLower === 'head office management') dashboardHref = '/admin/head-office-dashboard';
     if (userRoleLower === 'staff management') dashboardHref = '/admin/staff-management-dashboard';

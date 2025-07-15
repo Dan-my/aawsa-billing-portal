@@ -84,90 +84,96 @@ export default function StaffBulkMeterDetailsPage() {
     billingHistoryPage * billingHistoryRowsPerPage + billingHistoryRowsPerPage
   );
 
-  const memoizedDetails = useMemo(() => {
-    if (!bulkMeter) {
-      return {
-        bmPreviousReading: 0, bmCurrentReading: 0, bulkUsage: 0,
-        totalBulkBillForPeriod: 0, totalPayable: 0, differenceUsage: 0,
-        differenceBill: 0, differenceBillBreakdown: {} as BillCalculationResult,
-        displayBranchName: "N/A", displayCardLocation: "N/A",
-        billCardDetails: {
-          prevReading: 0, currReading: 0, usage: 0, baseWaterCharge: 0,
-          maintenanceFee: 0, sanitationFee: 0, sewerageCharge: 0, meterRent: 0,
-          vatAmount: 0, totalDifferenceBill: 0, differenceUsage: 0,
-          outstandingBill: 0, totalPayable: 0, paymentStatus: 'Unpaid' as PaymentStatus,
-          month: 'N/A',
-        },
-        totalIndividualUsage: 0,
-      };
-    }
+  const [memoizedDetails, setMemoizedDetails] = React.useState({
+    bmPreviousReading: 0, bmCurrentReading: 0, bulkUsage: 0,
+    totalBulkBillForPeriod: 0, totalPayable: 0, differenceUsage: 0,
+    differenceBill: 0, differenceBillBreakdown: {} as BillCalculationResult,
+    displayBranchName: "N/A", displayCardLocation: "N/A",
+    billCardDetails: {
+      prevReading: 0, currReading: 0, usage: 0, baseWaterCharge: 0,
+      maintenanceFee: 0, sanitationFee: 0, sewerageCharge: 0, meterRent: 0,
+      vatAmount: 0, totalDifferenceBill: 0, differenceUsage: 0,
+      outstandingBill: 0, totalPayable: 0, paymentStatus: 'Unpaid' as PaymentStatus,
+      month: 'N/A',
+    },
+    totalIndividualUsage: 0,
+  });
 
+  const calculateMemoizedDetails = useCallback(async () => {
+    if (!bulkMeter) return;
+  
     const bmPreviousReading = bulkMeter.previousReading ?? 0;
     const bmCurrentReading = bulkMeter.currentReading ?? 0;
     const bulkUsage = bmCurrentReading - bmPreviousReading;
-
+  
     const effectiveBulkMeterCustomerType: CustomerType = bulkMeter.chargeGroup || "Non-domestic";
     const effectiveBulkMeterSewerageConnection: SewerageConnection = bulkMeter.sewerageConnection || "No";
-    
-    const { totalBill: totalBulkBillForPeriod } = calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
-    
+    const billingMonth = bulkMeter.month || format(new Date(), 'yyyy-MM');
+  
+    const { totalBill: totalBulkBillForPeriod } = await calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize, billingMonth);
+  
     const outStandingBillValue = bulkMeter.outStandingbill ?? 0;
-
+  
     const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
-
+  
     const differenceUsage = bulkUsage - totalIndividualUsage;
-    
-    const { totalBill: differenceBill, ...differenceBillBreakdown } = calculateBill(differenceUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize);
-    
+  
+    const { totalBill: differenceBill, ...differenceBillBreakdown } = await calculateBill(differenceUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize, billingMonth);
+  
     const totalPayable = differenceBill + outStandingBillValue;
     const paymentStatus = totalPayable > 0.01 ? 'Unpaid' : 'Paid';
-    
+  
     const displayBranchName = bulkMeter.branchId ? branches.find(b => b.id === bulkMeter.branchId)?.name : bulkMeter.location;
     const displayCardLocation = bulkMeter.specificArea || bulkMeter.ward || "N/A";
-    
+  
     const billToRender = billForPrintView || (billingHistory.length > 0 ? billingHistory[0] : null);
-
-    const finalBillCardDetails = (() => {
-      if (billToRender) {
-          const historicalBillDetails = calculateBill(billToRender.differenceUsage ?? 0, bulkMeter.chargeGroup || "Non-domestic", bulkMeter.sewerageConnection || "No", bulkMeter.meterSize);
-          return {
-              prevReading: billToRender.previousReadingValue,
-              currReading: billToRender.currentReadingValue,
-              usage: billToRender.usageM3 ?? 0,
-              baseWaterCharge: historicalBillDetails.baseWaterCharge,
-              maintenanceFee: historicalBillDetails.maintenanceFee,
-              sanitationFee: historicalBillDetails.sanitationFee,
-              sewerageCharge: historicalBillDetails.sewerageCharge,
-              meterRent: historicalBillDetails.meterRent,
-              vatAmount: historicalBillDetails.vatAmount,
-              totalDifferenceBill: billToRender.totalAmountDue,
-              differenceUsage: billToRender.differenceUsage ?? 0,
-              outstandingBill: billToRender.balanceCarriedForward ?? 0,
-              totalPayable: (billToRender.balanceCarriedForward ?? 0) + billToRender.totalAmountDue,
-              paymentStatus: billToRender.paymentStatus,
-              month: billToRender.monthYear,
-          };
-      }
-      return {
-          prevReading: bmPreviousReading,
-          currReading: bmCurrentReading,
-          usage: bulkUsage,
-          ...differenceBillBreakdown,
-          totalDifferenceBill: differenceBill,
-          differenceUsage: differenceUsage,
-          outstandingBill: outStandingBillValue,
-          totalPayable: totalPayable,
-          paymentStatus: paymentStatus,
-          month: bulkMeter.month || 'N/A'
+  
+    let finalBillCardDetails;
+  
+    if (billToRender) {
+      const historicalBillDetails = await calculateBill(billToRender.differenceUsage ?? 0, bulkMeter.chargeGroup || "Non-domestic", bulkMeter.sewerageConnection || "No", bulkMeter.meterSize, billToRender.monthYear);
+      finalBillCardDetails = {
+        prevReading: billToRender.previousReadingValue,
+        currReading: billToRender.currentReadingValue,
+        usage: billToRender.usageM3 ?? 0,
+        baseWaterCharge: historicalBillDetails.baseWaterCharge,
+        maintenanceFee: historicalBillDetails.maintenanceFee,
+        sanitationFee: historicalBillDetails.sanitationFee,
+        sewerageCharge: historicalBillDetails.sewerageCharge,
+        meterRent: historicalBillDetails.meterRent,
+        vatAmount: historicalBillDetails.vatAmount,
+        totalDifferenceBill: billToRender.totalAmountDue,
+        differenceUsage: billToRender.differenceUsage ?? 0,
+        outstandingBill: billToRender.balanceCarriedForward ?? 0,
+        totalPayable: (billToRender.balanceCarriedForward ?? 0) + billToRender.totalAmountDue,
+        paymentStatus: billToRender.paymentStatus,
+        month: billToRender.monthYear,
       };
-    })();
-
-    return {
+    } else {
+      finalBillCardDetails = {
+        prevReading: bmPreviousReading,
+        currReading: bmCurrentReading,
+        usage: bulkUsage,
+        ...differenceBillBreakdown,
+        totalDifferenceBill: differenceBill,
+        differenceUsage: differenceUsage,
+        outstandingBill: outStandingBillValue,
+        totalPayable: totalPayable,
+        paymentStatus: paymentStatus,
+        month: bulkMeter.month || 'N/A'
+      };
+    }
+  
+    setMemoizedDetails({
       bmPreviousReading, bmCurrentReading, bulkUsage, totalBulkBillForPeriod,
       totalPayable, differenceUsage, differenceBill, differenceBillBreakdown,
       displayBranchName, displayCardLocation, billCardDetails: finalBillCardDetails, totalIndividualUsage,
-    };
+    });
   }, [bulkMeter, associatedCustomers, branches, billingHistory, billForPrintView]);
+
+  useEffect(() => {
+    calculateMemoizedDetails();
+  }, [calculateMemoizedDetails]);
 
     const {
     bmPreviousReading,
@@ -412,19 +418,19 @@ export default function StaffBulkMeterDetailsPage() {
                 monthYear: bulkMeter.month || 'N/A',
                 billPeriodStartDate: bulkMeter.month ? `${bulkMeter.month}-01` : 'N/A',
                 billPeriodEndDate: bulkMeter.month ? format(lastDayOfMonth(parseISO(`${bulkMeter.month}-01`)), 'yyyy-MM-dd') : 'N/A',
-                previousReadingValue: memoizedDetails.bmPreviousReading,
-                currentReadingValue: memoizedDetails.bmCurrentReading,
-                usageM3: memoizedDetails.bulkUsage,
-                differenceUsage: memoizedDetails.differenceUsage,
-                baseWaterCharge: memoizedDetails.differenceBillBreakdown.baseWaterCharge,
-                maintenanceFee: memoizedDetails.differenceBillBreakdown.maintenanceFee,
-                sanitationFee: memoizedDetails.differenceBillBreakdown.sanitationFee,
-                sewerageCharge: memoizedDetails.differenceBillBreakdown.sewerageCharge,
-                meterRent: memoizedDetails.differenceBillBreakdown.meterRent,
+                previousReadingValue: bmPreviousReading,
+                currentReadingValue: bmCurrentReading,
+                usageM3: bulkUsage,
+                differenceUsage: differenceUsage,
+                baseWaterCharge: differenceBillBreakdown.baseWaterCharge,
+                maintenanceFee: differenceBillBreakdown.maintenanceFee,
+                sanitationFee: differenceBillBreakdown.sanitationFee,
+                sewerageCharge: differenceBillBreakdown.sewerageCharge,
+                meterRent: differenceBillBreakdown.meterRent,
                 balanceCarriedForward: bulkMeter.outStandingbill,
-                totalAmountDue: memoizedDetails.differenceBill,
+                totalAmountDue: differenceBill,
                 dueDate: 'N/A',
-                paymentStatus: memoizedDetails.billCardDetails.paymentStatus,
+                paymentStatus: billCardDetails.paymentStatus,
                 notes: "Current Live Pay Slip Generation (No History Available)",
             };
             setBillForPrintView(temporaryBillForPrint);
@@ -493,7 +499,7 @@ export default function StaffBulkMeterDetailsPage() {
       const differenceUsageForCycle = bmUsage - totalIndivUsage;
       const chargeGroup = latestMeterData.chargeGroup || 'Non-domestic';
       const sewerageConn = latestMeterData.sewerageConnection || 'No';
-      const { totalBill: billForDifferenceUsage, ...differenceBillBreakdownForCycle } = calculateBill(differenceUsageForCycle, chargeGroup, sewerageConn, latestMeterData.meterSize);
+      const { totalBill: billForDifferenceUsage, ...differenceBillBreakdownForCycle } = await calculateBill(differenceUsageForCycle, chargeGroup, sewerageConn, latestMeterData.meterSize, parsedMonth);
       const balanceFromPreviousPeriods = latestMeterData.outStandingbill || 0;
       const totalPayableForCycle = billForDifferenceUsage + balanceFromPreviousPeriods;
 

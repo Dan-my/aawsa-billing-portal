@@ -170,7 +170,8 @@ export default function IndividualCustomersPage() {
   };
 
   const filteredCustomers = customers.filter(customer => {
-    if (customer.status !== 'Active') return false;
+    // Show only 'Active' customers on this page
+    if (customer.status !== 'Active') return false; 
     const branchName = getBranchNameFromList(customer.branchId, customer.location);
     return (
         customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -336,40 +336,42 @@ const mapSupabaseCustomerToDomain = async (sc: SupabaseIndividualCustomerRow): P
     sewerageConnection: sc.sewerageConnection,
     assignedBulkMeterId: sc.assignedBulkMeterId || undefined,
     branchId: sc.branch_id || undefined,
-    status: sc.status as IndividualCustomerStatus,
-    paymentStatus: sc.paymentStatus as PaymentStatus,
+    status: sc.status,
+    paymentStatus: sc.paymentStatus,
     calculatedBill: bill,
     arrears: 0, // Placeholder, as it's not in the DB
     created_at: sc.created_at,
     updated_at: sc.updated_at,
+    approved_by: sc.approved_by,
+    approved_at: sc.approved_at,
   };
 };
 
 const mapDomainCustomerToInsert = async (
-  customer: Omit<DomainIndividualCustomer, 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill' | 'arrears'>
+  customer: Partial<DomainIndividualCustomer>
 ): Promise<IndividualCustomerInsert> => {
-  const usage = customer.currentReading - customer.previousReading;
-  const { totalBill: bill } = await calculateBill(usage, customer.customerType, customer.sewerageConnection, Number(customer.meterSize), customer.month);
+  const usage = (customer.currentReading || 0) - (customer.previousReading || 0);
+  const { totalBill: bill } = await calculateBill(usage, customer.customerType!, customer.sewerageConnection!, Number(customer.meterSize), customer.month!);
   return {
-    name: customer.name,
-    customerKeyNumber: customer.customerKeyNumber,
-    contractNumber: customer.contractNumber,
-    customerType: customer.customerType,
-    bookNumber: customer.bookNumber,
+    name: customer.name!,
+    customerKeyNumber: customer.customerKeyNumber!,
+    contractNumber: customer.contractNumber!,
+    customerType: customer.customerType!,
+    bookNumber: customer.bookNumber!,
     ordinal: Number(customer.ordinal) || 0,
     meterSize: Number(customer.meterSize) || 0,
-    meterNumber: customer.meterNumber,
+    meterNumber: customer.meterNumber!,
     previousReading: Number(customer.previousReading) || 0,
     currentReading: Number(customer.currentReading) || 0,
-    month: customer.month,
-    specificArea: customer.specificArea,
-    location: customer.location,
-    ward: customer.ward,
-    sewerageConnection: customer.sewerageConnection,
+    month: customer.month!,
+    specificArea: customer.specificArea!,
+    location: customer.location!,
+    ward: customer.ward!,
+    sewerageConnection: customer.sewerageConnection!,
     assignedBulkMeterId: customer.assignedBulkMeterId,
     branch_id: customer.branchId, 
-    status: 'Active', 
-    paymentStatus: 'Unpaid', 
+    status: customer.status || 'Active', 
+    paymentStatus: customer.paymentStatus || 'Unpaid', 
     calculatedBill: bill,
   };
 };
@@ -396,6 +398,8 @@ const mapDomainCustomerToUpdate = async (customer: Partial<DomainIndividualCusto
   if(customer.branchId !== undefined) updatePayload.branch_id = customer.branchId; 
   if(customer.status !== undefined) updatePayload.status = customer.status;
   if(customer.paymentStatus !== undefined) updatePayload.paymentStatus = customer.paymentStatus;
+  if(customer.approved_by !== undefined) updatePayload.approved_by = customer.approved_by;
+  if(customer.approved_at !== undefined) updatePayload.approved_at = customer.approved_at;
   
   // Note: We do not update 'arrears' here as it does not exist in the DB.
 
@@ -1191,9 +1195,20 @@ export const deleteBranch = async (branchId: string): Promise<StoreOperationResu
 };
 
 export const addCustomer = async (
-  customerData: Omit<DomainIndividualCustomer, 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill' | 'arrears'>
+  customerData: Partial<DomainIndividualCustomer>,
+  currentUser: StaffMember
 ): Promise<StoreOperationResult<DomainIndividualCustomer>> => {
-  const customerPayload = await mapDomainCustomerToInsert(customerData);
+  let finalStatus: IndividualCustomerStatus = 'Active'; // Default for admins
+  const userRole = currentUser?.role?.toLowerCase();
+
+  // Set status to 'Pending Approval' if the creator is a 'Staff' member
+  if (userRole === 'staff') {
+    finalStatus = 'Pending Approval';
+  }
+
+  const customerDataWithStatus = { ...customerData, status: finalStatus };
+  const customerPayload = await mapDomainCustomerToInsert(customerDataWithStatus);
+
   const { data: newSupabaseCustomer, error } = await createCustomerAction(customerPayload);
 
   if (newSupabaseCustomer && !error) {
@@ -1205,6 +1220,7 @@ export const addCustomer = async (
   console.error("DataStore: Failed to add customer. Error:", JSON.stringify(error, null, 2));
   return { success: false, message: (error as any)?.message || "Failed to add customer.", error };
 };
+
 
 export const updateCustomer = async (customerKeyNumber: string, customerData: Partial<Omit<DomainIndividualCustomer, 'customerKeyNumber'>>): Promise<StoreOperationResult<void>> => {
   const updatePayloadSupabase = await mapDomainCustomerToUpdate({ customerKeyNumber, ...customerData });
@@ -1651,6 +1667,26 @@ export const addTariff = async (tariffData: Omit<TariffInfo, 'id'>): Promise<Sto
     console.error("DataStore: Failed to add tariff. Error:", JSON.stringify(error, null, 2));
     return { success: false, message: (error as any)?.message || "Failed to add tariff.", error };
 };
+
+// --- Approval Workflow Functions ---
+export const approveCustomer = async (customerKeyNumber: string, approverId: string): Promise<StoreOperationResult<void>> => {
+  const updatePayload: Partial<DomainIndividualCustomer> = {
+    status: 'Active',
+    approved_by: approverId,
+    approved_at: new Date().toISOString(),
+  };
+  return await updateCustomer(customerKeyNumber, updatePayload);
+};
+
+export const rejectCustomer = async (customerKeyNumber: string, rejectorId: string): Promise<StoreOperationResult<void>> => {
+  const updatePayload: Partial<DomainIndividualCustomer> = {
+    status: 'Rejected',
+    approved_by: rejectorId, // Log who rejected it
+    approved_at: new Date().toISOString(),
+  };
+  return await updateCustomer(customerKeyNumber, updatePayload);
+};
+
 
 export const subscribeToBranches = (listener: Listener<DomainBranch>): (() => void) => {
   branchListeners.add(listener);

@@ -39,6 +39,9 @@ import {
   getCustomers, subscribeToCustomers, initializeCustomers,
   getBranches, subscribeToBranches, initializeBranches
 } from "@/lib/data-store";
+import type { BulkMeter } from '../bulk-meters/bulk-meter-types';
+import type { IndividualCustomer } from '../individual-customers/individual-customer-types';
+import type { Branch } from '../branches/branch-types';
 
 const chartConfig = {
   paid: { label: "Paid", color: "hsl(var(--chart-1))" },
@@ -77,12 +80,14 @@ export default function AdminDashboardPage() {
     const currentBulkMeters = getBulkMeters();
     const currentCustomers = getCustomers();
 
-    // 1. Total Bills Status (Bulk Meters ONLY)
+    // 1. Total Bills Status (from both bulk and individual meters)
     const paidBMs = currentBulkMeters.filter(bm => bm.paymentStatus === 'Paid').length;
     const unpaidBMs = currentBulkMeters.filter(bm => bm.paymentStatus === 'Unpaid').length;
+    const paidICs = currentCustomers.filter(c => c.paymentStatus === 'Paid').length;
+    const unpaidICs = currentCustomers.filter(c => c.paymentStatus === 'Unpaid' || c.paymentStatus === 'Pending').length;
 
-    const totalPaid = paidBMs;
-    const totalUnpaid = unpaidBMs;
+    const totalPaid = paidBMs + paidICs;
+    const totalUnpaid = unpaidBMs + unpaidICs;
     const totalBills = totalPaid + totalUnpaid;
 
     setDynamicTotalBills(totalBills);
@@ -122,7 +127,7 @@ export default function AdminDashboardPage() {
     
     currentBulkMeters.forEach(bm => {
       if (bm.month) {
-        const usage = bm.currentReading - bm.previousReading;
+        const usage = (bm.currentReading ?? 0) - (bm.previousReading ?? 0);
         if (typeof usage === 'number' && !isNaN(usage)) {
           const currentMonthUsage = usageMap.get(bm.month) || 0;
           usageMap.set(bm.month, currentMonthUsage + usage);
@@ -132,7 +137,7 @@ export default function AdminDashboardPage() {
 
     currentCustomers.forEach(c => {
         if (c.month) {
-            const usage = c.currentReading - c.previousReading;
+            const usage = (c.currentReading ?? 0) - (c.previousReading ?? 0);
             if(typeof usage === 'number' && !isNaN(usage)) {
                 const currentMonthUsage = usageMap.get(c.month) || 0;
                 usageMap.set(c.month, currentMonthUsage + usage);
@@ -206,7 +211,7 @@ export default function AdminDashboardPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bulk Meter Bills Status</CardTitle>
+            <CardTitle className="text-sm font-medium">Overall Bills Status</CardTitle>
             <FileText className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -377,7 +382,7 @@ export default function AdminDashboardPage() {
                         <YAxis tickFormatter={(value) => `${value.toLocaleString()}`} tick={{ fontSize: 12 }} />
                         <Tooltip content={<ChartTooltipContent />} />
                         <Legend />
-                        <Line type="monotone" dataKey="usage" nameKey="waterUsage" stroke="var(--color-waterUsage)" />
+                        <Line type="monotone" dataKey="usage" name="Water Usage" stroke="var(--color-waterUsage)" />
                       </LineChart>
                     </ResponsiveContainer>
                   </ChartContainer>
@@ -419,6 +424,3 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
-
-    
-    

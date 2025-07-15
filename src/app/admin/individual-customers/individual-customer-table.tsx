@@ -44,12 +44,12 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
     return bulkMetersList.find(bm => bm.customerKeyNumber === key)?.name || "Unknown BM";
   };
 
-  const getCustomerBranchName = (branchId?: string) => {
+  const getCustomerBranchName = (branchId?: string, fallbackLocation?: string) => {
     if (branchId) {
       const branch = branches.find(b => b.id === branchId);
       if (branch) return branch.name;
     }
-    return "-";
+    return fallbackLocation || "-";
   };
 
   const showActionsColumn = canEdit || canDelete;
@@ -80,13 +80,13 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
         </TableHeader>
         <TableBody>
           {data.map((customer) => {
-            const usage = customer.currentReading - customer.previousReading;
+            const usage = (customer.currentReading ?? 0) - (customer.previousReading ?? 0);
             return (
               <TableRow key={customer.customerKeyNumber}>
                 <TableCell className="font-medium">{customer.name}</TableCell>
                 <TableCell>{customer.meterNumber}</TableCell>
                 <TableCell>
-                  {getCustomerBranchName(customer.branchId)}
+                  {getCustomerBranchName(customer.branchId, customer.location)}
                 </TableCell>
                 <TableCell>{customer.customerType}</TableCell>
                 <TableCell>{usage.toFixed(2)}</TableCell>

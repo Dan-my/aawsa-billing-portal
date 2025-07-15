@@ -22,27 +22,21 @@ import {
   getBulkMeters,
   subscribeToBulkMeters,
   initializeBulkMeters,
-  getBranches, // Added
-  initializeBranches, // Added
-  subscribeToBranches // Added
+  getBranches,
+  initializeBranches,
+  subscribeToBranches
 } from "@/lib/data-store";
 import type { PaymentStatus, CustomerType, SewerageConnection } from "@/lib/billing";
-import type { Branch } from "@/app/admin/branches/branch-types"; // Added
+import type { Branch } from "@/app/admin/branches/branch-types";
 import { TablePagination } from "@/components/ui/table-pagination";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
-
-interface User {
-  email: string;
-  role: "admin" | "staff" | "Admin" | "Staff";
-  branchName?: string;
-  branchId?: string;
-}
+import type { StaffMember } from "@/app/admin/staff-management/staff-types";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export default function StaffIndividualCustomersPage() {
+  const { hasPermission } = usePermissions();
   const { toast } = useToast();
-  const [authStatus, setAuthStatus] = React.useState<'loading' | 'unauthorized' | 'authorized'>('loading');
-  const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
-  const [staffBranchId, setStaffBranchId] = React.useState<string | null>(null);
+  const [currentUser, setCurrentUser] = React.useState<StaffMember | null>(null);
   
   const [allCustomers, setAllCustomers] = React.useState<IndividualCustomer[]>([]);
   const [allBulkMeters, setAllBulkMeters] = React.useState<BulkMeter[]>([]);
@@ -57,54 +51,39 @@ export default function StaffIndividualCustomersPage() {
   
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
-
-  // First useEffect for authentication check
+  
   React.useEffect(() => {
-    const userString = localStorage.getItem("user");
-    if (userString) {
-      try {
-        const parsedUser: User = JSON.parse(userString);
-        if (parsedUser.role.toLowerCase() === 'staff' && parsedUser.branchId && parsedUser.branchName) {
-          setStaffBranchName(parsedUser.branchName);
-          setStaffBranchId(parsedUser.branchId);
-          setAuthStatus('authorized');
-        } else {
-          setAuthStatus('unauthorized');
-        }
-      } catch {
-        setAuthStatus('unauthorized');
-      }
-    } else {
-      setAuthStatus('unauthorized');
+    const userJson = localStorage.getItem("user");
+    if (userJson) {
+      setCurrentUser(JSON.parse(userJson));
     }
   }, []);
 
-  // Second useEffect for data loading, dependent on auth status
   React.useEffect(() => {
-    if (authStatus !== 'authorized') {
-      if (authStatus !== 'loading') setIsLoading(false);
+    if (!currentUser?.branchId) {
+      setIsLoading(false);
       return;
     }
-
+    
     let isMounted = true;
     setIsLoading(true);
 
-    const initializeAndSubscribe = async () => {
-        try {
-          await Promise.all([initializeBranches(), initializeBulkMeters(), initializeCustomers()]);
-          if (isMounted) {
-            setAllBranches(getBranches());
-            setAllBulkMeters(getBulkMeters());
-            setAllCustomers(getCustomers());
-          }
-        } catch (err) {
-            console.error("Failed to initialize data:", err);
-        } finally {
-            if (isMounted) setIsLoading(false);
+    const initializeData = async () => {
+      try {
+        await Promise.all([initializeBranches(), initializeBulkMeters(), initializeCustomers()]);
+        if (isMounted) {
+          setAllBranches(getBranches());
+          setAllBulkMeters(getBulkMeters());
+          setAllCustomers(getCustomers());
         }
+      } catch (err) {
+        console.error("Failed to initialize data:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
     };
     
-    initializeAndSubscribe();
+    initializeData();
     
     const unSubBranches = subscribeToBranches((data) => isMounted && setAllBranches(data));
     const unSubBulkMeters = subscribeToBulkMeters((data) => isMounted && setAllBulkMeters(data));
@@ -116,24 +95,24 @@ export default function StaffIndividualCustomersPage() {
       unSubBulkMeters();
       unSubCustomers();
     };
-  }, [authStatus]);
+  }, [currentUser]);
 
   // Declarative filtering with useMemo
   const branchFilteredData = React.useMemo(() => {
-    if (authStatus !== 'authorized' || !staffBranchId) {
+    if (!currentUser?.branchId) {
       return { customers: [], bulkMeters: [] };
     }
     
-    const branchBMs = allBulkMeters.filter(bm => bm.branchId === staffBranchId);
+    const branchBMs = allBulkMeters.filter(bm => bm.branchId === currentUser?.branchId);
     const branchBMKeys = new Set(branchBMs.map(bm => bm.customerKeyNumber));
     
     const branchCustomers = allCustomers.filter(customer =>
-      customer.branchId === staffBranchId ||
+      customer.branchId === currentUser?.branchId ||
       (customer.assignedBulkMeterId && branchBMKeys.has(customer.assignedBulkMeterId))
     );
     
     return { customers: branchCustomers, bulkMeters: branchBMs.map(bm => ({ customerKeyNumber: bm.customerKeyNumber, name: bm.name })) };
-  }, [authStatus, staffBranchId, allCustomers, allBulkMeters]);
+  }, [currentUser, allCustomers, allBulkMeters]);
   
   const searchedCustomers = React.useMemo(() => {
     if (!searchTerm) {
@@ -182,7 +161,12 @@ export default function StaffIndividualCustomersPage() {
   };
 
   const handleSubmitCustomer = async (data: IndividualCustomerFormValues) => {
-    const dataWithBranchId = { ...data, branchId: staffBranchId };
+    if (!currentUser) {
+        toast({ variant: 'destructive', title: 'Error', description: 'User information not found.' });
+        return;
+    }
+    
+    const dataWithBranchId = { ...data, branchId: currentUser.branchId };
 
     if (selectedCustomer) {
       const updatedCustomerData: Partial<Omit<IndividualCustomer, 'customerKeyNumber'>> = {
@@ -210,14 +194,9 @@ export default function StaffIndividualCustomersPage() {
         meterSize: Number(data.meterSize),
         previousReading: Number(data.previousReading),
         currentReading: Number(data.currentReading),
-        status: data.status as IndividualCustomerStatus || "Active",
-        paymentStatus: data.paymentStatus as PaymentStatus || "Unpaid",
-        customerType: data.customerType as CustomerType,
-        sewerageConnection: data.sewerageConnection as SewerageConnection,
-        assignedBulkMeterId: data.assignedBulkMeterId || undefined,
       } as Omit<IndividualCustomer, 'created_at' | 'updated_at' | 'calculatedBill'>;
 
-      const result = await addCustomerToStore(newCustomerData);
+      const result = await addCustomerToStore(newCustomerData, currentUser);
       if (result.success && result.data) {
         toast({ title: "Customer Added", description: `${result.data.name} has been added.` });
       } else {
@@ -230,25 +209,13 @@ export default function StaffIndividualCustomersPage() {
   
   const renderContent = () => {
     if (isLoading) {
-      return (
-        <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
-          Loading...
-        </div>
-      );
+      return <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">Loading...</div>;
     }
-    if (authStatus === 'unauthorized') {
-      return (
-        <div className="mt-4 p-4 border rounded-md bg-destructive/10 text-center text-destructive">
-          Your user profile is not configured for a staff role or branch.
-        </div>
-      );
+    if (!currentUser?.branchId) {
+      return <div className="mt-4 p-4 border rounded-md bg-destructive/10 text-center text-destructive">Your user profile is not configured for a staff role or branch.</div>;
     }
     if (branchFilteredData.customers.length === 0 && !searchTerm) {
-      return (
-        <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
-          No customers found for branch: {staffBranchName}. Click "Add New Customer" to get started. <User className="inline-block ml-2 h-5 w-5" />
-        </div>
-      );
+      return <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">No customers found for your branch. Click "Add New Customer" to get started. <User className="inline-block ml-2 h-5 w-5" /></div>;
     }
     return (
       <IndividualCustomerTable
@@ -257,6 +224,8 @@ export default function StaffIndividualCustomersPage() {
         onDelete={handleDeleteCustomer}
         bulkMetersList={allBulkMeters.map(bm => ({ customerKeyNumber: bm.customerKeyNumber, name: bm.name }))}
         branches={allBranches}
+        canEdit={hasPermission('customers_update')}
+        canDelete={hasPermission('customers_delete')}
       />
     );
   };
@@ -264,7 +233,7 @@ export default function StaffIndividualCustomersPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4">
-        <h1 className="text-2xl md:text-3xl font-bold">Individual Customers {staffBranchName ? `(${staffBranchName})` : ''}</h1>
+        <h1 className="text-2xl md:text-3xl font-bold">Individual Customers {currentUser?.branchName ? `(${currentUser.branchName})` : ''}</h1>
         <div className="flex gap-2 w-full md:w-auto">
            <div className="relative flex-grow md:flex-grow-0">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -274,24 +243,26 @@ export default function StaffIndividualCustomersPage() {
               className="pl-8 w-full md:w-[250px]"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              disabled={authStatus !== 'authorized'}
+              disabled={!currentUser?.branchId}
             />
           </div>
-          <Button onClick={handleAddCustomer} disabled={authStatus !== 'authorized'}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New Customer
-          </Button>
+          {hasPermission('customers_create') && (
+            <Button onClick={handleAddCustomer} disabled={!currentUser?.branchId}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Add New Customer
+            </Button>
+          )}
         </div>
       </div>
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Customer List for {staffBranchName || "Your Area"}</CardTitle>
+          <CardTitle>Customer List for {currentUser?.branchName || "Your Area"}</CardTitle>
           <CardDescription>View, edit, and manage individual customer information for your branch.</CardDescription>
         </CardHeader>
         <CardContent>
           {renderContent()}
         </CardContent>
-        {searchedCustomers.length > 0 && authStatus === 'authorized' && (
+        {searchedCustomers.length > 0 && currentUser?.branchId && (
           <TablePagination
             count={searchedCustomers.length}
             page={page}
@@ -306,29 +277,33 @@ export default function StaffIndividualCustomersPage() {
         )}
       </Card>
 
-      <IndividualCustomerFormDialog
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        onSubmit={handleSubmitCustomer}
-        defaultValues={selectedCustomer}
-        bulkMeters={branchFilteredData.bulkMeters}
-        staffBranchName={staffBranchName || undefined}
-      />
+      {hasPermission('customers_create') || hasPermission('customers_update') ? (
+        <IndividualCustomerFormDialog
+          open={isFormOpen}
+          onOpenChange={setIsFormOpen}
+          onSubmit={handleSubmitCustomer}
+          defaultValues={selectedCustomer}
+          bulkMeters={branchFilteredData.bulkMeters}
+          staffBranchName={currentUser?.branchName || undefined}
+        />
+      ) : null}
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the customer {customerToDelete?.name}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setCustomerToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {hasPermission('customers_delete') && (
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the customer {customerToDelete?.name}.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setCustomerToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }

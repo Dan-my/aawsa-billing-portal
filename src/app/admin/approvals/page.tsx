@@ -61,15 +61,16 @@ export default function ApprovalsPage() {
   }, []);
 
   const pendingCustomers = React.useMemo(() => {
-    let filtered = customers.filter(c => c.status === 'Pending Approval');
+    const allPending = customers.filter(c => c.status === 'Pending Approval');
     
     // Admins see all. Staff Management sees only their branch's customers.
     if (currentUser?.role.toLowerCase() === 'staff management' && currentUser.branchId) {
-      const branchCustomers = new Set(customers.filter(c => c.branchId === currentUser?.branchId).map(c => c.customerKeyNumber));
-      filtered = filtered.filter(c => branchCustomers.has(c.customerKeyNumber));
+      const branchId = currentUser.branchId;
+      return allPending.filter(c => c.branchId === branchId);
     }
     
-    return filtered;
+    // Default to all pending for Admins or if branch logic doesn't apply
+    return allPending;
   }, [customers, currentUser]);
   
   const handleApproveClick = (customer: IndividualCustomer) => {

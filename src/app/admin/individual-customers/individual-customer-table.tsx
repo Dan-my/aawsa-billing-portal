@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -118,7 +119,8 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
                         customer.status === 'Pending Approval' && "bg-amber-500 text-white hover:bg-amber-600"
                     )}
                   >
-                    {customer.status === 'Pending Approval' && <Hourglass className="mr-1 h-3.5 w-3.5"/>}
+                    {customer.status === 'Pending Approval' ? <Hourglass className="mr-1 h-3.5 w-3.5"/> : null}
+                    {customer.status === 'Rejected' ? <XCircle className="mr-1 h-3.5 w-3.5"/> : null}
                     {customer.status}
                   </Badge>
                 </TableCell>

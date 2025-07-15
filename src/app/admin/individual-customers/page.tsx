@@ -170,8 +170,6 @@ export default function IndividualCustomersPage() {
   };
 
   const filteredCustomers = customers.filter(customer => {
-    // Show only 'Active' customers on this page
-    if (customer.status !== 'Active') return false; 
     const branchName = getBranchNameFromList(customer.branchId, customer.location);
     return (
         customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -212,8 +210,8 @@ export default function IndividualCustomersPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Active Customer List</CardTitle>
-          <CardDescription>View, edit, and manage active individual customer information.</CardDescription>
+          <CardTitle>Customer List</CardTitle>
+          <CardDescription>View, edit, and manage all individual customer information.</CardDescription>
         </CardHeader>
         <CardContent>
            {isLoading ? (

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -36,16 +37,14 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse, isValid } from "date-fns";
 import { customerTypes, sewerageConnections, paymentStatuses } from "@/lib/billing";
 import { individualCustomerStatuses } from "@/app/admin/individual-customers/individual-customer-types";
+import type { StaffMember } from "@/app/admin/staff-management/staff-types";
 
 
 interface StaffIndividualCustomerEntryFormProps {
   branchName: string; 
 }
 
-const StaffEntryFormSchema = baseIndividualCustomerDataSchema.extend({
-  status: z.enum(individualCustomerStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
-  paymentStatus: z.enum(paymentStatuses, { errorMap: () => ({ message: "Please select a valid payment status."}) }),
-});
+const StaffEntryFormSchema = baseIndividualCustomerDataSchema; // Removed status and paymentStatus from staff form schema
 type StaffEntryFormValues = z.infer<typeof StaffEntryFormSchema>;
 
 
@@ -53,6 +52,7 @@ const UNASSIGNED_BULK_METER_VALUE = "_SELECT_NONE_BULK_METER_";
 
 export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividualCustomerEntryFormProps) {
   const { toast } = useToast();
+  const [currentUser, setCurrentUser] = React.useState<StaffMember | null>(null);
   const [availableBulkMeters, setAvailableBulkMeters] = React.useState<{customerKeyNumber: string, name: string}[]>([]);
   const [isLoadingBulkMeters, setIsLoadingBulkMeters] = React.useState(true);
   const [staffBranchId, setStaffBranchId] = React.useState<string | undefined>(undefined);
@@ -77,8 +77,6 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
       branchId: staffBranchId,
       ward: "",
       sewerageConnection: undefined,
-      status: "Active",
-      paymentStatus: "Unpaid",
     },
   });
 
@@ -86,6 +84,9 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
   const actualBulkMeterIsSelected = assignedBulkMeterIdValue !== UNASSIGNED_BULK_METER_VALUE && !!assignedBulkMeterIdValue;
 
   React.useEffect(() => {
+    const userJson = localStorage.getItem('user');
+    if (userJson) setCurrentUser(JSON.parse(userJson));
+
     setIsLoadingBulkMeters(true);
     Promise.all([
         initializeBulkMeters(),
@@ -123,18 +124,24 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
     form.reset({ ...form.getValues(), location: branchName, branchId: staffBranchId });
   }, [branchName, staffBranchId, form]);
 
-  async function onSubmit(data: StaffEntryFormValues) { 
+  async function onSubmit(data: StaffEntryFormValues) {
+    if (!currentUser) {
+        toast({ variant: 'destructive', title: 'Error', description: 'User information not found.' });
+        return;
+    }
+    
     const submissionData = {
       ...data,
       assignedBulkMeterId: data.assignedBulkMeterId === UNASSIGNED_BULK_METER_VALUE ? undefined : data.assignedBulkMeterId,
       branchId: staffBranchId, // Ensure branchId is set from state
     };
     
-    const result = await addCustomerToStore(submissionData as Omit<IndividualCustomer, 'created_at' | 'updated_at' | 'calculatedBill' | 'arrears'>);
+    // Status will be set to 'Pending Approval' by addCustomerToStore
+    const result = await addCustomerToStore(submissionData as Omit<IndividualCustomer, 'created_at' | 'updated_at' | 'calculatedBill' | 'arrears' | 'status' | 'paymentStatus'>, currentUser);
     if (result.success && result.data) {
         toast({
-        title: "Data Entry Submitted",
-        description: `Data for individual customer ${result.data.name} (Branch: ${branchName}) has been successfully recorded.`,
+        title: "Data Entry Submitted for Approval",
+        description: `Data for customer ${result.data.name} has been recorded and is now pending approval.`,
         });
         form.reset({ 
             assignedBulkMeterId: UNASSIGNED_BULK_METER_VALUE,
@@ -154,8 +161,6 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
             branchId: staffBranchId,
             ward: "",
             sewerageConnection: undefined,
-            status: "Active",
-            paymentStatus: "Unpaid",
         });
     } else {
         toast({
@@ -312,13 +317,9 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
 
             <FormField control={form.control} name="sewerageConnection" render={({ field }) => (<FormItem><FormLabel>Sewerage Conn. *</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={commonFieldDisabled}><FormControl><SelectTrigger disabled={commonFieldDisabled}><SelectValue placeholder="Select connection" /></SelectTrigger></FormControl><SelectContent>{sewerageConnections.map(conn => <SelectItem key={conn} value={conn}>{conn}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
           </div>
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <FormField control={form.control} name="status" render={({ field }) => (<FormItem><FormLabel>Customer Status *</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={commonFieldDisabled}><FormControl><SelectTrigger disabled={commonFieldDisabled}><SelectValue placeholder="Select status"/></SelectTrigger></FormControl><SelectContent>{individualCustomerStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
-             <FormField control={form.control} name="paymentStatus" render={({ field }) => (<FormItem><FormLabel>Payment Status *</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={commonFieldDisabled}><FormControl><SelectTrigger disabled={commonFieldDisabled}><SelectValue placeholder="Select payment status"/></SelectTrigger></FormControl><SelectContent>{paymentStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
-           </div>
-
+          
           <Button type="submit" className="w-full md:w-auto" disabled={submitButtonDisabled}>
-            {form.formState.isSubmitting ? "Submitting..." : "Submit Individual Customer Data"}
+            {form.formState.isSubmitting ? "Submitting..." : "Submit for Approval"}
           </Button>
         </form>
       </Form>

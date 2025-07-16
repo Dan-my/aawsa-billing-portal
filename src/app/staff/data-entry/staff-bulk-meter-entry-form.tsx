@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { bulkMeterDataEntrySchema, type BulkMeterDataEntryFormValues, meterSizeOptions } from "@/app/admin/data-entry/customer-data-entry-types"; 
+import { bulkMeterDataEntrySchema, type BulkMeterDataEntryFormValues, meterSizeOptions, subCityOptions, woredaOptions } from "@/app/admin/data-entry/customer-data-entry-types"; 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { addBulkMeter as addBulkMeterToStore, initializeBulkMeters, getBulkMeters, getBranches, initializeBranches } from "@/lib/data-store";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
@@ -275,9 +275,20 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Sub-City *</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a Sub-City" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {subCityOptions.map(option => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -288,9 +299,20 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Woreda *</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
+                   <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a Woreda" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {woredaOptions.map(option => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

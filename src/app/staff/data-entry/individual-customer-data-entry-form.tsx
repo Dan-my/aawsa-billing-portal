@@ -272,7 +272,11 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Sub-City *</FormLabel>
-                   <Select onValueChange={field.onChange} value={field.value} disabled={commonFieldDisabled || true}>
+                   <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value} 
+                      disabled={commonFieldDisabled || true}
+                    >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a Sub-City" />
@@ -290,7 +294,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 </FormItem>
               )}
             />
-            <FormField
+             <FormField
               control={form.control}
               name="ward"
               render={({ field }) => (

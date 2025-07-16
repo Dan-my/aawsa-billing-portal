@@ -152,8 +152,11 @@ export default function StaffManagementDashboardPage() {
     );
 
     const activeCustomers = branchCustomers.filter(c => c.status === 'Active');
-    const pendingCustomers = branchCustomers.filter(c => c.status === 'Pending Approval').length;
     
+    const pendingCustomersCount = branchCustomers.filter(c => c.status === 'Pending Approval').length;
+    const pendingBulkMetersCount = branchBMs.filter(bm => bm.status === 'Pending Approval').length;
+    const totalPendingApprovals = pendingCustomersCount + pendingBulkMetersCount;
+
     const paidCount = branchBMs.filter(bm => bm.paymentStatus === 'Paid').length + activeCustomers.filter(c => c.paymentStatus === 'Paid').length;
     const unpaidCount = branchBMs.filter(bm => bm.paymentStatus === 'Unpaid').length + activeCustomers.filter(c => c.paymentStatus === 'Unpaid' || c.paymentStatus === 'Pending').length;
     const totalBillsCount = paidCount + unpaidCount;
@@ -183,7 +186,7 @@ export default function StaffManagementDashboardPage() {
     const usageMap = new Map<string, number>();
     branchBMs.forEach(bm => {
       if (bm.month) {
-        const usage = bm.currentReading - bm.previousReading;
+        const usage = (bm.currentReading ?? 0) - (bm.previousReading ?? 0);
         if (typeof usage === 'number' && !isNaN(usage)) {
           const currentMonthUsage = usageMap.get(bm.month) || 0;
           usageMap.set(bm.month, currentMonthUsage + usage);
@@ -192,7 +195,7 @@ export default function StaffManagementDashboardPage() {
     });
     activeCustomers.forEach(c => {
         if (c.month) {
-            const usage = c.currentReading - c.previousReading;
+            const usage = (c.currentReading ?? 0) - (c.previousReading ?? 0);
             if(typeof usage === 'number' && !isNaN(usage)) {
                 const currentMonthUsage = usageMap.get(c.month) || 0;
                 usageMap.set(c.month, currentMonthUsage + usage);
@@ -214,7 +217,7 @@ export default function StaffManagementDashboardPage() {
       branchPerformanceData,
       waterUsageTrendData,
       paidPercentage,
-      pendingApprovals: pendingCustomers,
+      pendingApprovals: totalPendingApprovals,
     };
   }, [authStatus, staffBranchId, allBulkMeters, allCustomers, allBranches]);
 
@@ -250,7 +253,7 @@ export default function StaffManagementDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{processedStats.pendingApprovals}</div>
-            <p className="text-xs text-muted-foreground">New customers awaiting approval</p>
+            <p className="text-xs text-muted-foreground">New records awaiting approval</p>
             <div className="h-[120px] mt-4 flex items-center justify-center">
                 <Link href="/admin/approvals" className="w-full">
                   <Button variant="outline" className="w-full">View Approvals</Button>

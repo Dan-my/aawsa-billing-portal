@@ -16,6 +16,7 @@ export interface Database {
           maintenance_percentage: number;
           sanitation_percentage: number;
           sewerage_rate_per_m3: number;
+          meter_rent_prices: Json | null; // Added
           created_at: string;
           updated_at: string;
         };
@@ -26,6 +27,7 @@ export interface Database {
           maintenance_percentage: number;
           sanitation_percentage: number;
           sewerage_rate_per_m3: number;
+          meter_rent_prices?: Json | null; // Added
           created_at?: string;
           updated_at?: string;
         };
@@ -36,6 +38,7 @@ export interface Database {
           maintenance_percentage?: number;
           sanitation_percentage?: number;
           sewerage_rate_per_m3?: number;
+          meter_rent_prices?: Json | null; // Added
           created_at?: string;
           updated_at?: string;
         };
@@ -174,7 +177,7 @@ export interface Database {
           specificArea: string;
           location: string; 
           ward: string;
-          status: 'Active' | 'Maintenance' | 'Decommissioned';
+          status: 'Active' | 'Maintenance' | 'Decommissioned' | 'Pending Approval' | 'Rejected';
           paymentStatus: 'Paid' | 'Unpaid';
           branch_id?: string | null; 
           charge_group: 'Domestic' | 'Non-domestic';
@@ -186,6 +189,8 @@ export interface Database {
           outStandingbill?: number | null;
           x_coordinate?: number | null;
           y_coordinate?: number | null;
+          approved_by?: string | null;
+          approved_at?: string | null;
           createdAt?: string | null;
           updatedAt?: string | null;
         };
@@ -201,7 +206,7 @@ export interface Database {
           specificArea: string;
           location: string;
           ward: string;
-          status: 'Active' | 'Maintenance' | 'Decommissioned';
+          status: 'Active' | 'Maintenance' | 'Decommissioned' | 'Pending Approval' | 'Rejected';
           paymentStatus: 'Paid' | 'Unpaid';
           branch_id?: string | null; 
           charge_group: 'Domestic' | 'Non-domestic';
@@ -213,6 +218,8 @@ export interface Database {
           outStandingbill?: number | null;
           x_coordinate?: number | null;
           y_coordinate?: number | null;
+          approved_by?: string | null;
+          approved_at?: string | null;
           createdAt?: string | null;
           updatedAt?: string | null;
         };
@@ -228,7 +235,7 @@ export interface Database {
           specificArea?: string;
           location?: string;
           ward?: string;
-          status?: 'Active' | 'Maintenance' | 'Decommissioned';
+          status?: 'Active' | 'Maintenance' | 'Decommissioned' | 'Pending Approval' | 'Rejected';
           paymentStatus?: 'Paid' | 'Unpaid';
           branch_id?: string | null; 
           charge_group?: 'Domestic' | 'Non-domestic';
@@ -240,6 +247,8 @@ export interface Database {
           outStandingbill?: number | null;
           x_coordinate?: number | null;
           y_coordinate?: number | null;
+          approved_by?: string | null;
+          approved_at?: string | null;
           createdAt?: string | null;
           updatedAt?: string | null;
         };
@@ -262,10 +271,12 @@ export interface Database {
           ward: string;
           sewerageConnection: 'Yes' | 'No';
           assignedBulkMeterId?: string | null;
-          status: 'Active' | 'Inactive' | 'Suspended';
+          status: 'Active' | 'Inactive' | 'Suspended' | 'Pending Approval' | 'Rejected';
           paymentStatus: 'Paid' | 'Unpaid' | 'Pending';
           calculatedBill: number;
-          
+          arrears: number; // Added arrears
+          approved_by?: string | null; // Added
+          approved_at?: string | null; // Added
           branch_id?: string | null; 
           created_at?: string | null;
           updated_at?: string | null;
@@ -287,10 +298,12 @@ export interface Database {
           ward: string;
           sewerageConnection: 'Yes' | 'No';
           assignedBulkMeterId?: string | null;
-          status?: 'Active' | 'Inactive' | 'Suspended';
+          status?: 'Active' | 'Inactive' | 'Suspended' | 'Pending Approval' | 'Rejected';
           paymentStatus?: 'Paid' | 'Unpaid' | 'Pending';
           calculatedBill?: number;
-          
+          arrears?: number;
+          approved_by?: string | null;
+          approved_at?: string | null;
           branch_id?: string | null; 
           created_at?: string | null;
           updated_at?: string | null;
@@ -312,10 +325,12 @@ export interface Database {
           ward?: string;
           sewerageConnection?: 'Yes' | 'No';
           assignedBulkMeterId?: string | null;
-          status?: 'Active' | 'Inactive' | 'Suspended';
+          status?: 'Active' | 'Inactive' | 'Suspended' | 'Pending Approval' | 'Rejected';
           paymentStatus?: 'Paid' | 'Unpaid' | 'Pending';
           calculatedBill?: number;
-          
+          arrears?: number;
+          approved_by?: string | null;
+          approved_at?: string | null;
           branch_id?: string | null; 
           created_at?: string | null;
           updated_at?: string | null;
@@ -323,7 +338,7 @@ export interface Database {
       };
       staff_members: {
         Row: {
-          id: string;
+          id: string; // Correct type is uuid, but we use string in JS/TS
           name: string;
           email: string;
           password?: string;
@@ -332,7 +347,7 @@ export interface Database {
           phone?: string | null;
           hire_date?: string | null;
           role: string;
-          role_id?: number | null; // Added
+          role_id?: number | null; 
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -346,7 +361,7 @@ export interface Database {
           phone?: string | null;
           hire_date?: string | null;
           role: string;
-          role_id?: number | null; // Added
+          role_id?: number | null; 
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -360,7 +375,7 @@ export interface Database {
           phone?: string | null;
           hire_date?: string | null;
           role?: string;
-          role_id?: number | null; // Added
+          role_id?: number | null; 
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -635,11 +650,11 @@ export interface Database {
     };
     Enums: {
         branch_status_enum: 'Active' | 'Inactive';
-        bulk_meter_status_enum: 'Active' | 'Maintenance' | 'Decommissioned';
+        bulk_meter_status_enum: 'Active' | 'Maintenance' | 'Decommissioned' | 'Pending Approval' | 'Rejected';
         payment_status_enum: 'Paid' | 'Unpaid' | 'Pending';
         customer_type_enum: 'Domestic' | 'Non-domestic';
         sewerage_connection_enum: 'Yes' | 'No';
-        individual_customer_status_enum: 'Active' | 'Inactive' | 'Suspended';
+        individual_customer_status_enum: 'Active' | 'Inactive' | 'Suspended' | 'Pending Approval' | 'Rejected';
         staff_status_enum: 'Active' | 'Inactive' | 'On Leave';
         payment_method_enum: 'Cash' | 'Bank Transfer' | 'Mobile Money' | 'Online Payment' | 'Other';
         report_type_enum: 'CustomerDataExport' | 'BulkMeterDataExport' | 'BillingSummary' | 'WaterUsageReport' | 'PaymentHistoryReport' | 'MeterReadingAccuracy';

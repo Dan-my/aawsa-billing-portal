@@ -455,6 +455,8 @@ const mapSupabaseBulkMeterToDomain = async (sbm: BulkMeterRow): Promise<BulkMete
     outStandingbill: sbm.outStandingbill ? Number(sbm.outStandingbill) : 0, 
     xCoordinate: sbm.x_coordinate ? Number(sbm.x_coordinate) : undefined,
     yCoordinate: sbm.y_coordinate ? Number(sbm.y_coordinate) : undefined,
+    approved_by: sbm.approved_by,
+    approved_at: sbm.approved_at,
   };
 };
 
@@ -519,6 +521,8 @@ const mapDomainBulkMeterToUpdate = async (bm: Partial<BulkMeter> & { customerKey
     if (bm.outStandingbill !== undefined) updatePayload.outStandingbill = Number(bm.outStandingbill);
     if (bm.xCoordinate !== undefined) updatePayload.x_coordinate = bm.xCoordinate;
     if (bm.yCoordinate !== undefined) updatePayload.y_coordinate = bm.yCoordinate;
+    if (bm.approved_by !== undefined) updatePayload.approved_by = bm.approved_by;
+    if (bm.approved_at !== undefined) updatePayload.approved_at = bm.approved_at;
 
     if (bm.customerKeyNumber && (bm.currentReading !== undefined || bm.previousReading !== undefined || bm.meterSize !== undefined || bm.month !== undefined)) {
         const existingBM = bulkMeters.find(b => b.customerKeyNumber === bm.customerKeyNumber);
@@ -1202,7 +1206,7 @@ export const addCustomer = async (
   const userRole = currentUser?.role?.toLowerCase();
 
   // Set status to 'Pending Approval' if the creator is a 'Staff' member
-  if (userRole === 'staff') {
+  if (userRole === 'staff' || userRole === 'staff management') {
     finalStatus = 'Pending Approval';
   }
 
@@ -1259,8 +1263,16 @@ export const deleteCustomer = async (customerKeyNumber: string): Promise<StoreOp
   return { success: false, message: (error as any)?.message || "Failed to delete customer.", error };
 };
 
-export const addBulkMeter = async (bulkMeterDomainData: Omit<BulkMeter, 'customerKeyNumber'> & { customerKeyNumber: string }): Promise<StoreOperationResult<BulkMeter>> => {
-  const bulkMeterPayload = await mapDomainBulkMeterToInsert(bulkMeterDomainData);
+export const addBulkMeter = async (
+    bulkMeterDomainData: Partial<BulkMeter>,
+    currentUser: StaffMember
+): Promise<StoreOperationResult<BulkMeter>> => {
+  const finalStatus = (currentUser.role.toLowerCase() === 'staff' || currentUser.role.toLowerCase() === 'staff management')
+      ? 'Pending Approval'
+      : 'Active';
+
+  const bulkMeterPayload = await mapDomainBulkMeterToInsert({ ...bulkMeterDomainData, status: finalStatus } as any);
+  
   const { data: newSupabaseBulkMeter, error } = await createBulkMeterAction(bulkMeterPayload);
   if (newSupabaseBulkMeter && !error) {
     const newBulkMeter = await mapSupabaseBulkMeterToDomain(newSupabaseBulkMeter);
@@ -1686,6 +1698,24 @@ export const rejectCustomer = async (customerKeyNumber: string, rejectorId: stri
   };
   return await updateCustomer(customerKeyNumber, updatePayload);
 };
+
+export const approveBulkMeter = async (customerKeyNumber: string, approverId: string): Promise<StoreOperationResult<void>> => {
+    const updatePayload: Partial<BulkMeter> = {
+        status: 'Active',
+        approved_by: approverId,
+        approved_at: new Date().toISOString(),
+    };
+    return await updateBulkMeter(customerKeyNumber, updatePayload);
+}
+
+export const rejectBulkMeter = async (customerKeyNumber: string, rejectorId: string): Promise<StoreOperationResult<void>> => {
+    const updatePayload: Partial<BulkMeter> = {
+        status: 'Rejected',
+        approved_by: rejectorId,
+        approved_at: new Date().toISOString(),
+    };
+    return await updateBulkMeter(customerKeyNumber, updatePayload);
+}
 
 
 export const subscribeToBranches = (listener: Listener<DomainBranch>): (() => void) => {

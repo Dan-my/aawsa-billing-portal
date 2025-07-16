@@ -197,6 +197,8 @@ export type Database = {
       }
       bulk_meters: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           branch_id: string | null
           bulk_usage: number | null
           charge_group: "Domestic" | "Non-domestic"
@@ -216,7 +218,7 @@ export type Database = {
           previousReading: number
           sewerage_connection: "Yes" | "No"
           specificArea: string
-          status: "Active" | "Maintenance" | "Decommissioned"
+          status: "Active" | "Maintenance" | "Decommissioned" | "Pending Approval" | "Rejected"
           total_bulk_bill: number | null
           updatedAt: string | null
           ward: string
@@ -224,6 +226,8 @@ export type Database = {
           y_coordinate: number | null
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           branch_id?: string | null
           bulk_usage?: number | null
           charge_group: "Domestic" | "Non-domestic"
@@ -243,7 +247,7 @@ export type Database = {
           previousReading: number
           sewerage_connection: "Yes" | "No"
           specificArea: string
-          status: "Active" | "Maintenance" | "Decommissioned"
+          status: "Active" | "Maintenance" | "Decommissioned" | "Pending Approval" | "Rejected"
           total_bulk_bill?: number | null
           updatedAt?: string | null
           ward: string
@@ -251,6 +255,8 @@ export type Database = {
           y_coordinate?: number | null
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           branch_id?: string | null
           bulk_usage?: number | null
           charge_group?: "Domestic" | "Non-domestic"
@@ -270,7 +276,7 @@ export type Database = {
           previousReading?: number
           sewerage_connection?: "Yes" | "No"
           specificArea?: string
-          status?: "Active" | "Maintenance" | "Decommissioned"
+          status?: "Active" | "Maintenance" | "Decommissioned" | "Pending Approval" | "Rejected"
           total_bulk_bill?: number | null
           updatedAt?: string | null
           ward?: string
@@ -278,6 +284,13 @@ export type Database = {
           y_coordinate?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_bulk_meters_approved_by_staff"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "staff_members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "fk_branch"
             columns: ["branch_id"]
@@ -343,6 +356,9 @@ export type Database = {
       }
       individual_customers: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
+          arrears: number
           assignedBulkMeterId: string | null
           bookNumber: string
           branch_id: string | null
@@ -362,11 +378,14 @@ export type Database = {
           previousReading: number
           sewerageConnection: "Yes" | "No"
           specificArea: string
-          status: "Active" | "Inactive" | "Suspended"
+          status: "Active" | "Inactive" | "Suspended" | "Pending Approval" | "Rejected"
           updated_at: string | null
           ward: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          arrears?: number
           assignedBulkMeterId?: string | null
           bookNumber: string
           branch_id?: string | null
@@ -386,11 +405,14 @@ export type Database = {
           previousReading: number
           sewerageConnection: "Yes" | "No"
           specificArea: string
-          status?: "Active" | "Inactive" | "Suspended"
+          status?: "Active" | "Inactive" | "Suspended" | "Pending Approval" | "Rejected"
           updated_at?: string | null
           ward: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          arrears?: number
           assignedBulkMeterId?: string | null
           bookNumber?: string
           branch_id?: string | null
@@ -410,7 +432,7 @@ export type Database = {
           previousReading?: number
           sewerageConnection?: "Yes" | "No"
           specificArea?: string
-          status?: "Active" | "Inactive" | "Suspended"
+          status?: "Active" | "Inactive" | "Suspended" | "Pending Approval" | "Rejected"
           updated_at?: string | null
           ward?: string
         }
@@ -421,6 +443,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "bulk_meters"
             referencedColumns: ["customerKeyNumber"]
+          },
+          {
+            foreignKeyName: "individual_customers_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "staff_members"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "individual_customers_branch_id_fkey"

@@ -244,3 +244,27 @@ This update makes meter rent prices year-specific and editable by moving them in
     *   Click the **"RUN"** button.
 
 You should see a "Success. No rows returned" message. After running this, meter rent prices will be fully database-driven and year-specific.
+
+---
+
+### **Migration: Add Approval Columns to Bulk Meters (Required)**
+
+This update adds the necessary columns to the `bulk_meters` table to support the approval workflow for new bulk meter records.
+
+**What it does:**
+*   Adds `approved_by` (to store who approved it) and `approved_at` (to store when it was approved) columns to the `bulk_meters` table.
+*   This is essential for the approval/rejection functionality on the "Approvals" page to work correctly for bulk meters.
+
+**To apply this update:**
+
+1.  **Navigate to the SQL Editor:**
+    *   Go to your Supabase project dashboard.
+    *   In the left-hand menu, click on the **SQL Editor** icon.
+2.  **Run the Script:**
+    *   Click on **"+ New query"**.
+    *   Open the newly added file `database_migrations/005_add_approval_to_bulk_meters.sql` in this project.
+    *   Copy the entire content of that file.
+    *   Paste the content into the query window in the Supabase SQL Editor.
+    *   Click the **"RUN"** button.
+
+You should see a "Success. No rows returned" message. After running this, the approval workflow for bulk meters will be fully functional.

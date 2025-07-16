@@ -80,14 +80,12 @@ export default function AdminDashboardPage() {
     const currentBulkMeters = getBulkMeters();
     const currentCustomers = getCustomers();
 
-    // 1. Total Bills Status (from both bulk and individual meters)
+    // 1. Total Bills Status (from BULK meters only)
     const paidBMs = currentBulkMeters.filter(bm => bm.paymentStatus === 'Paid').length;
     const unpaidBMs = currentBulkMeters.filter(bm => bm.paymentStatus === 'Unpaid').length;
-    const paidICs = currentCustomers.filter(c => c.paymentStatus === 'Paid').length;
-    const unpaidICs = currentCustomers.filter(c => c.paymentStatus === 'Unpaid' || c.paymentStatus === 'Pending').length;
-
-    const totalPaid = paidBMs + paidICs;
-    const totalUnpaid = unpaidBMs + unpaidICs;
+    
+    const totalPaid = paidBMs;
+    const totalUnpaid = unpaidBMs;
     const totalBills = totalPaid + totalUnpaid;
 
     setDynamicTotalBills(totalBills);
@@ -211,7 +209,7 @@ export default function AdminDashboardPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Overall Bills Status</CardTitle>
+            <CardTitle className="text-sm font-medium">Bulk Meter Bills Status</CardTitle>
             <FileText className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>

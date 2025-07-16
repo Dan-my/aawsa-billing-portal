@@ -25,16 +25,23 @@ import { format, parse } from "date-fns";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 import type { Branch } from "../branches/branch-types";
 import { customerTypes, sewerageConnections } from "@/lib/billing";
+import type { StaffMember } from "../staff-management/staff-types";
 
 
 const BRANCH_UNASSIGNED_VALUE = "_SELECT_BRANCH_BULK_METER_";
 
 export function BulkMeterDataEntryForm() {
   const { toast } = useToast();
+  const [currentUser, setCurrentUser] = React.useState<StaffMember | null>(null);
   const [availableBranches, setAvailableBranches] = React.useState<Branch[]>([]);
   const [isLoadingBranches, setIsLoadingBranches] = React.useState(true);
 
   React.useEffect(() => {
+    const userJson = localStorage.getItem('user');
+    if (userJson) {
+      setCurrentUser(JSON.parse(userJson));
+    }
+
     initializeCustomers();
     initializeBulkMeters();
     
@@ -73,19 +80,17 @@ export function BulkMeterDataEntryForm() {
   });
 
   async function onSubmit(data: BulkMeterDataEntryFormValues) {
-    const bulkMeterDataForStore: Omit<BulkMeter, 'id'> = { 
-      ...data, 
-      branchId: data.branchId === BRANCH_UNASSIGNED_VALUE ? undefined : data.branchId,
-      status: "Active", 
-      paymentStatus: "Unpaid", 
-      outStandingbill: 0
-    };
-    
-    const result = await addBulkMeterToStore(bulkMeterDataForStore);
+    if (!currentUser) {
+        toast({ variant: 'destructive', title: 'Error', description: 'User information not found.' });
+        return;
+    }
+
+    const result = await addBulkMeterToStore(data, currentUser);
+
     if (result.success && result.data) {
       toast({
         title: "Data Entry Submitted",
-        description: `Data for bulk meter ${result.data.name} has been successfully recorded.`,
+        description: `Data for bulk meter ${result.data.name} has been successfully recorded and is pending approval.`,
       });
       form.reset(); 
     } else {
@@ -451,7 +456,7 @@ export function BulkMeterDataEntryForm() {
               </div>
 
               <Button type="submit" className="w-full md:w-auto" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Submitting..." : "Submit Bulk Meter Reading"}
+                {form.formState.isSubmitting ? "Submitting..." : "Submit Bulk Meter for Approval"}
               </Button>
             </form>
           </Form>

@@ -733,7 +733,32 @@ if (!supabaseUrl || !supabaseKey) {
   throw new Error("Supabase URL or Key is not defined. Please check your .env file.");
 }
 
-export const supabase = createClient<ResolvedDatabase>(supabaseUrl, supabaseKey);
+// To use Local Storage for session persistence, we need a custom storage adapter
+// that checks for the `window` object, as it's not available in server-side rendering.
+const customLocalStorage = {
+  getItem: (key: string) => {
+    return typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+  },
+  setItem: (key: string, value: string) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(key, value);
+    }
+  },
+  removeItem: (key: string) => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(key);
+    }
+  },
+};
+
+export const supabase = createClient<ResolvedDatabase>(supabaseUrl, supabaseKey, {
+  auth: {
+    storage: customLocalStorage, // Use the custom localStorage adapter
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+  },
+});
 
 // --- Rewritten CRUD Functions with Supabase Client ---
 
@@ -826,3 +851,5 @@ export const getAllReportLogs = () => supabase.from('reports').select('*');
 export const createReportLog = (reportLog: ReportLogInsert) => supabase.from('reports').insert(reportLog).select().single();
 export const updateReportLog = (id: string, reportLog: ReportLogUpdate) => supabase.from('reports').update(reportLog).eq('id', id).select().single();
 export const deleteReportLog = (id: string) => supabase.from('reports').delete().eq('id', id);
+
+    

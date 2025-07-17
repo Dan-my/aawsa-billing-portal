@@ -19,7 +19,6 @@ import {
   deleteStaffMember as supabaseDeleteStaffMember,
   getAllStaffMembers as supabaseGetAllStaffMembers,
   updateStaffMember as supabaseUpdateStaffMember,
-  getStaffMemberForAuth as supabaseGetStaffMemberForAuth,
   createBill as supabaseCreateBill,
   deleteBill as supabaseDeleteBill,
   getAllBills as supabaseGetAllBills,
@@ -86,7 +85,7 @@ import type {
   NotificationInsert,
   TariffRow,
   TariffInsert,
-  TariffUpdate
+  TariffUpdate,
 } from './supabase';
 
 export type { RoleRow, PermissionRow, RolePermissionRow, Branch, BulkMeterRow, IndividualCustomer, StaffMember, Bill, IndividualCustomerReading, BulkMeterReading, Payment, ReportLog, NotificationRow, BranchInsert, BranchUpdate, BulkMeterInsert, BulkMeterUpdate, IndividualCustomerInsert, IndividualCustomerUpdate, StaffMemberInsert, StaffMemberUpdate, BillInsert, BillUpdate, IndividualCustomerReadingInsert, IndividualCustomerReadingUpdate, BulkMeterReadingInsert, BulkMeterReadingUpdate, PaymentInsert, PaymentUpdate, ReportLogInsert, ReportLogUpdate, NotificationInsert, TariffRow, TariffInsert, TariffUpdate };
@@ -146,7 +145,6 @@ export async function getAllPermissionsAction() { return supabaseGetAllPermissio
 export async function getAllRolePermissionsAction() { return supabaseGetAllRolePermissions(); }
 
 export async function rpcUpdateRolePermissionsAction(roleId: number, permissionIds: number[]) {
-    // Authentication token is no longer needed for this public-policy based action
     return supabaseRpcUpdateRolePermissions(roleId, permissionIds);
 }
 

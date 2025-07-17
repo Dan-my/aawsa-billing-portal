@@ -19,6 +19,7 @@ import {
   deleteStaffMember as supabaseDeleteStaffMember,
   getAllStaffMembers as supabaseGetAllStaffMembers,
   updateStaffMember as supabaseUpdateStaffMember,
+  getStaffMemberForAuth as supabaseGetStaffMemberForAuth,
   createBill as supabaseCreateBill,
   deleteBill as supabaseDeleteBill,
   getAllBills as supabaseGetAllBills,
@@ -86,7 +87,7 @@ import type {
   TariffRow,
   TariffInsert,
   TariffUpdate,
-} from './supabase';
+} from './actions';
 
 export type { RoleRow, PermissionRow, RolePermissionRow, Branch, BulkMeterRow, IndividualCustomer, StaffMember, Bill, IndividualCustomerReading, BulkMeterReading, Payment, ReportLog, NotificationRow, BranchInsert, BranchUpdate, BulkMeterInsert, BulkMeterUpdate, IndividualCustomerInsert, IndividualCustomerUpdate, StaffMemberInsert, StaffMemberUpdate, BillInsert, BillUpdate, IndividualCustomerReadingInsert, IndividualCustomerReadingUpdate, BulkMeterReadingInsert, BulkMeterReadingUpdate, PaymentInsert, PaymentUpdate, ReportLogInsert, ReportLogUpdate, NotificationInsert, TariffRow, TariffInsert, TariffUpdate };
 

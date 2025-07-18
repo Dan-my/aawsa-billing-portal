@@ -105,10 +105,8 @@ export function BulkMeterDataEntryForm() {
   const handleBranchChange = (branchIdValue: string) => {
     const selectedBranch = availableBranches.find(b => b.id === branchIdValue);
     if (selectedBranch) {
-      form.setValue("location", selectedBranch.name); 
       form.setValue("branchId", selectedBranch.id);
     } else if (branchIdValue === BRANCH_UNASSIGNED_VALUE) {
-      form.setValue("location", ""); 
       form.setValue("branchId", undefined);
     }
   };

@@ -184,10 +184,8 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
   const handleBranchChange = (branchIdValue: string) => {
     const selectedBranch = availableBranches.find(b => b.id === branchIdValue);
     if (selectedBranch) {
-      form.setValue("location", selectedBranch.name); 
       form.setValue("branchId", selectedBranch.id);
     } else if (branchIdValue === BRANCH_UNASSIGNED_VALUE) {
-      form.setValue("location", ""); 
       form.setValue("branchId", undefined);
     }
   };
@@ -217,7 +215,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                     name="branchId"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Assign to Branch (sets Location)</FormLabel>
+                        <FormLabel>Assign to Branch</FormLabel>
                         <Select
                             onValueChange={(value) => handleBranchChange(value)}
                             value={field.value || BRANCH_UNASSIGNED_VALUE}
@@ -229,7 +227,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                            <SelectItem value={BRANCH_UNASSIGNED_VALUE}>None (Manual Location)</SelectItem>
+                            <SelectItem value={BRANCH_UNASSIGNED_VALUE}>None</SelectItem>
                             {availableBranches.map((branch) => (
                                 <SelectItem key={branch.id} value={branch.id}>
                                 {branch.name}
@@ -326,7 +324,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                        <Select 
                           onValueChange={field.onChange} 
                           value={field.value} 
-                          disabled={form.formState.isSubmitting || !!staffBranchName || (!!form.getValues().branchId && form.getValues().branchId !== BRANCH_UNASSIGNED_VALUE)}
+                          disabled={form.formState.isSubmitting}
                         >
                         <FormControl>
                           <SelectTrigger>

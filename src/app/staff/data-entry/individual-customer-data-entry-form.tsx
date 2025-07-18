@@ -73,7 +73,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
       currentReading: undefined,
       month: "",
       specificArea: "",
-      location: branchName || "",
+      location: "",
       branchId: staffBranchId,
       ward: "",
       sewerageConnection: undefined,
@@ -121,8 +121,8 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
   }, [branchName, staffBranchId]);
 
   React.useEffect(() => {
-    form.reset({ ...form.getValues(), location: branchName, branchId: staffBranchId });
-  }, [branchName, staffBranchId, form]);
+    form.reset({ ...form.getValues(), location: "", branchId: staffBranchId });
+  }, [staffBranchId, form]);
 
   async function onSubmit(data: StaffEntryFormValues) {
     if (!currentUser) {
@@ -157,7 +157,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
             currentReading: undefined,
             month: "",
             specificArea: "",
-            location: branchName || "",
+            location: "",
             branchId: staffBranchId,
             ward: "",
             sewerageConnection: undefined,
@@ -275,7 +275,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                    <Select 
                       onValueChange={field.onChange} 
                       value={field.value} 
-                      disabled={commonFieldDisabled || true}
+                      disabled={commonFieldDisabled}
                     >
                     <FormControl>
                       <SelectTrigger>

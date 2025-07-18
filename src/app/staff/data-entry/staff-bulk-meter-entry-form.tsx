@@ -60,7 +60,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
       currentReading: undefined,
       month: "", 
       specificArea: "",
-      location: branchName || "", 
+      location: "", // No longer set to branchName
       ward: "",
       chargeGroup: "Non-domestic",
       sewerageConnection: "No",
@@ -68,13 +68,6 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
       yCoordinate: undefined,
     },
   });
-
-  React.useEffect(() => {
-    // Reset location if branchName changes and form is pristine for location
-    if (form.formState.isDirty && form.getFieldState('location').isDirty) return;
-    form.reset({ ...form.getValues(), location: branchName });
-  }, [branchName, form]);
-
 
   async function onSubmit(data: BulkMeterDataEntryFormValues) {
     const bulkMeterDataForStore = {
@@ -100,7 +93,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
         currentReading: undefined,
         month: "",
         specificArea: "",
-        location: branchName || "", // Reset location to current branchName
+        location: "", // Reset to blank
         ward: "",
         chargeGroup: "Non-domestic",
         sewerageConnection: "No",

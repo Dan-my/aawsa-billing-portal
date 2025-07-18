@@ -153,10 +153,8 @@ export function IndividualCustomerDataEntryForm() {
   const handleBranchChange = (branchIdValue: string) => {
     const selectedBranch = availableBranches.find(b => b.id === branchIdValue);
     if (selectedBranch) {
-      form.setValue("location", selectedBranch.name); 
       form.setValue("branchId", selectedBranch.id);
     } else if (branchIdValue === BRANCH_UNASSIGNED_VALUE) {
-      form.setValue("location", ""); 
       form.setValue("branchId", undefined);
     }
   };
@@ -174,7 +172,7 @@ export function IndividualCustomerDataEntryForm() {
                   name="branchId" 
                   render={({ field }) => ( 
                     <FormItem>
-                      <FormLabel>Assign to Branch (sets Location)</FormLabel>
+                      <FormLabel>Assign to Branch</FormLabel>
                       <Select
                         onValueChange={(value) => handleBranchChange(value)}
                         value={field.value || BRANCH_UNASSIGNED_VALUE}
@@ -186,7 +184,7 @@ export function IndividualCustomerDataEntryForm() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value={BRANCH_UNASSIGNED_VALUE}>None (Manual Location)</SelectItem>
+                          <SelectItem value={BRANCH_UNASSIGNED_VALUE}>None</SelectItem>
                           {availableBranches.map((branch) => (
                             <SelectItem key={branch.id} value={branch.id}>
                               {branch.name}
@@ -284,7 +282,7 @@ export function IndividualCustomerDataEntryForm() {
                        <Select 
                           onValueChange={field.onChange} 
                           value={field.value} 
-                          disabled={form.formState.isSubmitting || !!form.getValues().branchId}
+                          disabled={form.formState.isSubmitting}
                         >
                         <FormControl>
                           <SelectTrigger>

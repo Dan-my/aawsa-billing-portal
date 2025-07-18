@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { baseBulkMeterDataSchema, meterSizeOptions } from "@/app/admin/data-entry/customer-data-entry-types";
+import { baseBulkMeterDataSchema, meterSizeOptions, subCityOptions, woredaOptions } from "@/app/admin/data-entry/customer-data-entry-types";
 import type { BulkMeter } from "./bulk-meter-types";
 import { bulkMeterStatuses } from "./bulk-meter-types";
 import { paymentStatuses, customerTypes, sewerageConnections } from "@/lib/billing"; 
@@ -152,10 +152,8 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
   const handleBranchChange = (branchIdValue: string) => {
     const selectedBranch = availableBranches.find(b => b.id === branchIdValue);
     if (selectedBranch) {
-      form.setValue("location", selectedBranch.name); 
       form.setValue("branchId", selectedBranch.id);
     } else if (branchIdValue === BRANCH_UNASSIGNED_VALUE) {
-      form.setValue("location", ""); 
       form.setValue("branchId", undefined);
     }
   };
@@ -185,7 +183,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                   name="branchId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Assign to Branch (sets Location)</FormLabel>
+                      <FormLabel>Assign to Branch</FormLabel>
                       <Select
                         onValueChange={(value) => handleBranchChange(value)}
                         value={field.value || BRANCH_UNASSIGNED_VALUE}
@@ -367,26 +365,44 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 control={form.control}
                 name="location"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sub-City *</FormLabel>
-                    <FormControl>
-                      <Input {...field} readOnly={!!staffBranchName || (!!form.getValues().branchId && form.getValues().branchId !== BRANCH_UNASSIGNED_VALUE)} placeholder="Set by Branch selection or enter manually" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                    <FormItem>
+                        <FormLabel>Sub-City *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a Sub-City" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {subCityOptions.map(option => (
+                                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
                 )}
               />
               <FormField
                 control={form.control}
                 name="ward"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Woreda *</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Enter woreda" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                    <FormItem>
+                        <FormLabel>Woreda *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a Woreda" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {woredaOptions.map(option => (
+                                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
                 )}
               />
               <FormField

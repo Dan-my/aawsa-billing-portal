@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, Frown, Hourglass } from "lucide-react";
+import { Check, Frown, Hourglass, FileEdit } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -68,7 +68,7 @@ export function BulkMeterApprovalTable({ data, onApprove, onReject, branches }: 
               </TableCell>
               <TableCell className="text-right space-x-2">
                 <Button variant="destructive" size="sm" onClick={() => onReject(meter)}>
-                    <Frown className="mr-2 h-4 w-4"/> Reject
+                    <FileEdit className="mr-2 h-4 w-4"/> Amend
                 </Button>
                 <Button variant="default" size="sm" onClick={() => onApprove(meter)}>
                     <Check className="mr-2 h-4 w-4"/> Approve

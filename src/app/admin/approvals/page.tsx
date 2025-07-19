@@ -26,7 +26,7 @@ import type { StaffMember } from "../staff-management/staff-types";
 import type { Branch } from "../branches/branch-types";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Alert, AlertTitle } from "@/components/ui/alert";
-import { Check, Frown, Lock, ShieldCheck, UserCheck } from "lucide-react";
+import { Check, Frown, Lock, ShieldCheck, UserCheck, FileEdit } from "lucide-react";
 import { ApprovalTable } from "./approval-table";
 import { BulkMeterApprovalTable } from "./bulk-meter-approval-table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -118,8 +118,8 @@ export default function ApprovalsPage() {
 
     if (result.success) {
       toast({
-        title: `${isCustomer ? 'Customer' : 'Bulk Meter'} ${actionType === 'approve' ? 'Approved' : 'Rejected'}`,
-        description: `${selectedEntity.name} has been successfully ${actionType === 'approve' ? 'activated' : 'rejected'}.`
+        title: `${isCustomer ? 'Customer' : 'Bulk Meter'} ${actionType === 'approve' ? 'Approved' : 'Amended'}`,
+        description: `${selectedEntity.name} has been successfully ${actionType === 'approve' ? 'activated' : 'marked for amendment'}.`
       });
     } else {
       toast({
@@ -149,13 +149,18 @@ export default function ApprovalsPage() {
     );
   }
 
+  const dialogTitle = actionType === 'approve' ? 'Approve Record' : 'Request Amendment';
+  const dialogDescription = `Are you sure you want to ${actionType === 'approve' ? 'approve' : 'request an amendment for'} the record for "${selectedEntity?.name}"?
+    ${actionType === 'approve' ? " This will make the record active and billable." : " This will mark the record as needing changes by the original submitter."}`;
+  const dialogButtonText = actionType === 'approve' ? 'Yes, Approve' : 'Yes, Request Amendment';
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <UserCheck className="h-8 w-8 text-primary"/>
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Approvals</h1>
-          <p className="text-muted-foreground">Review and approve or reject new registrations.</p>
+          <p className="text-muted-foreground">Review and approve or amend new registrations.</p>
         </div>
       </div>
 
@@ -220,11 +225,9 @@ export default function ApprovalsPage() {
       <AlertDialog open={!!selectedEntity} onOpenChange={(open) => !open && setSelectedEntity(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Action: {actionType === 'approve' ? 'Approve' : 'Reject'} Record</AlertDialogTitle>
+            <AlertDialogTitle>Confirm Action: {dialogTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to {actionType} the record for "{selectedEntity?.name}"?
-              {actionType === 'approve' && " This will make the record active and billable."}
-              {actionType === 'reject' && " This will mark the record as rejected and it will not be active."}
+              {dialogDescription}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -233,8 +236,8 @@ export default function ApprovalsPage() {
                 onClick={confirmAction}
                 variant={actionType === 'approve' ? 'default' : 'destructive'}
             >
-              {actionType === 'approve' ? <Check className="mr-2 h-4 w-4" /> : <Frown className="mr-2 h-4 w-4" />}
-              {actionType === 'approve' ? 'Yes, Approve' : 'Yes, Reject'}
+              {actionType === 'approve' ? <Check className="mr-2 h-4 w-4" /> : <FileEdit className="mr-2 h-4 w-4" />}
+              {dialogButtonText}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

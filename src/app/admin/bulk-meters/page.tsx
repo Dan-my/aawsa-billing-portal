@@ -26,10 +26,12 @@ import {
 import type { Branch } from "../branches/branch-types";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { usePermissions } from "@/hooks/use-permissions";
+import type { StaffMember } from "../staff-management/staff-types";
 
 export default function BulkMetersPage() {
   const { hasPermission } = usePermissions();
   const { toast } = useToast();
+  const [currentUser, setCurrentUser] = React.useState<StaffMember | null>(null);
   const [bulkMeters, setBulkMeters] = React.useState<BulkMeter[]>([]);
   const [branches, setBranches] = React.useState<Branch[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -43,6 +45,10 @@ export default function BulkMetersPage() {
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
   React.useEffect(() => {
+    const userJson = localStorage.getItem('user');
+    if (userJson) {
+      setCurrentUser(JSON.parse(userJson));
+    }
     setIsLoading(true);
     Promise.all([
       initializeBulkMeters(),
@@ -92,10 +98,20 @@ export default function BulkMetersPage() {
 
   const handleSubmitBulkMeter = async (data: BulkMeterFormValues) => {
     if (selectedBulkMeter) {
-      await updateBulkMeterInStore(selectedBulkMeter.customerKeyNumber, data);
+      // Use the correct property names from the form data
+      const updateData: Partial<BulkMeter> = {
+        ...data,
+        subCity: data.subCity,
+        woreda: data.woreda,
+      };
+      await updateBulkMeterInStore(selectedBulkMeter.customerKeyNumber, updateData);
       toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
     } else {
-      await addBulkMeterToStore(data as BulkMeter); 
+      if (!currentUser) {
+        toast({ variant: 'destructive', title: 'Error', description: 'User information not found.' });
+        return;
+      }
+      await addBulkMeterToStore(data, currentUser); 
       toast({ title: "Bulk Meter Added", description: `${data.name} has been added.` });
     }
     setIsFormOpen(false);

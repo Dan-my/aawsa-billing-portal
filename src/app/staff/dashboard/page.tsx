@@ -3,10 +3,24 @@
 
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart as BarChartIcon, PieChart as PieChartIcon, Gauge, Users, ArrowRight, FileText, TrendingUp, AlertCircle, Table as TableIcon, UserCheck } from 'lucide-react'; 
+import { BarChart as BarChartIcon, PieChart as PieChartIcon, Gauge, Users, ArrowRight, FileText, TrendingUp, AlertCircle, Table as TableIcon } from 'lucide-react';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ResponsiveContainer, BarChart, PieChart, XAxis, YAxis, Tooltip, Legend, Pie, Cell, Bar, LineChart, Line, CartesianGrid } from 'recharts';
+import {
+  ResponsiveContainer,
+  BarChart,
+  PieChart,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  Pie,
+  Cell,
+  Bar,
+  LineChart,
+  Line,
+  CartesianGrid
+} from 'recharts';
 import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import { getBulkMeters, subscribeToBulkMeters, initializeBulkMeters, getCustomers, subscribeToCustomers, initializeCustomers, getBranches, initializeBranches, subscribeToBranches } from "@/lib/data-store";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
@@ -24,8 +38,8 @@ interface User {
 }
 
 const chartConfig = {
-  paid: { label: "Paid", color: "hsl(var(--chart-1))" }, 
-  unpaid: { label: "Unpaid", color: "hsl(var(--chart-3))" }, 
+  paid: { label: "Paid", color: "hsl(var(--chart-1))" },
+  unpaid: { label: "Unpaid", color: "hsl(var(--chart-3))" },
   waterUsage: { label: "Water Usage (m³)", color: "hsl(var(--chart-1))" },
 } satisfies import("@/components/ui/chart").ChartConfig;
 
@@ -39,14 +53,15 @@ export default function StaffDashboardPage() {
   const [allBulkMeters, setAllBulkMeters] = React.useState<BulkMeter[]>([]);
   const [allCustomers, setAllCustomers] = React.useState<IndividualCustomer[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
-  
-  const [waterUsageView, setWaterUsageView] = React.useState<'chart' | 'table'>('chart');
+
+  // State for toggling views
   const [branchPerformanceView, setBranchPerformanceView] = React.useState<'chart' | 'table'>('chart');
-  
+  const [waterUsageView, setWaterUsageView] = React.useState<'chart' | 'table'>('chart');
+
   React.useEffect(() => {
     setIsClient(true);
   }, []);
-  
+
   // Auth check
   React.useEffect(() => {
     const userString = localStorage.getItem("user");
@@ -55,12 +70,12 @@ export default function StaffDashboardPage() {
         const parsedUser: User = JSON.parse(userString);
         if (
           parsedUser.role.toLowerCase() === "staff" &&
-          parsedUser.branchId && // Now check for branchId
+          parsedUser.branchId &&
           parsedUser.branchName &&
           parsedUser.branchName !== 'Unknown Branch'
         ) {
           setStaffBranchName(parsedUser.branchName);
-          setStaffBranchId(parsedUser.branchId); // Set the branch ID from the session
+          setStaffBranchId(parsedUser.branchId);
           setAuthStatus('authorized');
         } else {
           setAuthStatus('unauthorized');
@@ -71,7 +86,7 @@ export default function StaffDashboardPage() {
     } else {
       setAuthStatus('unauthorized');
     }
-  }, []); 
+  }, []);
 
   // Data loading, dependent on auth
   React.useEffect(() => {
@@ -97,9 +112,9 @@ export default function StaffDashboardPage() {
             if (isMounted) setIsLoading(false);
         }
     };
-    
+
     initializeAndSubscribe();
-    
+
     const unSubBranches = subscribeToBranches((data) => isMounted && setAllBranches(data));
     const unSubBulkMeters = subscribeToBulkMeters((data) => isMounted && setAllBulkMeters(data));
     const unSubCustomers = subscribeToCustomers((data) => isMounted && setAllCustomers(data));
@@ -117,7 +132,7 @@ export default function StaffDashboardPage() {
     if (authStatus !== 'authorized' || !staffBranchId) {
       return { totalBulkMeters: 0, totalCustomers: 0, totalBills: 0, paidBills: 0, unpaidBills: 0, billsData: [], branchPerformanceData: [], waterUsageTrendData: [], paidPercentage: "0%", pendingApprovals: 0 };
     }
-    
+
     const branchBMs = allBulkMeters.filter(bm => bm.branchId === staffBranchId);
     const branchBMKeys = new Set(branchBMs.map(bm => bm.customerKeyNumber));
     const branchCustomers = allCustomers.filter(customer =>
@@ -127,7 +142,7 @@ export default function StaffDashboardPage() {
 
     const activeCustomers = branchCustomers.filter(c => c.status === 'Active');
     const pendingCustomers = branchCustomers.filter(c => c.status === 'Pending Approval').length;
-    
+
     const paidCount = branchBMs.filter(bm => bm.paymentStatus === 'Paid').length + activeCustomers.filter(c => c.paymentStatus === 'Paid').length;
     const unpaidCount = branchBMs.filter(bm => bm.paymentStatus === 'Unpaid').length + activeCustomers.filter(c => c.paymentStatus === 'Unpaid' || c.paymentStatus === 'Pending').length;
     const totalBillsCount = paidCount + unpaidCount;
@@ -139,7 +154,7 @@ export default function StaffDashboardPage() {
 
     const performanceMap = new Map<string, { branchName: string, paid: number, unpaid: number }>();
     const displayableBranches = allBranches.filter(b => b.name.toLowerCase() !== 'head office');
-    
+
     displayableBranches.forEach(branch => {
       performanceMap.set(branch.id, { branchName: branch.name, paid: 0, unpaid: 0 });
     });
@@ -176,7 +191,7 @@ export default function StaffDashboardPage() {
     const waterUsageTrendData = Array.from(usageMap.entries())
       .map(([month, usage]) => ({ month, usage }))
       .sort((a, b) => new Date(a.month + "-01").getTime() - new Date(b.month + "-01").getTime());
-    
+
 
     return {
       totalBulkMeters: branchBMs.length,
@@ -196,7 +211,7 @@ export default function StaffDashboardPage() {
   if (isLoading || authStatus === 'loading') {
     return <div className="p-4 text-center">Loading dashboard data...</div>;
   }
-  
+
   if (authStatus === 'unauthorized') {
       return (
         <div className="flex items-center justify-center pt-20">
@@ -215,7 +230,7 @@ export default function StaffDashboardPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl md:text-3xl font-bold">Staff Dashboard - {staffBranchName}</h1>
-      
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -272,7 +287,7 @@ export default function StaffDashboardPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Payment Collection Rate</CardTitle>
@@ -288,7 +303,7 @@ export default function StaffDashboardPage() {
         </Card>
 
       </div>
-      
+
       <Card className="shadow-lg">
         <CardHeader>
             <CardTitle>Quick Access</CardTitle>
@@ -317,7 +332,7 @@ export default function StaffDashboardPage() {
             </Button>
         </CardContent>
       </Card>
-      
+
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="shadow-lg">
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
@@ -449,3 +464,5 @@ export default function StaffDashboardPage() {
     </div>
   );
 }
+
+    

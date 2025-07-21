@@ -119,19 +119,7 @@ export default function IndividualCustomersPage() {
     }
     
     if (selectedCustomer) {
-      const updatedCustomerData: Partial<Omit<IndividualCustomer, 'customerKeyNumber'>> = {
-        ...data, 
-        ordinal: Number(data.ordinal),
-        meterSize: Number(data.meterSize),
-        previousReading: Number(data.previousReading),
-        currentReading: Number(data.currentReading),
-        status: data.status as IndividualCustomerStatus,
-        paymentStatus: data.paymentStatus as PaymentStatus,
-        customerType: data.customerType as CustomerType,
-        sewerageConnection: data.sewerageConnection as SewerageConnection,
-        assignedBulkMeterId: data.assignedBulkMeterId || undefined,
-      };
-      const result = await updateCustomerInStore(selectedCustomer.customerKeyNumber, updatedCustomerData);
+      const result = await updateCustomerInStore(selectedCustomer.customerKeyNumber, data);
       if (result.success) {
         toast({ title: "Customer Updated", description: `${data.name} has been updated.` });
       } else {
@@ -142,15 +130,7 @@ export default function IndividualCustomersPage() {
         });
       }
     } else {
-      const newCustomerData = {
-        ...data,
-        ordinal: Number(data.ordinal),
-        meterSize: Number(data.meterSize),
-        previousReading: Number(data.previousReading),
-        currentReading: Number(data.currentReading),
-      } as Omit<IndividualCustomer, 'created_at' | 'updated_at' | 'calculatedBill'>;
-
-      const result = await addCustomerToStore(newCustomerData, currentUser);
+      const result = await addCustomerToStore(data, currentUser);
       if (result.success && result.data) {
         toast({ title: "Customer Added", description: `${result.data.name} has been added.` });
       } else {

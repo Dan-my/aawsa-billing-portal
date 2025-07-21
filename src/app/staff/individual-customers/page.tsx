@@ -165,38 +165,16 @@ export default function StaffIndividualCustomersPage() {
         toast({ variant: 'destructive', title: 'Error', description: 'User information not found.' });
         return;
     }
-    
-    const dataWithBranchId = { ...data, branchId: currentUser.branchId };
 
     if (selectedCustomer) {
-      const updatedCustomerData: Partial<Omit<IndividualCustomer, 'customerKeyNumber'>> = {
-        ...dataWithBranchId,
-        ordinal: Number(data.ordinal),
-        meterSize: Number(data.meterSize),
-        previousReading: Number(data.previousReading),
-        currentReading: Number(data.currentReading),
-        status: data.status as IndividualCustomerStatus,
-        paymentStatus: data.paymentStatus as PaymentStatus,
-        customerType: data.customerType as CustomerType,
-        sewerageConnection: data.sewerageConnection as SewerageConnection,
-        assignedBulkMeterId: data.assignedBulkMeterId || undefined,
-      };
-      const result = await updateCustomerInStore(selectedCustomer.customerKeyNumber, updatedCustomerData);
+      const result = await updateCustomerInStore(selectedCustomer.customerKeyNumber, data);
       if (result.success) {
         toast({ title: "Customer Updated", description: `${data.name} has been updated.` });
       } else {
          toast({ variant: "destructive", title: "Update Failed", description: result.message || "Could not update customer."});
       }
     } else {
-      const newCustomerData = {
-        ...dataWithBranchId,
-        ordinal: Number(data.ordinal),
-        meterSize: Number(data.meterSize),
-        previousReading: Number(data.previousReading),
-        currentReading: Number(data.currentReading),
-      } as Omit<IndividualCustomer, 'created_at' | 'updated_at' | 'calculatedBill'>;
-
-      const result = await addCustomerToStore(newCustomerData, currentUser);
+      const result = await addCustomerToStore(data, currentUser);
       if (result.success && result.data) {
         toast({ title: "Customer Added", description: `${result.data.name} has been added.` });
       } else {
@@ -277,7 +255,7 @@ export default function StaffIndividualCustomersPage() {
         )}
       </Card>
 
-      {hasPermission('customers_create') || hasPermission('customers_update') ? (
+      {(hasPermission('customers_create') || hasPermission('customers_update')) && (
         <IndividualCustomerFormDialog
           open={isFormOpen}
           onOpenChange={setIsFormOpen}
@@ -286,7 +264,7 @@ export default function StaffIndividualCustomersPage() {
           bulkMeters={branchFilteredData.bulkMeters}
           staffBranchName={currentUser?.branchName || undefined}
         />
-      ) : null}
+      )}
 
       {hasPermission('customers_delete') && (
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

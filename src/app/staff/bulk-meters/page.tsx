@@ -26,20 +26,13 @@ import {
 import type { Branch } from "@/app/admin/branches/branch-types";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { usePermissions } from "@/hooks/use-permissions";
-
-interface User {
-  email: string;
-  role: "admin" | "staff" | "Admin" | "Staff";
-  branchName?: string;
-  branchId?: string;
-}
+import type { StaffMember } from "@/app/admin/staff-management/staff-types";
 
 export default function StaffBulkMetersPage() {
   const { hasPermission } = usePermissions();
   const { toast } = useToast();
   const [authStatus, setAuthStatus] = React.useState<'loading' | 'unauthorized' | 'authorized'>('loading');
-  const [staffBranchName, setStaffBranchName] = React.useState<string | null>(null);
-  const [staffBranchId, setStaffBranchId] = React.useState<string | null>(null);
+  const [currentUser, setCurrentUser] = React.useState<StaffMember | null>(null);
   
   const [allBulkMeters, setAllBulkMeters] = React.useState<BulkMeter[]>([]);
   const [allBranches, setAllBranches] = React.useState<Branch[]>([]);
@@ -59,10 +52,9 @@ export default function StaffBulkMetersPage() {
     const userString = localStorage.getItem("user");
     if (userString) {
       try {
-        const parsedUser: User = JSON.parse(userString);
-        if (parsedUser.role.toLowerCase() === 'staff' && parsedUser.branchId && parsedUser.branchName) {
-          setStaffBranchName(parsedUser.branchName);
-          setStaffBranchId(parsedUser.branchId);
+        const parsedUser: StaffMember = JSON.parse(userString);
+        setCurrentUser(parsedUser);
+        if (parsedUser.role.toLowerCase() === 'staff' || parsedUser.role.toLowerCase() === 'staff management') {
           setAuthStatus('authorized');
         } else {
           setAuthStatus('unauthorized');
@@ -114,11 +106,11 @@ export default function StaffBulkMetersPage() {
 
   // Declarative filtering with useMemo
   const branchFilteredBulkMeters = React.useMemo(() => {
-    if (authStatus !== 'authorized' || !staffBranchId) {
+    if (authStatus !== 'authorized' || !currentUser?.branchId) {
       return [];
     }
-    return allBulkMeters.filter(bm => bm.branchId === staffBranchId);
-  }, [authStatus, staffBranchId, allBulkMeters]);
+    return allBulkMeters.filter(bm => bm.branchId === currentUser?.branchId);
+  }, [authStatus, currentUser, allBulkMeters]);
 
 
   const searchedBulkMeters = React.useMemo(() => {
@@ -163,21 +155,25 @@ export default function StaffBulkMetersPage() {
   };
 
   const handleSubmitBulkMeter = async (data: BulkMeterFormValues) => {
-    // Automatically associate with staff's branch ID
-    const dataWithBranchId = { ...data, branchId: staffBranchId, subCity: staffBranchName || data.subCity };
+     if (!currentUser) {
+      toast({ variant: 'destructive', title: 'Error', description: 'User information not found.' });
+      return;
+    }
     
     if (selectedBulkMeter) {
-      await updateBulkMeterInStore(selectedBulkMeter.customerKeyNumber, dataWithBranchId);
-      toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
+      const result = await updateBulkMeterInStore(selectedBulkMeter.customerKeyNumber, data);
+      if (result.success) {
+        toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
+      } else {
+        toast({ variant: "destructive", title: "Update Failed", description: result.message });
+      }
     } else {
-      const newBulkMeterData: Omit<BulkMeter, 'customerKeyNumber'> & {customerKeyNumber: string} = {
-        ...dataWithBranchId,
-        status: "Active", 
-        paymentStatus: "Unpaid",
-        outStandingbill: 0,
-      };
-      await addBulkMeterToStore(newBulkMeterData); 
-      toast({ title: "Bulk Meter Added", description: `${data.name} has been added.` });
+      const result = await addBulkMeterToStore(data, currentUser); 
+      if (result.success) {
+        toast({ title: "Bulk Meter Added", description: `${data.name} has been added and is pending approval.` });
+      } else {
+        toast({ variant: "destructive", title: "Add Failed", description: result.message });
+      }
     }
     setIsFormOpen(false);
     setSelectedBulkMeter(null);
@@ -201,7 +197,7 @@ export default function StaffBulkMetersPage() {
     if (branchFilteredBulkMeters.length === 0 && !searchTerm) {
       return (
         <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
-          No bulk meters found for branch: {staffBranchName}. Click "Add New Bulk Meter" to get started. <Gauge className="inline-block ml-2 h-5 w-5" />
+          No bulk meters found for branch: {currentUser?.branchName}. Click "Add New Bulk Meter" to get started. <Gauge className="inline-block ml-2 h-5 w-5" />
         </div>
       );
     }
@@ -221,7 +217,7 @@ export default function StaffBulkMetersPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4">
-        <h1 className="text-2xl md:text-3xl font-bold">Bulk Meters {staffBranchName ? `(${staffBranchName})` : ''}</h1>
+        <h1 className="text-2xl md:text-3xl font-bold">Bulk Meters {currentUser?.branchName ? `(${currentUser.branchName})` : ''}</h1>
         <div className="flex gap-2 w-full md:w-auto">
            <div className="relative flex-grow md:flex-grow-0">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -244,7 +240,7 @@ export default function StaffBulkMetersPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Bulk Meter List for {staffBranchName || "Your Area"}</CardTitle>
+          <CardTitle>Bulk Meter List for {currentUser?.branchName || "Your Area"}</CardTitle>
           <CardDescription>View, edit, and manage bulk meter information for your branch.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -271,7 +267,7 @@ export default function StaffBulkMetersPage() {
           onOpenChange={setIsFormOpen}
           onSubmit={handleSubmitBulkMeter}
           defaultValues={selectedBulkMeter}
-          staffBranchName={staffBranchName || undefined}
+          staffBranchName={currentUser?.branchName || undefined}
         />
       )}
 

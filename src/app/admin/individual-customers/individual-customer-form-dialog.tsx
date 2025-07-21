@@ -36,7 +36,7 @@ import type { Branch } from "../branches/branch-types";
 const individualCustomerFormObjectSchema = baseIndividualCustomerDataSchema.extend({
   status: z.enum(individualCustomerStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
   paymentStatus: z.enum(paymentStatuses, { errorMap: () => ({ message: "Please select a valid payment status."}) }),
-  branchId: z.string().optional(), // Add branchId to schema
+  branchId: z.string().optional(),
   arrears: z.coerce.number().min(0, { message: "Arrears cannot be negative." }),
 });
 
@@ -74,8 +74,8 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
       currentReading: undefined,
       month: "",
       specificArea: "",
-      location: "",
-      ward: "",
+      subCity: "",
+      woreda: "",
       sewerageConnection: undefined,
       assignedBulkMeterId: UNASSIGNED_BULK_METER_VALUE,
       branchId: undefined,
@@ -132,8 +132,8 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         currentReading: defaultValues.currentReading ?? undefined,
         month: defaultValues.month || "",
         specificArea: defaultValues.specificArea || "",
-        location: defaultValues.location || "",
-        ward: defaultValues.ward || "",
+        subCity: defaultValues.subCity || "",
+        woreda: defaultValues.woreda || "",
         sewerageConnection: defaultValues.sewerageConnection || undefined,
         assignedBulkMeterId: defaultValues.assignedBulkMeterId || UNASSIGNED_BULK_METER_VALUE,
         branchId: defaultValues.branchId || undefined,
@@ -155,8 +155,8 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         currentReading: undefined,
         month: "",
         specificArea: "",
-        location: staffBranchName || "",
-        ward: "",
+        subCity: staffBranchName || "",
+        woreda: "",
         sewerageConnection: undefined,
         assignedBulkMeterId: UNASSIGNED_BULK_METER_VALUE, 
         branchId: undefined,
@@ -317,7 +317,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
               
               <FormField
                   control={form.control}
-                  name="location"
+                  name="subCity"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Sub-City *</FormLabel>
@@ -345,7 +345,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                 />
                  <FormField
                   control={form.control}
-                  name="ward"
+                  name="woreda"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Woreda *</FormLabel>

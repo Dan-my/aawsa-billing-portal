@@ -97,22 +97,25 @@ export default function BulkMetersPage() {
   };
 
   const handleSubmitBulkMeter = async (data: BulkMeterFormValues) => {
+    if (!currentUser) {
+      toast({ variant: 'destructive', title: 'Error', description: 'User information not found.' });
+      return;
+    }
+    
     if (selectedBulkMeter) {
-      // Use the correct property names from the form data
-      const updateData: Partial<BulkMeter> = {
-        ...data,
-        subCity: data.subCity,
-        woreda: data.woreda,
-      };
-      await updateBulkMeterInStore(selectedBulkMeter.customerKeyNumber, updateData);
-      toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
-    } else {
-      if (!currentUser) {
-        toast({ variant: 'destructive', title: 'Error', description: 'User information not found.' });
-        return;
+      const result = await updateBulkMeterInStore(selectedBulkMeter.customerKeyNumber, data);
+      if (result.success) {
+        toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
+      } else {
+        toast({ variant: "destructive", title: "Update Failed", description: result.message });
       }
-      await addBulkMeterToStore(data, currentUser); 
-      toast({ title: "Bulk Meter Added", description: `${data.name} has been added.` });
+    } else {
+      const result = await addBulkMeterToStore(data, currentUser); 
+      if (result.success) {
+        toast({ title: "Bulk Meter Added", description: `${data.name} has been added and is pending approval.` });
+      } else {
+        toast({ variant: "destructive", title: "Add Failed", description: result.message });
+      }
     }
     setIsFormOpen(false);
     setSelectedBulkMeter(null);

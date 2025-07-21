@@ -373,6 +373,7 @@ const mapDomainCustomerToInsert = async (
     status: customer.status || 'Active', 
     paymentStatus: customer.paymentStatus || 'Unpaid', 
     calculatedBill: bill,
+    arrears: customer.arrears || 0
   };
 };
 
@@ -400,9 +401,8 @@ const mapDomainCustomerToUpdate = async (customer: Partial<DomainIndividualCusto
   if(customer.paymentStatus !== undefined) updatePayload.paymentStatus = customer.paymentStatus;
   if(customer.approved_by !== undefined) updatePayload.approved_by = customer.approved_by;
   if(customer.approved_at !== undefined) updatePayload.approved_at = customer.approved_at;
+  if(customer.arrears !== undefined) updatePayload.arrears = customer.arrears;
   
-  // Note: We do not update 'arrears' here as it does not exist in the DB.
-
   if (customer.currentReading !== undefined || customer.previousReading !== undefined || customer.customerType !== undefined || customer.sewerageConnection !== undefined || customer.meterSize !== undefined || customer.month !== undefined) {
     const existingCustomer = customers.find(c => c.customerKeyNumber === customer.customerKeyNumber);
     if (existingCustomer) {
@@ -461,34 +461,34 @@ const mapSupabaseBulkMeterToDomain = async (sbm: BulkMeterRow): Promise<BulkMete
 };
 
 
-const mapDomainBulkMeterToInsert = async (bm: Omit<BulkMeter, 'customerKeyNumber'> & { customerKeyNumber: string }): Promise<BulkMeterInsert> => {
+const mapDomainBulkMeterToInsert = async (bm: Partial<BulkMeter>): Promise<BulkMeterInsert> => {
   const calculatedBulkUsage = (bm.currentReading ?? 0) - (bm.previousReading ?? 0);
-  const { totalBill: calculatedTotalBulkBill } = await calculateBill(calculatedBulkUsage, "Non-domestic", "No", Number(bm.meterSize), bm.month);
+  const { totalBill: calculatedTotalBulkBill } = await calculateBill(calculatedBulkUsage, "Non-domestic", "No", Number(bm.meterSize), bm.month!);
 
   const allIndividualCustomers = getCustomers();
   const associatedCustomers = allIndividualCustomers.filter(c => c.assignedBulkMeterId === bm.customerKeyNumber);
   const sumIndividualUsage = associatedCustomers.reduce((acc, cust) => acc + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
 
   const differenceUsage = calculatedBulkUsage - sumIndividualUsage;
-  const { totalBill: differenceBill } = await calculateBill(differenceUsage, "Non-domestic", "No", Number(bm.meterSize), bm.month);
+  const { totalBill: differenceBill } = await calculateBill(differenceUsage, "Non-domestic", "No", Number(bm.meterSize), bm.month!);
 
   return {
-    name: bm.name,
-    customerKeyNumber: bm.customerKeyNumber,
-    contractNumber: bm.contractNumber,
+    name: bm.name!,
+    customerKeyNumber: bm.customerKeyNumber!,
+    contractNumber: bm.contractNumber!,
     meterSize: Number(bm.meterSize) || 0,
-    meterNumber: bm.meterNumber,
+    meterNumber: bm.meterNumber!,
     previousReading: Number(bm.previousReading) || 0,
     currentReading: Number(bm.currentReading) || 0,
-    month: bm.month,
-    specificArea: bm.specificArea,
-    location: bm.subCity,
-    ward: bm.woreda,
+    month: bm.month!,
+    specificArea: bm.specificArea!,
+    location: bm.subCity!,
+    ward: bm.woreda!,
     branch_id: bm.branchId, 
     status: bm.status || 'Active',
     paymentStatus: bm.paymentStatus || 'Unpaid',
     charge_group: bm.chargeGroup || 'Non-domestic',
-    sewerage_connection: bm.sewerageConnection,
+    sewerage_connection: bm.sewerageConnection || 'No',
     bulk_usage: calculatedBulkUsage,
     total_bulk_bill: calculatedTotalBulkBill,
     difference_usage: differenceUsage,
@@ -530,9 +530,12 @@ const mapDomainBulkMeterToUpdate = async (bm: Partial<BulkMeter> & { customerKey
         const previousReading = bm.previousReading ?? existingBM?.previousReading ?? 0;
         const meterSize = bm.meterSize ?? existingBM?.meterSize ?? 0;
         const billingMonth = bm.month ?? existingBM?.month ?? new Date().toISOString().slice(0, 7);
+        const chargeGroup = bm.chargeGroup ?? existingBM?.chargeGroup ?? 'Non-domestic';
+        const sewerageConnection = bm.sewerageConnection ?? existingBM?.sewerageConnection ?? 'No';
+
         
         const newBulkUsage = currentReading - previousReading;
-        const { totalBill: newTotalBulkBill } = await calculateBill(newBulkUsage, "Non-domestic", "No", Number(meterSize), billingMonth);
+        const { totalBill: newTotalBulkBill } = await calculateBill(newBulkUsage, chargeGroup, sewerageConnection, Number(meterSize), billingMonth);
 
         updatePayload.bulk_usage = newBulkUsage;
         updatePayload.total_bulk_bill = newTotalBulkBill;
@@ -548,7 +551,7 @@ const mapDomainBulkMeterToUpdate = async (bm: Partial<BulkMeter> & { customerKey
         const newDifferenceUsage = newBulkUsage - sumIndividualUsage;
         updatePayload.difference_usage = newDifferenceUsage;
         
-        const { totalBill: newDifferenceBill } = await calculateBill(newDifferenceUsage, "Non-domestic", "No", Number(meterSize), billingMonth);
+        const { totalBill: newDifferenceBill } = await calculateBill(newDifferenceUsage, chargeGroup, sewerageConnection, Number(meterSize), billingMonth);
         updatePayload.difference_bill = newDifferenceBill;
     }
     return updatePayload;
@@ -1271,7 +1274,7 @@ export const addBulkMeter = async (
       ? 'Pending Approval'
       : 'Active';
 
-  const bulkMeterPayload = await mapDomainBulkMeterToInsert({ ...bulkMeterDomainData, status: finalStatus } as any);
+  const bulkMeterPayload = await mapDomainBulkMeterToInsert({ ...bulkMeterDomainData, status: finalStatus });
   
   const { data: newSupabaseBulkMeter, error } = await createBulkMeterAction(bulkMeterPayload);
   if (newSupabaseBulkMeter && !error) {

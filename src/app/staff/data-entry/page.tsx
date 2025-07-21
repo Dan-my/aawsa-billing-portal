@@ -25,8 +25,8 @@ import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import type { StaffMember } from "@/app/admin/staff-management/staff-types";
 
-const bulkMeterCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward"];
-const individualCustomerCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward", "sewerageConnection", "assignedBulkMeterId"];
+const bulkMeterCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "subCity", "woreda"];
+const individualCustomerCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "subCity", "woreda", "sewerageConnection", "assignedBulkMeterId"];
 
 interface User {
   email: string;
@@ -68,13 +68,12 @@ export default function StaffDataEntryPage() {
 
 
   const handleBulkMeterCsvUpload = async (data: BulkMeterDataEntryFormValues) => {
-    const bulkMeterDataForStore: Omit<BulkMeter, 'id'> = {
+    if (!currentUser) return;
+    const bulkMeterDataForStore = {
       ...data,
       branchId: staffBranchId || undefined, // Use the stored branch ID
-      status: "Active",
-      paymentStatus: "Unpaid",
     };
-    await addBulkMeter(bulkMeterDataForStore as BulkMeter);
+    await addBulkMeter(bulkMeterDataForStore, currentUser);
   };
 
   const handleIndividualCustomerCsvUpload = async (data: IndividualCustomerDataEntryFormValues) => {
@@ -82,7 +81,7 @@ export default function StaffDataEntryPage() {
      const customerDataForStore = {
         ...data,
         branchId: staffBranchId || undefined, // Use the stored branch ID
-    } as Omit<IndividualCustomer, 'id' | 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill'>;
+    } as Omit<IndividualCustomer, 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill' | 'arrears'>;
     await addCustomer(customerDataForStore, currentUser);
   };
   

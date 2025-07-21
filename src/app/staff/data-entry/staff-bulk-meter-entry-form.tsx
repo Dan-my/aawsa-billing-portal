@@ -23,6 +23,7 @@ import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format, parse } from "date-fns";
 import { customerTypes, sewerageConnections } from "@/lib/billing";
+import type { StaffMember } from "@/app/admin/staff-management/staff-types";
 
 interface StaffBulkMeterEntryFormProps {
   branchName: string; 
@@ -30,9 +31,15 @@ interface StaffBulkMeterEntryFormProps {
 
 export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormProps) {
   const { toast } = useToast();
+  const [currentUser, setCurrentUser] = React.useState<StaffMember | null>(null);
   const [staffBranchId, setStaffBranchId] = React.useState<string | undefined>(undefined);
 
   React.useEffect(() => {
+    const userJson = localStorage.getItem('user');
+    if (userJson) {
+      setCurrentUser(JSON.parse(userJson));
+    }
+
     initializeBranches().then(() => {
       const allBranches = getBranches();
       const normalizedStaffBranchName = branchName.trim().toLowerCase();
@@ -60,8 +67,8 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
       currentReading: undefined,
       month: "", 
       specificArea: "",
-      location: "", // No longer set to branchName
-      ward: "",
+      subCity: "",
+      woreda: "",
       chargeGroup: "Non-domestic",
       sewerageConnection: "No",
       xCoordinate: undefined,
@@ -70,36 +77,47 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
   });
 
   async function onSubmit(data: BulkMeterDataEntryFormValues) {
+    if (!currentUser) {
+      toast({ variant: 'destructive', title: "Authentication Error", description: "Could not identify current user." });
+      return;
+    }
+
     const bulkMeterDataForStore = {
         ...data, 
-        branchId: staffBranchId, // Add the staff's branchId to the submission
-        status: "Active",
-        paymentStatus: "Unpaid",
-        outStandingbill: 0,
+        branchId: staffBranchId,
     };
     
-    await addBulkMeterToStore(bulkMeterDataForStore as BulkMeter); 
-    toast({
-      title: "Bulk Meter Data Submitted",
-      description: `Data for bulk meter ${data.name} (Branch: ${branchName}) has been successfully recorded.`,
-    });
-    form.reset({
-        name: "",
-        customerKeyNumber: "",
-        contractNumber: "",
-        meterSize: undefined,
-        meterNumber: "",
-        previousReading: undefined,
-        currentReading: undefined,
-        month: "",
-        specificArea: "",
-        location: "", // Reset to blank
-        ward: "",
-        chargeGroup: "Non-domestic",
-        sewerageConnection: "No",
-        xCoordinate: undefined,
-        yCoordinate: undefined,
-    }); 
+    const result = await addBulkMeterToStore(bulkMeterDataForStore, currentUser); 
+    
+    if (result.success && result.data) {
+      toast({
+        title: "Bulk Meter Submitted for Approval",
+        description: `Data for bulk meter ${result.data.name} (Branch: ${branchName}) has been successfully recorded.`,
+      });
+      form.reset({
+          name: "",
+          customerKeyNumber: "",
+          contractNumber: "",
+          meterSize: undefined,
+          meterNumber: "",
+          previousReading: undefined,
+          currentReading: undefined,
+          month: "",
+          specificArea: "",
+          subCity: "",
+          woreda: "",
+          chargeGroup: "Non-domestic",
+          sewerageConnection: "No",
+          xCoordinate: undefined,
+          yCoordinate: undefined,
+      }); 
+    } else {
+      toast({
+        variant: 'destructive',
+        title: "Submission Failed",
+        description: result.message || "An unexpected error occurred."
+      });
+    }
   }
 
   return (
@@ -264,7 +282,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
             />
             <FormField
               control={form.control}
-              name="location"
+              name="subCity"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Sub-City *</FormLabel>
@@ -288,7 +306,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
             />
             <FormField
               control={form.control}
-              name="ward"
+              name="woreda"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Woreda *</FormLabel>
@@ -383,7 +401,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
           </div>
 
           <Button type="submit" className="w-full md:w-auto" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? "Submitting..." : "Submit Bulk Meter Data"}
+            {form.formState.isSubmitting ? "Submitting..." : "Submit for Approval"}
           </Button>
         </form>
       </Form>

@@ -21,6 +21,7 @@ interface UserProfile {
   email: string;
   role: string;
   branchId?: string;
+  branchName?: string;
 }
 
 export default function StaffSentBillsReportPage() {

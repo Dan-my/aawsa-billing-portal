@@ -60,8 +60,8 @@ export function BulkMeterTable({ data, onEdit, onDelete, branches, canEdit, canD
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Meter Number</TableHead>
-            <TableHead>Branch / Location</TableHead> 
-            <TableHead>Ward</TableHead>
+            <TableHead>Branch / Sub-City</TableHead> 
+            <TableHead>Woreda</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -71,8 +71,8 @@ export function BulkMeterTable({ data, onEdit, onDelete, branches, canEdit, canD
             <TableRow key={bulkMeter.customerKeyNumber}>
               <TableCell className="font-medium">{bulkMeter.name}</TableCell>
               <TableCell>{bulkMeter.meterNumber}</TableCell>
-              <TableCell>{getBranchName(bulkMeter.branchId, bulkMeter.location)}</TableCell> 
-              <TableCell>{bulkMeter.ward}</TableCell>
+              <TableCell>{getBranchName(bulkMeter.branchId, bulkMeter.subCity)}</TableCell> 
+              <TableCell>{bulkMeter.woreda}</TableCell>
               <TableCell>
                 <Badge 
                   variant={
@@ -123,3 +123,4 @@ export function BulkMeterTable({ data, onEdit, onDelete, branches, canEdit, canD
     </div>
   );
 }
+

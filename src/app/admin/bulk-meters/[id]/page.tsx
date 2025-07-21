@@ -111,8 +111,8 @@ export default function BulkMeterDetailsPage() {
     const totalPayable = differenceBill + outStandingBillValue;
     const paymentStatus = totalPayable > 0.01 ? 'Unpaid' : 'Paid';
   
-    const displayBranchName = bulkMeter.branchId ? branches.find(b => b.id === bulkMeter.branchId)?.name : bulkMeter.location;
-    const displayCardLocation = bulkMeter.specificArea || bulkMeter.ward || "N/A";
+    const displayBranchName = bulkMeter.branchId ? branches.find(b => b.id === bulkMeter.branchId)?.name : bulkMeter.subCity;
+    const displayCardLocation = bulkMeter.specificArea || bulkMeter.woreda || "N/A";
   
     const billToRender = billForPrintView || (billingHistory.length > 0 ? billingHistory[0] : null);
   
@@ -672,7 +672,7 @@ export default function BulkMeterDetailsPage() {
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div>
                 <p><strong className="font-semibold">Branch:</strong> {displayBranchName ?? 'N/A'}</p>
-                <p><strong className="font-semibold">Location:</strong> {bulkMeter.location ?? 'N/A'}, {bulkMeter.ward ?? 'N/A'}</p>
+                <p><strong className="font-semibold">Sub-City:</strong> {bulkMeter.subCity ?? 'N/A'}, {bulkMeter.woreda ?? 'N/A'}</p>
                 <p><strong className="font-semibold">Specific Area:</strong> {bulkMeter.specificArea ?? 'N/A'}</p>
                 <p><strong className="font-semibold">Meter No:</strong> {bulkMeter.meterNumber ?? 'N/A'}</p>
                 <p><strong className="font-semibold">Meter Size:</strong> {bulkMeter.meterSize} inch</p>
@@ -808,3 +808,4 @@ export default function BulkMeterDetailsPage() {
     </div>
   );
 }
+

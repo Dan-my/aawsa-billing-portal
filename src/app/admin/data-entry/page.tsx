@@ -22,8 +22,8 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import type { StaffMember } from "../staff-management/staff-types";
 
-const bulkMeterCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward", "branchId", "chargeGroup", "sewerageConnection", "xCoordinate", "yCoordinate"];
-const individualCustomerCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "location", "ward", "sewerageConnection", "assignedBulkMeterId", "branchId"];
+const bulkMeterCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "subCity", "woreda", "branchId", "chargeGroup", "sewerageConnection", "xCoordinate", "yCoordinate"];
+const individualCustomerCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "subCity", "woreda", "sewerageConnection", "assignedBulkMeterId", "branchId"];
 
 
 export default function AdminDataEntryPage() {
@@ -40,10 +40,8 @@ export default function AdminDataEntryPage() {
   }, []);
 
   const handleBulkMeterCsvUpload = async (data: BulkMeterDataEntryFormValues) => {
-    const bulkMeterDataForStore: Omit<BulkMeter, 'status' | 'paymentStatus' | 'outStandingbill'> = {
-      ...data,
-    };
-    await addBulkMeter(bulkMeterDataForStore as BulkMeter);
+    if (!currentUser) return;
+    await addBulkMeter(data, currentUser);
   };
 
   const handleIndividualCustomerCsvUpload = async (data: IndividualCustomerDataEntryFormValues) => {

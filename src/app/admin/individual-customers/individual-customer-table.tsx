@@ -86,7 +86,7 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
                 <TableCell className="font-medium">{customer.name}</TableCell>
                 <TableCell>{customer.meterNumber}</TableCell>
                 <TableCell>
-                  {getCustomerBranchName(customer.branchId, customer.location)}
+                  {getCustomerBranchName(customer.branchId, customer.subCity)}
                 </TableCell>
                 <TableCell>{customer.customerType}</TableCell>
                 <TableCell>{usage.toFixed(2)}</TableCell>

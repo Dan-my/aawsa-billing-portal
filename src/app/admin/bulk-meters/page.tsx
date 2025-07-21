@@ -91,11 +91,16 @@ export default function BulkMetersPage() {
   };
 
   const handleSubmitBulkMeter = async (data: BulkMeterFormValues) => {
+    const submissionData = {
+      ...data,
+      subCity: data.subCity,
+      woreda: data.woreda,
+    };
     if (selectedBulkMeter) {
-      await updateBulkMeterInStore(selectedBulkMeter.customerKeyNumber, data);
+      await updateBulkMeterInStore(selectedBulkMeter.customerKeyNumber, submissionData);
       toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
     } else {
-      await addBulkMeterToStore(data); 
+      await addBulkMeterToStore(submissionData as BulkMeter); 
       toast({ title: "Bulk Meter Added", description: `${data.name} has been added.` });
     }
     setIsFormOpen(false);
@@ -106,8 +111,8 @@ export default function BulkMetersPage() {
     bm.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     bm.meterNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (bm.branchId && branches.find(b => b.id === bm.branchId)?.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    bm.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    bm.ward.toLowerCase().includes(searchTerm.toLowerCase())
+    bm.subCity.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    bm.woreda.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
   const paginatedBulkMeters = filteredBulkMeters.slice(

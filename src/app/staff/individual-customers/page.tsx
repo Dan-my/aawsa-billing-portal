@@ -121,8 +121,8 @@ export default function StaffIndividualCustomersPage() {
     return branchFilteredData.customers.filter(customer =>
       customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.meterNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.ward.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.subCity.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.woreda.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (customer.assignedBulkMeterId && allBulkMeters.find(bm => bm.customerKeyNumber === customer.assignedBulkMeterId)?.name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [searchTerm, branchFilteredData.customers, allBulkMeters]);

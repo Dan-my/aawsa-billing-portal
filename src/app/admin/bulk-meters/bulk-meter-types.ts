@@ -25,6 +25,8 @@ export type BulkMeter = z.infer<typeof baseBulkMeterDataSchema> & {
   sewerageConnection: SewerageConnection;
   approved_by?: string | null;
   approved_at?: string | null;
+  subCity: string;
+  woreda: string;
 };
 
     

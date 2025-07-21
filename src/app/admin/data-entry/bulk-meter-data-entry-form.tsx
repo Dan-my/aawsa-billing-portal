@@ -69,8 +69,8 @@ export function BulkMeterDataEntryForm() {
       currentReading: undefined,
       month: "", 
       specificArea: "",
-      location: "",
-      ward: "",
+      subCity: "",
+      woreda: "",
       branchId: undefined,
       chargeGroup: "Non-domestic",
       sewerageConnection: "No",
@@ -303,7 +303,7 @@ export function BulkMeterDataEntryForm() {
                 />
                 <FormField
                   control={form.control}
-                  name="location"
+                  name="subCity"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Sub-City *</FormLabel>
@@ -327,7 +327,7 @@ export function BulkMeterDataEntryForm() {
                 />
                 <FormField
                   control={form.control}
-                  name="ward"
+                  name="woreda"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Woreda *</FormLabel>

@@ -170,12 +170,12 @@ export default function IndividualCustomersPage() {
   };
 
   const filteredCustomers = customers.filter(customer => {
-    const branchName = getBranchNameFromList(customer.branchId, customer.location);
+    const branchName = getBranchNameFromList(customer.branchId, customer.subCity);
     return (
         customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         customer.meterNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         branchName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.ward.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.woreda.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (customer.assignedBulkMeterId && bulkMetersList.find(bm => bm.customerKeyNumber === customer.assignedBulkMeterId)?.name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   });

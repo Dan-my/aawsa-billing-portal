@@ -111,8 +111,8 @@ export function IndividualCustomerDataEntryForm() {
       currentReading: undefined,
       month: "",
       specificArea: "",
-      location: "", // Will be set by branch selection
-      ward: "",
+      subCity: "",
+      woreda: "",
       sewerageConnection: undefined,
       status: "Active", 
       paymentStatus: "Unpaid", 
@@ -275,7 +275,7 @@ export function IndividualCustomerDataEntryForm() {
                 
                 <FormField
                   control={form.control}
-                  name="location"
+                  name="subCity"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Sub-City *</FormLabel>
@@ -303,7 +303,7 @@ export function IndividualCustomerDataEntryForm() {
                 />
                  <FormField
                   control={form.control}
-                  name="ward"
+                  name="woreda"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Woreda *</FormLabel>

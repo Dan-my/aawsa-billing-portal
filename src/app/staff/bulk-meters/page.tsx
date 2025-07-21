@@ -127,8 +127,8 @@ export default function StaffBulkMetersPage() {
     return branchFilteredBulkMeters.filter(bm =>
       bm.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       bm.meterNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (bm.location && bm.location.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (bm.ward && bm.ward.toLowerCase().includes(searchTerm.toLowerCase()))
+      (bm.subCity && bm.subCity.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (bm.woreda && bm.woreda.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [searchTerm, branchFilteredBulkMeters]);
   
@@ -163,7 +163,7 @@ export default function StaffBulkMetersPage() {
 
   const handleSubmitBulkMeter = async (data: BulkMeterFormValues) => {
     // Automatically associate with staff's branch ID
-    const dataWithBranchId = { ...data, branchId: staffBranchId, location: staffBranchName || data.location };
+    const dataWithBranchId = { ...data, branchId: staffBranchId, subCity: staffBranchName || data.subCity };
     
     if (selectedBulkMeter) {
       await updateBulkMeterInStore(selectedBulkMeter.customerKeyNumber, dataWithBranchId);
@@ -171,8 +171,8 @@ export default function StaffBulkMetersPage() {
     } else {
       const newBulkMeterData: Omit<BulkMeter, 'customerKeyNumber'> & {customerKeyNumber: string} = {
         ...dataWithBranchId,
-        status: data.status || "Active", 
-        paymentStatus: data.paymentStatus || "Unpaid",
+        status: "Active", 
+        paymentStatus: "Unpaid",
         outStandingbill: 0,
       };
       await addBulkMeterToStore(newBulkMeterData); 
@@ -293,5 +293,3 @@ export default function StaffBulkMetersPage() {
     </div>
   );
 }
-
-    

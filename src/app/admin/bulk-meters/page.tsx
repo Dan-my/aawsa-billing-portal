@@ -91,16 +91,11 @@ export default function BulkMetersPage() {
   };
 
   const handleSubmitBulkMeter = async (data: BulkMeterFormValues) => {
-    const submissionData = {
-      ...data,
-      subCity: data.subCity,
-      woreda: data.woreda,
-    };
     if (selectedBulkMeter) {
-      await updateBulkMeterInStore(selectedBulkMeter.customerKeyNumber, submissionData);
+      await updateBulkMeterInStore(selectedBulkMeter.customerKeyNumber, data);
       toast({ title: "Bulk Meter Updated", description: `${data.name} has been updated.` });
     } else {
-      await addBulkMeterToStore(submissionData as BulkMeter); 
+      await addBulkMeterToStore(data as BulkMeter); 
       toast({ title: "Bulk Meter Added", description: `${data.name} has been added.` });
     }
     setIsFormOpen(false);

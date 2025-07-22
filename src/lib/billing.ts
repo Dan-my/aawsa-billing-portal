@@ -1,4 +1,3 @@
-
 // src/lib/billing.ts
 
 import { getTariff } from './data-store'; // Use data-store to get tariffs
@@ -57,13 +56,10 @@ export async function calculateBill(
       return emptyResult;
   }
 
-  // Fetch the tariff configuration directly from the data-store for the given year.
-  // The data-store now ensures this is fresh data from the DB.
   const tariffConfig = await getTariffInfo(customerType, year);
   
-  // If no tariff config is found in the database for that year, return 0 for all values.
   if (!tariffConfig) {
-      console.error(`Tariff information for customer type "${customerType}" for year ${year} not found in database. Bill calculation will be 0.`);
+      console.warn(`Tariff information for customer type "${customerType}" for year ${year} not found in database. Bill calculation will be 0.`);
       return emptyResult;
   }
   
@@ -72,25 +68,19 @@ export async function calculateBill(
 
   // --- Base Water Charge Calculation ---
   if (customerType === "Domestic") {
-    // Progressive calculation for Domestic customers
-    let remainingUsage = usageM3;
-    let lastTierLimit = 0;
-
+    // Corrected progressive calculation for Domestic customers
+    let cumulativeUsage = 0;
     for (const tier of tiers) {
-      if (remainingUsage <= 0) break;
+        if (usageM3 <= cumulativeUsage) break;
 
-      const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
-      const usageInThisTier = Math.min(remainingUsage, tierLimit - lastTierLimit);
-      baseWaterCharge += usageInThisTier * tier.rate;
-      remainingUsage -= usageInThisTier;
-      lastTierLimit = tierLimit;
-
-      if (tierLimit === Infinity) {
-        if (remainingUsage > 0) {
-          baseWaterCharge += remainingUsage * tier.rate;
+        const tierUpperLimit = tier.limit === Infinity ? usageM3 : Number(tier.limit);
+        const usageInTier = Math.min(usageM3, tierUpperLimit) - cumulativeUsage;
+        
+        if (usageInTier > 0) {
+            baseWaterCharge += usageInTier * tier.rate;
         }
-        break;
-      }
+
+        cumulativeUsage += usageInTier;
     }
   } else {
     // Non-progressive (flat rate based on consumption tier) for Non-domestic customers
@@ -119,43 +109,39 @@ export async function calculateBill(
     const VAT_EXEMPTION_LIMIT = 15;
     if (usageM3 > VAT_EXEMPTION_LIMIT) {
       let taxableWaterCharge = 0;
-      let cumulativeUsage = 0;
+      let cumulativeUsageForVat = 0;
 
       // Recalculate water charge on the taxable portion only
       for (const tier of tiers) {
         const tierUpperLimit = tier.limit === Infinity ? usageM3 : Number(tier.limit);
-        const consumptionInTier = Math.min(usageM3, tierUpperLimit) - cumulativeUsage;
+        const usageInThisTier = Math.min(usageM3, tierUpperLimit) - cumulativeUsageForVat;
 
-        if (consumptionInTier <= 0) break;
+        if (usageInThisTier <= 0) break;
         
-        // The portion of usage in *this* tier that is above the 15m³ exemption
-        const taxableStartPoint = Math.max(0, VAT_EXEMPTION_LIMIT - cumulativeUsage);
-        const taxableUsageInTier = consumptionInTier - taxableStartPoint;
-
-        if (taxableUsageInTier > 0) {
-          taxableWaterCharge += taxableUsageInTier * tier.rate;
+        const taxableStartPointInTier = Math.max(cumulativeUsageForVat, VAT_EXEMPTION_LIMIT);
+        const taxableEndPointInTier = Math.min(usageM3, tierUpperLimit);
+        
+        if (taxableEndPointInTier > taxableStartPointInTier) {
+            const taxableUsageInTier = taxableEndPointInTier - taxableStartPointInTier;
+            taxableWaterCharge += taxableUsageInTier * tier.rate;
         }
         
-        cumulativeUsage += consumptionInTier;
-        if (cumulativeUsage >= usageM3) break;
+        cumulativeUsageForVat += usageInThisTier;
+        if (cumulativeUsageForVat >= usageM3) break;
       }
-
       vatAmount = taxableWaterCharge * VAT_RATE;
     }
   } else {
-    // For Non-domestic, VAT is always applied on the base water charge.
     vatAmount = baseWaterCharge * VAT_RATE;
   }
 
   // --- Other Charges ---
-  // Use only the prices from the fetched tariff. No defaults.
   const meterRentPrices = tariffConfig.meter_rent_prices || {};
-  const meterRent = meterRentPrices[String(meterSize)] || 0; // If no price for size, rent is 0
+  const meterRent = meterRentPrices[String(meterSize)] || 0;
   
   const sewerageChargeRate = tariffConfig.sewerage_rate_per_m3;
   const sewerageCharge = (sewerageConnection === "Yes") ? usageM3 * sewerageChargeRate : 0;
 
-  // --- Final Total Bill ---
   const totalBill = baseWaterCharge + maintenanceFee + sanitationFee + vatAmount + meterRent + sewerageCharge;
 
   return {

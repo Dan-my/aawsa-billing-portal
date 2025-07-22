@@ -1,7 +1,8 @@
 
 // src/lib/billing.ts
 
-import { supabase } from './supabase'; // Import supabase client
+import { getTariff } from './data-store'; // Use data-store to get tariffs
+import type { TariffInfo } from './data-store';
 
 export const customerTypes = ["Domestic", "Non-domestic"] as const;
 export type CustomerType = (typeof customerTypes)[number];
@@ -17,66 +18,10 @@ export interface TariffTier {
   rate: number;
 }
 
-export interface TariffInfo {
-    id: string; 
-    year: number;
-    customer_type: CustomerType;
-    tiers: TariffTier[];
-    maintenance_percentage: number;
-    sanitation_percentage: number;
-    sewerage_rate_per_m3: number;
-    meter_rent_prices: { [key: string]: number };
-}
-
-// This function now fetches directly from the database for the given year.
+// This function now uses the centralized getTariff function from the data-store.
 export const getTariffInfo = async (type: CustomerType, year: number): Promise<TariffInfo | undefined> => {
-    const { data: tariff, error } = await supabase
-        .from('tariffs')
-        .select('*')
-        .eq('customer_type', type)
-        .eq('year', year)
-        .single();
-
-    if (error || !tariff) {
-        console.warn(`DB Fetch: Tariff for customer type "${type}" and year "${year}" not found.`, error);
-        return undefined;
-    }
-
-    let parsedTiers;
-    if (typeof tariff.tiers === 'string') {
-        try {
-            parsedTiers = JSON.parse(tariff.tiers);
-        } catch (e) {
-            console.error(`Failed to parse tiers JSON from DB for tariff ${type}/${year}`, e);
-            parsedTiers = [];
-        }
-    } else {
-        parsedTiers = tariff.tiers;
-    }
-    
-    let parsedMeterRents;
-    if (typeof tariff.meter_rent_prices === 'string') {
-        try {
-            parsedMeterRents = JSON.parse(tariff.meter_rent_prices);
-        } catch(e) {
-            console.error(`Failed to parse meter_rent_prices JSON from DB for tariff ${type}/${year}`, e);
-            parsedMeterRents = {}; // Fallback to an empty object, not defaults
-        }
-    } else {
-        parsedMeterRents = tariff.meter_rent_prices || {}; // Fallback to an empty object
-    }
-
-
-    return {
-        id: `${type}-${year}`,
-        customer_type: tariff.customer_type as CustomerType,
-        year: tariff.year,
-        tiers: parsedTiers,
-        maintenance_percentage: tariff.maintenance_percentage,
-        sanitation_percentage: tariff.sanitation_percentage,
-        sewerage_rate_per_m3: tariff.sewerage_rate_per_m3,
-        meter_rent_prices: parsedMeterRents,
-    };
+    // The data-store's getTariff function will handle fetching and ensuring data is up-to-date.
+    return getTariff(type, year);
 };
 
 
@@ -99,7 +44,6 @@ export async function calculateBill(
   meterSize: number,
   billingMonth: string // e.g., "2024-05"
 ): Promise<BillCalculationResult> {
-  let baseWaterCharge = 0;
   const emptyResult = { totalBill: 0, baseWaterCharge: 0, maintenanceFee: 0, sanitationFee: 0, vatAmount: 0, meterRent: 0, sewerageCharge: 0 };
   
   if (!billingMonth || typeof billingMonth !== 'string' || !billingMonth.match(/^\d{4}-\d{2}$/)) {
@@ -113,15 +57,18 @@ export async function calculateBill(
       return emptyResult;
   }
 
-  // Fetch the tariff configuration directly from the database for the given year.
+  // Fetch the tariff configuration directly from the data-store for the given year.
+  // The data-store now ensures this is fresh data from the DB.
   const tariffConfig = await getTariffInfo(customerType, year);
   
+  // If no tariff config is found in the database for that year, return 0 for all values.
   if (!tariffConfig) {
-      console.error(`Tariff information for customer type "${customerType}" for year ${year} not found in database. Bill calculation will be incorrect.`);
+      console.error(`Tariff information for customer type "${customerType}" for year ${year} not found in database. Bill calculation will be 0.`);
       return emptyResult;
   }
   
   const tiers = tariffConfig.tiers;
+  let baseWaterCharge = 0;
 
   // --- Base Water Charge Calculation ---
   if (customerType === "Domestic") {

@@ -1,3 +1,4 @@
+
 // src/lib/billing.ts
 
 import { getTariff } from './data-store';
@@ -12,7 +13,6 @@ export type SewerageConnection = (typeof sewerageConnections)[number];
 export const paymentStatuses = ['Paid', 'Unpaid', 'Pending'] as const;
 export type PaymentStatus = (typeof paymentStatuses)[number];
 
-// This function now uses the centralized getTariff function from the data-store.
 export const getTariffInfo = async (type: CustomerType, year: number): Promise<TariffInfo | undefined> => {
     return getTariff(type, year);
 };
@@ -55,23 +55,23 @@ export async function calculateBill(
       return emptyResult;
   }
   
-  const tiers = tariffConfig.tiers.sort((a, b) => a.limit - b.limit);
+  const tiers = tariffConfig.tiers.sort((a, b) => (a.limit === Infinity ? 1 : b.limit === Infinity ? -1 : a.limit - b.limit));
   let baseWaterCharge = 0;
 
   // --- Base Water Charge Calculation ---
   if (customerType === "Domestic") {
     let remainingUsage = usageM3;
     let previousTierLimit = 0;
-    
+
     for (const tier of tiers) {
         if (remainingUsage <= 0) break;
-        const currentTierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
-        const tierRange = currentTierLimit - previousTierLimit;
-        const usageInThisTier = Math.min(remainingUsage, tierRange);
+
+        const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
+        const usageInThisTier = Math.min(remainingUsage, tierLimit - previousTierLimit);
         
         baseWaterCharge += usageInThisTier * tier.rate;
         remainingUsage -= usageInThisTier;
-        previousTierLimit = currentTierLimit;
+        previousTierLimit = tierLimit;
     }
   } else { // Non-domestic
     let applicableRate = 0;
@@ -86,6 +86,8 @@ export async function calculateBill(
     if (applicableRate === 0 && tiers.length > 0) {
       const lastTier = tiers[tiers.length - 1];
       if (lastTier.limit !== Infinity) {
+          applicableRate = lastTier.rate;
+      } else if (lastTier.limit === Infinity && tiers.length > 1) {
           applicableRate = lastTier.rate;
       }
     }
@@ -102,23 +104,26 @@ export async function calculateBill(
     const VAT_EXEMPTION_LIMIT = 15;
     if (usageM3 > VAT_EXEMPTION_LIMIT) {
       let taxableWaterCharge = 0;
-      let remainingTaxableUsage = usageM3;
+      let usageForVatCalc = usageM3;
       let previousTierLimit = 0;
 
       for (const tier of tiers) {
-          if (remainingTaxableUsage <= 0) break;
+        if (usageForVatCalc <= 0) break;
+        
+        const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
+        const usageInThisTier = Math.min(usageForVatCalc, tierLimit - previousTierLimit);
+        
+        // Calculate the portion of usage in this tier that is above the VAT exemption limit
+        const taxableStart = Math.max(previousTierLimit, VAT_EXEMPTION_LIMIT);
+        const taxableEnd = Math.min(previousTierLimit + usageInThisTier, tierLimit);
+        
+        if (taxableEnd > taxableStart) {
+          const taxableUsageInTier = taxableEnd - taxableStart;
+          taxableWaterCharge += taxableUsageInTier * tier.rate;
+        }
 
-          const currentTierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
-          const tierStart = Math.max(previousTierLimit, VAT_EXEMPTION_LIMIT);
-          
-          if(currentTierLimit > VAT_EXEMPTION_LIMIT) {
-             const usageInTaxablePortionOfTier = Math.min(remainingTaxableUsage, currentTierLimit - tierStart)
-             if (usageInTaxablePortionOfTier > 0) {
-                taxableWaterCharge += usageInTaxablePortionOfTier * tier.rate;
-                remainingTaxableUsage -= (currentTierLimit - previousTierLimit);
-             }
-          }
-          previousTierLimit = currentTierLimit;
+        usageForVatCalc -= usageInThisTier;
+        previousTierLimit = tierLimit;
       }
       vatAmount = taxableWaterCharge * VAT_RATE;
     }

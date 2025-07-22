@@ -45,6 +45,10 @@ export async function calculateBill(
 ): Promise<BillCalculationResult> {
   const emptyResult = { totalBill: 0, baseWaterCharge: 0, maintenanceFee: 0, sanitationFee: 0, vatAmount: 0, meterRent: 0, sewerageCharge: 0 };
   
+  if (usageM3 <= 0) {
+    return emptyResult;
+  }
+
   if (!billingMonth || typeof billingMonth !== 'string' || !billingMonth.match(/^\d{4}-\d{2}$/)) {
     console.error(`Invalid billingMonth provided: ${billingMonth}. Calculation cannot proceed.`);
     return emptyResult;
@@ -68,20 +72,21 @@ export async function calculateBill(
 
   // --- Base Water Charge Calculation ---
   if (customerType === "Domestic") {
-    // Corrected progressive calculation for Domestic customers
-    let cumulativeUsage = 0;
+    // Correct progressive calculation for Domestic customers
+    let remainingUsage = usageM3;
+    let previousTierLimit = 0;
+    
     for (const tier of tiers) {
-        if (usageM3 <= cumulativeUsage) break;
+        if (remainingUsage <= 0) break;
 
-        const tierUpperLimit = tier.limit === Infinity ? usageM3 : Number(tier.limit);
-        const usageInTier = Math.min(usageM3, tierUpperLimit) - cumulativeUsage;
+        const currentTierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
+        const usageInThisTier = Math.min(remainingUsage, currentTierLimit - previousTierLimit);
         
-        if (usageInTier > 0) {
-            baseWaterCharge += usageInTier * tier.rate;
-        }
-
-        cumulativeUsage += usageInTier;
+        baseWaterCharge += usageInThisTier * tier.rate;
+        remainingUsage -= usageInThisTier;
+        previousTierLimit = currentTierLimit;
     }
+
   } else {
     // Non-progressive (flat rate based on consumption tier) for Non-domestic customers
     let applicableRate = 0;
@@ -109,25 +114,27 @@ export async function calculateBill(
     const VAT_EXEMPTION_LIMIT = 15;
     if (usageM3 > VAT_EXEMPTION_LIMIT) {
       let taxableWaterCharge = 0;
-      let cumulativeUsageForVat = 0;
+      let remainingTaxableUsage = usageM3 - VAT_EXEMPTION_LIMIT;
+      let previousTierLimit = 0;
 
-      // Recalculate water charge on the taxable portion only
       for (const tier of tiers) {
-        const tierUpperLimit = tier.limit === Infinity ? usageM3 : Number(tier.limit);
-        const usageInThisTier = Math.min(usageM3, tierUpperLimit) - cumulativeUsageForVat;
-
-        if (usageInThisTier <= 0) break;
-        
-        const taxableStartPointInTier = Math.max(cumulativeUsageForVat, VAT_EXEMPTION_LIMIT);
-        const taxableEndPointInTier = Math.min(usageM3, tierUpperLimit);
-        
-        if (taxableEndPointInTier > taxableStartPointInTier) {
-            const taxableUsageInTier = taxableEndPointInTier - taxableStartPointInTier;
-            taxableWaterCharge += taxableUsageInTier * tier.rate;
-        }
-        
-        cumulativeUsageForVat += usageInThisTier;
-        if (cumulativeUsageForVat >= usageM3) break;
+          if (remainingTaxableUsage <= 0) break;
+          
+          const currentTierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
+          
+          if (currentTierLimit <= VAT_EXEMPTION_LIMIT) {
+              previousTierLimit = currentTierLimit;
+              continue;
+          }
+          
+          const tierStart = Math.max(previousTierLimit, VAT_EXEMPTION_LIMIT);
+          const usageInTier = Math.min(remainingTaxableUsage, currentTierLimit - tierStart);
+          
+          if (usageInTier > 0) {
+              taxableWaterCharge += usageInTier * tier.rate;
+              remainingTaxableUsage -= usageInTier;
+          }
+          previousTierLimit = currentTierLimit;
       }
       vatAmount = taxableWaterCharge * VAT_RATE;
     }

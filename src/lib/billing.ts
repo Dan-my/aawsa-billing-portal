@@ -58,42 +58,29 @@ export async function calculateBill(
   let baseWaterCharge = 0;
 
   // --- Base Water Charge Calculation ---
-  if (customerType === "Domestic") {
-    let remainingUsage = usageM3;
-    let previousTierLimit = 0;
-
-    for (const tier of tiers) {
-        if (remainingUsage <= 0) break;
-
-        const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
-        const usageInThisTier = Math.min(remainingUsage, tierLimit - previousTierLimit);
-        
-        baseWaterCharge += usageInThisTier * tier.rate;
-        remainingUsage -= usageInThisTier;
-        previousTierLimit = tierLimit;
+  // This logic now correctly handles a flat-rate based on tiers for BOTH domestic and non-domestic.
+  let applicableRate = 0;
+  for (const tier of tiers) {
+    const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
+    if (usageM3 <= tierLimit) {
+      applicableRate = Number(tier.rate);
+      break;
     }
-  } else { // Non-domestic
-    let applicableRate = 0;
-    // Find the correct tier for the total consumption
-    for (const tier of tiers) {
-      if (usageM3 <= tier.limit) {
-        applicableRate = tier.rate;
-        break;
-      }
-    }
-    // If usage is higher than the last defined tier's limit, use that last tier's rate
-    if (applicableRate === 0 && tiers.length > 0) {
-      const lastTierWithFiniteLimit = [...tiers].reverse().find(t => t.limit !== Infinity);
-      const infinityTier = tiers.find(t => t.limit === Infinity);
-
-      if (infinityTier && usageM3 > (lastTierWithFiniteLimit?.limit ?? 0)) {
-          applicableRate = infinityTier.rate;
-      } else if (lastTierWithFiniteLimit) {
-           applicableRate = lastTierWithFiniteLimit.rate;
-      }
-    }
-    baseWaterCharge = usageM3 * applicableRate;
   }
+
+  // If usage exceeds all defined finite limits, use the rate of the "Infinity" tier if it exists.
+  if (applicableRate === 0 && tiers.length > 0) {
+    const infinityTier = tiers.find(t => t.limit === Infinity);
+    if (infinityTier) {
+        applicableRate = Number(infinityTier.rate);
+    } else {
+        // Fallback to the last tier's rate if no infinity tier is defined.
+        applicableRate = Number(tiers[tiers.length - 1].rate);
+    }
+  }
+  
+  baseWaterCharge = usageM3 * applicableRate;
+
 
   // --- Service Fees Calculation (based on total water charge) ---
   const maintenanceFee = (tariffConfig.maintenance_percentage ?? 0) * baseWaterCharge;
@@ -101,37 +88,12 @@ export async function calculateBill(
   
   // --- VAT Calculation ---
   let vatAmount = 0;
+  // Per requirement, Domestic VAT is only for consumption > 15 m³.
   if (customerType === 'Domestic') {
-    const VAT_EXEMPTION_LIMIT = 15;
-    if (usageM3 > VAT_EXEMPTION_LIMIT) {
-      let taxableWaterCharge = 0;
-      let remainingUsageForVat = usageM3;
-      let previousTierLimit = 0;
-
-      for (const tier of tiers) {
-        if (remainingUsageForVat <= 0) break;
-
-        const currentTierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
-        const consumptionInTier = Math.min(remainingUsageForVat, currentTierLimit - previousTierLimit);
-        
-        // Determine the taxable portion of consumption within this tier
-        const tierStart = previousTierLimit;
-        const tierEnd = previousTierLimit + consumptionInTier;
-        
-        const taxableStartPoint = Math.max(tierStart, VAT_EXEMPTION_LIMIT);
-        const taxableEndPoint = Math.min(tierEnd, currentTierLimit);
-
-        if (taxableEndPoint > taxableStartPoint) {
-            const taxableUsageInTier = taxableEndPoint - taxableStartPoint;
-            taxableWaterCharge += taxableUsageInTier * tier.rate;
-        }
-
-        remainingUsageForVat -= consumptionInTier;
-        previousTierLimit = currentTierLimit;
-      }
-      vatAmount = taxableWaterCharge * VAT_RATE;
+    if (usageM3 > 15) {
+      vatAmount = baseWaterCharge * VAT_RATE; // Apply to the full base charge if over limit
     }
-  } else { // Non-domestic
+  } else { // Non-domestic always gets VAT
     vatAmount = baseWaterCharge * VAT_RATE;
   }
 

@@ -1071,9 +1071,8 @@ export async function getBulkMeterByCustomerKey(customerKeyNumber: string): Prom
 }
 
 export const initializeTariffs = async () => {
-    if (!tariffsFetched) {
-        await fetchAllTariffs();
-    }
+    // This function will now ALWAYS re-fetch from the database to avoid stale data.
+    await fetchAllTariffs();
     if (tariffs.length === 0) {
       console.warn("No tariffs found in DB. The application requires tariffs to be seeded in the database. Please run the migration script.");
     }

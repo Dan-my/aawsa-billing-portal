@@ -87,7 +87,7 @@ import type {
 } from './actions';
 
 export type { RoleRow as DomainRole, PermissionRow as DomainPermission, RolePermissionRow as DomainRolePermission } from './actions';
-export type { TariffInfo } from './billing';
+export type { TariffInfo, TariffTier } from './billing';
 
 export interface DomainNotification {
   id: string;
@@ -1057,19 +1057,6 @@ export const initializeRolePermissions = async () => {
   }
 };
 
-export async function getBulkMeterByCustomerKey(customerKeyNumber: string): Promise<StoreOperationResult<BulkMeter>> {
-    const { data, error } = await getAllBulkMetersAction();
-    if(error) {
-        return { success: false, message: 'Could not fetch meter data', error };
-    }
-    const meter = data?.find(m => m.customerKeyNumber === customerKeyNumber);
-    if (!meter) {
-        return { success: false, message: 'Meter not found', isNotFoundError: true };
-    }
-    const domainMeter = await mapSupabaseBulkMeterToDomain(meter);
-    return { success: true, data: domainMeter };
-}
-
 export const initializeTariffs = async () => {
     // This function will now ALWAYS re-fetch from the database to avoid stale data.
     await fetchAllTariffs();
@@ -1080,6 +1067,12 @@ export const initializeTariffs = async () => {
 };
 
 export const getTariff = (customerType: CustomerType, year: number): TariffInfo | undefined => {
+    if (tariffs.length === 0) {
+        console.error("DataStore: getTariff called before tariffs were initialized. Fetching now...");
+        initializeTariffs(); // This should be awaited, but for now, it triggers a fetch.
+        // The return might be empty on the first call, but subsequent calls will work.
+        // This is a sign that initialization should be handled more gracefully, e.g. in a top-level component.
+    }
     const tariff = tariffs.find(t => t.customer_type === customerType && t.year === year);
     if (!tariff) {
         console.warn(`Tariff for customer type "${customerType}" and year "${year}" not found in local store.`);

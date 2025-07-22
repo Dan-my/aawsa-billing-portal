@@ -208,7 +208,6 @@ export type Database = {
           customerKeyNumber: string
           difference_bill: number | null
           difference_usage: number | null
-          location: string
           meterNumber: string
           meterSize: number
           month: string
@@ -219,9 +218,10 @@ export type Database = {
           sewerage_connection: "Yes" | "No"
           specificArea: string
           status: "Active" | "Maintenance" | "Decommissioned" | "Pending Approval" | "Rejected"
+          subCity: string
           total_bulk_bill: number | null
           updatedAt: string | null
-          ward: string
+          woreda: string
           x_coordinate: number | null
           y_coordinate: number | null
         }
@@ -237,7 +237,6 @@ export type Database = {
           customerKeyNumber: string
           difference_bill?: number | null
           difference_usage?: number | null
-          location: string
           meterNumber: string
           meterSize: number
           month: string
@@ -248,9 +247,10 @@ export type Database = {
           sewerage_connection: "Yes" | "No"
           specificArea: string
           status: "Active" | "Maintenance" | "Decommissioned" | "Pending Approval" | "Rejected"
+          subCity: string
           total_bulk_bill?: number | null
           updatedAt?: string | null
-          ward: string
+          woreda: string
           x_coordinate?: number | null
           y_coordinate?: number | null
         }
@@ -266,7 +266,6 @@ export type Database = {
           customerKeyNumber?: string
           difference_bill?: number | null
           difference_usage?: number | null
-          location?: string
           meterNumber?: string
           meterSize?: number
           month?: string
@@ -277,9 +276,10 @@ export type Database = {
           sewerage_connection?: "Yes" | "No"
           specificArea?: string
           status?: "Active" | "Maintenance" | "Decommissioned" | "Pending Approval" | "Rejected"
+          subCity?: string
           total_bulk_bill?: number | null
           updatedAt?: string | null
-          ward?: string
+          woreda?: string
           x_coordinate?: number | null
           y_coordinate?: number | null
         }
@@ -368,7 +368,6 @@ export type Database = {
           currentReading: number
           customerKeyNumber: string
           customerType: "Domestic" | "Non-domestic"
-          location: string
           meterNumber: string
           meterSize: number
           month: string
@@ -379,8 +378,9 @@ export type Database = {
           sewerageConnection: "Yes" | "No"
           specificArea: string
           status: "Active" | "Inactive" | "Suspended" | "Pending Approval" | "Rejected"
+          subCity: string
           updated_at: string | null
-          ward: string
+          woreda: string
         }
         Insert: {
           approved_at?: string | null
@@ -395,7 +395,6 @@ export type Database = {
           currentReading: number
           customerKeyNumber: string
           customerType: "Domestic" | "Non-domestic"
-          location: string
           meterNumber: string
           meterSize: number
           month: string
@@ -406,8 +405,9 @@ export type Database = {
           sewerageConnection: "Yes" | "No"
           specificArea: string
           status?: "Active" | "Inactive" | "Suspended" | "Pending Approval" | "Rejected"
+          subCity: string
           updated_at?: string | null
-          ward: string
+          woreda: string
         }
         Update: {
           approved_at?: string | null
@@ -422,7 +422,6 @@ export type Database = {
           currentReading?: number
           customerKeyNumber?: string
           customerType?: "Domestic" | "Non-domestic"
-          location?: string
           meterNumber?: string
           meterSize?: number
           month?: string
@@ -433,8 +432,9 @@ export type Database = {
           sewerageConnection?: "Yes" | "No"
           specificArea?: string
           status?: "Active" | "Inactive" | "Suspended" | "Pending Approval" | "Rejected"
+          subCity?: string
           updated_at?: string | null
-          ward?: string
+          woreda?: string
         }
         Relationships: [
           {

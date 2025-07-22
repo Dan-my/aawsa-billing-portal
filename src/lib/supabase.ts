@@ -4,15 +4,11 @@
 // The data-store.ts file now directly handles database interactions.
 // We are keeping this file to avoid breaking existing imports, but it no longer contains logic.
 import { createClient } from '@supabase/supabase-js';
-import type { Database, StaffMember } from '@/types/supabase';
+import type { Database } from '@/types/supabase';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 export const supabase = createClient<Database>(supabaseUrl, supabaseKey);
-
-type StaffMemberRow = Database['public']['Tables']['staff_members']['Row'];
-type RoleRow = Database['public']['Tables']['roles']['Row'];
-type BranchRow = Database['public']['Tables']['branches']['Row'];
 
 
 export const getStaffMemberForAuth = async (email: string, password?: string) => {

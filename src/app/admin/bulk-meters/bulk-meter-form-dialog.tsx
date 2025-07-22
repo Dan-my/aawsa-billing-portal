@@ -89,8 +89,8 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
       currentReading: undefined,
       month: "", 
       specificArea: "",
-      location: "",
-      ward: "",
+      subCity: "",
+      woreda: "",
       branchId: undefined,
       chargeGroup: "Non-domestic",
       sewerageConnection: "No",
@@ -127,8 +127,8 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
         currentReading: undefined,
         month: "",
         specificArea: "",
-        location: staffBranchName || "", // Use staff branch name for location
-        ward: "",
+        subCity: staffBranchName || "", // Use staff branch name for subCity
+        woreda: "",
         branchId: undefined,
         chargeGroup: "Non-domestic",
         sewerageConnection: "No",
@@ -363,7 +363,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
               />
               <FormField
                 control={form.control}
-                name="location"
+                name="subCity"
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>Sub-City *</FormLabel>
@@ -385,7 +385,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
               />
               <FormField
                 control={form.control}
-                name="ward"
+                name="woreda"
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>Woreda *</FormLabel>

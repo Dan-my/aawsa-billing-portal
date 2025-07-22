@@ -51,43 +51,47 @@ import {
   updateTariff as supabaseUpdateTariff,
 } from './supabase';
 
-import type {
-  RoleRow,
-  PermissionRow,
-  RolePermissionRow,
-  Branch,
-  BulkMeterRow,
-  IndividualCustomer,
-  StaffMember,
-  Bill,
-  IndividualCustomerReading,
-  BulkMeterReading,
-  Payment,
-  ReportLog,
-  NotificationRow,
-  BranchInsert,
-  BranchUpdate,
-  BulkMeterInsert,
-  BulkMeterUpdate,
-  IndividualCustomerInsert,
-  IndividualCustomerUpdate,
-  StaffMemberInsert,
-  StaffMemberUpdate,
-  BillInsert,
-  BillUpdate,
-  IndividualCustomerReadingInsert,
-  IndividualCustomerReadingUpdate,
-  BulkMeterReadingInsert,
-  BulkMeterReadingUpdate,
-  PaymentInsert,
-  PaymentUpdate,
-  ReportLogInsert,
-  ReportLogUpdate,
-  NotificationInsert,
-  TariffRow,
-  TariffInsert,
-  TariffUpdate,
-} from './actions';
+import type { Database } from '@/types/supabase';
+
+// Helper types to extract Row, Insert, and Update types from the database definition
+type PublicTables = Database['public']['Tables'];
+type RoleRow = PublicTables['roles']['Row'];
+type PermissionRow = PublicTables['permissions']['Row'];
+type RolePermissionRow = PublicTables['role_permissions']['Row'];
+type Branch = PublicTables['branches']['Row'];
+type BulkMeterRow = PublicTables['bulk_meters']['Row'];
+type IndividualCustomer = PublicTables['individual_customers']['Row'];
+type StaffMember = PublicTables['staff_members']['Row'];
+type Bill = PublicTables['bills']['Row'];
+type IndividualCustomerReading = PublicTables['individual_customer_readings']['Row'];
+type BulkMeterReading = PublicTables['bulk_meter_readings']['Row'];
+type Payment = PublicTables['payments']['Row'];
+type ReportLog = PublicTables['reports']['Row'];
+type NotificationRow = PublicTables['notifications']['Row'];
+type TariffRow = PublicTables['tariffs']['Row'];
+
+type BranchInsert = PublicTables['branches']['Insert'];
+type BranchUpdate = PublicTables['branches']['Update'];
+type BulkMeterInsert = PublicTables['bulk_meters']['Insert'];
+type BulkMeterUpdate = PublicTables['bulk_meters']['Update'];
+type IndividualCustomerInsert = PublicTables['individual_customers']['Insert'];
+type IndividualCustomerUpdate = PublicTables['individual_customers']['Update'];
+type StaffMemberInsert = PublicTables['staff_members']['Insert'];
+type StaffMemberUpdate = PublicTables['staff_members']['Update'];
+type BillInsert = PublicTables['bills']['Insert'];
+type BillUpdate = PublicTables['bills']['Update'];
+type IndividualCustomerReadingInsert = PublicTables['individual_customer_readings']['Insert'];
+type IndividualCustomerReadingUpdate = PublicTables['individual_customer_readings']['Update'];
+type BulkMeterReadingInsert = PublicTables['bulk_meter_readings']['Insert'];
+type BulkMeterReadingUpdate = PublicTables['bulk_meter_readings']['Update'];
+type PaymentInsert = PublicTables['payments']['Insert'];
+type PaymentUpdate = PublicTables['payments']['Update'];
+type ReportLogInsert = PublicTables['reports']['Insert'];
+type ReportLogUpdate = PublicTables['reports']['Update'];
+type NotificationInsert = PublicTables['notifications']['Insert'];
+type TariffInsert = PublicTables['tariffs']['Insert'];
+type TariffUpdate = PublicTables['tariffs']['Update'];
+
 
 export type { RoleRow, PermissionRow, RolePermissionRow, Branch, BulkMeterRow, IndividualCustomer, StaffMember, Bill, IndividualCustomerReading, BulkMeterReading, Payment, ReportLog, NotificationRow, BranchInsert, BranchUpdate, BulkMeterInsert, BulkMeterUpdate, IndividualCustomerInsert, IndividualCustomerUpdate, StaffMemberInsert, StaffMemberUpdate, BillInsert, BillUpdate, IndividualCustomerReadingInsert, IndividualCustomerReadingUpdate, BulkMeterReadingInsert, BulkMeterReadingUpdate, PaymentInsert, PaymentUpdate, ReportLogInsert, ReportLogUpdate, NotificationInsert, TariffRow, TariffInsert, TariffUpdate };
 

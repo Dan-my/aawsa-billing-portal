@@ -331,8 +331,8 @@ const mapSupabaseCustomerToDomain = async (sc: SupabaseIndividualCustomerRow): P
     currentReading: Number(sc.currentReading),
     month: sc.month,
     specificArea: sc.specificArea,
-    subCity: sc.location,
-    woreda: sc.ward,
+    subCity: sc.subCity,
+    woreda: sc.woreda,
     sewerageConnection: sc.sewerageConnection,
     assignedBulkMeterId: sc.assignedBulkMeterId || undefined,
     branchId: sc.branch_id || undefined,
@@ -365,8 +365,8 @@ const mapDomainCustomerToInsert = async (
     currentReading: Number(customer.currentReading) || 0,
     month: customer.month!,
     specificArea: customer.specificArea!,
-    location: customer.subCity!,
-    ward: customer.woreda!,
+    subCity: customer.subCity!,
+    woreda: customer.woreda!,
     sewerageConnection: customer.sewerageConnection!,
     assignedBulkMeterId: customer.assignedBulkMeterId,
     branch_id: customer.branchId, 
@@ -392,8 +392,8 @@ const mapDomainCustomerToUpdate = async (customer: Partial<DomainIndividualCusto
   if(customer.currentReading !== undefined) updatePayload.currentReading = Number(customer.currentReading);
   if(customer.month !== undefined) updatePayload.month = customer.month;
   if(customer.specificArea !== undefined) updatePayload.specificArea = customer.specificArea;
-  if(customer.subCity !== undefined) updatePayload.location = customer.subCity;
-  if(customer.woreda !== undefined) updatePayload.ward = customer.woreda;
+  if(customer.subCity !== undefined) updatePayload.subCity = customer.subCity;
+  if(customer.woreda !== undefined) updatePayload.woreda = customer.woreda;
   if(customer.sewerageConnection !== undefined) updatePayload.sewerageConnection = customer.sewerageConnection;
   if(customer.assignedBulkMeterId !== undefined) updatePayload.assignedBulkMeterId = customer.assignedBulkMeterId;
   if(customer.branchId !== undefined) updatePayload.branch_id = customer.branchId; 
@@ -441,8 +441,8 @@ const mapSupabaseBulkMeterToDomain = async (sbm: BulkMeterRow): Promise<BulkMete
     currentReading: Number(sbm.currentReading),
     month: sbm.month,
     specificArea: sbm.specificArea,
-    subCity: sbm.location,
-    woreda: sbm.ward,
+    subCity: sbm.subCity,
+    woreda: sbm.woreda,
     branchId: sbm.branch_id || undefined, 
     status: sbm.status,
     paymentStatus: sbm.paymentStatus,
@@ -482,8 +482,8 @@ const mapDomainBulkMeterToInsert = async (bm: Partial<BulkMeter>): Promise<BulkM
     currentReading: Number(bm.currentReading) || 0,
     month: bm.month!,
     specificArea: bm.specificArea!,
-    location: bm.subCity!,
-    ward: bm.woreda!,
+    subCity: bm.subCity!,
+    woreda: bm.woreda!,
     branch_id: bm.branchId, 
     status: bm.status || 'Active',
     paymentStatus: bm.paymentStatus || 'Unpaid',
@@ -511,8 +511,8 @@ const mapDomainBulkMeterToUpdate = async (bm: Partial<BulkMeter> & { customerKey
     if (bm.currentReading !== undefined) updatePayload.currentReading = Number(bm.currentReading);
     if (bm.month !== undefined) updatePayload.month = bm.month;
     if (bm.specificArea !== undefined) updatePayload.specificArea = bm.specificArea;
-    if (bm.subCity !== undefined) updatePayload.location = bm.subCity;
-    if (bm.woreda !== undefined) updatePayload.ward = bm.woreda;
+    if (bm.subCity !== undefined) updatePayload.subCity = bm.subCity;
+    if (bm.woreda !== undefined) updatePayload.woreda = bm.woreda;
     if (bm.branchId !== undefined) updatePayload.branch_id = bm.branchId; 
     if (bm.status !== undefined) updatePayload.status = bm.status;
     if (bm.paymentStatus !== undefined) updatePayload.paymentStatus = bm.paymentStatus;

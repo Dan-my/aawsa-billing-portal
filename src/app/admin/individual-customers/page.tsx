@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import type { IndividualCustomer, IndividualCustomerStatus } from "./individual-customer-types";
+import type { IndividualCustomer } from "./individual-customer-types";
 import { IndividualCustomerFormDialog, type IndividualCustomerFormValues } from "./individual-customer-form-dialog";
 import { IndividualCustomerTable } from "./individual-customer-table";
 import {
@@ -26,7 +26,6 @@ import {
   initializeBranches,
   subscribeToBranches
 } from "@/lib/data-store";
-import type { PaymentStatus, CustomerType, SewerageConnection } from "@/lib/billing";
 import type { Branch } from "../branches/branch-types";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { usePermissions } from "@/hooks/use-permissions";

@@ -1,5 +1,4 @@
 
-
 // src/lib/billing.ts
 
 import { supabase } from './supabase'; // Import supabase client

@@ -17,9 +17,6 @@ export const getTariffInfo = async (type: CustomerType, year: number): Promise<T
     return getTariff(type, year);
 };
 
-const VAT_RATE = 0.15; // 15% VAT
-const DOMESTIC_VAT_THRESHOLD = 15; // VAT applies on consumption above 15 m³ for Domestic
-
 export interface BillCalculationResult {
   totalBill: number;
   baseWaterCharge: number;
@@ -59,6 +56,11 @@ export async function calculateBill(
   const tiers = tariffConfig.tiers.sort((a, b) => (a.limit === Infinity ? 1 : b.limit === Infinity ? -1 : a.limit - b.limit));
   let baseWaterCharge = 0;
   let waterChargeForVat = 0; // Specific for domestic VAT calculation
+
+  // Get VAT settings from the database tariff config
+  const VAT_RATE = tariffConfig.vat_rate ?? 0.15; // Default to 15% if not in DB
+  const DOMESTIC_VAT_THRESHOLD = tariffConfig.domestic_vat_threshold_m3 ?? 15; // Default to 15m³ if not in DB
+
 
   if (customerType === 'Domestic') {
     // Progressive calculation for Domestic

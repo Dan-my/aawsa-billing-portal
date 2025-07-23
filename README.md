@@ -150,14 +150,6 @@ From time to to time, application updates may require changes to the database st
 
 This is a comprehensive update that creates the tables for roles and permissions, adds the necessary database functions, and sets up row-level security. It also seeds the database with default roles and a permission set for each role.
 
-**What it does:**
-*   Creates tables for `roles`, `permissions`, and `role_permissions`.
-*   Populates these tables with default roles and a comprehensive set of permissions to match the application's features.
-*   Adds the required database relationship between the `staff_members` and `roles` tables, which is critical for login to function correctly.
-*   **Adds Row-Level Security (RLS) policies** to the permissions tables. These policies allow the application to read role/permission data while preventing unauthorized users from making changes.
-
-**Important:** If you have run a previous version of this script, please run this updated version to apply critical security fixes and to adjust the default permissions for the "Head Office Management" role to match the intended UI. Running the script again is safe and will not overwrite any manual permission changes you have made in the admin UI.
-
 **To apply this update:**
 
 1.  **Navigate to the SQL Editor:**
@@ -170,30 +162,18 @@ This is a comprehensive update that creates the tables for roles and permissions
     *   Paste the content into the query window in the Supabase SQL Editor.
     *   Click the **"RUN"** button.
 
-You should see a "Success. No rows returned" message. After running this, the foundation for the new permission system will be in place and secured.
-
 ---
 
 ### **Migration: Update Notification Function (Required)**
 
 This update fixes two critical bugs in the notification system.
-1. It changes how notifications are targeted from using a branch *name* to a unique branch *ID*, making the system much more reliable.
-2. It resolves a "row-level security policy" error by adding a necessary `SECURITY DEFINER` setting, allowing the application to send notifications without disabling important database security rules.
-**If you have run a previous version of this script, please run this updated version to apply the security fix.**
-
 **To apply this update:**
 
-1.  **Navigate to the SQL Editor:**
-    *   Go to your Supabase project dashboard.
-    *   In the left-hand menu, click on the **SQL Editor** icon (it looks like a database with a query symbol).
+1.  **Navigate to the SQL Editor.**
 2.  **Run the Script:**
     *   Click on **"+ New query"**.
     *   Open the newly added file `database_migrations/update_notification_function.sql` in this project.
-    *   Copy the entire content of that file.
-    *   Paste the content into the query window in the Supabase SQL Editor.
-    *   Click the **"RUN"** button.
-
-You should see a "Success. No rows returned" message. After running this script, the notification system will function correctly.
+    *   Copy the entire content of that file and run it.
 
 ---
 
@@ -201,24 +181,13 @@ You should see a "Success. No rows returned" message. After running this script,
 
 This update moves the tariff rates from being hard-coded in the application to a proper database table. This makes them centrally managed and editable through the "Tariff Management" page in the admin panel.
 
-**What it does:**
-*   Creates a new `tariffs` table to store billing rates.
-*   Sets up Row-Level Security to allow public read access but restricts updates to users with the 'Admin' role.
-*   Seeds the table with the default domestic and non-domestic tariff rates if they don't already exist.
-
 **To apply this update:**
 
-1.  **Navigate to the SQL Editor:**
-    *   Go to your Supabase project dashboard.
-    *   In the left-hand menu, click on the **SQL Editor** icon.
+1.  **Navigate to the SQL Editor.**
 2.  **Run the Script:**
     *   Click on **"+ New query"**.
     *   Open the newly added file `database_migrations/003_tariffs_setup.sql` in this project.
-    *   Copy the entire content of that file.
-    *   Paste the content into the query window in the Supabase SQL Editor.
-    *   Click the **"RUN"** button.
-
-You should see a "Success. No rows returned" message. After running this, tariff management will be fully database-driven.
+    *   Copy the entire content of that file and run it.
 
 ---
 
@@ -226,24 +195,13 @@ You should see a "Success. No rows returned" message. After running this, tariff
 
 This update makes meter rent prices year-specific and editable by moving them into the `tariffs` database table.
 
-**What it does:**
-*   Adds a new `meter_rent_prices` column to the `tariffs` table to store a JSON object of meter sizes and their corresponding rent prices.
-*   Populates the new column with default rent prices for all existing tariff records.
-*   This makes meter rent prices editable on a per-year basis through the "Manage Meter Rent" dialog in the Tariff Management page.
-
 **To apply this update:**
 
-1.  **Navigate to the SQL Editor:**
-    *   Go to your Supabase project dashboard.
-    *   In the left-hand menu, click on the **SQL Editor** icon.
+1.  **Navigate to the SQL Editor.**
 2.  **Run the Script:**
     *   Click on **"+ New query"**.
     *   Open the newly added file `database_migrations/004_add_meter_rent_to_tariffs.sql` in this project.
-    *   Copy the entire content of that file.
-    *   Paste the content into the query window in the Supabase SQL Editor.
-    *   Click the **"RUN"** button.
-
-You should see a "Success. No rows returned" message. After running this, meter rent prices will be fully database-driven and year-specific.
+    *   Copy the entire content of that file and run it.
 
 ---
 
@@ -251,20 +209,24 @@ You should see a "Success. No rows returned" message. After running this, meter 
 
 This update adds the necessary columns to the `bulk_meters` table to support the approval workflow for new bulk meter records.
 
-**What it does:**
-*   Adds `approved_by` (to store who approved it) and `approved_at` (to store when it was approved) columns to the `bulk_meters` table.
-*   This is essential for the approval/rejection functionality on the "Approvals" page to work correctly for bulk meters.
-
 **To apply this update:**
 
-1.  **Navigate to the SQL Editor:**
-    *   Go to your Supabase project dashboard.
-    *   In the left-hand menu, click on the **SQL Editor** icon.
+1.  **Navigate to the SQL Editor.**
 2.  **Run the Script:**
     *   Click on **"+ New query"**.
     *   Open the newly added file `database_migrations/005_add_approval_to_bulk_meters.sql` in this project.
-    *   Copy the entire content of that file.
-    *   Paste the content into the query window in the Supabase SQL Editor.
-    *   Click the **"RUN"** button.
+    *   Copy the entire content of that file and run it.
 
-You should see a "Success. No rows returned" message. After running this, the approval workflow for bulk meters will be fully functional.
+---
+
+### **Migration: Add VAT Details to Tariffs Table (Required)**
+
+This update makes VAT calculations fully database-driven by adding `vat_rate` and `domestic_vat_threshold_m3` to the `tariffs` table.
+
+**To apply this update:**
+
+1.  **Navigate to the SQL Editor.**
+2.  **Run the Script:**
+    *   Click on **"+ New query"**.
+    *   Open the newly added file `database_migrations/006_add_vat_to_tariffs.sql` in this project.
+    *   Copy the entire content of that file and run it.

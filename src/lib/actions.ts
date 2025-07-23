@@ -155,5 +155,5 @@ export async function rpcUpdateRolePermissionsAction(roleId: number, permissionI
 
 
 export async function getAllTariffsAction() { return supabaseGetAllTariffs(); }
-export async function createTariff(tariff: TariffInsert) { return supabaseCreateTariff(tariff); }
+export async function createTariffAction(tariff: TariffInsert) { return supabaseCreateTariff(tariff); }
 export async function updateTariffAction(customerType: string, year: number, tariff: TariffUpdate) { return supabaseUpdateTariff(customerType, year, tariff); }

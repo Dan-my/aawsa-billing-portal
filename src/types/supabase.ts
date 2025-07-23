@@ -780,34 +780,40 @@ export type Database = {
         Row: {
           created_at: string
           customer_type: string
+          domestic_vat_threshold_m3: number
           maintenance_percentage: number
           meter_rent_prices: Json | null
           sanitation_percentage: number
           sewerage_rate_per_m3: number
           tiers: Json
           updated_at: string
+          vat_rate: number
           year: number
         }
         Insert: {
           created_at?: string
           customer_type: string
-          maintenance_percentage: number
+          domestic_vat_threshold_m3?: number
+          maintenance_percentage?: number
           meter_rent_prices?: Json | null
           sanitation_percentage: number
           sewerage_rate_per_m3: number
           tiers: Json
           updated_at?: string
+          vat_rate?: number
           year: number
         }
         Update: {
           created_at?: string
           customer_type?: string
+          domestic_vat_threshold_m3?: number
           maintenance_percentage?: number
           meter_rent_prices?: Json | null
           sanitation_percentage?: number
           sewerage_rate_per_m3?: number
           tiers?: Json
           updated_at?: string
+          vat_rate?: number
           year?: number
         }
         Relationships: []

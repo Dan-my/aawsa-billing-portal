@@ -6,7 +6,7 @@ import type { IndividualCustomer as DomainIndividualCustomer, IndividualCustomer
 import type { BulkMeter as DomainBulkMeterTypeFromTypes } from '@/app/admin/bulk-meters/bulk-meter-types'; 
 import type { Branch as DomainBranch } from '@/app/admin/branches/branch-types';
 import type { StaffMember as DomainStaffMember } from '@/app/admin/staff-management/staff-types';
-import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult, getTariffInfo as getTariffInfoFromBilling, TariffInfo } from '@/lib/billing';
+import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult, getTariffInfo as getTariffInfoFromBilling } from '@/lib/billing';
 import { supabase } from '@/lib/supabase'; // Direct import of supabase client
 import {
   getAllBranchesAction,
@@ -54,7 +54,7 @@ import {
   rpcUpdateRolePermissionsAction,
   getAllTariffsAction,
   updateTariffAction,
-  createTariff,
+  createTariffAction,
 } from './actions';
 
 import type {
@@ -87,7 +87,25 @@ import type {
 } from './actions';
 
 export type { RoleRow as DomainRole, PermissionRow as DomainPermission, RolePermissionRow as DomainRolePermission } from './actions';
-export type { TariffInfo, TariffTier } from './billing';
+
+export interface TariffTier {
+  rate: number;
+  limit: number | typeof Infinity;
+}
+
+export interface TariffInfo {
+    id: string;
+    customer_type: CustomerType;
+    year: number;
+    tiers: TariffTier[];
+    maintenance_percentage: number;
+    sanitation_percentage: number;
+    sewerage_rate_per_m3: number;
+    meter_rent_prices: { [key: string]: number; };
+    vat_rate: number;
+    domestic_vat_threshold_m3: number;
+}
+
 
 export interface DomainNotification {
   id: string;
@@ -1120,6 +1138,8 @@ export const getTariff = (customerType: CustomerType, year: number): TariffInfo 
         sanitation_percentage: tariff.sanitation_percentage,
         sewerage_rate_per_m3: tariff.sewerage_rate_per_m3,
         meter_rent_prices: parsedMeterRents,
+        vat_rate: tariff.vat_rate,
+        domestic_vat_threshold_m3: tariff.domestic_vat_threshold_m3,
     };
 };
 
@@ -1646,6 +1666,8 @@ export const updateTariff = async (customerType: CustomerType, year: number, tar
     if (tariff.sanitation_percentage) updatePayload.sanitation_percentage = tariff.sanitation_percentage;
     if (tariff.sewerage_rate_per_m3) updatePayload.sewerage_rate_per_m3 = tariff.sewerage_rate_per_m3;
     if (tariff.meter_rent_prices) updatePayload.meter_rent_prices = tariff.meter_rent_prices;
+    if (tariff.vat_rate) updatePayload.vat_rate = tariff.vat_rate;
+    if (tariff.domestic_vat_threshold_m3) updatePayload.domestic_vat_threshold_m3 = tariff.domestic_vat_threshold_m3;
 
     const { data: updatedSupabaseTariff, error } = await updateTariffAction(customerType, year, updatePayload);
     if (updatedSupabaseTariff && !error) {
@@ -1666,8 +1688,10 @@ export const addTariff = async (tariffData: Omit<TariffInfo, 'id'>): Promise<Sto
         sanitation_percentage: tariffData.sanitation_percentage,
         sewerage_rate_per_m3: tariffData.sewerage_rate_per_m3,
         meter_rent_prices: tariffData.meter_rent_prices,
+        vat_rate: tariffData.vat_rate,
+        domestic_vat_threshold_m3: tariffData.domestic_vat_threshold_m3,
     };
-    const { data, error } = await createTariff(payload);
+    const { data, error } = await createTariffAction(payload);
     if (data && !error) {
         tariffs = [...tariffs, data];
         notifyTariffListeners();

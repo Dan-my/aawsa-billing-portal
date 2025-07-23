@@ -1,99 +1,102 @@
--- Create the tariffs table if it doesn't exist
+-- Create the tariffs table to store billing rates and fees
 CREATE TABLE IF NOT EXISTS public.tariffs (
-    customer_type TEXT NOT NULL,
-    year INTEGER NOT NULL,
-    tiers JSONB NOT NULL,
-    maintenance_percentage NUMERIC(5, 4) NOT NULL,
-    sanitation_percentage NUMERIC(5, 4) NOT NULL,
-    sewerage_rate_per_m3 NUMERIC(10, 2) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    PRIMARY KEY (customer_type, year)
+    id uuid NOT NULL DEFAULT gen_random_uuid(),
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at timestamp with time zone NOT NULL DEFAULT now(),
+    customer_type text NOT NULL,
+    year integer NOT NULL,
+    tiers jsonb NOT NULL,
+    maintenance_percentage real NOT NULL DEFAULT 0.01,
+    sanitation_percentage real NOT NULL,
+    sewerage_rate_per_m3 real NOT NULL,
+    meter_rent_prices jsonb,
+    CONSTRAINT tariffs_pkey PRIMARY KEY (id),
+    CONSTRAINT tariffs_customer_type_year_key UNIQUE (customer_type, year)
 );
 
--- Apply Row-Level Security (RLS)
+-- Enable Row Level Security
 ALTER TABLE public.tariffs ENABLE ROW LEVEL SECURITY;
 
--- Allow public read access to everyone
-DROP POLICY IF EXISTS "allow_public_read_on_tariffs" ON public.tariffs;
-CREATE POLICY "allow_public_read_on_tariffs" ON public.tariffs
-FOR SELECT USING (true);
+-- Allow public read-only access to everyone
+DROP POLICY IF EXISTS "Public read access for tariffs" ON public.tariffs;
+CREATE POLICY "Public read access for tariffs"
+    ON public.tariffs
+    FOR SELECT
+    TO public
+    USING (true);
 
--- Allow admins to insert, update, and delete
-DROP POLICY IF EXISTS "allow_admin_all_on_tariffs" ON public.tariffs;
-CREATE POLICY "allow_admin_all_on_tariffs" ON public.tariffs
-FOR ALL
-USING ((SELECT public.is_admin()) = true)
-WITH CHECK ((SELECT public.is_admin()) = true);
-
-
--- Seed the data for Domestic tariffs for the year 2023
--- This uses the corrected rates based on the provided image.
-INSERT INTO public.tariffs (
-    customer_type,
-    year,
-    tiers,
-    maintenance_percentage,
-    sanitation_percentage,
-    sewerage_rate_per_m3
-) VALUES (
-    'Domestic',
-    2023,
-    '[
-        {"rate": 10.21, "limit": 5},
-        {"rate": 17.87, "limit": 14},
-        {"rate": 33.19, "limit": 24},
-        {"rate": 51.07, "limit": 39},
-        {"rate": 61.28, "limit": 54},
-        {"rate": 71.49, "limit": 79},
-        {"rate": 81.71, "limit": Infinity}
-    ]'::jsonb,
-    0.01, -- 1%
-    0.07, -- 7%
-    6.25
-)
-ON CONFLICT (customer_type, year) DO UPDATE SET
-tiers = EXCLUDED.tiers,
-maintenance_percentage = EXCLUDED.maintenance_percentage,
-sanitation_percentage = EXCLUDED.sanitation_percentage,
-sewerage_rate_per_m3 = EXCLUDED.sewerage_rate_per_m3,
-updated_at = now();
+-- Allow admins full access
+DROP POLICY IF EXISTS "Allow full access to admins" ON public.tariffs;
+CREATE POLICY "Allow full access to admins"
+    ON public.tariffs
+    FOR ALL
+    TO public
+    USING ((SELECT role FROM public.staff_members WHERE id = auth.uid()) = 'Admin')
+    WITH CHECK ((SELECT role FROM public.staff_members WHERE id = auth.uid()) = 'Admin');
 
 
--- Seed the data for Non-domestic tariffs for the year 2023
--- This also uses the corrected rates, as non-domestic often mirrors domestic.
-INSERT INTO public.tariffs (
-    customer_type,
-    year,
-    tiers,
-    maintenance_percentage,
-    sanitation_percentage,
-    sewerage_rate_per_m3
-) VALUES (
-    'Non-domestic',
-    2023,
-    '[
-        {"rate": 10.21, "limit": 5},
-        {"rate": 17.87, "limit": 14},
-        {"rate": 33.19, "limit": 24},
-        {"rate": 51.07, "limit": 39},
-        {"rate": 61.28, "limit": 54},
-        {"rate": 71.49, "limit": 79},
-        {"rate": 81.71, "limit": Infinity}
-    ]'::jsonb,
-    0.01, -- 1%
-    0.10, -- 10%
-    8.75
-)
-ON CONFLICT (customer_type, year) DO UPDATE SET
-tiers = EXCLUDED.tiers,
-maintenance_percentage = EXCLUDED.maintenance_percentage,
-sanitation_percentage = EXCLUDED.sanitation_percentage,
-sewerage_rate_per_m3 = EXCLUDED.sewerage_rate_per_m3,
-updated_at = now();
+-- Seed the data for years 2021, 2022, and 2023 with the corrected rates
+DO $$
+DECLARE
+    bill_year INT;
+BEGIN
+    FOR bill_year IN 2021..2023 LOOP
+        -- Seed Domestic Tariff for the year
+        IF NOT EXISTS (SELECT 1 FROM public.tariffs WHERE customer_type = 'Domestic' AND year = bill_year) THEN
+            INSERT INTO public.tariffs (customer_type, year, tiers, maintenance_percentage, sanitation_percentage, sewerage_rate_per_m3, meter_rent_prices)
+            VALUES (
+                'Domestic',
+                bill_year,
+                '[
+                    {"rate": 10.21, "limit": 5},
+                    {"rate": 17.87, "limit": 14},
+                    {"rate": 21.87, "limit": 30},
+                    {"rate": 24.37, "limit": 50},
+                    {"rate": 26.87, "limit": "Infinity"}
+                ]'::jsonb,
+                0.01, -- 1%
+                0.07, -- 7%
+                6.25,
+                '{"0.5": 15.00, "0.75": 18.00, "1": 25.00, "1.25": 30.00, "1.5": 40.00, "2": 50.00, "2.5": 60.00, "3": 75.00, "4": 100.00, "5": 125.00, "6": 150.00}'::jsonb
+            );
+        ELSE
+            UPDATE public.tariffs
+            SET 
+                tiers = '[
+                    {"rate": 10.21, "limit": 5},
+                    {"rate": 17.87, "limit": 14},
+                    {"rate": 21.87, "limit": 30},
+                    {"rate": 24.37, "limit": 50},
+                    {"rate": 26.87, "limit": "Infinity"}
+                ]'::jsonb,
+                updated_at = now()
+            WHERE customer_type = 'Domestic' AND year = bill_year;
+        END IF;
 
--- Trigger to automatically update the `updated_at` column
-CREATE OR REPLACE TRIGGER set_tariffs_updated_at
-BEFORE UPDATE ON public.tariffs
-FOR EACH ROW
-EXECUTE FUNCTION public.handle_updated_at();
+        -- Seed Non-domestic Tariff for the year
+        IF NOT EXISTS (SELECT 1 FROM public.tariffs WHERE customer_type = 'Non-domestic' AND year = bill_year) THEN
+            INSERT INTO public.tariffs (customer_type, year, tiers, maintenance_percentage, sanitation_percentage, sewerage_rate_per_m3, meter_rent_prices)
+            VALUES (
+                'Non-domestic',
+                bill_year,
+                '[
+                    {"rate": 20.62, "limit": 15},
+                    {"rate": 25.62, "limit": "Infinity"}
+                ]'::jsonb,
+                0.01, -- 1%
+                0.10, -- 10%
+                6.88,
+                '{"0.5": 15.00, "0.75": 18.00, "1": 25.00, "1.25": 30.00, "1.5": 40.00, "2": 50.00, "2.5": 60.00, "3": 75.00, "4": 100.00, "5": 125.00, "6": 150.00}'::jsonb
+            );
+        ELSE
+            UPDATE public.tariffs
+            SET 
+                tiers = '[
+                    {"rate": 20.62, "limit": 15},
+                    {"rate": 25.62, "limit": "Infinity"}
+                ]'::jsonb,
+                updated_at = now()
+            WHERE customer_type = 'Non-domestic' AND year = bill_year;
+        END IF;
+    END LOOP;
+END $$;

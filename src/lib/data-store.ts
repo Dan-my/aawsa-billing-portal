@@ -785,6 +785,10 @@ async function fetchAllBranches() {
 }
 
 async function fetchAllCustomers() {
+  // Ensure tariffs are loaded before customers to prevent calculation errors.
+  if (!tariffsFetched) {
+    await initializeTariffs();
+  }
   const { data, error } = await getAllCustomersAction();
   if (data) {
     customers = await Promise.all(data.map(mapSupabaseCustomerToDomain));
@@ -797,6 +801,10 @@ async function fetchAllCustomers() {
 }
 
 async function fetchAllBulkMeters() {
+  // Ensure tariffs are loaded before bulk meters to prevent calculation errors.
+  if (!tariffsFetched) { 
+    await initializeTariffs();
+  }
   const { data: rawBulkMeters, error: fetchError } = await getAllBulkMetersAction();
 
   if (fetchError) {
@@ -1068,10 +1076,9 @@ export const initializeTariffs = async () => {
 
 export const getTariff = (customerType: CustomerType, year: number): TariffInfo | undefined => {
     if (tariffs.length === 0) {
-        console.error("DataStore: getTariff called before tariffs were initialized. Fetching now...");
-        initializeTariffs(); // This should be awaited, but for now, it triggers a fetch.
-        // The return might be empty on the first call, but subsequent calls will work.
-        // This is a sign that initialization should be handled more gracefully, e.g. in a top-level component.
+        // This case should ideally not happen if initialization is correct.
+        console.error("DataStore: getTariff called but tariffs array is empty.");
+        return undefined;
     }
     const tariff = tariffs.find(t => t.customer_type === customerType && t.year === year);
     if (!tariff) {
@@ -1859,9 +1866,10 @@ export const authenticateStaffMember = async (email: string, password: string): 
 
 
 export async function loadInitialData() {
-  await initializeCustomers();
+  await initializeTariffs();
   await Promise.all([
     initializeBranches(),
+    initializeCustomers(),
     initializeBulkMeters(), 
     initializeStaffMembers(),
     initializeBills(),
@@ -1873,6 +1881,5 @@ export async function loadInitialData() {
     initializeRoles(),
     initializePermissions(),
     initializeRolePermissions(),
-    initializeTariffs(),
   ]);
 }

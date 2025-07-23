@@ -24,6 +24,25 @@ interface AiMeterReaderDialogProps {
   onReadingSuccess: (reading: number) => void;
 }
 
+// Helper function to convert a file to a Base64 Data URI
+const fileToDataUri = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            if (event.target && typeof event.target.result === 'string') {
+                resolve(event.target.result);
+            } else {
+                reject(new Error("Failed to read file as Data URI."));
+            }
+        };
+        reader.onerror = (error) => {
+            reject(error);
+        };
+        reader.readAsDataURL(file);
+    });
+};
+
+
 export function AiMeterReaderDialog({ open, onOpenChange, onReadingSuccess }: AiMeterReaderDialogProps) {
   const { toast } = useToast();
   const [file, setFile] = React.useState<File | null>(null);
@@ -53,29 +72,9 @@ export function AiMeterReaderDialog({ open, onOpenChange, onReadingSuccess }: Ai
     setIsProcessing(true);
     setError(null);
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
-      // Step 1: Upload the image to our custom API endpoint
-      const uploadResponse = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!uploadResponse.ok) {
-        const errorResult = await uploadResponse.json();
-        throw new Error(errorResult.error || 'File upload failed.');
-      }
-
-      const uploadResult = await uploadResponse.json();
-      const imageUrl = uploadResult.url;
-
-      // In a real app, you would now save `imageUrl` to your database.
-      // For this example, we proceed directly to AI processing.
-
-      // Step 2: Send the public URL to the AI for processing
-      const result = await readMeterFromImage({ photoUrl: imageUrl });
+      const dataUri = await fileToDataUri(file);
+      const result = await readMeterFromImage({ photoDataUri: dataUri });
       
       if (result && typeof result.reading === 'number') {
           onReadingSuccess(result.reading);

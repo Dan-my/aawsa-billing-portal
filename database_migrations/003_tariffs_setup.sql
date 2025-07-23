@@ -1,4 +1,3 @@
-
 -- Create the tariffs table to store billing rates and fees
 CREATE TABLE IF NOT EXISTS public.tariffs (
     id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -36,18 +35,18 @@ CREATE POLICY "Allow full access to admins"
     WITH CHECK ((SELECT role FROM public.staff_members WHERE id = auth.uid()) = 'Admin');
 
 
--- Seed the data for years 2021 through 2025 with the corrected rates
+-- Seed data for years 2021 through 2025 with the corrected rates
 DO $$
 DECLARE
-    year_to_seed integer;
+    billing_year integer;
 BEGIN
-    FOR year_to_seed IN 2021..2025 LOOP
-        -- Seed Domestic Tariff for the current year
-        IF NOT EXISTS (SELECT 1 FROM public.tariffs WHERE customer_type = 'Domestic' AND year = year_to_seed) THEN
+    FOR billing_year IN 2021..2025 LOOP
+        -- Seed Domestic Tariff for the year
+        IF NOT EXISTS (SELECT 1 FROM public.tariffs WHERE customer_type = 'Domestic' AND year = billing_year) THEN
             INSERT INTO public.tariffs (customer_type, year, tiers, maintenance_percentage, sanitation_percentage, sewerage_rate_per_m3, meter_rent_prices)
             VALUES (
                 'Domestic',
-                year_to_seed,
+                billing_year,
                 '[
                     {"rate": 10.21, "limit": 5},
                     {"rate": 17.87, "limit": 14},
@@ -71,15 +70,15 @@ BEGIN
                     {"rate": 26.87, "limit": "Infinity"}
                 ]'::jsonb,
                 updated_at = now()
-            WHERE customer_type = 'Domestic' AND year = year_to_seed;
+            WHERE customer_type = 'Domestic' AND year = billing_year;
         END IF;
 
-        -- Seed Non-domestic Tariff for the current year
-        IF NOT EXISTS (SELECT 1 FROM public.tariffs WHERE customer_type = 'Non-domestic' AND year = year_to_seed) THEN
+        -- Seed Non-domestic Tariff for the year
+        IF NOT EXISTS (SELECT 1 FROM public.tariffs WHERE customer_type = 'Non-domestic' AND year = billing_year) THEN
             INSERT INTO public.tariffs (customer_type, year, tiers, maintenance_percentage, sanitation_percentage, sewerage_rate_per_m3, meter_rent_prices)
             VALUES (
                 'Non-domestic',
-                year_to_seed,
+                billing_year,
                 '[
                     {"rate": 20.62, "limit": 15},
                     {"rate": 25.62, "limit": "Infinity"}
@@ -97,7 +96,7 @@ BEGIN
                     {"rate": 25.62, "limit": "Infinity"}
                 ]'::jsonb,
                 updated_at = now()
-            WHERE customer_type = 'Non-domestic' AND year = year_to_seed;
+            WHERE customer_type = 'Non-domestic' AND year = billing_year;
         END IF;
     END LOOP;
 END $$;

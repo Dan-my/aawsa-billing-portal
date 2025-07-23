@@ -36,18 +36,18 @@ CREATE POLICY "Allow full access to admins"
     WITH CHECK ((SELECT role FROM public.staff_members WHERE id = auth.uid()) = 'Admin');
 
 
--- Seed the data for years 2021 through 2025
+-- Seed the data for years 2021 through 2025 with the corrected rates
 DO $$
 DECLARE
-    bill_year INT;
+    year_to_seed integer;
 BEGIN
-    FOR bill_year IN 2021..2025 LOOP
-        -- Seed Domestic Tariff for the current year in the loop
-        IF NOT EXISTS (SELECT 1 FROM public.tariffs WHERE customer_type = 'Domestic' AND year = bill_year) THEN
+    FOR year_to_seed IN 2021..2025 LOOP
+        -- Seed Domestic Tariff for the current year
+        IF NOT EXISTS (SELECT 1 FROM public.tariffs WHERE customer_type = 'Domestic' AND year = year_to_seed) THEN
             INSERT INTO public.tariffs (customer_type, year, tiers, maintenance_percentage, sanitation_percentage, sewerage_rate_per_m3, meter_rent_prices)
             VALUES (
                 'Domestic',
-                bill_year,
+                year_to_seed,
                 '[
                     {"rate": 10.21, "limit": 5},
                     {"rate": 17.87, "limit": 14},
@@ -71,15 +71,15 @@ BEGIN
                     {"rate": 26.87, "limit": "Infinity"}
                 ]'::jsonb,
                 updated_at = now()
-            WHERE customer_type = 'Domestic' AND year = bill_year;
+            WHERE customer_type = 'Domestic' AND year = year_to_seed;
         END IF;
 
-        -- Seed Non-domestic Tariff for the current year in the loop
-        IF NOT EXISTS (SELECT 1 FROM public.tariffs WHERE customer_type = 'Non-domestic' AND year = bill_year) THEN
+        -- Seed Non-domestic Tariff for the current year
+        IF NOT EXISTS (SELECT 1 FROM public.tariffs WHERE customer_type = 'Non-domestic' AND year = year_to_seed) THEN
             INSERT INTO public.tariffs (customer_type, year, tiers, maintenance_percentage, sanitation_percentage, sewerage_rate_per_m3, meter_rent_prices)
             VALUES (
                 'Non-domestic',
-                bill_year,
+                year_to_seed,
                 '[
                     {"rate": 20.62, "limit": 15},
                     {"rate": 25.62, "limit": "Infinity"}
@@ -97,7 +97,7 @@ BEGIN
                     {"rate": 25.62, "limit": "Infinity"}
                 ]'::jsonb,
                 updated_at = now()
-            WHERE customer_type = 'Non-domestic' AND year = bill_year;
+            WHERE customer_type = 'Non-domestic' AND year = year_to_seed;
         END IF;
     END LOOP;
 END $$;

@@ -54,7 +54,7 @@ import {
   rpcUpdateRolePermissionsAction,
   getAllTariffsAction,
   updateTariffAction,
-  createTariff as createTariffActionSupabase,
+  createTariff,
 } from './actions';
 
 import type {
@@ -1667,7 +1667,7 @@ export const addTariff = async (tariffData: Omit<TariffInfo, 'id'>): Promise<Sto
         sewerage_rate_per_m3: tariffData.sewerage_rate_per_m3,
         meter_rent_prices: tariffData.meter_rent_prices,
     };
-    const { data, error } = await createTariffActionSupabase(payload);
+    const { data, error } = await createTariff(payload);
     if (data && !error) {
         tariffs = [...tariffs, data];
         notifyTariffListeners();

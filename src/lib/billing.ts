@@ -1,3 +1,4 @@
+
 // src/lib/billing.ts
 
 import { getTariff } from './data-store';
@@ -57,40 +58,63 @@ export async function calculateBill(
   
   const tiers = tariffConfig.tiers.sort((a, b) => (a.limit === Infinity ? 1 : b.limit === Infinity ? -1 : a.limit - b.limit));
   let baseWaterCharge = 0;
+  let waterChargeForVat = 0; // Specific for domestic VAT calculation
 
-  // Simplified flat-rate tier logic for BOTH Domestic and Non-domestic
-  let applicableRate = 0;
-  for (const tier of tiers) {
+  if (customerType === 'Domestic') {
+    // Progressive calculation for Domestic
+    let remainingUsage = usageM3;
+    let lastLimit = 0;
+
+    for (const tier of tiers) {
+      if (remainingUsage <= 0) break;
+
       const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
-      if (usageM3 <= tierLimit) {
-          applicableRate = Number(tier.rate);
-          break;
-      }
-  }
-  
-  if (applicableRate === 0 && tiers.length > 0) {
-      const infinityTier = tiers.find(t => t.limit === Infinity);
-      if (infinityTier) {
-          applicableRate = Number(infinityTier.rate);
-      } else {
-          applicableRate = Number(tiers[tiers.length - 1].rate);
-      }
-  }
-  
-  baseWaterCharge = usageM3 * applicableRate;
+      const tierRate = Number(tier.rate);
+      const tierBlockSize = tierLimit - lastLimit;
+      
+      const usageInThisTier = Math.min(remainingUsage, tierBlockSize);
+      const chargeInThisTier = usageInThisTier * tierRate;
+      baseWaterCharge += chargeInThisTier;
 
+      // Check if this tier contributes to the VAT-able amount
+      if (lastLimit + usageInThisTier > DOMESTIC_VAT_THRESHOLD) {
+          // Calculate how much of the usage in *this specific tier* is above the threshold
+          const vatApplicableUsageInTier = (lastLimit + usageInThisTier) - Math.max(lastLimit, DOMESTIC_VAT_THRESHOLD);
+          waterChargeForVat += vatApplicableUsageInTier * tierRate;
+      }
+      
+      remainingUsage -= usageInThisTier;
+      lastLimit = tierLimit;
+    }
+
+  } else {
+    // Flat-rate tier logic for Non-domestic
+    let applicableRate = 0;
+    for (const tier of tiers) {
+        const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
+        if (usageM3 <= tierLimit) {
+            applicableRate = Number(tier.rate);
+            break;
+        }
+    }
+    // If usage exceeds all defined limits, use the rate of the last (highest) tier.
+    if (applicableRate === 0 && tiers.length > 0) {
+        applicableRate = Number(tiers[tiers.length - 1].rate);
+    }
+    baseWaterCharge = usageM3 * applicableRate;
+  }
 
   const maintenanceFee = (tariffConfig.maintenance_percentage ?? 0) * baseWaterCharge;
   const sanitationFee = (tariffConfig.sanitation_percentage ?? 0) * baseWaterCharge;
   
   let vatAmount = 0;
-  // VAT logic remains conditional for Domestic, but is calculated on the total base charge.
   if (customerType === 'Domestic') {
+    // For domestic, VAT is calculated only on the charge for usage above the threshold.
     if (usageM3 > DOMESTIC_VAT_THRESHOLD) {
-      vatAmount = baseWaterCharge * VAT_RATE;
+        vatAmount = waterChargeForVat * VAT_RATE;
     }
   } else {
-    // Non-domestic VAT is always on the base charge
+    // For non-domestic, VAT is applied to the entire base water charge.
     vatAmount = baseWaterCharge * VAT_RATE;
   }
 

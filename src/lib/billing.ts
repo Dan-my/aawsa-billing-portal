@@ -17,6 +17,7 @@ export const getTariffInfo = async (type: CustomerType, year: number): Promise<T
 };
 
 const VAT_RATE = 0.15; // 15% VAT
+const DOMESTIC_VAT_THRESHOLD = 15; // VAT applies on consumption above 15 m³ for Domestic
 
 export interface BillCalculationResult {
   totalBill: number;
@@ -50,7 +51,7 @@ export async function calculateBill(
   const tariffConfig = await getTariffInfo(customerType, year);
   
   if (!tariffConfig || !tariffConfig.tiers || tariffConfig.tiers.length === 0) {
-      console.warn(`Tariff information for customer type "${customerType}" for year ${year} not found in database. Bill calculation will be 0.`);
+      console.warn(`Tariff information for customer type "${customerType}" for year ${year} not found. Bill calculation will be 0.`);
       return emptyResult;
   }
   
@@ -96,35 +97,33 @@ export async function calculateBill(
     baseWaterCharge = usageM3 * applicableRate;
   }
 
-  // --- Service Fees Calculation (based on total water charge) ---
   const maintenanceFee = (tariffConfig.maintenance_percentage ?? 0) * baseWaterCharge;
   const sanitationFee = (tariffConfig.sanitation_percentage ?? 0) * baseWaterCharge;
   
-  // --- VAT Calculation ---
   let vatAmount = 0;
   if (customerType === 'Domestic') {
-    if (usageM3 > 15) {
-      // Find the portion of the water charge related to consumption above 15m3
+    if (usageM3 > DOMESTIC_VAT_THRESHOLD) {
+      let chargeForVatEligibleUsage = 0;
       let remainingUsageForVat = usageM3;
       let previousLimitForVat = 0;
-      let chargeForVatEligibleUsage = 0;
 
       for (const tier of tiers) {
-          if (remainingUsageForVat <= 0) break;
+        if (remainingUsageForVat <= 0) break;
+        
+        const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
+        const tierRange = tierLimit - previousLimitForVat;
+        const usageInTier = Math.min(remainingUsageForVat, tierRange);
+        
+        const vatEligibleStartInTier = Math.max(DOMESTIC_VAT_THRESHOLD, previousLimitForVat);
+        const vatEligibleEndInTier = previousLimitForVat + usageInTier;
 
-          const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
-          const tierRange = tierLimit - previousLimitForVat;
-          const usageInTier = Math.min(remainingUsageForVat, tierRange);
-          
-          // Check how much of the usage in this tier is above the 15m3 threshold
-          const vatEligibleStart = Math.max(15, previousLimitForVat);
-          if (tierLimit > vatEligibleStart) {
-              const vatUsageInTier = Math.max(0, Math.min(tierLimit, previousLimitForVat + usageInTier) - vatEligibleStart);
-              chargeForVatEligibleUsage += vatUsageInTier * Number(tier.rate);
-          }
-          
-          remainingUsageForVat -= usageInTier;
-          previousLimitForVat = tierLimit;
+        if (vatEligibleEndInTier > vatEligibleStartInTier) {
+          const vatUsageInTier = vatEligibleEndInTier - vatEligibleStartInTier;
+          chargeForVatEligibleUsage += vatUsageInTier * Number(tier.rate);
+        }
+        
+        remainingUsageForVat -= usageInTier;
+        previousLimitForVat = tierLimit;
       }
       vatAmount = chargeForVatEligibleUsage * VAT_RATE;
     }
@@ -132,7 +131,6 @@ export async function calculateBill(
     vatAmount = baseWaterCharge * VAT_RATE;
   }
 
-  // --- Other Charges ---
   const meterRentPrices = tariffConfig.meter_rent_prices || {};
   const meterRent = meterRentPrices[String(meterSize)] || 0;
   

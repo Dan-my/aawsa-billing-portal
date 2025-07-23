@@ -1,3 +1,4 @@
+
 -- Create the tariffs table to store billing rates and fees
 CREATE TABLE IF NOT EXISTS public.tariffs (
     id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -35,13 +36,13 @@ CREATE POLICY "Allow full access to admins"
     WITH CHECK ((SELECT role FROM public.staff_members WHERE id = auth.uid()) = 'Admin');
 
 
--- Seed the data for years 2021, 2022, and 2023 with the corrected rates
+-- Seed the data for years 2021 through 2025
 DO $$
 DECLARE
     bill_year INT;
 BEGIN
-    FOR bill_year IN 2021..2023 LOOP
-        -- Seed Domestic Tariff for the year
+    FOR bill_year IN 2021..2025 LOOP
+        -- Seed Domestic Tariff for the current year in the loop
         IF NOT EXISTS (SELECT 1 FROM public.tariffs WHERE customer_type = 'Domestic' AND year = bill_year) THEN
             INSERT INTO public.tariffs (customer_type, year, tiers, maintenance_percentage, sanitation_percentage, sewerage_rate_per_m3, meter_rent_prices)
             VALUES (
@@ -73,7 +74,7 @@ BEGIN
             WHERE customer_type = 'Domestic' AND year = bill_year;
         END IF;
 
-        -- Seed Non-domestic Tariff for the year
+        -- Seed Non-domestic Tariff for the current year in the loop
         IF NOT EXISTS (SELECT 1 FROM public.tariffs WHERE customer_type = 'Non-domestic' AND year = bill_year) THEN
             INSERT INTO public.tariffs (customer_type, year, tiers, maintenance_percentage, sanitation_percentage, sewerage_rate_per_m3, meter_rent_prices)
             VALUES (

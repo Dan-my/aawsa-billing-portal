@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An AI flow to read a water meter reading from an image.
@@ -11,11 +12,10 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const ReadMeterInputSchema = z.object({
-  photoDataUri: z
+  photoUrl: z
     .string()
-    .describe(
-      "A photo of a water meter, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
-    ),
+    .url()
+    .describe("A publicly accessible URL of a water meter photo."),
 });
 export type ReadMeterInput = z.infer<typeof ReadMeterInputSchema>;
 
@@ -35,7 +35,7 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert utility meter reader. Your task is to analyze the provided image of a water meter and extract the primary numerical reading. Ignore any other numbers on the meter like serial numbers or dials that are not part of the main display. Return only the numerical value.
 
 Analyze this image:
-{{media url=photoDataUri}}`,
+{{media url=photoUrl}}`,
 });
 
 const readMeterFlow = ai.defineFlow(

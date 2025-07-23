@@ -53,36 +53,48 @@ export function AiMeterReaderDialog({ open, onOpenChange, onReadingSuccess }: Ai
     setIsProcessing(true);
     setError(null);
 
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = async () => {
-      const base64DataUri = reader.result as string;
-      try {
-        const result = await readMeterFromImage({ photoDataUri: base64DataUri });
-        if (result && typeof result.reading === 'number') {
-            onReadingSuccess(result.reading);
-            toast({ title: "Success", description: `AI read the value: ${result.reading}` });
-            onOpenChange(false); // Close dialog on success
-        } else {
-            throw new Error("The AI model returned an invalid result.");
-        }
-      } catch (err: any) {
-        console.error("AI Meter Reading Error:", err);
-        const errorMessage = err.message || "An unexpected error occurred while processing the image.";
-        setError(errorMessage);
-        toast({
-          variant: "destructive",
-          title: "AI Reading Failed",
-          description: errorMessage,
-        });
-      } finally {
-        setIsProcessing(false);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      // Step 1: Upload the image to our custom API endpoint
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        const errorResult = await uploadResponse.json();
+        throw new Error(errorResult.error || 'File upload failed.');
       }
-    };
-    reader.onerror = (err) => {
-        console.error("File Reader Error:", err);
-        setError("Failed to read the selected file.");
-        setIsProcessing(false);
+
+      const uploadResult = await uploadResponse.json();
+      const imageUrl = uploadResult.url;
+
+      // In a real app, you would now save `imageUrl` to your database.
+      // For this example, we proceed directly to AI processing.
+
+      // Step 2: Send the public URL to the AI for processing
+      const result = await readMeterFromImage({ photoUrl: imageUrl });
+      
+      if (result && typeof result.reading === 'number') {
+          onReadingSuccess(result.reading);
+          toast({ title: "Success", description: `AI read the value: ${result.reading}` });
+          onOpenChange(false); // Close dialog on success
+      } else {
+          throw new Error("The AI model returned an invalid result.");
+      }
+    } catch (err: any) {
+      console.error("AI Meter Reading Error:", err);
+      const errorMessage = err.message || "An unexpected error occurred while processing the image.";
+      setError(errorMessage);
+      toast({
+        variant: "destructive",
+        title: "AI Reading Failed",
+        description: errorMessage,
+      });
+    } finally {
+      setIsProcessing(false);
     }
   };
   

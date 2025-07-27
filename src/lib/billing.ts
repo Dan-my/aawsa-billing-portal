@@ -1,9 +1,9 @@
 
 
 // src/lib/billing.ts
+import { supabase } from '@/lib/supabase';
+import type { TariffRow } from '@/lib/actions';
 
-import { getTariff } from './data-store';
-import type { TariffInfo, TariffTier } from './data-store';
 
 export const customerTypes = ["Domestic", "Non-domestic"] as const;
 export type CustomerType = (typeof customerTypes)[number];
@@ -14,8 +14,64 @@ export type SewerageConnection = (typeof sewerageConnections)[number];
 export const paymentStatuses = ['Paid', 'Unpaid', 'Pending'] as const;
 export type PaymentStatus = (typeof paymentStatuses)[number];
 
-export const getTariffInfo = async (type: CustomerType, year: number): Promise<TariffInfo | undefined> => {
-    return getTariff(type, year);
+interface TariffTier {
+  rate: number;
+  limit: number | typeof Infinity;
+}
+
+interface TariffInfo {
+    customer_type: CustomerType;
+    year: number;
+    tiers: TariffTier[];
+    maintenance_percentage: number;
+    sanitation_percentage: number;
+    sewerage_rate_per_m3: number;
+    meter_rent_prices: { [key: string]: number; };
+    vat_rate: number;
+    domestic_vat_threshold_m3: number;
+}
+
+
+const getLiveTariffInfo = async (type: CustomerType, year: number): Promise<TariffInfo | undefined> => {
+    const { data, error } = await supabase
+        .from('tariffs')
+        .select('*')
+        .eq('customer_type', type)
+        .eq('year', year)
+        .single();
+        
+    if (error || !data) {
+        console.error(`Could not fetch live tariff for ${type}/${year}:`, error);
+        return undefined;
+    }
+
+    const tariff: TariffRow = data;
+    
+    let parsedTiers;
+    if (typeof tariff.tiers === 'string') {
+        try { parsedTiers = JSON.parse(tariff.tiers); } catch { parsedTiers = []; }
+    } else {
+        parsedTiers = tariff.tiers || [];
+    }
+    
+    let parsedMeterRents;
+    if (typeof tariff.meter_rent_prices === 'string') {
+        try { parsedMeterRents = JSON.parse(tariff.meter_rent_prices); } catch { parsedMeterRents = {}; }
+    } else {
+        parsedMeterRents = tariff.meter_rent_prices || {};
+    }
+
+    return {
+        customer_type: tariff.customer_type as CustomerType,
+        year: tariff.year,
+        tiers: parsedTiers,
+        maintenance_percentage: tariff.maintenance_percentage,
+        sanitation_percentage: tariff.sanitation_percentage,
+        sewerage_rate_per_m3: tariff.sewerage_rate_per_m3,
+        meter_rent_prices: parsedMeterRents,
+        vat_rate: tariff.vat_rate,
+        domestic_vat_threshold_m3: tariff.domestic_vat_threshold_m3,
+    };
 };
 
 export interface BillCalculationResult {
@@ -47,10 +103,10 @@ export async function calculateBill(
   }
 
   const year = parseInt(billingMonth.split('-')[0], 10);
-  const tariffConfig = await getTariffInfo(customerType, year);
+  const tariffConfig = await getLiveTariffInfo(customerType, year);
   
   if (!tariffConfig || !tariffConfig.tiers || tariffConfig.tiers.length === 0) {
-      console.warn(`Tariff information for customer type "${customerType}" for year ${year} not found. Bill calculation will be 0.`);
+      console.warn(`Tariff information for customer type "${customerType}" for year ${year} not found in database. Bill calculation will be 0.`);
       return emptyResult;
   }
   

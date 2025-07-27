@@ -6,7 +6,7 @@ import type { IndividualCustomer as DomainIndividualCustomer, IndividualCustomer
 import type { BulkMeter as DomainBulkMeterTypeFromTypes } from '@/app/admin/bulk-meters/bulk-meter-types'; 
 import type { Branch as DomainBranch } from '@/app/admin/branches/branch-types';
 import type { StaffMember as DomainStaffMember } from '@/app/admin/staff-management/staff-types';
-import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult, getTariffInfo as getTariffInfoFromBilling } from '@/lib/billing';
+import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult } from '@/lib/billing';
 import { supabase } from '@/lib/supabase'; // Direct import of supabase client
 import {
   getAllBranchesAction,
@@ -803,10 +803,6 @@ async function fetchAllBranches() {
 }
 
 async function fetchAllCustomers() {
-  // Ensure tariffs are loaded before customers to prevent calculation errors.
-  if (!tariffsFetched) {
-    await initializeTariffs();
-  }
   const { data, error } = await getAllCustomersAction();
   if (data) {
     customers = await Promise.all(data.map(mapSupabaseCustomerToDomain));
@@ -819,10 +815,6 @@ async function fetchAllCustomers() {
 }
 
 async function fetchAllBulkMeters() {
-  // Ensure tariffs are loaded before bulk meters to prevent calculation errors.
-  if (!tariffsFetched) { 
-    await initializeTariffs();
-  }
   const { data: rawBulkMeters, error: fetchError } = await getAllBulkMetersAction();
 
   if (fetchError) {
@@ -1084,17 +1076,14 @@ export const initializeRolePermissions = async () => {
 };
 
 export const initializeTariffs = async () => {
-    // This function will now ALWAYS re-fetch from the database to avoid stale data.
-    await fetchAllTariffs();
-    if (tariffs.length === 0) {
-      console.warn("No tariffs found in DB. The application requires tariffs to be seeded in the database. Please run the migration script.");
+    if (!tariffsFetched) {
+        await fetchAllTariffs();
     }
     return tariffs;
 };
 
 export const getTariff = (customerType: CustomerType, year: number): TariffInfo | undefined => {
     if (tariffs.length === 0) {
-        // This case should ideally not happen if initialization is correct.
         console.error("DataStore: getTariff called but tariffs array is empty.");
         return undefined;
     }
@@ -1104,12 +1093,9 @@ export const getTariff = (customerType: CustomerType, year: number): TariffInfo 
         return undefined;
     }
     
-    // Ensure tiers is parsed from JSON if it's a string
     let parsedTiers;
     if (typeof tariff.tiers === 'string') {
-        try {
-            parsedTiers = JSON.parse(tariff.tiers);
-        } catch (e) {
+        try { parsedTiers = JSON.parse(tariff.tiers); } catch (e) {
             console.error(`Failed to parse tiers JSON for tariff ${customerType}/${year}`, e);
             parsedTiers = [];
         }
@@ -1119,9 +1105,7 @@ export const getTariff = (customerType: CustomerType, year: number): TariffInfo 
     
     let parsedMeterRents;
     if (typeof tariff.meter_rent_prices === 'string') {
-        try {
-            parsedMeterRents = JSON.parse(tariff.meter_rent_prices);
-        } catch(e) {
+        try { parsedMeterRents = JSON.parse(tariff.meter_rent_prices); } catch(e) {
             console.error(`Failed to parse meter_rent_prices JSON from DB for tariff ${customerType}/${year}`, e);
             parsedMeterRents = {};
         }
@@ -1886,6 +1870,15 @@ export const authenticateStaffMember = async (email: string, password: string): 
     }
     
     return { success: true, data: user };
+};
+
+export const getBulkMeterByCustomerKey = async (key: string): Promise<StoreOperationResult<BulkMeter>> => {
+  const { data, error } = await supabase.from('bulk_meters').select('*').eq('customerKeyNumber', key).single();
+  if (error || !data) {
+    return { success: false, message: "Bulk meter not found", error };
+  }
+  const domainData = await mapSupabaseBulkMeterToDomain(data);
+  return { success: true, data: domainData };
 };
 
 

@@ -34,7 +34,48 @@ interface TariffInfo {
 }
 
 
+// Hardcoded Tariff structure as per the user's provided image.
+// This will be used for all Domestic calculations, overriding any database values.
+const domesticTariffStructure: TariffInfo = {
+    customer_type: 'Domestic',
+    year: 0, // Year is irrelevant as this is a fixed override
+    tiers: [
+        { limit: 5, rate: 10.21 },
+        { limit: 14, rate: 17.87 }, // 5 + 9
+        { limit: 23, rate: 33.19 }, // 14 + 9
+        { limit: 32, rate: 51.07 }, // 23 + 9
+        { limit: 41, rate: 61.28 }, // 32 + 9
+        { limit: 50, rate: 71.49 }, // 41 + 9
+        // Assuming a rate for consumption above 50, let's use the last rate to be safe.
+        { limit: Infinity, rate: 71.49 },
+    ],
+    maintenance_percentage: 0.01,
+    sanitation_percentage: 0.07,
+    sewerage_rate_per_m3: 6.25,
+    meter_rent_prices: {
+        "0.5": 15.00,
+        "0.75": 20.00,
+        "1": 30.00,
+        "1.25": 40.00,
+        "1.5": 50.00,
+        "2": 60.00,
+        "2.5": 70.00,
+        "3": 80.00,
+        "4": 90.00,
+        "5": 100.00,
+        "6": 110.00
+    },
+    vat_rate: 0.15,
+    domestic_vat_threshold_m3: 15,
+};
+
+
 const getLiveTariffInfo = async (type: CustomerType, year: number): Promise<TariffInfo | undefined> => {
+    // Override for Domestic customers to use the hardcoded structure from the image
+    if (type === 'Domestic') {
+        return domesticTariffStructure;
+    }
+
     const { data, error } = await supabase
         .from('tariffs')
         .select('*')
@@ -106,7 +147,7 @@ export async function calculateBill(
   const tariffConfig = await getLiveTariffInfo(customerType, year);
   
   if (!tariffConfig) {
-      console.warn(`Tariff information for customer type "${customerType}" for year ${year} not found in database. Bill calculation will be 0.`);
+      console.warn(`Tariff information for customer type "${customerType}" for year ${year} not found. Bill calculation will be 0.`);
       return emptyResult;
   }
   

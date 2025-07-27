@@ -58,8 +58,8 @@ export async function calculateBill(
   let waterChargeForVat = 0; // Specific for domestic VAT calculation
 
   // Get VAT settings from the database tariff config
-  const VAT_RATE = tariffConfig.vat_rate ?? 0.15; // Default to 15% if not in DB
-  const DOMESTIC_VAT_THRESHOLD = tariffConfig.domestic_vat_threshold_m3 ?? 15; // Default to 15m³ if not in DB
+  const VAT_RATE = tariffConfig.vat_rate;
+  const DOMESTIC_VAT_THRESHOLD = tariffConfig.domestic_vat_threshold_m3;
 
 
   if (customerType === 'Domestic') {
@@ -106,8 +106,8 @@ export async function calculateBill(
     baseWaterCharge = usageM3 * applicableRate;
   }
 
-  const maintenanceFee = (tariffConfig.maintenance_percentage ?? 0) * baseWaterCharge;
-  const sanitationFee = (tariffConfig.sanitation_percentage ?? 0) * baseWaterCharge;
+  const maintenanceFee = tariffConfig.maintenance_percentage * baseWaterCharge;
+  const sanitationFee = tariffConfig.sanitation_percentage * baseWaterCharge;
   
   let vatAmount = 0;
   if (customerType === 'Domestic') {
@@ -123,7 +123,7 @@ export async function calculateBill(
   const meterRentPrices = tariffConfig.meter_rent_prices || {};
   const meterRent = meterRentPrices[String(meterSize)] || 0;
   
-  const sewerageChargeRate = tariffConfig.sewerage_rate_per_m3 || 0;
+  const sewerageChargeRate = tariffConfig.sewerage_rate_per_m3;
   const sewerageCharge = (sewerageConnection === "Yes") ? usageM3 * sewerageChargeRate : 0;
 
   const totalBill = baseWaterCharge + maintenanceFee + sanitationFee + vatAmount + meterRent + sewerageCharge;

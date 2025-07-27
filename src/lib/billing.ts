@@ -19,11 +19,12 @@ interface TariffTier {
   limit: number | typeof Infinity;
 }
 
+// This interface now reflects the actual structure in the database
+// where there is only one `tiers` column.
 interface TariffInfo {
     customer_type: CustomerType;
     year: number;
-    tiers: TariffTier[];
-    tiers_progressive: TariffTier[];
+    tiers: TariffTier[]; // The primary source for tier data
     maintenance_percentage: number;
     sanitation_percentage: number;
     sewerage_rate_per_m3: number;
@@ -48,6 +49,7 @@ const getLiveTariffInfo = async (type: CustomerType, year: number): Promise<Tari
 
     const tariff: TariffRow = data;
     
+    // Helper to safely parse JSONB columns
     const parseJsonField = (field: any, fieldName: string) => {
         if (typeof field === 'string') {
             try { return JSON.parse(field); } catch { 
@@ -55,6 +57,7 @@ const getLiveTariffInfo = async (type: CustomerType, year: number): Promise<Tari
                 return fieldName.includes('tiers') ? [] : {};
             }
         }
+        // It's already an object/array if not a string
         return field || (fieldName.includes('tiers') ? [] : {});
     };
 
@@ -62,7 +65,6 @@ const getLiveTariffInfo = async (type: CustomerType, year: number): Promise<Tari
         customer_type: tariff.customer_type as CustomerType,
         year: tariff.year,
         tiers: parseJsonField(tariff.tiers, 'tiers'),
-        tiers_progressive: parseJsonField(tariff.tiers_progressive, 'tiers_progressive'),
         maintenance_percentage: tariff.maintenance_percentage,
         sanitation_percentage: tariff.sanitation_percentage,
         sewerage_rate_per_m3: tariff.sewerage_rate_per_m3,
@@ -114,49 +116,33 @@ export async function calculateBill(
   const VAT_RATE = tariffConfig.vat_rate;
   const DOMESTIC_VAT_THRESHOLD = tariffConfig.domestic_vat_threshold_m3;
   
-  if (customerType === 'Domestic') {
-      const tiers = (tariffConfig.tiers_progressive || []).sort((a, b) => (a.limit === Infinity ? 1 : b.limit === Infinity ? -1 : a.limit - b.limit));
-      if (tiers.length === 0) {
-        console.warn(`Progressive tiers for "Domestic" for year ${year} are missing.`);
-        return emptyResult;
+  const tiers = (tariffConfig.tiers || []).sort((a, b) => (a.limit === Infinity ? 1 : b.limit === Infinity ? -1 : a.limit - b.limit));
+  if (tiers.length === 0) {
+    console.warn(`Tiers for "${customerType}" for year ${year} are missing.`);
+    return emptyResult;
+  }
+
+  let remainingUsage = usageM3;
+  let lastLimit = 0;
+
+  for (const tier of tiers) {
+      if (remainingUsage <= 0) break;
+      
+      const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
+      const tierRate = Number(tier.rate);
+      const tierBlockSize = tierLimit - lastLimit;
+      const usageInThisTier = Math.min(remainingUsage, tierBlockSize);
+
+      const chargeInThisTier = usageInThisTier * tierRate;
+      baseWaterCharge += chargeInThisTier;
+
+      if (customerType === 'Domestic' && lastLimit + usageInThisTier > DOMESTIC_VAT_THRESHOLD) {
+          const vatApplicableUsageInTier = (lastLimit + usageInThisTier) - Math.max(lastLimit, DOMESTIC_VAT_THRESHOLD);
+          waterChargeForVat += vatApplicableUsageInTier * tierRate;
       }
 
-      let remainingUsage = usageM3;
-      let lastLimit = 0;
-
-      for (const tier of tiers) {
-          if (remainingUsage <= 0) break;
-          
-          const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
-          const tierRate = Number(tier.rate);
-          const tierBlockSize = tierLimit - lastLimit;
-          const usageInThisTier = Math.min(remainingUsage, tierBlockSize);
-
-          const chargeInThisTier = usageInThisTier * tierRate;
-          baseWaterCharge += chargeInThisTier;
-
-          if (lastLimit + usageInThisTier > DOMESTIC_VAT_THRESHOLD) {
-              const vatApplicableUsageInTier = (lastLimit + usageInThisTier) - Math.max(lastLimit, DOMESTIC_VAT_THRESHOLD);
-              waterChargeForVat += vatApplicableUsageInTier * tierRate;
-          }
-
-          remainingUsage -= usageInThisTier;
-          lastLimit = tierLimit;
-      }
-  } else { // Non-domestic
-      const tiers = (tariffConfig.tiers || []).sort((a, b) => (a.limit === Infinity ? 1 : b.limit === Infinity ? -1 : a.limit - b.limit));
-       if (tiers.length === 0) {
-        console.warn(`Tiers for "Non-domestic" for year ${year} are missing.`);
-        return emptyResult;
-      }
-      let applicableRate = 0;
-      for (const tier of tiers) {
-          if (usageM3 <= tier.limit) {
-              applicableRate = tier.rate;
-              break;
-          }
-      }
-      baseWaterCharge = usageM3 * applicableRate;
+      remainingUsage -= usageInThisTier;
+      lastLimit = tierLimit;
   }
 
   const maintenanceFee = tariffConfig.maintenance_percentage * baseWaterCharge;
@@ -167,7 +153,7 @@ export async function calculateBill(
     if (usageM3 > DOMESTIC_VAT_THRESHOLD) {
         vatAmount = waterChargeForVat * VAT_RATE;
     }
-  } else {
+  } else { // Non-domestic VAT is on the entire base charge
     vatAmount = baseWaterCharge * VAT_RATE;
   }
 

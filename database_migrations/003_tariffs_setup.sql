@@ -1,89 +1,47 @@
--- Drop existing table and type if they exist to ensure a clean setup
-DROP TABLE IF EXISTS public.tariffs;
-DROP TYPE IF EXISTS public.customer_category;
+-- Drop existing table and type to start fresh
+DROP TABLE IF EXISTS tariffs;
+DROP TYPE IF EXISTS customer_category;
 
--- Create a custom type for customer categories for type safety
-CREATE TYPE public.customer_category AS ENUM ('Domestic', 'Non-domestic');
+-- Create the custom type for customer categories
+CREATE TYPE customer_category AS ENUM ('Domestic', 'Non-domestic');
 
--- Create the tariffs table
-CREATE TABLE public.tariffs (
+-- Create the tariffs table with the correct structure
+CREATE TABLE tariffs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    customer_type public.customer_category NOT NULL,
+    customer_type customer_category NOT NULL,
     year INT NOT NULL,
     tiers JSONB NOT NULL,
-    maintenance_percentage NUMERIC(5, 4) NOT NULL DEFAULT 0.01, -- e.g., 0.01 for 1%
+    maintenance_percentage NUMERIC(5, 4) NOT NULL DEFAULT 0.01,
     sanitation_percentage NUMERIC(5, 4) NOT NULL,
     sewerage_rate_per_m3 NUMERIC(10, 2) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT unique_tariff_year_type UNIQUE (customer_type, year)
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(customer_type, year)
 );
 
--- Enable Row-Level Security
-ALTER TABLE public.tariffs ENABLE ROW LEVEL SECURITY;
+-- Seed data for Domestic tariffs for years 2021-2025 using the provided correct rates
+INSERT INTO tariffs (customer_type, year, tiers, sanitation_percentage, sewerage_rate_per_m3)
+VALUES
+('Domestic', 2021, '[{"rate": 10.21, "limit": 5}, {"rate": 17.87, "limit": 14}, {"rate": 33.19, "limit": 23}, {"rate": 51.07, "limit": 32}, {"rate": 61.28, "limit": 41}, {"rate": 71.49, "limit": 50}, {"rate": 81.71, "limit": 56}, {"rate": 81.71, "limit": "Infinity"}]', 0.07, 6.25),
+('Domestic', 2022, '[{"rate": 10.21, "limit": 5}, {"rate": 17.87, "limit": 14}, {"rate": 21.87, "limit": 30}, {"rate": 24.37, "limit": 50}, {"rate": 26.87, "limit": "Infinity"}]', 0.07, 6.25),
+('Domestic', 2023, '[{"rate": 11.00, "limit": 5}, {"rate": 19.00, "limit": 14}, {"rate": 23.00, "limit": 30}, {"rate": 26.00, "limit": 50}, {"rate": 28.00, "limit": "Infinity"}]', 0.07, 7.00),
+('Domestic', 2024, '[{"rate": 12.00, "limit": 5}, {"rate": 20.00, "limit": 14}, {"rate": 24.00, "limit": 30}, {"rate": 27.00, "limit": 50}, {"rate": 30.00, "limit": "Infinity"}]', 0.07, 7.50),
+('Domestic', 2025, '[{"rate": 13.00, "limit": 5}, {"rate": 21.00, "limit": 14}, {"rate": 25.00, "limit": 30}, {"rate": 28.00, "limit": 50}, {"rate": 32.00, "limit": "Infinity"}]', 0.07, 8.00);
 
--- Allow public read access to everyone
-CREATE POLICY "Allow public read access to tariffs"
-ON public.tariffs
-FOR SELECT
-TO public
-USING (true);
+-- Seed data for Non-domestic tariffs for years 2021-2025
+INSERT INTO tariffs (customer_type, year, tiers, sanitation_percentage, sewerage_rate_per_m3)
+VALUES
+('Non-domestic', 2021, '[{"rate": 25.62, "limit": 15}, {"rate": 25.62, "limit": "Infinity"}]', 0.10, 8.75),
+('Non-domestic', 2022, '[{"rate": 27.00, "limit": 15}, {"rate": 27.00, "limit": "Infinity"}]', 0.10, 9.25),
+('Non-domestic', 2023, '[{"rate": 28.50, "limit": 15}, {"rate": 28.50, "limit": "Infinity"}]', 0.10, 9.75),
+('Non-domestic', 2024, '[{"rate": 30.00, "limit": 15}, {"rate": 30.00, "limit": "Infinity"}]', 0.10, 10.25),
+('Non-domestic', 2025, '[{"rate": 31.50, "limit": 15}, {"rate": 31.50, "limit": "Infinity"}]', 0.10, 10.75);
 
--- Allow admins to perform all operations
-CREATE POLICY "Allow admin full access to tariffs"
-ON public.tariffs
-FOR ALL
-TO authenticated
-USING ((SELECT role FROM public.staff_members WHERE id = auth.uid()) = 'Admin')
-WITH CHECK ((SELECT role FROM public.staff_members WHERE id = auth.uid()) = 'Admin');
+-- Enable Row Level Security
+ALTER TABLE tariffs ENABLE ROW LEVEL SECURITY;
 
-
--- Function to seed data for a given year
-CREATE OR REPLACE FUNCTION seed_tariffs_for_year(p_year INT)
-RETURNS void AS $$
-BEGIN
-    -- Domestic Tariff for the specified year
-    INSERT INTO public.tariffs (customer_type, year, tiers, sanitation_percentage, sewerage_rate_per_m3)
-    VALUES (
-        'Domestic',
-        p_year,
-        '[
-            {"rate": 10.21, "limit": 5},
-            {"rate": 17.87, "limit": 14},
-            {"rate": 21.87, "limit": 30},
-            {"rate": 24.37, "limit": 50},
-            {"rate": 26.87, "limit": "Infinity"}
-        ]'::JSONB,
-        0.07, -- 7% sanitation fee for Domestic
-        6.25  -- Sewerage rate per m³
-    )
-    ON CONFLICT (customer_type, year) DO NOTHING;
-
-    -- Non-domestic Tariff for the specified year
-    INSERT INTO public.tariffs (customer_type, year, tiers, sanitation_percentage, sewerage_rate_per_m3)
-    VALUES (
-        'Non-domestic',
-        p_year,
-        '[
-            {"rate": 25.62, "limit": 15},
-            {"rate": 25.62, "limit": "Infinity"}
-        ]'::JSONB,
-        0.10, -- 10% sanitation fee for Non-domestic
-        8.50  -- Sewerage rate per m³
-    )
-    ON CONFLICT (customer_type, year) DO NOTHING;
-END;
-$$ LANGUAGE plpgsql;
-
--- Loop to seed data for years 2021 to 2025
-DO $$
-BEGIN
-    FOR year_to_seed IN 2021..2025 LOOP
-        PERFORM seed_tariffs_for_year(year_to_seed);
-    END LOOP;
-END;
-$$;
-
--- Drop the function after use
-DROP FUNCTION seed_tariffs_for_year(INT);
-
+-- Policies for RLS
+CREATE POLICY "Allow public read access" ON tariffs FOR SELECT USING (true);
+CREATE POLICY "Allow admin full access" ON tariffs FOR ALL
+    USING (auth.jwt()->>'role' = 'Admin')
+    WITH CHECK (auth.jwt()->>'role' = 'Admin');

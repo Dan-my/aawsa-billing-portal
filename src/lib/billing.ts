@@ -56,12 +56,11 @@ export async function calculateBill(
   
   const tiers = tariffConfig.tiers.sort((a, b) => (a.limit === Infinity ? 1 : b.limit === Infinity ? -1 : a.limit - b.limit));
   let baseWaterCharge = 0;
-  let waterChargeForVat = 0; // Specific for domestic VAT calculation
+  let waterChargeForVat = 0; 
 
   const VAT_RATE = tariffConfig.vat_rate;
   const DOMESTIC_VAT_THRESHOLD = tariffConfig.domestic_vat_threshold_m3;
 
-  // Progressive calculation for ALL customer types, as per database structure.
   let remainingUsage = usageM3;
   let lastLimit = 0;
 
@@ -70,8 +69,11 @@ export async function calculateBill(
 
     const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
     const tierRate = Number(tier.rate);
+    
+    // This is the size of the consumption block for the current tier
     const tierBlockSize = tierLimit - lastLimit;
     
+    // Usage in this tier is the lesser of what's remaining or the size of the block
     const usageInThisTier = Math.min(remainingUsage, tierBlockSize);
     const chargeInThisTier = usageInThisTier * tierRate;
     baseWaterCharge += chargeInThisTier;

@@ -34,19 +34,18 @@ interface TariffInfo {
 }
 
 
-// Hardcoded Tariff structure as per the user's provided image.
 // This will be used for all Domestic calculations, overriding any database values.
 const domesticTariffStructure: TariffInfo = {
     customer_type: 'Domestic',
     year: 0, // Year is irrelevant as this is a fixed override
     tiers: [
         { limit: 5, rate: 10.21 },
-        { limit: 14, rate: 17.87 }, // 5 + 9
-        { limit: 23, rate: 33.19 }, // 14 + 9
-        { limit: 32, rate: 51.07 }, // 23 + 9
-        { limit: 41, rate: 61.28 }, // 32 + 9
-        { limit: 50, rate: 71.49 }, // 41 + 9
-        // Assuming a rate for consumption above 50, let's use the last rate to be safe.
+        { limit: 14, rate: 17.87 },
+        { limit: 23, rate: 33.19 },
+        { limit: 32, rate: 51.07 },
+        { limit: 41, rate: 61.28 },
+        { limit: 50, rate: 71.49 },
+        // Add a safety tier for consumption above 50, using the last known rate.
         { limit: Infinity, rate: 71.49 },
     ],
     maintenance_percentage: 0.01,
@@ -152,10 +151,6 @@ export async function calculateBill(
   }
   
   let baseWaterCharge = 0;
-  let waterChargeForVat = 0;
-  
-  const VAT_RATE = tariffConfig.vat_rate;
-  const DOMESTIC_VAT_THRESHOLD = tariffConfig.domestic_vat_threshold_m3;
   
   const tiers = (tariffConfig.tiers || []).sort((a, b) => (a.limit === Infinity ? 1 : b.limit === Infinity ? -1 : a.limit - b.limit));
   if (tiers.length === 0) {
@@ -174,14 +169,7 @@ export async function calculateBill(
       const tierBlockSize = tierLimit - lastLimit;
       const usageInThisTier = Math.min(remainingUsage, tierBlockSize);
 
-      const chargeInThisTier = usageInThisTier * tierRate;
-      baseWaterCharge += chargeInThisTier;
-
-      if (customerType === 'Domestic' && lastLimit + usageInThisTier > DOMESTIC_VAT_THRESHOLD) {
-          const vatApplicableUsageInTier = (lastLimit + usageInThisTier) - Math.max(lastLimit, DOMESTIC_VAT_THRESHOLD);
-          waterChargeForVat += vatApplicableUsageInTier * tierRate;
-      }
-
+      baseWaterCharge += usageInThisTier * tierRate;
       remainingUsage -= usageInThisTier;
       lastLimit = tierLimit;
   }
@@ -190,13 +178,38 @@ export async function calculateBill(
   const sanitationFee = tariffConfig.sanitation_percentage * baseWaterCharge;
   
   let vatAmount = 0;
-  if (customerType === 'Domestic') {
-    if (usageM3 > DOMESTIC_VAT_THRESHOLD) {
-        vatAmount = waterChargeForVat * VAT_RATE;
-    }
-  } else { // Non-domestic VAT is on the entire base charge
-    vatAmount = baseWaterCharge * VAT_RATE;
+  if (customerType === 'Domestic' && usageM3 > tariffConfig.domestic_vat_threshold_m3) {
+      let taxableWaterCharge = 0;
+      let remainingTaxableUsage = usageM3 - tariffConfig.domestic_vat_threshold_m3;
+      let lastTierLimitForVat = 0;
+      
+      for(const tier of tiers) {
+        if(remainingTaxableUsage <= 0) break;
+
+        const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
+
+        // Skip tiers that are fully within the exemption
+        if (tierLimit <= tariffConfig.domestic_vat_threshold_m3) {
+            lastTierLimitForVat = tierLimit;
+            continue;
+        }
+
+        // The starting point for calculation in this tier
+        const startPointInTier = Math.max(lastTierLimitForVat, tariffConfig.domestic_vat_threshold_m3);
+        const usageInThisTierBlock = Math.min(tierLimit - startPointInTier, remainingTaxableUsage);
+
+        if (usageInThisTierBlock > 0) {
+             taxableWaterCharge += usageInThisTierBlock * tier.rate;
+             remainingTaxableUsage -= usageInThisTierBlock;
+        }
+        
+        lastTierLimitForVat = tierLimit;
+      }
+      vatAmount = taxableWaterCharge * tariffConfig.vat_rate;
+  } else if (customerType === 'Non-domestic') {
+      vatAmount = baseWaterCharge * tariffConfig.vat_rate;
   }
+
 
   const meterRentPrices = tariffConfig.meter_rent_prices || {};
   const meterRent = meterRentPrices[String(meterSize)] || 0;

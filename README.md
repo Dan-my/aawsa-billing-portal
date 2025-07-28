@@ -138,9 +138,45 @@ You can also deploy this application to major cloud providers, although these me
 
 ---
 
-## Database Migrations
+## Migrating to Standard PostgreSQL
 
-From time to to time, application updates may require changes to the database structure or functions. These changes are provided as SQL scripts that you need to run in your Supabase project's SQL Editor.
+If you prefer to host your own PostgreSQL database instead of using Supabase, you can set up the entire schema using the `000_complete_schema.sql` file.
+
+### Step 1: Create the Database
+Connect to your PostgreSQL server and create a new database. The recommended name is `postgres` to maintain consistency with the Supabase environment, but you can choose any name.
+
+```sql
+CREATE DATABASE postgres;
+```
+
+### Step 2: Run the Schema Script
+Use a tool like `psql` to execute the complete schema file against your newly created database. This will create all the necessary tables, roles, functions, and security policies.
+
+From your terminal, run the following command, replacing the placeholders with your actual database credentials:
+
+```bash
+psql -h YOUR_DB_HOST -p YOUR_DB_PORT -U YOUR_DB_USER -d postgres -f database_migrations/000_complete_schema.sql
+```
+You will be prompted for your database password.
+
+### Step 3: Update Environment Variables
+Once the schema is created, you must update your application's environment variables to point to your new database. Open the `.env` file in the root of the project and add your PostgreSQL connection string:
+
+```env
+# Replace with your actual PostgreSQL connection string
+# Format: postgresql://USER:PASSWORD@HOST:PORT/DATABASE
+DATABASE_URL="postgresql://your_user:your_password@your_host:5432/postgres"
+
+# The Supabase keys are no longer needed if you are self-hosting the database.
+# You can remove or comment them out.
+# NEXT_PUBLIC_SUPABASE_URL=...
+# NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+```
+After updating the `.env` file, restart your application for the changes to take effect. The application will now connect to your self-hosted PostgreSQL database.
+
+## Supabase Database Migrations
+
+If you are using Supabase, you may need to apply incremental updates to your database schema.
 
 ### **Important: Always back up your data before running any migration script.**
 
@@ -230,3 +266,4 @@ This update makes VAT calculations fully database-driven by adding `vat_rate` an
     *   Click on **"+ New query"**.
     *   Open the newly added file `database_migrations/006_add_vat_to_tariffs.sql` in this project.
     *   Copy the entire content of that file and run it.
+```

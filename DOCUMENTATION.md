@@ -143,7 +143,7 @@ The application is built with a modern, robust set of technologies:
 -   **Programming Language**: [TypeScript](https://www.typescriptlang.org/)
 -   **UI Components**: [ShadCN UI](https://ui.shadcn.com/)
 -   **Styling**: [Tailwind CSS](https://tailwindcss.com/)
--   **Database & Backend**: [Supabase](https://supabase.com/) (Managed PostgreSQL)
+-   **Database & Backend**: [Supabase](https://supabase.com/) (Managed PostgreSQL) or a standard PostgreSQL database.
 -   **Client-side Data Management**: A custom data store in `src/lib/data-store.ts` that acts as a real-time cache for Supabase data.
 -   **Generative AI**: [Genkit](https://firebase.google.com/docs/genkit) for AI-powered features.
 
@@ -151,6 +151,26 @@ The application is built with a modern, robust set of technologies:
 
 ## 7. Database & Migrations
 
--   The application's backend is powered by a Supabase project, which includes a PostgreSQL database, authentication, and auto-generated APIs.
--   Any changes required for the database schema (e.g., adding tables or columns) are provided as SQL script files in the `database_migrations/` folder.
--   As instructed in the `README.md`, these scripts must be run manually in the **SQL Editor** of your Supabase project dashboard to keep your database schema in sync with the application's requirements.
+-   The application's backend can be powered by a Supabase project or a standard PostgreSQL database.
+-   If using Supabase, any schema changes are provided as SQL script files in the `database_migrations/` folder. These must be run in the **SQL Editor** of your Supabase project.
+-   If migrating to a self-hosted PostgreSQL database, a complete schema file is provided.
+
+### 7.1. Advantages of Using a Standard PostgreSQL Database
+
+While Supabase is excellent for rapid development, moving to a self-hosted or standard PostgreSQL instance offers significant advantages for a mature application:
+
+1.  **Total Control and Flexibility**:
+    *   **Choose Your Hosting**: You can run your database on any cloud provider (AWS, Google Cloud, Azure) or on-premise, free from the constraints of a specific platform.
+    *   **Full Configuration Access**: You gain the ability to perform deep performance tuning by adjusting memory allocation, connection limits, and other advanced settings to perfectly match your application's needs.
+    *   **Unrestricted Extensions**: You can install any PostgreSQL extension you require, not just those approved by a managed service.
+
+2.  **No Vendor Lock-in**:
+    *   PostgreSQL is a powerful, open-source standard. This means your data and database schema are completely portable. You can migrate between hosting environments with minimal friction, giving you the freedom to choose the best platform based on cost, performance, or features.
+
+3.  **Potentially Lower Costs at Scale**:
+    *   Managed platforms like Supabase offer great convenience, but this often comes at a premium. By managing your own database instance, you can often achieve a lower cost for the same amount of computing power and storage, especially as your data and traffic grow.
+
+4.  **Deeper Integration and Customization**:
+    *   A standard database setup allows for deeper integration with your own infrastructure, custom monitoring tools (like Prometheus or Datadog), and specialized backup solutions that may be required for enterprise-level operations.
+
+In short, migrating to a standard PostgreSQL database is a move towards greater **ownership, control, and long-term scalability**.

@@ -1,9 +1,5 @@
-
 -- Enable the UUID generation extension if it's not already enabled.
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Create the 'authenticated' role that Supabase policies rely on.
-CREATE ROLE authenticated;
 
 --
 -- Type: branch_status
@@ -608,30 +604,28 @@ ALTER TABLE public.tariffs ENABLE ROW LEVEL SECURITY;
 --
 -- Define Policies
 --
-CREATE POLICY "Allow authenticated users to read all branches" ON public.branches FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Allow authenticated users to read all bulk meter readings" ON public.bulk_meter_readings FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Allow authenticated users to read all bulk meters" ON public.bulk_meters FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Allow auth users to read all individual customer readings" ON public.individual_customer_readings FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Allow authenticated users to read all individual customers" ON public.individual_customers FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Allow authenticated users to read all notifications" ON public.notifications FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Allow authenticated users to read all permissions" ON public.permissions FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Allow authenticated users to read all roles" ON public.roles FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Allow authenticated users to read all staff members" ON public.staff_members FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Allow authenticated users to read all tariffs" ON public.tariffs FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Allow full access for admin users" ON public.branches FOR ALL TO authenticated USING ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin') WITH CHECK ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin');
-CREATE POLICY "Allow full access for admin users" ON public.bulk_meters FOR ALL TO authenticated USING ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin') WITH CHECK ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin');
-CREATE POLICY "Allow full access for admin users" ON public.individual_customers FOR ALL TO authenticated USING ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin') WITH CHECK ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin');
-CREATE POLICY "Allow full access for admin users" ON public.staff_members FOR ALL TO authenticated USING ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin') WITH CHECK ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin');
-CREATE POLICY "Allow full access for admin users on role_permissions" ON public.role_permissions FOR ALL TO authenticated USING ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin') WITH CHECK ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin');
-CREATE POLICY "Allow read access to all authenticated users" ON public.bills FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Allow read access to all authenticated users" ON public.payments FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Allow read access to all authenticated users" ON public.reports FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Allow read access to all authenticated users" ON public.role_permissions FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Allow staff managers to modify their own branch data" ON public.branches FOR ALL TO authenticated USING ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Staff Management' AND id = (SELECT branch FROM public.staff_members WHERE email = auth.email())) WITH CHECK ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Staff Management' AND id = (SELECT branch FROM public.staff_members WHERE email = auth.email()));
-CREATE POLICY "Allow staff to create bulk meter readings in their branch" ON public.bulk_meter_readings FOR INSERT TO authenticated WITH CHECK (EXISTS (SELECT 1 FROM public.bulk_meters bm JOIN public.staff_members sm ON bm.branch_id = sm.branch WHERE sm.email = auth.email() AND bm."customerKeyNumber" = bulk_meter_id));
-CREATE POLICY "Allow staff to create individual customer readings in their branch" ON public.individual_customer_readings FOR INSERT TO authenticated WITH CHECK (EXISTS (SELECT 1 FROM public.individual_customers ic JOIN public.staff_members sm ON ic.branch_id = sm.branch WHERE sm.email = auth.email() AND ic."customerKeyNumber" = individual_customer_id));
-CREATE POLICY "Allow users to manage data in their own branch" ON public.bulk_meters FOR ALL TO authenticated USING (branch_id = (SELECT branch FROM public.staff_members WHERE email = auth.email())) WITH CHECK (branch_id = (SELECT branch FROM public.staff_members WHERE email = auth.email()));
-CREATE POLICY "Allow users to manage data in their own branch" ON public.individual_customers FOR ALL TO authenticated USING (branch_id = (SELECT branch FROM public.staff_members WHERE email = auth.email())) WITH CHECK (branch_id = (SELECT branch FROM public.staff_members WHERE email = auth.email()));
-CREATE POLICY "Allow users to manage staff in their own branch" ON public.staff_members FOR ALL TO authenticated USING (branch = (SELECT branch FROM public.staff_members WHERE email = auth.email())) WITH CHECK (branch = (SELECT branch FROM public.staff_members WHERE email = auth.email()));
-
-  
+CREATE POLICY "Allow public read access to all branches" ON public.branches FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow public read access to all bulk meter readings" ON public.bulk_meter_readings FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow public read access to all bulk meters" ON public.bulk_meters FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow public read access to all individual customer readings" ON public.individual_customer_readings FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow public read access to all individual customers" ON public.individual_customers FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow public read access to all notifications" ON public.notifications FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow public read access to all permissions" ON public.permissions FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow public read access to all roles" ON public.roles FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow public read access to all staff members" ON public.staff_members FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow public read access to all tariffs" ON public.tariffs FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow full access for admin users" ON public.branches FOR ALL USING ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin') WITH CHECK ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin');
+CREATE POLICY "Allow full access for admin users" ON public.bulk_meters FOR ALL USING ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin') WITH CHECK ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin');
+CREATE POLICY "Allow full access for admin users" ON public.individual_customers FOR ALL USING ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin') WITH CHECK ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin');
+CREATE POLICY "Allow full access for admin users" ON public.staff_members FOR ALL USING ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin') WITH CHECK ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin');
+CREATE POLICY "Allow full access for admin users on role_permissions" ON public.role_permissions FOR ALL USING ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin') WITH CHECK ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin');
+CREATE POLICY "Allow read access to all public users" ON public.bills FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow read access to all public users" ON public.payments FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow read access to all public users" ON public.reports FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow read access to all public users" ON public.role_permissions FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow staff managers to modify their own branch data" ON public.branches FOR ALL USING ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Staff Management' AND id = (SELECT branch FROM public.staff_members WHERE email = auth.email())) WITH CHECK ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Staff Management' AND id = (SELECT branch FROM public.staff_members WHERE email = auth.email()));
+CREATE POLICY "Allow staff to create bulk meter readings in their branch" ON public.bulk_meter_readings FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM public.bulk_meters bm JOIN public.staff_members sm ON bm.branch_id = sm.branch WHERE sm.email = auth.email() AND bm."customerKeyNumber" = bulk_meter_id));
+CREATE POLICY "Allow staff to create individual customer readings in their branch" ON public.individual_customer_readings FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM public.individual_customers ic JOIN public.staff_members sm ON ic.branch_id = sm.branch WHERE sm.email = auth.email() AND ic."customerKeyNumber" = individual_customer_id));
+CREATE POLICY "Allow users to manage data in their own branch" ON public.bulk_meters FOR ALL USING (branch_id = (SELECT branch FROM public.staff_members WHERE email = auth.email())) WITH CHECK (branch_id = (SELECT branch FROM public.staff_members WHERE email = auth.email()));
+CREATE POLICY "Allow users to manage data in their own branch" ON public.individual_customers FOR ALL USING (branch_id = (SELECT branch FROM public.staff_members WHERE email = auth.email())) WITH CHECK (branch_id = (SELECT branch FROM public.staff_members WHERE email = auth.email()));
+CREATE POLICY "Allow users to manage staff in their own branch" ON public.staff_members FOR ALL USING (branch = (SELECT branch FROM public.staff_members WHERE email = auth.email())) WITH CHECK (branch = (SELECT branch FROM public.staff_members WHERE email = auth.email()));

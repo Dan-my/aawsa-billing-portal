@@ -174,6 +174,89 @@ DATABASE_URL="postgresql://your_user:your_password@your_host:5432/postgres"
 ```
 After updating the `.env` file, restart your application for the changes to take effect. The application will now connect to your self-hosted PostgreSQL database.
 
+---
+
+### Hosting PostgreSQL on Your Own Server
+
+Setting up a PostgreSQL database on your own server (whether it's a physical machine, a Virtual Private Server (VPS), or a cloud instance) involves a few key steps. The method below using Docker is highly recommended for its simplicity and consistency.
+
+#### **Option A: Using Docker (Recommended)**
+
+Docker simplifies the installation and management process significantly.
+
+1.  **Install Docker:** If you don't have it, install [Docker](https://docs.docker.com/get-docker/) on your server.
+
+2.  **Run PostgreSQL Container:** Run the following command in your server's terminal. This will download the official PostgreSQL image and start a container.
+
+    ```bash
+    docker run --name aawsa-postgres -e POSTGRES_PASSWORD=your_strong_password -p 5432:5432 -v aawsa_pgdata:/var/lib/postgresql/data -d postgres
+    ```
+    *   `--name aawsa-postgres`: Gives your container a memorable name.
+    *   `-e POSTGRES_PASSWORD=...`: **Set a strong, secure password here.** This is for the default `postgres` user.
+    *   `-p 5432:5432`: Maps port 5432 on your server to port 5432 in the container, allowing your application to connect.
+    *   `-v aawsa_pgdata:/var/lib/postgresql/data`: **This is crucial.** It creates a volume on your server to persist the database data. Without this, your data would be lost if the container is removed.
+    *   `-d`: Runs the container in detached mode (in the background).
+    *   `postgres`: The name of the Docker image to use.
+
+3.  **Connect and Run Schema:**
+    *   Your database is now running. The `DATABASE_URL` for your `.env` file will be:
+        `postgresql://postgres:your_strong_password@YOUR_SERVER_IP:5432/postgres`
+    *   From your local machine (or any machine with `psql` installed), you can now run the schema script:
+        ```bash
+        psql -h YOUR_SERVER_IP -p 5432 -U postgres -d postgres -f database_migrations/000_complete_schema.sql
+        ```
+    *   You will be prompted for the password you set in the `docker run` command.
+
+#### **Option B: Direct Installation on Linux (e.g., Ubuntu)**
+
+This method installs PostgreSQL directly onto the server's operating system.
+
+1.  **Install PostgreSQL:**
+    ```bash
+    sudo apt update
+    sudo apt install postgresql postgresql-contrib
+    ```
+
+2.  **Initial Setup:**
+    *   PostgreSQL creates a default user named `postgres`. Switch to this user to perform admin tasks:
+        ```bash
+        sudo -i -u postgres
+        ```
+    *   From the `postgres` user prompt, create a new database user for your application and set a password:
+        ```bash
+        createuser --interactive
+        # Follow prompts: Enter name of role (e.g., aawsa_user), and answer 'n' to superuser.
+        psql -c "ALTER USER your_new_user WITH PASSWORD 'your_strong_password';"
+        ```
+    *   Create the database itself:
+        ```sql
+        createdb postgres
+        ```
+
+3.  **Configure Remote Access (Important):**
+    *   By default, PostgreSQL only allows local connections. You must edit two configuration files to allow your web application to connect.
+    *   **Edit `postgresql.conf`:**
+        *   Find the file (usually at `/etc/postgresql/YOUR_VERSION/main/postgresql.conf`).
+        *   Uncomment and change the `listen_addresses` line to allow connections from any IP address:
+            ```conf
+            listen_addresses = '*'
+            ```
+    *   **Edit `pg_hba.conf`:**
+        *   Find the file in the same directory as `postgresql.conf`.
+        *   Add this line to the end of the file to allow your new user to connect from any IP using a password. **For better security, replace `0.0.0.0/0` with your web server's specific IP address if possible.**
+            ```conf
+            # TYPE  DATABASE        USER            ADDRESS                 METHOD
+            host    all             all             0.0.0.0/0               md5
+            ```
+    *   **Restart PostgreSQL** to apply the changes:
+        ```bash
+        sudo systemctl restart postgresql
+        ```
+
+4.  **Run Schema and Connect:** You can now run the schema script and update your application's `.env` file with your new `DATABASE_URL` using the user and password you created.
+
+---
+
 ## Supabase Database Migrations
 
 If you are using Supabase, you may need to apply incremental updates to your database schema.
@@ -266,4 +349,3 @@ This update makes VAT calculations fully database-driven by adding `vat_rate` an
     *   Click on **"+ New query"**.
     *   Open the newly added file `database_migrations/006_add_vat_to_tariffs.sql` in this project.
     *   Copy the entire content of that file and run it.
-```

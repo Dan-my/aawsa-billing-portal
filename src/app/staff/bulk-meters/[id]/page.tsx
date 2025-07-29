@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image"; 
-import { Droplets, Edit, Trash2, Menu, User, CheckCircle, XCircle, FileEdit, RefreshCcw, Gauge, Users as UsersIcon, DollarSign, TrendingUp, Clock, AlertTriangle, MinusCircle, PlusCircle as PlusCircleIcon, Printer, History, ListCollapse, Eye } from "lucide-react";
+import { Droplets, Edit, Trash2, Menu, User, CheckCircle, XCircle, FileEdit, RefreshCcw, Gauge, Users as UsersIcon, DollarSign, TrendingUp, Clock, AlertTriangle, MinusCircle, PlusCircle as PlusCircleIcon, Printer, History, ListCollapse, Eye, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -709,7 +709,25 @@ export default function StaffBulkMeterDetailsPage() {
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div>
                 <p><strong className="font-semibold">Branch:</strong> {displayBranchName ?? 'N/A'}</p>
-                <p><strong className="font-semibold">Location:</strong> {bulkMeter.location ?? 'N/A'}, {bulkMeter.ward ?? 'N/A'}</p><p><strong className="font-semibold">Specific Area:</strong> {bulkMeter.specificArea ?? 'N/A'}</p><p><strong className="font-semibold">Meter No:</strong> {bulkMeter.meterNumber ?? 'N/A'}</p><p><strong className="font-semibold">Meter Size:</strong> {bulkMeter.meterSize} inch</p>
+                <p><strong className="font-semibold">Sub-City:</strong> {bulkMeter.subCity ?? 'N/A'}, {bulkMeter.woreda ?? 'N/A'}</p>
+                <p><strong className="font-semibold">Specific Area:</strong> {bulkMeter.specificArea ?? 'N/A'}</p>
+                <p><strong className="font-semibold">Meter No:</strong> {bulkMeter.meterNumber ?? 'N/A'}</p>
+                <p><strong className="font-semibold">Meter Size:</strong> {bulkMeter.meterSize} inch</p>
+                {bulkMeter.xCoordinate && bulkMeter.yCoordinate ? (
+                  <p className="flex items-center gap-2">
+                    <strong className="font-semibold">Location:</strong>
+                    <a
+                      href={`https://www.google.com/maps?q=${bulkMeter.yCoordinate},${bulkMeter.xCoordinate}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-primary hover:underline"
+                    >
+                      <MapPin className="h-4 w-4" /> View on Map
+                    </a>
+                  </p>
+                ) : (
+                  <p><strong className="font-semibold">Coordinates:</strong> N/A</p>
+                )}
               </div>
               <div>
                 <p><strong className="font-semibold">Customer Key:</strong> {bulkMeter.customerKeyNumber ?? 'N/A'}</p><p><strong className="font-semibold">Contract No:</strong> {bulkMeter.contractNumber ?? 'N/A'}</p><p><strong className="font-semibold">Month:</strong> {bulkMeter.month ?? 'N/A'}</p><p><strong className="font-semibold">Billed Readings (Prev/Curr):</strong> {(bmPreviousReading).toFixed(2)} / {(bmCurrentReading).toFixed(2)}</p>

@@ -15,7 +15,7 @@ import {
   type BulkMeterDataEntryFormValues,
   type IndividualCustomerDataEntryFormValues
 } from "./customer-data-entry-types";
-import { addBulkMeter, addCustomer, initializeBulkMeters, initializeCustomers } from "@/lib/data-store";
+import { addBulkMeter, addCustomer, initializeBulkMeters, initializeCustomers, getCustomers } from "@/lib/data-store";
 import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -45,8 +45,15 @@ export default function AdminDataEntryPage() {
   };
 
   const handleIndividualCustomerCsvUpload = async (data: IndividualCustomerDataEntryFormValues) => {
-     if (!currentUser) return;
-    await addCustomer(data, currentUser);
+    if (!currentUser) return;
+    // Check if customer already exists before adding
+    const existingCustomers = getCustomers();
+    const customerExists = existingCustomers.some(c => c.customerKeyNumber === data.customerKeyNumber);
+    if (!customerExists) {
+        await addCustomer(data, currentUser);
+    } else {
+        console.log(`Skipping existing customer with key: ${data.customerKeyNumber}`);
+    }
   };
 
   const downloadCsvTemplate = (headers: string[], fileName: string) => {

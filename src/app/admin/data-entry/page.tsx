@@ -46,10 +46,7 @@ export default function AdminDataEntryPage() {
 
   const handleIndividualCustomerCsvUpload = async (data: IndividualCustomerDataEntryFormValues) => {
      if (!currentUser) return;
-     const customerDataForStore = {
-        ...data,
-    } as Omit<IndividualCustomer, 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill' | 'arrears'>;
-    await addCustomer(customerDataForStore, currentUser);
+    await addCustomer(data, currentUser);
   };
 
   const downloadCsvTemplate = (headers: string[], fileName: string) => {

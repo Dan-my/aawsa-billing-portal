@@ -1,6 +1,19 @@
 -- Enable the UUID generation extension if it's not already enabled.
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Create a PUBLIC role to allow access for any authenticated user.
+DO
+$$
+BEGIN
+   IF NOT EXISTS (
+      SELECT FROM pg_catalog.pg_roles
+      WHERE  rolname = 'public') THEN
+      CREATE ROLE public;
+   END IF;
+END
+$$;
+
+
 --
 -- Type: branch_status
 --
@@ -176,8 +189,8 @@ CREATE TABLE public.bulk_meters (
     "currentReading" numeric,
     month text,
     "specificArea" text,
-    "subCity" text,
-    woreda text,
+    location text,
+    ward text,
     status public.bulk_meter_status DEFAULT 'Active'::public.bulk_meter_status,
     "paymentStatus" public.payment_status DEFAULT 'Unpaid'::public.payment_status,
     "outStandingbill" numeric DEFAULT 0,
@@ -192,7 +205,8 @@ CREATE TABLE public.bulk_meters (
     charge_group public.customer_type DEFAULT 'Non-domestic'::public.customer_type NOT NULL,
     sewerage_connection public.sewerage_connection DEFAULT 'No'::public.sewerage_connection NOT NULL,
     approved_by uuid,
-    approved_at timestamp with time zone
+    approved_at timestamp with time zone,
+    "subCity" text
 );
 
 ALTER TABLE public.bulk_meters OWNER TO postgres;
@@ -221,7 +235,6 @@ CREATE TABLE public.individual_customers (
     status public.individual_customer_status DEFAULT 'Active'::public.individual_customer_status,
     "paymentStatus" public.payment_status DEFAULT 'Unpaid'::public.payment_status,
     "calculatedBill" numeric DEFAULT 0,
-    arrears numeric DEFAULT 0,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone,
     approved_by uuid,
@@ -601,40 +614,28 @@ ALTER TABLE public.tariffs ENABLE ROW LEVEL SECURITY;
 --
 -- Define Policies
 --
-CREATE POLICY "Allow public read access" ON public.branches FOR SELECT TO PUBLIC USING (true);
-CREATE POLICY "Allow public read access" ON public.bulk_meter_readings FOR SELECT TO PUBLIC USING (true);
-CREATE POLICY "Allow public read access" ON public.bulk_meters FOR SELECT TO PUBLIC USING (true);
-CREATE POLICY "Allow public read access" ON public.individual_customer_readings FOR SELECT TO PUBLIC USING (true);
-CREATE POLICY "Allow public read access" ON public.individual_customers FOR SELECT TO PUBLIC USING (true);
-CREATE POLICY "Allow public read access" ON public.notifications FOR SELECT TO PUBLIC USING (true);
-CREATE POLICY "Allow public read access" ON public.permissions FOR SELECT TO PUBLIC USING (true);
-CREATE POLICY "Allow public read access" ON public.roles FOR SELECT TO PUBLIC USING (true);
-CREATE POLICY "Allow public read access" ON public.staff_members FOR SELECT TO PUBLIC USING (true);
-CREATE POLICY "Allow public read access" ON public.tariffs FOR SELECT TO PUBLIC USING (true);
-CREATE POLICY "Allow public read access" ON public.bills FOR SELECT TO PUBLIC USING (true);
-CREATE POLICY "Allow public read access" ON public.payments FOR SELECT TO PUBLIC USING (true);
-CREATE POLICY "Allow public read access" ON public.reports FOR SELECT TO PUBLIC USING (true);
-CREATE POLICY "Allow public read access" ON public.role_permissions FOR SELECT TO PUBLIC USING (true);
-
--- Admin users can do anything. This policy is simplified and assumes an 'Admin' role exists.
--- You might want to lock this down further based on your application's logic.
-CREATE POLICY "Allow full access for admin users" ON public.branches FOR ALL USING ((SELECT role FROM public.staff_members WHERE email = current_user) = 'Admin') WITH CHECK ((SELECT role FROM public.staff_members WHERE email = current_user) = 'Admin');
-CREATE POLICY "Allow full access for admin users" ON public.bulk_meters FOR ALL USING ((SELECT role FROM public.staff_members WHERE email = current_user) = 'Admin') WITH CHECK ((SELECT role FROM public.staff_members WHERE email = current_user) = 'Admin');
-CREATE POLICY "Allow full access for admin users" ON public.individual_customers FOR ALL USING ((SELECT role FROM public.staff_members WHERE email = current_user) = 'Admin') WITH CHECK ((SELECT role FROM public.staff_members WHERE email = current_user) = 'Admin');
-CREATE POLICY "Allow full access for admin users" ON public.staff_members FOR ALL USING ((SELECT role FROM public.staff_members WHERE email = current_user) = 'Admin') WITH CHECK ((SELECT role FROM public.staff_members WHERE email = current_user) = 'Admin');
-CREATE POLICY "Allow full access for admin users on role_permissions" ON public.role_permissions FOR ALL USING ((SELECT role FROM public.staff_members WHERE email = current_user) = 'Admin') WITH CHECK ((SELECT role FROM public.staff_members WHERE email = current_user) = 'Admin');
-
--- These policies are examples and may need to be adjusted based on how you handle user sessions in standard PostgreSQL.
--- The concept of `auth.email()` is Supabase-specific. You would need to replace it with a session variable, e.g., `current_setting('app.user.email', true)`.
--- This requires setting the variable at the beginning of each database session. The app code does not currently do this.
--- For simplicity, the following policies are commented out. The "public read" and "admin full access" policies will be used instead.
-/*
-CREATE POLICY "Allow staff managers to modify their own branch data" ON public.branches FOR ALL TO PUBLIC USING ((SELECT role FROM public.staff_members WHERE email = current_user) = 'Staff Management' AND id = (SELECT branch FROM public.staff_members WHERE email = current_user)) WITH CHECK ((SELECT role FROM public.staff_members WHERE email = current_user) = 'Staff Management' AND id = (SELECT branch FROM public.staff_members WHERE email = current_user));
-CREATE POLICY "Allow staff to create bulk meter readings in their branch" ON public.bulk_meter_readings FOR INSERT TO PUBLIC WITH CHECK (EXISTS (SELECT 1 FROM public.bulk_meters bm JOIN public.staff_members sm ON bm.branch_id = sm.branch WHERE sm.email = current_user AND bm."customerKeyNumber" = bulk_meter_id));
-CREATE POLICY "Allow staff to create individual customer readings in their branch" ON public.individual_customer_readings FOR INSERT TO PUBLIC WITH CHECK (EXISTS (SELECT 1 FROM public.individual_customers ic JOIN public.staff_members sm ON ic.branch_id = sm.branch WHERE sm.email = current_user AND ic."customerKeyNumber" = individual_customer_id));
-CREATE POLICY "Allow users to manage data in their own branch" ON public.bulk_meters FOR ALL TO PUBLIC USING (branch_id = (SELECT branch FROM public.staff_members WHERE email = current_user)) WITH CHECK (branch_id = (SELECT branch FROM public.staff_members WHERE email = current_user));
-CREATE POLICY "Allow users to manage data in their own branch" ON public.individual_customers FOR ALL TO PUBLIC USING (branch_id = (SELECT branch FROM public.staff_members WHERE email = current_user)) WITH CHECK (branch_id = (SELECT branch FROM public.staff_members WHERE email = current_user));
-CREATE POLICY "Allow users to manage staff in their own branch" ON public.staff_members FOR ALL TO PUBLIC USING (branch = (SELECT branch FROM public.staff_members WHERE email = current_user)) WITH CHECK (branch = (SELECT branch FROM public.staff_members WHERE email = current_user));
-*/
-
-  
+CREATE POLICY "Allow authenticated users to read all branches" ON public.branches FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow authenticated users to read all bulk meter readings" ON public.bulk_meter_readings FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow authenticated users to read all bulk meters" ON public.bulk_meters FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow authenticated users to read all individual customer readings" ON public.individual_customer_readings FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow authenticated users to read all individual customers" ON public.individual_customers FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow authenticated users to read all notifications" ON public.notifications FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow authenticated users to read all permissions" ON public.permissions FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow authenticated users to read all roles" ON public.roles FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow authenticated users to read all staff members" ON public.staff_members FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow authenticated users to read all tariffs" ON public.tariffs FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow full access for admin users" ON public.branches FOR ALL TO PUBLIC USING ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin') WITH CHECK ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin');
+CREATE POLICY "Allow full access for admin users" ON public.bulk_meters FOR ALL TO PUBLIC USING ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin') WITH CHECK ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin');
+CREATE POLICY "Allow full access for admin users" ON public.individual_customers FOR ALL TO PUBLIC USING ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin') WITH CHECK ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin');
+CREATE POLICY "Allow full access for admin users" ON public.staff_members FOR ALL TO PUBLIC USING ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin') WITH CHECK ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin');
+CREATE POLICY "Allow full access for admin users on role_permissions" ON public.role_permissions FOR ALL TO PUBLIC USING ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin') WITH CHECK ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Admin');
+CREATE POLICY "Allow read access to all authenticated users" ON public.bills FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow read access to all authenticated users" ON public.payments FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow read access to all authenticated users" ON public.reports FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow read access to all authenticated users" ON public.role_permissions FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY "Allow staff managers to modify their own branch data" ON public.branches FOR ALL TO PUBLIC USING ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Staff Management' AND id = (SELECT branch FROM public.staff_members WHERE email = auth.email())) WITH CHECK ((SELECT role FROM public.staff_members WHERE email = auth.email()) = 'Staff Management' AND id = (SELECT branch FROM public.staff_members WHERE email = auth.email()));
+CREATE POLICY "Allow staff to create bulk meter readings in their branch" ON public.bulk_meter_readings FOR INSERT TO PUBLIC WITH CHECK (EXISTS (SELECT 1 FROM public.bulk_meters bm JOIN public.staff_members sm ON bm.branch_id = sm.branch WHERE sm.email = auth.email() AND bm."customerKeyNumber" = bulk_meter_id));
+CREATE POLICY "Allow staff to create individual customer readings in their branch" ON public.individual_customer_readings FOR INSERT TO PUBLIC WITH CHECK (EXISTS (SELECT 1 FROM public.individual_customers ic JOIN public.staff_members sm ON ic.branch_id = sm.branch WHERE sm.email = auth.email() AND ic."customerKeyNumber" = individual_customer_id));
+CREATE POLICY "Allow users to manage data in their own branch" ON public.bulk_meters FOR ALL TO PUBLIC USING (branch_id = (SELECT branch FROM public.staff_members WHERE email = auth.email())) WITH CHECK (branch_id = (SELECT branch FROM public.staff_members WHERE email = auth.email()));
+CREATE POLICY "Allow users to manage data in their own branch" ON public.individual_customers FOR ALL TO PUBLIC USING (branch_id = (SELECT branch FROM public.staff_members WHERE email = auth.email())) WITH CHECK (branch_id = (SELECT branch FROM public.staff_members WHERE email = auth.email()));
+CREATE POLICY "Allow users to manage staff in their own branch" ON public.staff_members FOR ALL TO PUBLIC USING (branch = (SELECT branch FROM public.staff_members WHERE email = auth.email())) WITH CHECK (branch = (SELECT branch FROM public.staff_members WHERE email = auth.email()));

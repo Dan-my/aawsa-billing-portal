@@ -358,7 +358,6 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
-          arrears: number
           assignedBulkMeterId: string | null
           bookNumber: string
           branch_id: string | null
@@ -385,7 +384,6 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
-          arrears?: number
           assignedBulkMeterId?: string | null
           bookNumber: string
           branch_id?: string | null
@@ -412,7 +410,6 @@ export type Database = {
         Update: {
           approved_at?: string | null
           approved_by?: string | null
-          arrears?: number
           assignedBulkMeterId?: string | null
           bookNumber?: string
           branch_id?: string | null

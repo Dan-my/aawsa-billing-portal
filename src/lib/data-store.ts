@@ -357,7 +357,6 @@ const mapSupabaseCustomerToDomain = async (sc: SupabaseIndividualCustomerRow): P
     status: sc.status,
     paymentStatus: sc.paymentStatus,
     calculatedBill: bill,
-    arrears: 0, // Placeholder, as it's not in the DB
     created_at: sc.created_at,
     updated_at: sc.updated_at,
     approved_by: sc.approved_by,
@@ -391,7 +390,6 @@ const mapDomainCustomerToInsert = async (
     status: customer.status || 'Active', 
     paymentStatus: customer.paymentStatus || 'Unpaid', 
     calculatedBill: bill,
-    arrears: customer.arrears || 0
   };
 };
 
@@ -419,7 +417,6 @@ const mapDomainCustomerToUpdate = async (customer: Partial<DomainIndividualCusto
   if(customer.paymentStatus !== undefined) updatePayload.paymentStatus = customer.paymentStatus;
   if(customer.approved_by !== undefined) updatePayload.approved_by = customer.approved_by;
   if(customer.approved_at !== undefined) updatePayload.approved_at = customer.approved_at;
-  if(customer.arrears !== undefined) updatePayload.arrears = customer.arrears;
   
   if (customer.currentReading !== undefined || customer.previousReading !== undefined || customer.customerType !== undefined || customer.sewerageConnection !== undefined || customer.meterSize !== undefined || customer.month !== undefined) {
     const existingCustomer = customers.find(c => c.customerKeyNumber === customer.customerKeyNumber);
@@ -1129,17 +1126,17 @@ export const getTariff = (customerType: CustomerType, year: number): TariffInfo 
 
 
 
-export const getBranches = (): DomainBranch[] => [...branches];
-export const getCustomers = (): DomainIndividualCustomer[] => [...customers];
-export const getBulkMeters = (): BulkMeter[] => [...bulkMeters];
-export const getStaffMembers = (): StaffMember[] => [...staffMembers];
-export const getBills = (): DomainBill[] => [...bills];
-export const getIndividualCustomerReadings = (): DomainIndividualCustomerReading[] => [...individualCustomerReadings];
-export const getBulkMeterReadings = (): DomainBulkMeterReading[] => [...bulkMeterReadings];
-export const getNotifications = (): DomainNotification[] => [...notifications];
-export const getRoles = (): DomainRole[] => [...roles];
-export const getPermissions = (): DomainPermission[] => [...permissions];
-export const getRolePermissions = (): DomainRolePermission[] => [...rolePermissions];
+export const getBranches = (): DomainBranch[] => [...branches]];
+export const getCustomers = (): DomainIndividualCustomer[] => [...customers]];
+export const getBulkMeters = (): BulkMeter[] => [...bulkMeters]];
+export const getStaffMembers = (): StaffMember[] => [...staffMembers]];
+export const getBills = (): DomainBill[] => [...bills]];
+export const getIndividualCustomerReadings = (): DomainIndividualCustomerReading[] => [...individualCustomerReadings]];
+export const getBulkMeterReadings = (): DomainBulkMeterReading[] => [...bulkMeterReadings]];
+export const getNotifications = (): DomainNotification[] => [...notifications]];
+export const getRoles = (): DomainRole[] => [...roles]];
+export const getPermissions = (): DomainPermission[] => [...permissions]];
+export const getRolePermissions = (): DomainRolePermission[] => [...rolePermissions]];
 
 export function getMeterReadings(): (DomainIndividualCustomerReading | DomainBulkMeterReading)[] {
     const allReadings = [
@@ -1149,8 +1146,8 @@ export function getMeterReadings(): (DomainIndividualCustomerReading | DomainBul
     return allReadings.sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
 }
 
-export const getPayments = (): DomainPayment[] => [...payments];
-export const getReportLogs = (): DomainReportLog[] => [...reportLogs];
+export const getPayments = (): DomainPayment[] => [...payments]];
+export const getReportLogs = (): DomainReportLog[] => [...reportLogs]];
 
 export const getBulkMeterPaymentStatusCounts = (): { totalBMs: number; paidBMs: number; unpaidBMs: number } => {
   const totalBMs = bulkMeters.length;

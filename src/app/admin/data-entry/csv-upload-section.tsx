@@ -9,12 +9,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { UploadCloud, FileWarning, CheckCircle, Info } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import type { StaffMember } from "../staff-management/staff-types";
 
 interface CsvUploadSectionProps<TFormValues> {
   entryType: "bulk" | "individual";
   schema: ZodSchema<TFormValues>;
-  addRecordFunction: (data: TFormValues) => void;
+  addRecordFunction: (data: TFormValues, currentUser: StaffMember) => void;
   expectedHeaders: string[];
+  currentUser: StaffMember | null;
 }
 
 // Regex to split CSV by comma, but not if comma is inside double quotes
@@ -25,6 +27,7 @@ export function CsvUploadSection<TFormValues>({
   schema,
   addRecordFunction,
   expectedHeaders,
+  currentUser,
 }: CsvUploadSectionProps<TFormValues>) {
   const { toast } = useToast();
   const [file, setFile] = React.useState<File | null>(null);
@@ -60,6 +63,15 @@ export function CsvUploadSection<TFormValues>({
         variant: "destructive",
         title: "No File Selected",
         description: "Please select a CSV file to upload.",
+      });
+      return;
+    }
+    
+    if (!currentUser) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Error",
+        description: "Cannot upload records without a logged-in user.",
       });
       return;
     }
@@ -109,7 +121,7 @@ export function CsvUploadSection<TFormValues>({
         
         try {
           const validatedData = schema.parse(rowData); // Zod handles coercion based on schema
-          addRecordFunction(validatedData as TFormValues);
+          await addRecordFunction(validatedData as TFormValues, currentUser);
           localSuccessCount++;
         } catch (error) {
           if (error instanceof Error && (error as any).issues) { // ZodError
@@ -183,7 +195,7 @@ export function CsvUploadSection<TFormValues>({
         />
         <Button
           onClick={handleProcessFile}
-          disabled={!file || isProcessing}
+          disabled={!file || isProcessing || !currentUser}
           className="w-full sm:w-auto"
         >
           <UploadCloud className="mr-2 h-4 w-4" />

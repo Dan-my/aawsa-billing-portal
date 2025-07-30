@@ -39,21 +39,12 @@ export default function AdminDataEntryPage() {
     }
   }, []);
 
-  const handleBulkMeterCsvUpload = async (data: BulkMeterDataEntryFormValues) => {
-    if (!currentUser) return;
-    await addBulkMeter(data, currentUser);
+  const handleBulkMeterCsvUpload = async (data: BulkMeterDataEntryFormValues, user: StaffMember) => {
+    await addBulkMeter(data, user);
   };
 
-  const handleIndividualCustomerCsvUpload = async (data: IndividualCustomerDataEntryFormValues) => {
-    if (!currentUser) return;
-    // Check if customer already exists before adding
-    const existingCustomers = getCustomers();
-    const customerExists = existingCustomers.some(c => c.customerKeyNumber === data.customerKeyNumber);
-    if (!customerExists) {
-        await addCustomer(data, currentUser);
-    } else {
-        console.log(`Skipping existing customer with key: ${data.customerKeyNumber}`);
-    }
+  const handleIndividualCustomerCsvUpload = async (data: IndividualCustomerDataEntryFormValues, user: StaffMember) => {
+    await addCustomer(data, user);
   };
 
   const downloadCsvTemplate = (headers: string[], fileName: string) => {
@@ -158,6 +149,7 @@ export default function AdminDataEntryPage() {
                     schema={bulkMeterDataEntrySchema}
                     addRecordFunction={handleBulkMeterCsvUpload}
                     expectedHeaders={bulkMeterCsvHeaders}
+                    currentUser={currentUser}
                 />
                 </CardContent>
             </Card>
@@ -185,6 +177,7 @@ export default function AdminDataEntryPage() {
                     schema={individualCustomerDataEntrySchema}
                     addRecordFunction={handleIndividualCustomerCsvUpload}
                     expectedHeaders={individualCustomerCsvHeaders}
+                    currentUser={currentUser}
                 />
                 </CardContent>
             </Card>

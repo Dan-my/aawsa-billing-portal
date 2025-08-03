@@ -1,3 +1,4 @@
+
 // src/lib/billing.ts
 import { supabase } from '@/lib/supabase';
 import type { TariffRow } from '@/lib/actions';
@@ -64,11 +65,11 @@ const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<Ta
         .from('tariffs')
         .select('*')
         .eq('customer_type', type)
-        .eq('year', year) // Ensure year is treated as a number
+        .eq('year', year)
         .single();
         
     if (error || !data) {
-        console.error(`Could not fetch live tariff for ${type}/${year}. Error:`, error);
+        console.warn(`Could not fetch live tariff for ${type}/${year}. Error:`, error);
         // Fallback: Try to get the most recent tariff for the given type if the specific year is not found.
         const { data: fallbackData, error: fallbackError } = await supabase
             .from('tariffs')

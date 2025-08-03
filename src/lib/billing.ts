@@ -28,36 +28,6 @@ interface TariffInfo {
     domestic_vat_threshold_m3: number;
 }
 
-const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<TariffInfo | null> => {
-    const { data, error } = await supabase
-        .from('tariffs')
-        .select('*')
-        .eq('customer_type', type)
-        .eq('year', year)
-        .single();
-        
-    if (error || !data) {
-        console.error(`Could not fetch live tariff for ${type}/${year}:`, error);
-        // Fallback: Try to get the most recent tariff for the given type
-        const { data: fallbackData, error: fallbackError } = await supabase
-            .from('tariffs')
-            .select('*')
-            .eq('customer_type', type)
-            .order('year', { ascending: false })
-            .limit(1)
-            .single();
-
-        if (fallbackError || !fallbackData) {
-            console.error(`Fallback failed: Could not fetch any tariff for ${type}.`, fallbackError);
-            return null;
-        }
-        console.warn(`Using fallback tariff from year ${fallbackData.year} for calculations for ${year}.`);
-        return mapTariffRowToInfo(fallbackData);
-    }
-
-    return mapTariffRowToInfo(data);
-};
-
 const mapTariffRowToInfo = (tariff: TariffRow): TariffInfo => {
     const parseJsonField = (field: any, fieldName: string) => {
         if (field === null || field === undefined) {
@@ -86,6 +56,37 @@ const mapTariffRowToInfo = (tariff: TariffRow): TariffInfo => {
         vat_rate: tariff.vat_rate,
         domestic_vat_threshold_m3: tariff.domestic_vat_threshold_m3,
     };
+};
+
+
+const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<TariffInfo | null> => {
+    const { data, error } = await supabase
+        .from('tariffs')
+        .select('*')
+        .eq('customer_type', type)
+        .eq('year', year) // Ensure year is treated as a number
+        .single();
+        
+    if (error || !data) {
+        console.error(`Could not fetch live tariff for ${type}/${year}. Error:`, error);
+        // Fallback: Try to get the most recent tariff for the given type if the specific year is not found.
+        const { data: fallbackData, error: fallbackError } = await supabase
+            .from('tariffs')
+            .select('*')
+            .eq('customer_type', type)
+            .order('year', { ascending: false })
+            .limit(1)
+            .single();
+
+        if (fallbackError || !fallbackData) {
+            console.error(`Fallback failed: Could not fetch ANY tariff for ${type}.`, fallbackError);
+            return null;
+        }
+        console.warn(`Using fallback tariff from year ${fallbackData.year} for calculations for year ${year}.`);
+        return mapTariffRowToInfo(fallbackData);
+    }
+
+    return mapTariffRowToInfo(data);
 };
 
 
@@ -151,19 +152,22 @@ export async function calculateBill(
   } else {
     // Single-rate "slab" calculation for Non-domestic
     let applicableRate = 0;
-    const finalTierRate = tiers[tiers.length - 1].rate; // Fallback to highest rate
-
+    
+    // Find the correct tier for the given usage
     for (const tier of tiers) {
         const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
         if (usageM3 <= tierLimit) {
             applicableRate = Number(tier.rate);
-            break;
+            break; // Found the correct tier, exit the loop
         }
     }
-    // If usage exceeds all finite limits, applicableRate will remain 0, so use the final tier rate.
-    if (applicableRate === 0) {
-        applicableRate = finalTierRate;
+    
+    // If usage exceeds all defined limits, applicableRate will still be 0.
+    // In this case, use the rate of the last tier (which should have an "Infinity" limit).
+    if (applicableRate === 0 && tiers.length > 0) {
+        applicableRate = Number(tiers[tiers.length - 1].rate);
     }
+
     baseWaterCharge = usageM3 * applicableRate;
   }
 

@@ -69,8 +69,7 @@ const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<Ta
         .single();
         
     if (error || !data) {
-        console.warn(`Could not fetch live tariff for ${type}/${year}. Error:`, error);
-        // Fallback: Try to get the most recent tariff for the given type if the specific year is not found.
+        console.warn(`Could not fetch live tariff for ${type}/${year}. Error: ${error?.message}. Attempting to use most recent tariff as fallback.`);
         const { data: fallbackData, error: fallbackError } = await supabase
             .from('tariffs')
             .select('*')
@@ -123,7 +122,7 @@ export async function calculateBill(
   const tariffConfig = await getLiveTariffFromDB(customerType, year);
   
   if (!tariffConfig) {
-      console.warn(`Tariff information for customer type "${customerType}" for year ${year} not found. Bill calculation will be 0.`);
+      console.error(`Tariff information for customer type "${customerType}" for year ${year} not found. Bill calculation will be incorrect.`);
       return emptyResult;
   }
   
@@ -151,25 +150,31 @@ export async function calculateBill(
         lastLimit = tierLimit;
     }
   } else {
-    // Single-rate "slab" calculation for Non-domestic
-    let applicableRate = 0;
+    // ** CORRECTED SLAB CALCULATION FOR NON-DOMESTIC **
+    let applicableRate: number | null = null;
     
-    // Find the correct tier for the given usage
+    // Find the single correct rate for the given usage.
     for (const tier of tiers) {
-        const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
-        if (usageM3 <= tierLimit) {
-            applicableRate = Number(tier.rate);
-            break; // Found the correct tier, exit the loop
-        }
-    }
-    
-    // If usage exceeds all defined limits, applicableRate will still be 0.
-    // In this case, use the rate of the last tier (which should have an "Infinity" limit).
-    if (applicableRate === 0 && tiers.length > 0) {
-        applicableRate = Number(tiers[tiers.length - 1].rate);
+      const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
+      if (usageM3 <= tierLimit) {
+        applicableRate = Number(tier.rate);
+        break; // Found the correct tier, exit the loop.
+      }
     }
 
-    baseWaterCharge = usageM3 * applicableRate;
+    // If usage exceeds all defined limits, applicableRate will be null.
+    // Use the rate of the last tier (which should have an "Infinity" limit).
+    if (applicableRate === null && tiers.length > 0) {
+      applicableRate = Number(tiers[tiers.length - 1].rate);
+    }
+    
+    if (applicableRate !== null) {
+      baseWaterCharge = usageM3 * applicableRate;
+    } else {
+      // This should not happen if tariffs are configured correctly.
+      console.error(`Could not determine an applicable rate for Non-domestic customer with usage ${usageM3} m³.`);
+      return emptyResult;
+    }
   }
 
   // --- Fee and Tax Calculations (Common for both types) ---

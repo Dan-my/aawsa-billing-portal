@@ -38,19 +38,41 @@ const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<Ta
         
     if (error || !data) {
         console.error(`Could not fetch live tariff for ${type}/${year}:`, error);
-        return null;
+        // Fallback: Try to get the most recent tariff for the given type
+        const { data: fallbackData, error: fallbackError } = await supabase
+            .from('tariffs')
+            .select('*')
+            .eq('customer_type', type)
+            .order('year', { ascending: false })
+            .limit(1)
+            .single();
+
+        if (fallbackError || !fallbackData) {
+            console.error(`Fallback failed: Could not fetch any tariff for ${type}.`, fallbackError);
+            return null;
+        }
+        console.warn(`Using fallback tariff from year ${fallbackData.year} for calculations for ${year}.`);
+        return mapTariffRowToInfo(fallbackData);
     }
 
-    const tariff: TariffRow = data;
-    
+    return mapTariffRowToInfo(data);
+};
+
+const mapTariffRowToInfo = (tariff: TariffRow): TariffInfo => {
     const parseJsonField = (field: any, fieldName: string) => {
+        if (field === null || field === undefined) {
+             return fieldName.includes('tiers') ? [] : {};
+        }
+        if (typeof field === 'object' && field !== null) {
+            return field; // Already an object
+        }
         if (typeof field === 'string') {
             try { return JSON.parse(field); } catch { 
-                console.error(`Failed to parse JSON for ${fieldName} for tariff ${type}/${year}`);
+                console.error(`Failed to parse JSON for ${fieldName} for tariff ${tariff.customer_type}/${tariff.year}`);
                 return fieldName.includes('tiers') ? [] : {};
             }
         }
-        return field || (fieldName.includes('tiers') ? [] : {});
+        return fieldName.includes('tiers') ? [] : {};
     };
 
     return {
@@ -65,6 +87,7 @@ const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<Ta
         domestic_vat_threshold_m3: tariff.domestic_vat_threshold_m3,
     };
 };
+
 
 export interface BillCalculationResult {
   totalBill: number;
@@ -103,59 +126,77 @@ export async function calculateBill(
   }
   
   const tiers = (tariffConfig.tiers || []).sort((a, b) => (a.limit === Infinity ? 1 : b.limit === Infinity ? -1 : a.limit - b.limit));
+  
   if (tiers.length === 0) {
     console.warn(`Tiers for "${customerType}" for year ${year} are missing.`);
     return emptyResult;
   }
 
   let baseWaterCharge = 0;
-  let remainingUsage = usageM3;
-  let lastLimit = 0;
 
-  for (const tier of tiers) {
-      if (remainingUsage <= 0) break;
-      
-      const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
-      const tierRate = Number(tier.rate);
-      const tierBlockSize = tierLimit - lastLimit;
-      const usageInThisTier = Math.min(remainingUsage, tierBlockSize);
+  if (customerType === 'Domestic') {
+    // Progressive tiered calculation for Domestic
+    let remainingUsage = usageM3;
+    let lastLimit = 0;
+    for (const tier of tiers) {
+        if (remainingUsage <= 0) break;
+        const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
+        const tierRate = Number(tier.rate);
+        const tierBlockSize = tierLimit - lastLimit;
+        const usageInThisTier = Math.min(remainingUsage, tierBlockSize);
+        baseWaterCharge += usageInThisTier * tierRate;
+        remainingUsage -= usageInThisTier;
+        lastLimit = tierLimit;
+    }
+  } else {
+    // Single-rate "slab" calculation for Non-domestic
+    let applicableRate = 0;
+    const finalTierRate = tiers[tiers.length - 1].rate; // Fallback to highest rate
 
-      baseWaterCharge += usageInThisTier * tierRate;
-      remainingUsage -= usageInThisTier;
-      lastLimit = tierLimit;
+    for (const tier of tiers) {
+        const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
+        if (usageM3 <= tierLimit) {
+            applicableRate = Number(tier.rate);
+            break;
+        }
+    }
+    // If usage exceeds all finite limits, applicableRate will remain 0, so use the final tier rate.
+    if (applicableRate === 0) {
+        applicableRate = finalTierRate;
+    }
+    baseWaterCharge = usageM3 * applicableRate;
   }
 
+  // --- Fee and Tax Calculations (Common for both types) ---
   const maintenanceFee = tariffConfig.maintenance_percentage * baseWaterCharge;
   const sanitationFee = tariffConfig.sanitation_percentage * baseWaterCharge;
   
   let vatAmount = 0;
   if (customerType === 'Domestic' && usageM3 > tariffConfig.domestic_vat_threshold_m3) {
       let taxableWaterCharge = 0;
-      let usageForVatCalc = usageM3;
-      let lastTierLimitForVat = 0;
+      let remainingUsageForVat = usageM3;
+      let lastLimitForVat = 0;
 
-      for(const tier of tiers) {
-        if (usageForVatCalc <= 0) break;
-        
-        const currentTierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
-        const usageInTier = Math.min(usageForVatCalc, currentTierLimit - lastTierLimitForVat);
+      for (const tier of tiers) {
+          if (remainingUsageForVat <= 0) break;
+          
+          const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
+          const tierRate = Number(tier.rate);
+          const tierBlockSize = tierLimit - lastLimitForVat;
 
-        const taxableStartPoint = tariffConfig.domestic_vat_threshold_m3;
-        
-        // Calculate the overlap between the current tier's usage range and the taxable range
-        const tierStart = lastTierLimitForVat;
-        const tierEnd = lastTierLimitForVat + usageInTier;
+          const usageInTier = Math.min(remainingUsageForVat, tierBlockSize);
+          
+          const consumptionStartInTier = lastLimitForVat;
+          const consumptionEndInTier = lastLimitForVat + usageInTier;
 
-        const taxableAmountInTier = Math.max(0, Math.min(tierEnd, taxableStartPoint + usageForVatCalc) - Math.max(tierStart, taxableStartPoint));
-        
-        if (taxableAmountInTier > 0) {
-            taxableWaterCharge += taxableAmountInTier * tier.rate;
-        }
+          if (consumptionEndInTier > tariffConfig.domestic_vat_threshold_m3) {
+              const taxableUsageInTier = consumptionEndInTier - Math.max(consumptionStartInTier, tariffConfig.domestic_vat_threshold_m3);
+              taxableWaterCharge += taxableUsageInTier * tierRate;
+          }
 
-        usageForVatCalc -= usageInTier;
-        lastTierLimitForVat = currentTierLimit;
+          remainingUsageForVat -= usageInTier;
+          lastLimitForVat = tierLimit;
       }
-
       vatAmount = taxableWaterCharge * tariffConfig.vat_rate;
   } else if (customerType === 'Non-domestic') {
       vatAmount = baseWaterCharge * tariffConfig.vat_rate;

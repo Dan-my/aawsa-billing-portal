@@ -1,3 +1,4 @@
+
 // src/lib/billing.ts
 import { supabase } from '@/lib/supabase';
 import type { TariffRow } from '@/lib/actions';
@@ -123,6 +124,7 @@ export async function calculateBill(
       return emptyResult;
   }
 
+  // Ensure tiers are sorted numerically, with "Infinity" treated as the largest value.
   const tiers = (tariffConfig.tiers || []).sort((a, b) => {
     const limitA = a.limit === "Infinity" ? Number.MAX_SAFE_INTEGER : Number(a.limit);
     const limitB = b.limit === "Infinity" ? Number.MAX_SAFE_INTEGER : Number(b.limit);
@@ -138,7 +140,8 @@ export async function calculateBill(
   
   if (customerType === 'Non-domestic') {
       let applicableRate = 0;
-      // For non-domestic, find the single rate for the entire consumption
+
+      // Find the single applicable rate for the entire consumption
       for (const tier of tiers) {
         const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
         if (usageM3 <= tierLimit) {

@@ -1,3 +1,4 @@
+
 // src/lib/billing.ts
 import { supabase } from '@/lib/supabase';
 import type { TariffRow } from '@/lib/actions';
@@ -136,10 +137,7 @@ export async function calculateBill(
 
   let baseWaterCharge = 0;
   
-  if (customerType === 'Non-domestic') {
-      // Non-domestic calculation logic has been removed as requested.
-      baseWaterCharge = 0;
-  } else { // Domestic uses progressive calculation
+  if (customerType === 'Domestic') { // Domestic uses progressive calculation
       let remainingUsage = usageM3;
       let lastLimit = 0;
       for (const tier of sortedTiers) {

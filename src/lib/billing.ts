@@ -1,4 +1,3 @@
-
 // src/lib/billing.ts
 import { supabase } from '@/lib/supabase';
 import type { TariffRow } from '@/lib/actions';
@@ -124,11 +123,10 @@ export async function calculateBill(
       return emptyResult;
   }
   
-  // This sort is important. It handles numbers and places Infinity at the end.
   const sortedTiers = (tariffConfig.tiers || []).sort((a, b) => {
-      const limitA = a.limit === 'Infinity' ? Infinity : Number(a.limit);
-      const limitB = b.limit === 'Infinity' ? Infinity : Number(b.limit);
-      return limitA - limitB;
+    const limitA = a.limit === "Infinity" ? Infinity : Number(a.limit);
+    const limitB = b.limit === "Infinity" ? Infinity : Number(b.limit);
+    return limitA - limitB;
   });
   
   if (sortedTiers.length === 0) {
@@ -139,18 +137,8 @@ export async function calculateBill(
   let baseWaterCharge = 0;
   
   if (customerType === 'Non-domestic') {
-      let applicableRate = 0;
-      
-      for (const tier of sortedTiers) {
-          const tierLimit = tier.limit === 'Infinity' ? Infinity : Number(tier.limit);
-          if (usageM3 <= tierLimit) {
-              applicableRate = Number(tier.rate);
-              break; // Found the correct tier, exit the loop.
-          }
-      }
-      
-      baseWaterCharge = usageM3 * applicableRate;
-
+      // Non-domestic calculation logic has been removed as requested.
+      baseWaterCharge = 0;
   } else { // Domestic uses progressive calculation
       let remainingUsage = usageM3;
       let lastLimit = 0;

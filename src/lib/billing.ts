@@ -125,6 +125,7 @@ export async function calculateBill(
       return emptyResult;
   }
   
+  // Correctly sort tiers numerically, placing "Infinity" at the end.
   const sortedTiers = (tariffConfig.tiers || []).sort((a, b) => {
     const limitA = a.limit === "Infinity" ? Infinity : Number(a.limit);
     const limitB = b.limit === "Infinity" ? Infinity : Number(b.limit);
@@ -151,10 +152,16 @@ export async function calculateBill(
           remainingUsage -= usageInThisTier;
           lastLimit = tierLimit;
       }
-  } else if (customerType === 'Non-domestic') {
-      // NON-DOMESTIC LOGIC REMOVED TO PREVENT NAN ERRORS.
-      // This section will now return 0 for the base water charge.
-      baseWaterCharge = 0;
+  } else if (customerType === 'Non-domestic') { // Non-domestic uses slab-based calculation
+      let applicableRate = 0;
+      for (const tier of sortedTiers) {
+          const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
+          if (usageM3 <= tierLimit) {
+              applicableRate = Number(tier.rate);
+              break; // Found the correct slab, so exit the loop
+          }
+      }
+      baseWaterCharge = usageM3 * applicableRate;
   }
 
   const maintenanceFee = tariffConfig.maintenance_percentage * baseWaterCharge;
@@ -208,3 +215,4 @@ export async function calculateBill(
     sewerageCharge: parseFloat(sewerageCharge.toFixed(2)),
   };
 }
+

@@ -123,7 +123,7 @@ export async function calculateBill(
       return emptyResult;
   }
 
-  const tiers = (tariffConfig.tiers || []).sort((a, b) => (a.limit === Infinity ? 1 : b.limit === Infinity ? -1 : a.limit - b.limit));
+  const tiers = (tariffConfig.tiers || []).sort((a, b) => (a.limit === Infinity ? 1 : b.limit === Infinity ? -1 : Number(a.limit) - Number(b.limit)));
   
   if (tiers.length === 0) {
     console.warn(`Tiers for "${customerType}" for year ${year} are missing.`);
@@ -137,6 +137,7 @@ export async function calculateBill(
     
     // Find the single applicable rate for the entire consumption
     for (const tier of tiers) {
+        // Correctly handle "Infinity" as a numeric value for comparison
         const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
         if (usageM3 <= tierLimit) {
             applicableRate = Number(tier.rate);

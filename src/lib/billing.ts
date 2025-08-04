@@ -123,14 +123,15 @@ export async function calculateBill(
       console.warn(`Tariff information for customer type "${customerType}" for year ${year} not found. Bill calculation will be 0.`);
       return emptyResult;
   }
-
-  const tiers = (tariffConfig.tiers || []).sort((a, b) => {
-    const limitA = a.limit === 'Infinity' ? Infinity : Number(a.limit);
-    const limitB = b.limit === 'Infinity' ? Infinity : Number(b.limit);
-    return limitA - limitB;
+  
+  // This sort is important. It handles numbers and places Infinity at the end.
+  const sortedTiers = (tariffConfig.tiers || []).sort((a, b) => {
+      const limitA = a.limit === 'Infinity' ? Infinity : Number(a.limit);
+      const limitB = b.limit === 'Infinity' ? Infinity : Number(b.limit);
+      return limitA - limitB;
   });
   
-  if (tiers.length === 0) {
+  if (sortedTiers.length === 0) {
     console.warn(`Tiers for "${customerType}" for year ${year} are missing.`);
     return emptyResult;
   }
@@ -140,12 +141,11 @@ export async function calculateBill(
   if (customerType === 'Non-domestic') {
       let applicableRate = 0;
       
-      // Find the single applicable rate based on total consumption
-      for (const tier of tiers) {
+      for (const tier of sortedTiers) {
           const tierLimit = tier.limit === 'Infinity' ? Infinity : Number(tier.limit);
           if (usageM3 <= tierLimit) {
               applicableRate = Number(tier.rate);
-              break; // Stop at the first applicable tier
+              break; // Found the correct tier, exit the loop.
           }
       }
       
@@ -154,7 +154,7 @@ export async function calculateBill(
   } else { // Domestic uses progressive calculation
       let remainingUsage = usageM3;
       let lastLimit = 0;
-      for (const tier of tiers) {
+      for (const tier of sortedTiers) {
           if (remainingUsage <= 0) break;
           const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
           const tierRate = Number(tier.rate);
@@ -175,7 +175,7 @@ export async function calculateBill(
       let remainingUsageForVat = usageM3;
       let lastLimitForVat = 0;
 
-      for (const tier of tiers) {
+      for (const tier of sortedTiers) {
           if (remainingUsageForVat <= 0) break;
           
           const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);

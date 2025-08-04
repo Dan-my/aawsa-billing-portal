@@ -125,13 +125,7 @@ export async function calculateBill(
       return emptyResult;
   }
   
-  const sortedTiers = (tariffConfig.tiers || []).sort((a, b) => {
-    const limitA = a.limit === "Infinity" ? Infinity : Number(a.limit);
-    const limitB = b.limit === "Infinity" ? Infinity : Number(b.limit);
-    return limitA - limitB;
-  });
-  
-  if (sortedTiers.length === 0) {
+  if (!tariffConfig.tiers || tariffConfig.tiers.length === 0) {
     console.warn(`Tiers for "${customerType}" for year ${year} are missing.`);
     return emptyResult;
   }
@@ -139,6 +133,11 @@ export async function calculateBill(
   let baseWaterCharge = 0;
   
   if (customerType === 'Domestic') { // Domestic uses progressive calculation
+      const sortedTiers = (tariffConfig.tiers || []).sort((a, b) => {
+        const limitA = a.limit === "Infinity" ? Infinity : Number(a.limit);
+        const limitB = b.limit === "Infinity" ? Infinity : Number(b.limit);
+        return limitA - limitB;
+      });
       let remainingUsage = usageM3;
       let lastLimit = 0;
       for (const tier of sortedTiers) {
@@ -152,7 +151,25 @@ export async function calculateBill(
           lastLimit = tierLimit;
       }
   } else if (customerType === 'Non-domestic') { 
-    // This block is intentionally left empty as per your instruction.
+      // Correctly sort the tiers to handle numeric and "Infinity" limits
+      const sortedTiers = (tariffConfig.tiers || []).sort((a, b) => {
+        const limitA = a.limit === "Infinity" ? Infinity : Number(a.limit);
+        const limitB = b.limit === "Infinity" ? Infinity : Number(b.limit);
+        return limitA - limitB;
+      });
+      
+      let applicableRate = 0;
+      // Find the single applicable rate for the entire consumption
+      for (const tier of sortedTiers) {
+          const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
+          if (usageM3 <= tierLimit) {
+              applicableRate = Number(tier.rate);
+              break; // Found the correct slab, so exit the loop
+          }
+      }
+      
+      // Calculate the base water charge using the single rate
+      baseWaterCharge = usageM3 * applicableRate;
   }
 
   const maintenanceFee = tariffConfig.maintenance_percentage * baseWaterCharge;
@@ -160,6 +177,11 @@ export async function calculateBill(
   
   let vatAmount = 0;
   if (customerType === 'Domestic' && usageM3 > tariffConfig.domestic_vat_threshold_m3) {
+      const sortedTiers = (tariffConfig.tiers || []).sort((a, b) => {
+        const limitA = a.limit === "Infinity" ? Infinity : Number(a.limit);
+        const limitB = b.limit === "Infinity" ? Infinity : Number(b.limit);
+        return limitA - limitB;
+      });
       let taxableWaterCharge = 0;
       let remainingUsageForVat = usageM3;
       let lastLimitForVat = 0;

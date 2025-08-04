@@ -131,13 +131,15 @@ export async function calculateBill(
   }
 
   let baseWaterCharge = 0;
+
+  // **Definitive Fix**: Sort the tiers correctly ONCE and use this sorted list for all calculations.
+  const sortedTiers = (tariffConfig.tiers || []).sort((a, b) => {
+    const limitA = a.limit === "Infinity" ? Infinity : Number(a.limit);
+    const limitB = b.limit === "Infinity" ? Infinity : Number(b.limit);
+    return limitA - limitB;
+  });
   
   if (customerType === 'Domestic') { // Domestic uses progressive calculation
-      const sortedTiers = (tariffConfig.tiers || []).sort((a, b) => {
-        const limitA = a.limit === "Infinity" ? Infinity : Number(a.limit);
-        const limitB = b.limit === "Infinity" ? Infinity : Number(b.limit);
-        return limitA - limitB;
-      });
       let remainingUsage = usageM3;
       let lastLimit = 0;
       for (const tier of sortedTiers) {
@@ -150,14 +152,7 @@ export async function calculateBill(
           remainingUsage -= usageInThisTier;
           lastLimit = tierLimit;
       }
-  } else if (customerType === 'Non-domestic') { 
-      // Correctly sort the tiers to handle numeric and "Infinity" limits
-      const sortedTiers = (tariffConfig.tiers || []).sort((a, b) => {
-        const limitA = a.limit === "Infinity" ? Infinity : Number(a.limit);
-        const limitB = b.limit === "Infinity" ? Infinity : Number(b.limit);
-        return limitA - limitB;
-      });
-      
+  } else if (customerType === 'Non-domestic') { // Non-domestic uses a single rate (slab-based)
       let applicableRate = 0;
       // Find the single applicable rate for the entire consumption
       for (const tier of sortedTiers) {
@@ -177,15 +172,11 @@ export async function calculateBill(
   
   let vatAmount = 0;
   if (customerType === 'Domestic' && usageM3 > tariffConfig.domestic_vat_threshold_m3) {
-      const sortedTiers = (tariffConfig.tiers || []).sort((a, b) => {
-        const limitA = a.limit === "Infinity" ? Infinity : Number(a.limit);
-        const limitB = b.limit === "Infinity" ? Infinity : Number(b.limit);
-        return limitA - limitB;
-      });
       let taxableWaterCharge = 0;
       let remainingUsageForVat = usageM3;
       let lastLimitForVat = 0;
 
+      // Use the correctly sorted tiers for VAT calculation as well
       for (const tier of sortedTiers) {
           if (remainingUsageForVat <= 0) break;
           

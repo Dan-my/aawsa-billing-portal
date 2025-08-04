@@ -1,4 +1,3 @@
-
 // src/lib/billing.ts
 import { supabase } from '@/lib/supabase';
 import type { TariffRow } from '@/lib/actions';
@@ -124,7 +123,6 @@ export async function calculateBill(
       return emptyResult;
   }
   
-  // Custom sort to handle "Infinity" correctly
   const tiers = (tariffConfig.tiers || []).sort((a, b) => {
     const limitA = a.limit === "Infinity" ? Number.MAX_SAFE_INTEGER : Number(a.limit);
     const limitB = b.limit === "Infinity" ? Number.MAX_SAFE_INTEGER : Number(b.limit);
@@ -140,20 +138,13 @@ export async function calculateBill(
   
   if (customerType === 'Non-domestic') {
       let applicableRate = 0;
-      
-      // Find the single applicable rate for the entire consumption
+
       for (const tier of tiers) {
-        const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
-        if (usageM3 <= tierLimit) {
-            applicableRate = Number(tier.rate);
-            break; // Found the correct tier, stop searching
-        }
-      }
-      
-      // If no rate was found (e.g., if usage exceeds all finite limits and no Infinity tier exists)
-      // default to the highest available rate. This is a safety fallback.
-      if (applicableRate === 0 && tiers.length > 0) {
-        applicableRate = Number(tiers[tiers.length - 1].rate);
+          const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
+          if (usageM3 <= tierLimit) {
+              applicableRate = Number(tier.rate);
+              break; 
+          }
       }
       
       baseWaterCharge = usageM3 * applicableRate;

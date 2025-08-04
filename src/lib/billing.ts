@@ -124,9 +124,9 @@ export async function calculateBill(
   }
 
   const tiers = (tariffConfig.tiers || []).sort((a, b) => {
-      const limitA = a.limit === "Infinity" ? Number.MAX_SAFE_INTEGER : Number(a.limit);
-      const limitB = b.limit === "Infinity" ? Number.MAX_SAFE_INTEGER : Number(b.limit);
-      return limitA - limitB;
+    const limitA = a.limit === 'Infinity' ? Number.MAX_SAFE_INTEGER : Number(a.limit);
+    const limitB = b.limit === 'Infinity' ? Number.MAX_SAFE_INTEGER : Number(b.limit);
+    return limitA - limitB;
   });
   
   if (tiers.length === 0) {
@@ -137,23 +137,21 @@ export async function calculateBill(
   let baseWaterCharge = 0;
   
   if (customerType === 'Non-domestic') {
-    let applicableRate = 0;
-    
-    // Find the first tier where the consumption fits
-    const applicableTier = tiers.find(tier => {
-        const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
-        return usageM3 <= tierLimit;
-    });
+      let applicableRate = 0;
+      // Find the first tier where consumption is less than or equal to the limit.
+      const applicableTier = tiers.find(tier => {
+          const tierLimit = tier.limit === 'Infinity' ? Infinity : Number(tier.limit);
+          return usageM3 <= tierLimit;
+      });
 
-    if (applicableTier) {
-        applicableRate = Number(applicableTier.rate);
-    } else {
-        // This case should theoretically not be reached if an "Infinity" tier exists,
-        // but as a failsafe, use the last available tier's rate.
-        applicableRate = Number(tiers[tiers.length - 1].rate);
-    }
-    
-    baseWaterCharge = usageM3 * applicableRate;
+      if (applicableTier) {
+          applicableRate = Number(applicableTier.rate);
+      } else if (tiers.length > 0) {
+          // This is a fallback, but the sorted "Infinity" tier should prevent this.
+          applicableRate = Number(tiers[tiers.length - 1].rate);
+      }
+      
+      baseWaterCharge = usageM3 * applicableRate;
 
   } else { // Domestic uses progressive calculation
       let remainingUsage = usageM3;

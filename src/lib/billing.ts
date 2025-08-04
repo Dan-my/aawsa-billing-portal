@@ -1,4 +1,3 @@
-
 // src/lib/billing.ts
 import { supabase } from '@/lib/supabase';
 import type { TariffRow } from '@/lib/actions';
@@ -139,16 +138,14 @@ export async function calculateBill(
   
   if (customerType === 'Non-domestic') {
       let applicableRate = 0;
-      
-      // Find the single applicable rate for the entire consumption
+      // For non-domestic, find the single rate for the entire consumption
       for (const tier of tiers) {
-          const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
-          if (usageM3 <= tierLimit) {
-              applicableRate = Number(tier.rate);
-              break; // Found the correct tier, stop searching
-          }
+        const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
+        if (usageM3 <= tierLimit) {
+            applicableRate = Number(tier.rate);
+            break; // Found the correct tier, stop searching
+        }
       }
-      
       baseWaterCharge = usageM3 * applicableRate;
 
   } else { // Domestic uses progressive calculation

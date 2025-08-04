@@ -150,6 +150,17 @@ export async function calculateBill(
           remainingUsage -= usageInThisTier;
           lastLimit = tierLimit;
       }
+  } else if (customerType === 'Non-domestic') { // Non-domestic uses slab-based calculation
+      let applicableRate = 0;
+      // Find the single applicable rate based on total consumption
+      for (const tier of sortedTiers) {
+          const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
+          if (usageM3 <= tierLimit) {
+              applicableRate = Number(tier.rate);
+              break; // Found the correct slab, so exit the loop
+          }
+      }
+      baseWaterCharge = usageM3 * applicableRate;
   }
 
   const maintenanceFee = tariffConfig.maintenance_percentage * baseWaterCharge;

@@ -32,6 +32,21 @@ import { cn } from "@/lib/utils";
 import { format, parseISO, lastDayOfMonth } from "date-fns";
 import { TablePagination } from "@/components/ui/table-pagination";
 
+const initialMemoizedDetails = {
+    bmPreviousReading: 0, bmCurrentReading: 0, bulkUsage: 0,
+    totalBulkBillForPeriod: 0, totalPayable: 0, differenceUsage: 0,
+    differenceBill: 0, differenceBillBreakdown: {} as BillCalculationResult,
+    displayBranchName: "N/A", displayCardLocation: "N/A",
+    billCardDetails: {
+      prevReading: 0, currReading: 0, usage: 0, baseWaterCharge: 0,
+      maintenanceFee: 0, sanitationFee: 0, sewerageCharge: 0, meterRent: 0,
+      vatAmount: 0, totalDifferenceBill: 0, differenceUsage: 0,
+      outstandingBill: 0, totalPayable: 0, paymentStatus: 'Unpaid' as PaymentStatus,
+      month: 'N/A',
+    },
+    totalIndividualUsage: 0,
+};
+
 export default function BulkMeterDetailsPage() {
   const params = useParams();
   const router = useRouter();
@@ -72,54 +87,50 @@ export default function BulkMeterDetailsPage() {
     billingHistoryPage * billingHistoryRowsPerPage + billingHistoryRowsPerPage
   );
 
-  const [memoizedDetails, setMemoizedDetails] = React.useState({
-    bmPreviousReading: 0, bmCurrentReading: 0, bulkUsage: 0,
-    totalBulkBillForPeriod: 0, totalPayable: 0, differenceUsage: 0,
-    differenceBill: 0, differenceBillBreakdown: {} as BillCalculationResult,
-    displayBranchName: "N/A", displayCardLocation: "N/A",
-    billCardDetails: {
-      prevReading: 0, currReading: 0, usage: 0, baseWaterCharge: 0,
-      maintenanceFee: 0, sanitationFee: 0, sewerageCharge: 0, meterRent: 0,
-      vatAmount: 0, totalDifferenceBill: 0, differenceUsage: 0,
-      outstandingBill: 0, totalPayable: 0, paymentStatus: 'Unpaid' as PaymentStatus,
-      month: 'N/A',
-    },
-    totalIndividualUsage: 0,
-  });
+  const [memoizedDetails, setMemoizedDetails] = React.useState(initialMemoizedDetails);
 
-  const calculateMemoizedDetails = useCallback(async () => {
-    if (!bulkMeter) return;
+  const calculateMemoizedDetails = useCallback(async (
+    currentBulkMeter: BulkMeter | null, 
+    currentAssociatedCustomers: IndividualCustomer[], 
+    currentBranches: Branch[], 
+    currentBillingHistory: DomainBill[], 
+    currentBillForPrintView: DomainBill | null
+  ) => {
+    if (!currentBulkMeter) {
+        setMemoizedDetails(initialMemoizedDetails);
+        return;
+    }
   
-    const bmPreviousReading = bulkMeter.previousReading ?? 0;
-    const bmCurrentReading = bulkMeter.currentReading ?? 0;
+    const bmPreviousReading = currentBulkMeter.previousReading ?? 0;
+    const bmCurrentReading = currentBulkMeter.currentReading ?? 0;
     const bulkUsage = bmCurrentReading - bmPreviousReading;
   
-    const effectiveBulkMeterCustomerType: CustomerType = bulkMeter.chargeGroup || "Non-domestic";
-    const effectiveBulkMeterSewerageConnection: SewerageConnection = bulkMeter.sewerageConnection || "No";
-    const billingMonth = bulkMeter.month || format(new Date(), 'yyyy-MM');
+    const effectiveBulkMeterCustomerType: CustomerType = currentBulkMeter.chargeGroup as CustomerType || "Non-domestic";
+    const effectiveBulkMeterSewerageConnection: SewerageConnection = currentBulkMeter.sewerageConnection || "No";
+    const billingMonth = currentBulkMeter.month || format(new Date(), 'yyyy-MM');
   
-    const { totalBill: totalBulkBillForPeriod } = await calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize, billingMonth);
+    const { totalBill: totalBulkBillForPeriod } = await calculateBill(bulkUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, currentBulkMeter.meterSize, billingMonth);
   
-    const outStandingBillValue = bulkMeter.outStandingbill ?? 0;
+    const outStandingBillValue = currentBulkMeter.outStandingbill ?? 0;
   
-    const totalIndividualUsage = associatedCustomers.reduce((sum, cust) => sum + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
+    const totalIndividualUsage = currentAssociatedCustomers.reduce((sum, cust) => sum + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
   
     const differenceUsage = bulkUsage - totalIndividualUsage;
   
-    const { totalBill: differenceBill, ...differenceBillBreakdown } = await calculateBill(differenceUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, bulkMeter.meterSize, billingMonth);
+    const { totalBill: differenceBill, ...differenceBillBreakdown } = await calculateBill(differenceUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, currentBulkMeter.meterSize, billingMonth);
   
     const totalPayable = differenceBill + outStandingBillValue;
     const paymentStatus = totalPayable > 0.01 ? 'Unpaid' : 'Paid';
   
-    const displayBranchName = bulkMeter.branchId ? branches.find(b => b.id === bulkMeter.branchId)?.name : bulkMeter.subCity;
-    const displayCardLocation = bulkMeter.specificArea || bulkMeter.woreda || "N/A";
+    const displayBranchName = currentBulkMeter.branchId ? currentBranches.find(b => b.id === currentBulkMeter.branchId)?.name : currentBulkMeter.subCity;
+    const displayCardLocation = currentBulkMeter.specificArea || currentBulkMeter.woreda || "N/A";
   
-    const billToRender = billForPrintView || (billingHistory.length > 0 ? billingHistory[0] : null);
+    const billToRender = currentBillForPrintView || (currentBillingHistory.length > 0 ? currentBillingHistory[0] : null);
   
     let finalBillCardDetails;
   
     if (billToRender) {
-      const historicalBillDetails = await calculateBill(billToRender.differenceUsage ?? 0, bulkMeter.chargeGroup || "Non-domestic", bulkMeter.sewerageConnection || "No", bulkMeter.meterSize, billToRender.monthYear);
+      const historicalBillDetails = await calculateBill(billToRender.differenceUsage ?? 0, currentBulkMeter.chargeGroup as CustomerType || "Non-domestic", currentBulkMeter.sewerageConnection || "No", currentBulkMeter.meterSize, billToRender.monthYear);
       finalBillCardDetails = {
         prevReading: billToRender.previousReadingValue,
         currReading: billToRender.currentReadingValue,
@@ -148,7 +159,7 @@ export default function BulkMeterDetailsPage() {
         outstandingBill: outStandingBillValue,
         totalPayable: totalPayable,
         paymentStatus: paymentStatus,
-        month: bulkMeter.month || 'N/A'
+        month: currentBulkMeter.month || 'N/A'
       };
     }
   
@@ -157,11 +168,11 @@ export default function BulkMeterDetailsPage() {
       totalPayable, differenceUsage, differenceBill, differenceBillBreakdown,
       displayBranchName, displayCardLocation, billCardDetails: finalBillCardDetails, totalIndividualUsage,
     });
-  }, [bulkMeter, associatedCustomers, branches, billingHistory, billForPrintView]);
+  }, []);
 
   useEffect(() => {
-    calculateMemoizedDetails();
-  }, [calculateMemoizedDetails]);
+    calculateMemoizedDetails(bulkMeter, associatedCustomers, branches, billingHistory, billForPrintView);
+  }, [bulkMeter, associatedCustomers, branches, billingHistory, billForPrintView, calculateMemoizedDetails]);
 
     const {
     bmPreviousReading,
@@ -263,8 +274,8 @@ export default function BulkMeterDetailsPage() {
             return creationB - creationA;
         }));
         setBillingHistory(getBills().filter(b => b.bulkMeterId === foundBM.customerKeyNumber).sort((a, b) => {
-            const dateA = new Date(a.billPeriodEndDate);
-            const dateB = new Date(b.billPeriodEndDate);
+            const dateA = new Date(b.billPeriodEndDate);
+            const dateB = new Date(a.billPeriodEndDate);
             if (dateB.getTime() !== dateA.getTime()) {
               return dateB.getTime() - dateA.getTime();
             }
@@ -465,7 +476,7 @@ export default function BulkMeterDetailsPage() {
       const totalIndivUsage = associatedCustomers.reduce((sum, cust) => sum + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
       const differenceUsageForCycle = bmUsage - totalIndivUsage;
       
-      const chargeGroup = latestMeterData.chargeGroup || 'Non-domestic';
+      const chargeGroup = latestMeterData.chargeGroup as CustomerType || 'Non-domestic';
       const sewerageConn = latestMeterData.sewerageConnection || 'No';
       const { totalBill: billForDifferenceUsage, ...differenceBillBreakdownForCycle } = await calculateBill(differenceUsageForCycle, chargeGroup, sewerageConn, latestMeterData.meterSize, parsedMonth);
       
@@ -784,7 +795,7 @@ export default function BulkMeterDetailsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {selectedCustomer && bulkMeter && (<IndividualCustomerFormDialog open={isCustomerFormOpen} onOpenChange={setIsCustomerFormOpen} onSubmit={handleSubmitCustomerForm} defaultValues={selectedCustomer} bulkMeters={[{customerKeyNumber: bulkMeter.customerKeyNumber, name: bulkMeter.name}]}/>)}
+      {selectedCustomer && (<IndividualCustomerFormDialog open={isCustomerFormOpen} onOpenChange={setIsCustomerFormOpen} onSubmit={handleSubmitCustomerForm} defaultValues={selectedCustomer} bulkMeters={[{customerKeyNumber: bulkMeter.customerKeyNumber, name: bulkMeter.name}]}/>)}
       <AlertDialog open={isCustomerDeleteDialogOpen} onOpenChange={setIsCustomerDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader><AlertDialogTitle>Are you sure you want to delete this customer?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the customer: {customerToDelete?.name}.</AlertDialogDescription></AlertDialogHeader>
@@ -808,4 +819,3 @@ export default function BulkMeterDetailsPage() {
     </div>
   );
 }
-

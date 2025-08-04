@@ -133,26 +133,18 @@ export async function calculateBill(
   let baseWaterCharge = 0;
   
   if (customerType === 'Non-domestic') {
-      let applicableRate = 0;
-      let rateFound = false;
-
-      for (const tier of tiers) {
-          if (usageM3 <= tier.limit) {
-              applicableRate = tier.rate;
-              rateFound = true;
-              break;
-          }
-      }
-      
-      if (!rateFound && tiers.length > 0) {
-          // Fallback to the highest rate if usage exceeds all defined finite limits
-          const highestTier = tiers[tiers.length - 1];
-          if (highestTier.limit === Infinity) {
-             applicableRate = highestTier.rate;
-          }
-      }
-      
-      baseWaterCharge = usageM3 * applicableRate;
+    let applicableRate = 0;
+    
+    // Find the single applicable rate for the entire consumption
+    for (const tier of tiers) {
+        const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
+        if (usageM3 <= tierLimit) {
+            applicableRate = Number(tier.rate);
+            break; // Found the correct tier, stop searching
+        }
+    }
+    
+    baseWaterCharge = usageM3 * applicableRate;
 
   } else { // Domestic uses progressive calculation
       let remainingUsage = usageM3;

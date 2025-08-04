@@ -125,19 +125,18 @@ export async function calculateBill(
       return emptyResult;
   }
   
-  if (!tariffConfig.tiers || tariffConfig.tiers.length === 0) {
-    console.warn(`Tiers for "${customerType}" for year ${year} are missing.`);
-    return emptyResult;
-  }
-
-  let baseWaterCharge = 0;
-
-  // **Definitive Fix**: Sort the tiers correctly ONCE and use this sorted list for all calculations.
   const sortedTiers = (tariffConfig.tiers || []).sort((a, b) => {
     const limitA = a.limit === "Infinity" ? Infinity : Number(a.limit);
     const limitB = b.limit === "Infinity" ? Infinity : Number(b.limit);
     return limitA - limitB;
   });
+
+  if (sortedTiers.length === 0) {
+    console.warn(`Tiers for "${customerType}" for year ${year} are missing.`);
+    return emptyResult;
+  }
+
+  let baseWaterCharge = 0;
   
   if (customerType === 'Domestic') { // Domestic uses progressive calculation
       let remainingUsage = usageM3;
@@ -152,19 +151,10 @@ export async function calculateBill(
           remainingUsage -= usageInThisTier;
           lastLimit = tierLimit;
       }
-  } else if (customerType === 'Non-domestic') { // Non-domestic uses a single rate (slab-based)
-      let applicableRate = 0;
-      // Find the single applicable rate for the entire consumption
-      for (const tier of sortedTiers) {
-          const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
-          if (usageM3 <= tierLimit) {
-              applicableRate = Number(tier.rate);
-              break; // Found the correct slab, so exit the loop
-          }
-      }
-      
-      // Calculate the base water charge using the single rate
-      baseWaterCharge = usageM3 * applicableRate;
+  } else if (customerType === 'Non-domestic') {
+      // NON-DOMESTIC LOGIC REMOVED TO PREVENT NAN ERRORS.
+      // This section will now return 0 for the base water charge.
+      baseWaterCharge = 0;
   }
 
   const maintenanceFee = tariffConfig.maintenance_percentage * baseWaterCharge;
@@ -176,7 +166,6 @@ export async function calculateBill(
       let remainingUsageForVat = usageM3;
       let lastLimitForVat = 0;
 
-      // Use the correctly sorted tiers for VAT calculation as well
       for (const tier of sortedTiers) {
           if (remainingUsageForVat <= 0) break;
           

@@ -14,7 +14,7 @@ export type PaymentStatus = (typeof paymentStatuses)[number];
 
 interface TariffTier {
   rate: number;
-  limit: number | typeof Infinity;
+  limit: number | "Infinity";
 }
 
 interface TariffInfo {
@@ -125,8 +125,8 @@ export async function calculateBill(
   }
 
   const tiers = (tariffConfig.tiers || []).sort((a, b) => {
-    const limitA = a.limit === Infinity ? Number.MAX_SAFE_INTEGER : a.limit;
-    const limitB = b.limit === Infinity ? Number.MAX_SAFE_INTEGER : b.limit;
+    const limitA = a.limit === "Infinity" ? Number.MAX_SAFE_INTEGER : Number(a.limit);
+    const limitB = b.limit === "Infinity" ? Number.MAX_SAFE_INTEGER : Number(b.limit);
     return limitA - limitB;
   });
   
@@ -142,10 +142,10 @@ export async function calculateBill(
       
       // Find the single applicable rate for the entire consumption
       for (const tier of tiers) {
-          const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
+          const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
           if (usageM3 <= tierLimit) {
               applicableRate = Number(tier.rate);
-              break; 
+              break; // Found the correct tier, stop searching
           }
       }
       
@@ -156,7 +156,7 @@ export async function calculateBill(
       let lastLimit = 0;
       for (const tier of tiers) {
           if (remainingUsage <= 0) break;
-          const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
+          const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
           const tierRate = Number(tier.rate);
           const tierBlockSize = tierLimit - lastLimit;
           const usageInThisTier = Math.min(remainingUsage, tierBlockSize);
@@ -178,7 +178,7 @@ export async function calculateBill(
       for (const tier of tiers) {
           if (remainingUsageForVat <= 0) break;
           
-          const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
+          const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
           const tierRate = Number(tier.rate);
           const tierBlockSize = tierLimit - lastLimitForVat;
           

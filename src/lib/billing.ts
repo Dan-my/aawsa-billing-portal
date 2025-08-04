@@ -122,11 +122,11 @@ export async function calculateBill(
       console.warn(`Tariff information for customer type "${customerType}" for year ${year} not found. Bill calculation will be 0.`);
       return emptyResult;
   }
-  
+
   const tiers = (tariffConfig.tiers || []).sort((a, b) => {
-    const limitA = a.limit === "Infinity" ? Number.MAX_SAFE_INTEGER : Number(a.limit);
-    const limitB = b.limit === "Infinity" ? Number.MAX_SAFE_INTEGER : Number(b.limit);
-    return limitA - limitB;
+      const limitA = a.limit === "Infinity" ? Number.MAX_SAFE_INTEGER : Number(a.limit);
+      const limitB = b.limit === "Infinity" ? Number.MAX_SAFE_INTEGER : Number(b.limit);
+      return limitA - limitB;
   });
   
   if (tiers.length === 0) {
@@ -137,17 +137,23 @@ export async function calculateBill(
   let baseWaterCharge = 0;
   
   if (customerType === 'Non-domestic') {
-      let applicableRate = 0;
+    let applicableRate = 0;
+    
+    // Find the first tier where the consumption fits
+    const applicableTier = tiers.find(tier => {
+        const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
+        return usageM3 <= tierLimit;
+    });
 
-      for (const tier of tiers) {
-          const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
-          if (usageM3 <= tierLimit) {
-              applicableRate = Number(tier.rate);
-              break; 
-          }
-      }
-      
-      baseWaterCharge = usageM3 * applicableRate;
+    if (applicableTier) {
+        applicableRate = Number(applicableTier.rate);
+    } else {
+        // This case should theoretically not be reached if an "Infinity" tier exists,
+        // but as a failsafe, use the last available tier's rate.
+        applicableRate = Number(tiers[tiers.length - 1].rate);
+    }
+    
+    baseWaterCharge = usageM3 * applicableRate;
 
   } else { // Domestic uses progressive calculation
       let remainingUsage = usageM3;

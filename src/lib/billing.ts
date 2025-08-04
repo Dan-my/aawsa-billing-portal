@@ -1,3 +1,4 @@
+
 // src/lib/billing.ts
 import { supabase } from '@/lib/supabase';
 import type { TariffRow } from '@/lib/actions';
@@ -123,7 +124,11 @@ export async function calculateBill(
       return emptyResult;
   }
 
-  const tiers = (tariffConfig.tiers || []).sort((a, b) => (a.limit === Infinity ? 1 : b.limit === Infinity ? -1 : Number(a.limit) - Number(b.limit)));
+  const tiers = (tariffConfig.tiers || []).sort((a, b) => {
+    const limitA = a.limit === Infinity ? Number.MAX_SAFE_INTEGER : a.limit;
+    const limitB = b.limit === Infinity ? Number.MAX_SAFE_INTEGER : b.limit;
+    return limitA - limitB;
+  });
   
   if (tiers.length === 0) {
     console.warn(`Tiers for "${customerType}" for year ${year} are missing.`);
@@ -133,19 +138,18 @@ export async function calculateBill(
   let baseWaterCharge = 0;
   
   if (customerType === 'Non-domestic') {
-    let applicableRate = 0;
-    
-    // Find the single applicable rate for the entire consumption
-    for (const tier of tiers) {
-        // Correctly handle "Infinity" as a numeric value for comparison
-        const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
-        if (usageM3 <= tierLimit) {
-            applicableRate = Number(tier.rate);
-            break; // Found the correct tier, stop searching
-        }
-    }
-    
-    baseWaterCharge = usageM3 * applicableRate;
+      let applicableRate = 0;
+      
+      // Find the single applicable rate for the entire consumption
+      for (const tier of tiers) {
+          const tierLimit = tier.limit === Infinity ? Infinity : Number(tier.limit);
+          if (usageM3 <= tierLimit) {
+              applicableRate = Number(tier.rate);
+              break; 
+          }
+      }
+      
+      baseWaterCharge = usageM3 * applicableRate;
 
   } else { // Domestic uses progressive calculation
       let remainingUsage = usageM3;

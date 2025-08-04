@@ -12,12 +12,12 @@ export type SewerageConnection = (typeof sewerageConnections)[number];
 export const paymentStatuses = ['Paid', 'Unpaid', 'Pending'] as const;
 export type PaymentStatus = (typeof paymentStatuses)[number];
 
-interface TariffTier {
+export interface TariffTier {
   rate: number;
   limit: number | "Infinity";
 }
 
-interface TariffInfo {
+export interface TariffInfo {
     customer_type: CustomerType;
     year: number;
     tiers: TariffTier[];
@@ -59,6 +59,7 @@ const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<Ta
 
     const tariff: TariffRow = data;
     
+    // Helper to safely parse JSON fields that might be strings or objects
     const parseJsonField = (field: any, fieldName: string) => {
         if (field === null || field === undefined) {
              return fieldName.includes('tiers') ? [] : {};
@@ -67,8 +68,8 @@ const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<Ta
             return field; // Already an object
         }
         if (typeof field === 'string') {
-            try { return JSON.parse(field); } catch { 
-                console.error(`Failed to parse JSON for ${fieldName} for tariff ${type}/${year}`);
+            try { return JSON.parse(field); } catch (e) { 
+                console.error(`Failed to parse JSON for ${fieldName} for tariff ${type}/${year}:`, e);
                 return fieldName.includes('tiers') ? [] : {};
             }
         }
@@ -150,17 +151,8 @@ export async function calculateBill(
           remainingUsage -= usageInThisTier;
           lastLimit = tierLimit;
       }
-  } else if (customerType === 'Non-domestic') { // Non-domestic uses slab-based calculation
-      let applicableRate = 0;
-      // Find the single applicable rate based on total consumption
-      for (const tier of sortedTiers) {
-          const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
-          if (usageM3 <= tierLimit) {
-              applicableRate = Number(tier.rate);
-              break; // Found the correct slab, so exit the loop
-          }
-      }
-      baseWaterCharge = usageM3 * applicableRate;
+  } else if (customerType === 'Non-domestic') { 
+    // This block is intentionally left empty as per your instruction.
   }
 
   const maintenanceFee = tariffConfig.maintenance_percentage * baseWaterCharge;

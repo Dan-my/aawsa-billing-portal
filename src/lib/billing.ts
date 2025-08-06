@@ -30,7 +30,6 @@ export interface TariffInfo {
 }
 
 const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<TariffInfo | null> => {
-    // Strict lookup: Only get the tariff for the specific year. No fallbacks.
     let { data, error } = await supabase
         .from('tariffs')
         .select('*')
@@ -38,7 +37,6 @@ const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<Ta
         .eq('year', year)
         .single();
     
-    // If no tariff is found for the specific year, return null.
     if (error || !data) {
         console.error(`Tariff for ${type}/${year} not found in the database. Bill calculation cannot proceed.`, error);
         return null;
@@ -46,13 +44,12 @@ const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<Ta
 
     const tariff: TariffRow = data;
     
-    // Helper to safely parse JSON fields that might be strings or objects
     const parseJsonField = (field: any, fieldName: string) => {
         if (field === null || field === undefined) {
              return fieldName.includes('tiers') ? [] : {};
         }
         if (typeof field === 'object' && field !== null) {
-            return field; // Already an object
+            return field;
         }
         if (typeof field === 'string') {
             try { return JSON.parse(field); } catch (e) { 
@@ -125,7 +122,7 @@ export async function calculateBill(
 
   let baseWaterCharge = 0;
   
-  if (customerType === 'Domestic') { // Domestic uses progressive calculation
+  if (customerType === 'Domestic') {
       let remainingUsage = usageM3;
       let lastLimit = 0;
       for (const tier of sortedTiers) {
@@ -138,14 +135,18 @@ export async function calculateBill(
           remainingUsage -= usageInThisTier;
           lastLimit = tierLimit;
       }
-  } else if (customerType === 'Non-domestic') { // Non-domestic uses slab-based calculation
+  } else if (customerType === 'Non-domestic') {
       let applicableRate = 0;
       for (const tier of sortedTiers) {
           const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
           if (usageM3 <= tierLimit) {
               applicableRate = Number(tier.rate);
-              break; // Found the correct slab, so exit the loop
+              break;
           }
+      }
+      // If usage is higher than the highest defined limit (that is not infinity), use the rate of the last tier
+      if (applicableRate === 0 && sortedTiers.length > 0) {
+          applicableRate = Number(sortedTiers[sortedTiers.length - 1].rate);
       }
       baseWaterCharge = usageM3 * applicableRate;
   }

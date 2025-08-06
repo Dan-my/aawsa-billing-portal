@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -229,8 +228,8 @@ export default function BulkMeterDetailsPage() {
             return creationB - creationA;
         }));
         setBillingHistory(getBills().filter(b => b.bulkMeterId === foundBM.customerKeyNumber).sort((a, b) => {
-            const dateA = new Date(a.billPeriodEndDate);
-            const dateB = new Date(b.billPeriodEndDate);
+            const dateA = new Date(b.billPeriodEndDate);
+            const dateB = new Date(a.billPeriodEndDate);
             if (dateB.getTime() !== dateA.getTime()) {
               return dateB.getTime() - dateA.getTime();
             }
@@ -821,4 +820,3 @@ export default function BulkMeterDetailsPage() {
     </div>
   );
 }
-

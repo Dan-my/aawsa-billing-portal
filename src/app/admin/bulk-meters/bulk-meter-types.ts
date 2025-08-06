@@ -21,7 +21,7 @@ export type BulkMeter = z.infer<typeof baseBulkMeterDataSchema> & {
   differenceBill?: number;
   xCoordinate?: number;
   yCoordinate?: number;
-  chargeGroup: string;
+  chargeGroup: string; // Changed to string
   sewerageConnection: SewerageConnection;
   approved_by?: string | null;
   approved_at?: string | null;

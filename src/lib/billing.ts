@@ -38,22 +38,8 @@ const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<Ta
         .single();
     
     if (error || !data) {
-        console.warn(`Tariff for ${type}/${year} not found in the database. Bill calculation may be incorrect.`, error);
-        // Attempt to get the latest available tariff for that customer type as a fallback
-        const { data: fallbackData, error: fallbackError } = await supabase
-            .from('tariffs')
-            .select('*')
-            .eq('customer_type', type)
-            .order('year', { ascending: false })
-            .limit(1)
-            .single();
-
-        if (fallbackError || !fallbackData) {
-            console.error(`CRITICAL: No fallback tariff found for ${type}. Bill calculation cannot proceed.`, fallbackError);
-            return null;
-        }
-        console.log(`Using fallback tariff from year ${fallbackData.year} for calculation.`);
-        data = fallbackData;
+        console.warn(`Tariff for ${type}/${year} not found in the database. Bill calculation cannot proceed.`, error);
+        return null;
     }
 
     const tariff: TariffRow = data;
@@ -200,8 +186,6 @@ export async function calculateBill(
   }
 
   const meterRentPrices = tariffConfig.meter_rent_prices || {};
-  // ** THE FIX IS HERE **
-  // Ensure meterSize is a string for the object key lookup.
   const meterRent = meterRentPrices[String(meterSize)] || 0;
   
   const sewerageChargeRate = tariffConfig.sewerage_rate_per_m3;

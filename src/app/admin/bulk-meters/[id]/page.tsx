@@ -123,7 +123,7 @@ export default function BulkMeterDetailsPage() {
     const paymentStatus = totalPayable > 0.01 ? 'Unpaid' : 'Paid';
   
     const displayBranchName = currentBulkMeter.branchId ? currentBranches.find(b => b.id === currentBulkMeter.branchId)?.name : currentBulkMeter.subCity;
-    const displayCardLocation = currentBulkMeter.location || "N/A";
+    const displayCardLocation = currentBulkMeter.specificArea || "N/A";
   
     const billToRender = currentBillForPrintView || (currentBillingHistory.length > 0 ? currentBillingHistory[0] : null);
   
@@ -169,25 +169,6 @@ export default function BulkMeterDetailsPage() {
       displayBranchName, displayCardLocation, billCardDetails: finalBillCardDetails, totalIndividualUsage,
     });
   }, []);
-
-  useEffect(() => {
-    calculateMemoizedDetails(bulkMeter, associatedCustomers, branches, billingHistory, billForPrintView);
-  }, [bulkMeter, associatedCustomers, branches, billingHistory, billForPrintView, calculateMemoizedDetails]);
-
-    const {
-    bmPreviousReading,
-    bmCurrentReading,
-    bulkUsage,
-    totalBulkBillForPeriod,
-    totalPayable,
-    differenceUsage,
-    differenceBill,
-    differenceBillBreakdown,
-    displayBranchName,
-    displayCardLocation,
-    billCardDetails,
-    totalIndividualUsage,
-  } = memoizedDetails;
 
   useEffect(() => {
     let isMounted = true;
@@ -274,8 +255,8 @@ export default function BulkMeterDetailsPage() {
             return creationB - creationA;
         }));
         setBillingHistory(getBills().filter(b => b.bulkMeterId === foundBM.customerKeyNumber).sort((a, b) => {
-            const dateA = new Date(b.billPeriodEndDate);
-            const dateB = new Date(a.billPeriodEndDate);
+            const dateA = new Date(a.billPeriodEndDate);
+            const dateB = new Date(b.billPeriodEndDate);
             if (dateB.getTime() !== dateA.getTime()) {
               return dateB.getTime() - dateA.getTime();
             }
@@ -303,7 +284,26 @@ export default function BulkMeterDetailsPage() {
       unsubMeterReadings();
       unsubBills();
     };
-  }, [bulkMeterKey, router, toast, bulkMeter]);
+  }, [bulkMeterKey, router, toast]);
+
+  useEffect(() => {
+    calculateMemoizedDetails(bulkMeter, associatedCustomers, branches, billingHistory, billForPrintView);
+  }, [bulkMeter, associatedCustomers, branches, billingHistory, billForPrintView, calculateMemoizedDetails]);
+
+    const {
+    bmPreviousReading,
+    bmCurrentReading,
+    bulkUsage,
+    totalBulkBillForPeriod,
+    totalPayable,
+    differenceUsage,
+    differenceBill,
+    differenceBillBreakdown,
+    displayBranchName,
+    displayCardLocation,
+    billCardDetails,
+    totalIndividualUsage,
+  } = memoizedDetails;
   
   const handleEditBulkMeter = () => setIsBulkMeterFormOpen(true);
   const handleDeleteBulkMeter = () => setIsBulkMeterDeleteDialogOpen(true);
@@ -597,7 +597,7 @@ export default function BulkMeterDetailsPage() {
                   <div className="print-row"><span>Customer key number:</span> <span>{bulkMeter.customerKeyNumber}</span></div>
                   <div className="print-row"><span>Contract No:</span> <span>{bulkMeter.contractNumber ?? 'N/A'}</span></div>
                   <div className="print-row"><span>Branch:</span> <span>{displayBranchName ?? 'N/A'}</span></div>
-                  <div className="print-row"><span>Location:</span> <span>{displayCardLocation}</span></div>
+                  <div className="print-row"><span>Sub-City:</span> <span>{bulkMeter.subCity}</span></div>
                 </div>
 
                 <div className="print-section">

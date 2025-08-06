@@ -134,8 +134,8 @@ export default function StaffBulkMeterDetailsPage() {
     const totalPayable = differenceBill + outStandingBillValue;
     const paymentStatus = totalPayable > 0.01 ? 'Unpaid' : 'Paid';
   
-    const displayBranchName = currentBulkMeter.branchId ? currentBranches.find(b => b.id === currentBulkMeter.branchId)?.name : currentBulkMeter.location;
-    const displayCardLocation = currentBulkMeter.specificArea || currentBulkMeter.ward || "N/A";
+    const displayBranchName = currentBulkMeter.branchId ? currentBranches.find(b => b.id === currentBulkMeter.branchId)?.name : currentBulkMeter.subCity;
+    const displayCardLocation = currentBulkMeter.specificArea || "N/A";
   
     const billToRender = currentBillForPrintView || (currentBillingHistory.length > 0 ? currentBillingHistory[0] : null);
   
@@ -181,25 +181,6 @@ export default function StaffBulkMeterDetailsPage() {
       displayBranchName, displayCardLocation, billCardDetails: finalBillCardDetails, totalIndividualUsage,
     });
   }, []);
-
-  useEffect(() => {
-    calculateMemoizedDetails(bulkMeter, associatedCustomers, branches, billingHistory, billForPrintView);
-  }, [bulkMeter, associatedCustomers, branches, billingHistory, billForPrintView, calculateMemoizedDetails]);
-
-    const {
-    bmPreviousReading,
-    bmCurrentReading,
-    bulkUsage,
-    totalBulkBillForPeriod,
-    totalPayable,
-    differenceUsage,
-    differenceBill,
-    differenceBillBreakdown,
-    displayBranchName,
-    displayCardLocation,
-    billCardDetails,
-    totalIndividualUsage,
-  } = memoizedDetails;
 
   useEffect(() => {
     let isMounted = true;
@@ -335,8 +316,26 @@ export default function StaffBulkMeterDetailsPage() {
     const unsubBills = subscribeToBills(handleStoresUpdate);
 
     return () => { isMounted = false; unsubBM(); unsubCust(); unsubBranches(); unsubMeterReadings(); unsubBills(); };
-  }, [bulkMeterKey, router, toast, bulkMeter]); 
+  }, [bulkMeterKey, router, toast]); 
 
+  useEffect(() => {
+    calculateMemoizedDetails(bulkMeter, associatedCustomers, branches, billingHistory, billForPrintView);
+  }, [bulkMeter, associatedCustomers, branches, billingHistory, billForPrintView, calculateMemoizedDetails]);
+
+    const {
+    bmPreviousReading,
+    bmCurrentReading,
+    bulkUsage,
+    totalBulkBillForPeriod,
+    totalPayable,
+    differenceUsage,
+    differenceBill,
+    differenceBillBreakdown,
+    displayBranchName,
+    displayCardLocation,
+    billCardDetails,
+    totalIndividualUsage,
+  } = memoizedDetails;
 
   const handleEditBulkMeter = () => setIsBulkMeterFormOpen(true);
   const handleDeleteBulkMeter = () => setIsBulkMeterDeleteDialogOpen(true);
@@ -508,7 +507,7 @@ export default function StaffBulkMeterDetailsPage() {
       const bmUsage = (latestMeterData.currentReading ?? 0) - (latestMeterData.previousReading ?? 0);
       const totalIndivUsage = associatedCustomers.reduce((sum, cust) => sum + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
       const differenceUsageForCycle = bmUsage - totalIndivUsage;
-      const chargeGroup = latestMeterData.chargeGroup || 'Non-domestic';
+      const chargeGroup = latestMeterData.chargeGroup as CustomerType || 'Non-domestic';
       const sewerageConn = latestMeterData.sewerageConnection || 'No';
       const { totalBill: billForDifferenceUsage, ...differenceBillBreakdownForCycle } = await calculateBill(differenceUsageForCycle, chargeGroup, sewerageConn, latestMeterData.meterSize, parsedMonth);
       const balanceFromPreviousPeriods = latestMeterData.outStandingbill || 0;
@@ -637,7 +636,7 @@ export default function StaffBulkMeterDetailsPage() {
                   <div className="print-row"><span>Customer key number:</span> <span>{bulkMeter.customerKeyNumber}</span></div>
                   <div className="print-row"><span>Contract No:</span> <span>{bulkMeter.contractNumber ?? 'N/A'}</span></div>
                   <div className="print-row"><span>Branch:</span> <span>{displayBranchName ?? 'N/A'}</span></div>
-                  <div className="print-row"><span>Location:</span> <span>{bulkMeter.specificArea ?? displayCardLocation}</span></div>
+                  <div className="print-row"><span>Sub-City:</span> <span>{bulkMeter.subCity}</span></div>
                 </div>
 
                 <div className="print-section">
@@ -720,7 +719,7 @@ export default function StaffBulkMeterDetailsPage() {
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div>
                 <p><strong className="font-semibold">Branch:</strong> {displayBranchName ?? 'N/A'}</p>
-                <p><strong className="font-semibold">Location:</strong> {bulkMeter.location ?? 'N/A'}, {bulkMeter.ward ?? 'N/A'}</p><p><strong className="font-semibold">Specific Area:</strong> {bulkMeter.specificArea ?? 'N/A'}</p><p><strong className="font-semibold">Meter No:</strong> {bulkMeter.meterNumber ?? 'N/A'}</p><p><strong className="font-semibold">Meter Size:</strong> {bulkMeter.meterSize} inch</p>
+                <p><strong className="font-semibold">Sub-City:</strong> {bulkMeter.subCity ?? 'N/A'}, {bulkMeter.woreda ?? 'N/A'}</p><p><strong className="font-semibold">Specific Area:</strong> {bulkMeter.specificArea ?? 'N/A'}</p><p><strong className="font-semibold">Meter No:</strong> {bulkMeter.meterNumber ?? 'N/A'}</p><p><strong className="font-semibold">Meter Size:</strong> {bulkMeter.meterSize} inch</p>
               </div>
               <div>
                 <p><strong className="font-semibold">Customer Key:</strong> {bulkMeter.customerKeyNumber ?? 'N/A'}</p><p><strong className="font-semibold">Contract No:</strong> {bulkMeter.contractNumber ?? 'N/A'}</p><p><strong className="font-semibold">Month:</strong> {bulkMeter.month ?? 'N/A'}</p><p><strong className="font-semibold">Billed Readings (Prev/Curr):</strong> {(bmPreviousReading).toFixed(2)} / {(bmCurrentReading).toFixed(2)}</p>

@@ -31,7 +31,7 @@ export interface TariffInfo {
 }
 
 const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<TariffInfo | null> => {
-    // First, try to get the tariff for the specific year
+    // Strict lookup: Only get the tariff for the specific year. No fallbacks.
     let { data, error } = await supabase
         .from('tariffs')
         .select('*')
@@ -39,23 +39,10 @@ const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<Ta
         .eq('year', year)
         .single();
     
-    // If no tariff is found for the specific year, try to get the most recent one
+    // If no tariff is found for the specific year, return null.
     if (error || !data) {
-        console.warn(`Tariff for ${type}/${year} not found. Trying to find the latest available tariff.`);
-        const fallbackQuery = await supabase
-            .from('tariffs')
-            .select('*')
-            .eq('customer_type', type)
-            .order('year', { ascending: false })
-            .limit(1)
-            .single();
-
-        if (fallbackQuery.error || !fallbackQuery.data) {
-             console.error(`Could not fetch any live tariff for ${type}. This is a critical error.`, fallbackQuery.error);
-             return null;
-        }
-        data = fallbackQuery.data;
-        console.log(`Using tariff from year ${data.year} as a fallback for ${year}.`);
+        console.error(`Tariff for ${type}/${year} not found in the database. Bill calculation cannot proceed.`, error);
+        return null;
     }
 
     const tariff: TariffRow = data;
@@ -215,5 +202,3 @@ export async function calculateBill(
     sewerageCharge: parseFloat(sewerageCharge.toFixed(2)),
   };
 }
-
-

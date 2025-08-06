@@ -1084,44 +1084,37 @@ export const initializeTariffs = async () => {
 
 export const getTariff = (customerType: CustomerType, year: number): TariffInfo | undefined => {
     if (tariffs.length === 0) {
-        console.error("DataStore: getTariff called but tariffs array is empty.");
+        console.error("DataStore: getTariff called but tariffs array is empty. This indicates an initialization problem.");
         return undefined;
     }
     const tariff = tariffs.find(t => t.customer_type === customerType && t.year === year);
     if (!tariff) {
-        console.warn(`Tariff for customer type "${customerType}" and year "${year}" not found in local store.`);
+        console.warn(`DataStore: No tariff found for customer type "${customerType}" and year "${year}" in the local store.`);
         return undefined;
     }
     
-    let parsedTiers;
-    if (typeof tariff.tiers === 'string') {
-        try { parsedTiers = JSON.parse(tariff.tiers); } catch (e) {
-            console.error(`Failed to parse tiers JSON for tariff ${customerType}/${year}`, e);
-            parsedTiers = [];
+    // Safely parse JSON fields which might be strings from the database.
+    const parseJsonField = (field: any, fieldName: string) => {
+        if (field === null || field === undefined) return fieldName.includes('tiers') ? [] : {};
+        if (typeof field === 'object') return field;
+        if (typeof field === 'string') {
+            try { return JSON.parse(field); } catch (e) {
+                console.error(`Failed to parse JSON for ${fieldName} from data-store for tariff ${customerType}/${year}`, e);
+                return fieldName.includes('tiers') ? [] : {};
+            }
         }
-    } else {
-        parsedTiers = tariff.tiers;
-    }
-    
-    let parsedMeterRents;
-    if (typeof tariff.meter_rent_prices === 'string') {
-        try { parsedMeterRents = JSON.parse(tariff.meter_rent_prices); } catch(e) {
-            console.error(`Failed to parse meter_rent_prices JSON from DB for tariff ${customerType}/${year}`, e);
-            parsedMeterRents = {};
-        }
-    } else {
-        parsedMeterRents = tariff.meter_rent_prices || {};
-    }
+        return fieldName.includes('tiers') ? [] : {};
+    };
 
     return {
         id: `${customerType}-${year}`,
         customer_type: tariff.customer_type as CustomerType,
         year: tariff.year,
-        tiers: parsedTiers,
+        tiers: parseJsonField(tariff.tiers, 'tiers'),
         maintenance_percentage: tariff.maintenance_percentage,
         sanitation_percentage: tariff.sanitation_percentage,
         sewerage_rate_per_m3: tariff.sewerage_rate_per_m3,
-        meter_rent_prices: parsedMeterRents,
+        meter_rent_prices: parseJsonField(tariff.meter_rent_prices, 'meter_rent_prices'),
         vat_rate: tariff.vat_rate,
         domestic_vat_threshold_m3: tariff.domestic_vat_threshold_m3,
     };

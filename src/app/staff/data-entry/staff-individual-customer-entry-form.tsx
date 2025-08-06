@@ -175,8 +175,8 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
     form.setValue("assignedBulkMeterId", value);
   };
 
-  const commonFieldDisabled = !actualBulkMeterIsSelected || form.formState.isSubmitting || isLoadingBulkMeters;
-  const submitButtonDisabled = !actualBulkMeterIsSelected || form.formState.isSubmitting || isLoadingBulkMeters;
+  const commonFieldDisabled = form.formState.isSubmitting || isLoadingBulkMeters;
+  const submitButtonDisabled = form.formState.isSubmitting || isLoadingBulkMeters;
 
 
   return (
@@ -195,7 +195,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                     name="assignedBulkMeterId"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Assign to Bulk Meter *</FormLabel>
+                        <FormLabel>Assign to Bulk Meter</FormLabel>
                         <Select
                             onValueChange={handleBulkMeterChange} 
                             value={field.value || UNASSIGNED_BULK_METER_VALUE}
@@ -207,7 +207,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                            <SelectItem value={UNASSIGNED_BULK_METER_VALUE}>None</SelectItem>
+                            <SelectItem value={UNASSIGNED_BULK_METER_VALUE}>None (Unassigned)</SelectItem>
                             {availableBulkMeters.length === 0 && !isLoadingBulkMeters && (
                                 <SelectItem value="no-bms-available-staff" disabled>
                                 No bulk meters available in this branch

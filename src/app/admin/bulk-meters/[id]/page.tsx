@@ -819,3 +819,4 @@ export default function BulkMeterDetailsPage() {
     </div>
   );
 }
+

@@ -28,5 +28,3 @@ export type BulkMeter = z.infer<typeof baseBulkMeterDataSchema> & {
   subCity: string;
   woreda: string;
 };
-
-    

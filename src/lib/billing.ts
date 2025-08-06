@@ -1,4 +1,5 @@
 
+
 // src/lib/billing.ts
 import { supabase } from '@/lib/supabase';
 import type { TariffRow } from '@/lib/actions';
@@ -125,7 +126,6 @@ export async function calculateBill(
       return emptyResult;
   }
   
-  // Correctly sort tiers numerically, placing "Infinity" at the end.
   const sortedTiers = (tariffConfig.tiers || []).sort((a, b) => {
     const limitA = a.limit === "Infinity" ? Infinity : Number(a.limit);
     const limitB = b.limit === "Infinity" ? Infinity : Number(b.limit);
@@ -215,4 +215,5 @@ export async function calculateBill(
     sewerageCharge: parseFloat(sewerageCharge.toFixed(2)),
   };
 }
+
 

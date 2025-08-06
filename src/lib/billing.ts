@@ -151,6 +151,7 @@ export async function calculateBill(
       }
   } else if (customerType === 'Non-domestic') {
       let applicableRate = 0;
+      // For non-domestic, find the single slab rate that applies.
       for (const tier of sortedTiers) {
           const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
           if (usageM3 <= tierLimit) {
@@ -162,7 +163,7 @@ export async function calculateBill(
       if (applicableRate === 0 && sortedTiers.length > 0) {
           applicableRate = Number(sortedTiers[sortedTiers.length - 1].rate);
       }
-      baseWaterCharge = usageM3 * applicableRate;
+      baseWaterCharge = Number(usageM3) * Number(applicableRate);
   }
 
   const maintenanceFee = tariffConfig.maintenance_percentage * baseWaterCharge;
@@ -193,7 +194,7 @@ export async function calculateBill(
           remainingUsageForVat -= usageInTier;
           lastLimitForVat = tierLimit;
       }
-      vatAmount = taxableWaterCharge * tariffConfig.vat_rate;
+      vatAmount = taxableWaterCharge * Number(tariffConfig.vat_rate);
   } else if (customerType === 'Non-domestic') {
       vatAmount = baseWaterCharge * tariffConfig.vat_rate;
   }

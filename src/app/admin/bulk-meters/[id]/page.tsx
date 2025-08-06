@@ -123,7 +123,7 @@ export default function BulkMeterDetailsPage() {
     const paymentStatus = totalPayable > 0.01 ? 'Unpaid' : 'Paid';
   
     const displayBranchName = currentBulkMeter.branchId ? currentBranches.find(b => b.id === currentBulkMeter.branchId)?.name : currentBulkMeter.subCity;
-    const displayCardLocation = currentBulkMeter.subCity || "N/A";
+    const displayCardLocation = currentBulkMeter.location || "N/A";
   
     const billToRender = currentBillForPrintView || (currentBillingHistory.length > 0 ? currentBillingHistory[0] : null);
   

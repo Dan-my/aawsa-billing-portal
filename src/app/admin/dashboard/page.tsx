@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { 
   ArrowRight, 
   AlertCircle, 
-  PieChart as PieChartIcon, 
   Users, 
   Gauge,
   BarChart as BarChartIcon,
@@ -84,16 +83,12 @@ export default function AdminDashboardPage() {
     const paidBMs = currentBulkMeters.filter(bm => bm.paymentStatus === 'Paid').length;
     const unpaidBMs = currentBulkMeters.filter(bm => bm.paymentStatus === 'Unpaid').length;
     
-    const totalPaid = paidBMs;
-    const totalUnpaid = unpaidBMs;
-    const totalBills = totalPaid + totalUnpaid;
-
-    setDynamicTotalBills(totalBills);
-    setDynamicPaidBills(totalPaid);
-    setDynamicUnpaidBills(totalUnpaid);
+    setDynamicTotalBills(paidBMs + unpaidBMs);
+    setDynamicPaidBills(paidBMs);
+    setDynamicUnpaidBills(unpaidBMs);
     setBillsPaymentStatusData([
-      { name: 'Paid', value: totalPaid, fill: 'hsl(var(--chart-1))' },
-      { name: 'Unpaid', value: totalUnpaid, fill: 'hsl(var(--chart-3))' },
+      { name: 'Paid', value: paidBMs, fill: 'hsl(var(--chart-1))' },
+      { name: 'Unpaid', value: unpaidBMs, fill: 'hsl(var(--chart-3))' },
     ]);
 
     // 2. Customer and Meter Counts
@@ -123,29 +118,21 @@ export default function AdminDashboardPage() {
     // 4. Water Usage Trend Data from Bulk Meters AND Individual Customers
     const usageMap = new Map<string, number>();
     
-    currentBulkMeters.forEach(bm => {
-      if (bm.month) {
-        const usage = (bm.currentReading ?? 0) - (bm.previousReading ?? 0);
-        if (typeof usage === 'number' && !isNaN(usage)) {
-          const currentMonthUsage = usageMap.get(bm.month) || 0;
-          usageMap.set(bm.month, currentMonthUsage + usage);
+    const allMeters = [...currentBulkMeters, ...currentCustomers];
+
+    allMeters.forEach(meter => {
+      if (meter.month) {
+        const usage = (meter.currentReading ?? 0) - (meter.previousReading ?? 0);
+        if (typeof usage === 'number' && !isNaN(usage) && usage > 0) {
+          const currentMonthUsage = usageMap.get(meter.month) || 0;
+          usageMap.set(meter.month, currentMonthUsage + usage);
         }
       }
     });
 
-    currentCustomers.forEach(c => {
-        if (c.month) {
-            const usage = (c.currentReading ?? 0) - (c.previousReading ?? 0);
-            if(typeof usage === 'number' && !isNaN(usage)) {
-                const currentMonthUsage = usageMap.get(c.month) || 0;
-                usageMap.set(c.month, currentMonthUsage + usage);
-            }
-        }
-    });
-
     const trendData = Array.from(usageMap.entries())
       .map(([month, usage]) => ({ month, usage }))
-      .sort((a, b) => new Date(a.month + "-01").getTime() - new Date(b.month + "-01").getTime()); 
+      .sort((a, b) => new Date(`${a.month}-01`).getTime() - new Date(`${b.month}-01`).getTime()); 
     setDynamicWaterUsageTrendData(trendData);
 
   }, []);
@@ -216,7 +203,7 @@ export default function AdminDashboardPage() {
             <div className="text-2xl font-bold">{dynamicTotalBills.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">{dynamicPaidBills} Paid / {dynamicUnpaidBills} Unpaid</p>
             <div className="h-[120px] mt-4">
-              {isClient && (
+              {isClient && billsPaymentStatusData.some(d => d.value > 0) ? (
                 <ChartContainer config={chartConfig} className="w-full h-full">
                   <ResponsiveContainer>
                     <PieChartRecharts>
@@ -228,6 +215,8 @@ export default function AdminDashboardPage() {
                     </PieChartRecharts>
                   </ResponsiveContainer>
                 </ChartContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No bill data to display.</div>
               )}
             </div>
           </CardContent>

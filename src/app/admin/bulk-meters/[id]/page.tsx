@@ -123,7 +123,7 @@ export default function BulkMeterDetailsPage() {
     const paymentStatus = totalPayable > 0.01 ? 'Unpaid' : 'Paid';
   
     const displayBranchName = currentBulkMeter.branchId ? currentBranches.find(b => b.id === currentBulkMeter.branchId)?.name : currentBulkMeter.subCity;
-    const displayCardLocation = currentBulkMeter.subCity || currentBulkMeter.woreda || "N/A";
+    const displayCardLocation = currentBulkMeter.subCity || "N/A";
   
     const billToRender = currentBillForPrintView || (currentBillingHistory.length > 0 ? currentBillingHistory[0] : null);
   
@@ -597,7 +597,7 @@ export default function BulkMeterDetailsPage() {
                   <div className="print-row"><span>Customer key number:</span> <span>{bulkMeter.customerKeyNumber}</span></div>
                   <div className="print-row"><span>Contract No:</span> <span>{bulkMeter.contractNumber ?? 'N/A'}</span></div>
                   <div className="print-row"><span>Branch:</span> <span>{displayBranchName ?? 'N/A'}</span></div>
-                  <div className="print-row"><span>Location:</span> <span>{bulkMeter.specificArea ?? displayCardLocation}</span></div>
+                  <div className="print-row"><span>Location:</span> <span>{displayCardLocation}</span></div>
                 </div>
 
                 <div className="print-section">

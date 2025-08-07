@@ -58,6 +58,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
   const [dynamicBulkMeters, setDynamicBulkMeters] = React.useState<{ customerKeyNumber: string; name: string }[]>(propBulkMeters || []);
   const [availableBranches, setAvailableBranches] = React.useState<Branch[]>([]);
   const [isLoadingBranches, setIsLoadingBranches] = React.useState(true);
+  const [isLoadingBulkMeters, setIsLoadingBulkMeters] = React.useState(true);
   
   const form = useForm<IndividualCustomerFormValues>({
     resolver: zodResolver(individualCustomerFormObjectSchema),
@@ -86,6 +87,8 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
   });
 
   React.useEffect(() => {
+    if (!open) return;
+
     setIsLoadingBranches(true);
     initializeAdminBranches().then(() => {
         setAvailableBranches(getBranches());
@@ -96,19 +99,23 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
         setIsLoadingBranches(false);
     });
 
-    if (!propBulkMeters || propBulkMeters.length === 0) {
+    setIsLoadingBulkMeters(true);
+    if (!propBulkMeters) {
       initializeBulkMeters().then(() => {
         const fetchedBms = getBulkMeters().map(bm => ({ customerKeyNumber: bm.customerKeyNumber, name: bm.name }));
         setDynamicBulkMeters(fetchedBms);
+        setIsLoadingBulkMeters(false);
       });
     } else {
          setDynamicBulkMeters(propBulkMeters);
+         setIsLoadingBulkMeters(false);
     }
 
     let unsubscribeBMs = () => {};
-    if (!propBulkMeters || propBulkMeters.length === 0) {
+    if (!propBulkMeters) {
       unsubscribeBMs = subscribeToBulkMeters((updatedBulkMeters) => {
         setDynamicBulkMeters(updatedBulkMeters.map(bm => ({ customerKeyNumber: bm.customerKeyNumber, name: bm.name })));
+        setIsLoadingBulkMeters(false);
       });
     }
     return () => {
@@ -248,16 +255,17 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                     <FormLabel>Assign to Bulk Meter</FormLabel>
                     <Select
                         onValueChange={handleBulkMeterChange}
-                        value={field.value} 
+                        value={field.value || UNASSIGNED_BULK_METER_VALUE}
+                        disabled={isLoadingBulkMeters}
                     >
                         <FormControl>
                         <SelectTrigger>
-                            <SelectValue placeholder="None" />
+                            <SelectValue placeholder={isLoadingBulkMeters ? "Loading..." : "None"} />
                         </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                         <SelectItem value={UNASSIGNED_BULK_METER_VALUE}>None</SelectItem>
-                        {dynamicBulkMeters.length === 0 && (
+                        {dynamicBulkMeters.length === 0 && !isLoadingBulkMeters && (
                             <SelectItem value="no-bms-available" disabled>
                             No bulk meters available
                             </SelectItem>

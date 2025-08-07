@@ -44,30 +44,36 @@ const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<Ta
 
     const tariff: TariffRow = data;
     
-    const parseJsonField = (field: any, fieldName: string) => {
+    // This is a more robust parser that checks if the parsed result is a valid object/array.
+    const safeParseJsonField = (field: any, fieldName: string, expectedType: 'array' | 'object') => {
         if (field === null || field === undefined) {
-             return fieldName.includes('tiers') ? [] : {};
+             return expectedType === 'array' ? [] : {};
         }
         if (typeof field === 'object' && field !== null) {
             return field;
         }
         if (typeof field === 'string') {
-            try { return JSON.parse(field); } catch (e) { 
+            try { 
+                const parsed = JSON.parse(field);
+                if (expectedType === 'array' && Array.isArray(parsed)) return parsed;
+                if (expectedType === 'object' && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+            } catch (e) { 
                 console.error(`Failed to parse JSON for ${fieldName} for tariff ${type}/${year}:`, e);
-                return fieldName.includes('tiers') ? [] : {};
+                return expectedType === 'array' ? [] : {};
             }
         }
-        return fieldName.includes('tiers') ? [] : {};
+        // If it's not a string or object, return the default empty type.
+        return expectedType === 'array' ? [] : {};
     };
 
     return {
         customer_type: tariff.customer_type as CustomerType,
         year: tariff.year,
-        tiers: parseJsonField(tariff.tiers, 'tiers'),
+        tiers: safeParseJsonField(tariff.tiers, 'tiers', 'array'),
         maintenance_percentage: tariff.maintenance_percentage,
         sanitation_percentage: tariff.sanitation_percentage,
         sewerage_rate_per_m3: tariff.sewerage_rate_per_m3,
-        meter_rent_prices: parseJsonField(tariff.meter_rent_prices, 'meter_rent_prices'),
+        meter_rent_prices: safeParseJsonField(tariff.meter_rent_prices, 'meter_rent_prices', 'object'),
         vat_rate: tariff.vat_rate,
         domestic_vat_threshold_m3: tariff.domestic_vat_threshold_m3,
     };
@@ -137,12 +143,11 @@ export async function calculateBill(
       }
   } else if (customerType === 'Non-domestic') {
       let applicableRate = 0;
-      // For non-domestic, find the single slab rate that applies.
       for (const tier of sortedTiers) {
           const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
-          applicableRate = Number(tier.rate); // Keep updating to the highest applicable rate
+          applicableRate = Number(tier.rate);
           if (usageM3 <= tierLimit) {
-              break; // Stop when we find the correct slab
+              break; 
           }
       }
       baseWaterCharge = Number(usageM3) * Number(applicableRate);
@@ -182,8 +187,8 @@ export async function calculateBill(
   }
 
   const meterRentPrices = tariffConfig.meter_rent_prices || {};
-  // CRITICAL FIX: Ensure meterSize is treated as a string for object key lookup.
-  const meterSizeStringKey = Number(meterSize).toFixed(2).replace(/\.00$/, ''); // Converts 1 to "1", 0.5 to "0.5"
+  // More robust meter size to string conversion for lookup
+  const meterSizeStringKey = String(meterSize); 
   const meterRent = meterRentPrices[meterSizeStringKey] || 0;
   
   const sewerageChargeRate = tariffConfig.sewerage_rate_per_m3;

@@ -182,7 +182,9 @@ export async function calculateBill(
   }
 
   const meterRentPrices = tariffConfig.meter_rent_prices || {};
-  const meterRent = meterRentPrices[String(meterSize)] || 0;
+  // CRITICAL FIX: Ensure meterSize is treated as a string for object key lookup.
+  const meterSizeStringKey = Number(meterSize).toFixed(2).replace(/\.00$/, ''); // Converts 1 to "1", 0.5 to "0.5"
+  const meterRent = meterRentPrices[meterSizeStringKey] || 0;
   
   const sewerageChargeRate = tariffConfig.sewerage_rate_per_m3;
   const sewerageCharge = (sewerageConnection === "Yes") ? usageM3 * sewerageChargeRate : 0;

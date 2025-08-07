@@ -140,14 +140,10 @@ export async function calculateBill(
       // For non-domestic, find the single slab rate that applies.
       for (const tier of sortedTiers) {
           const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
+          applicableRate = Number(tier.rate); // Keep updating to the highest applicable rate
           if (usageM3 <= tierLimit) {
-              applicableRate = Number(tier.rate);
-              break;
+              break; // Stop when we find the correct slab
           }
-      }
-      // If usage is higher than the highest defined limit (that is not infinity), use the rate of the last tier
-      if (applicableRate === 0 && sortedTiers.length > 0) {
-          applicableRate = Number(sortedTiers[sortedTiers.length - 1].rate);
       }
       baseWaterCharge = Number(usageM3) * Number(applicableRate);
   }

@@ -1,4 +1,5 @@
 
+
 // src/lib/billing.ts
 import { supabase } from '@/lib/supabase';
 import type { TariffRow } from '@/lib/actions';
@@ -47,9 +48,18 @@ const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<Ta
     // This is a more robust parser that checks if the parsed result is a valid object/array.
     const safeParseJsonField = (field: any, fieldName: string, expectedType: 'array' | 'object') => {
         if (field === null || field === undefined) {
+             console.error(`Tariff field '${fieldName}' is null or undefined for ${type}/${year}.`);
              return expectedType === 'array' ? [] : {};
         }
         if (typeof field === 'object' && field !== null) {
+            if (expectedType === 'array' && !Array.isArray(field)) {
+                console.error(`Tariff field '${fieldName}' was expected to be an array but is an object for ${type}/${year}.`);
+                return [];
+            }
+             if (expectedType === 'object' && Array.isArray(field)) {
+                console.error(`Tariff field '${fieldName}' was expected to be an object but is an array for ${type}/${year}.`);
+                return {};
+            }
             return field;
         }
         if (typeof field === 'string') {
@@ -57,12 +67,14 @@ const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<Ta
                 const parsed = JSON.parse(field);
                 if (expectedType === 'array' && Array.isArray(parsed)) return parsed;
                 if (expectedType === 'object' && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+                 console.error(`Tariff field '${fieldName}' JSON string parsed to the wrong type for ${type}/${year}.`);
+                return expectedType === 'array' ? [] : {};
             } catch (e) { 
                 console.error(`Failed to parse JSON for ${fieldName} for tariff ${type}/${year}:`, e);
                 return expectedType === 'array' ? [] : {};
             }
         }
-        // If it's not a string or object, return the default empty type.
+        console.error(`Tariff field '${fieldName}' has an unexpected type for ${type}/${year}: ${typeof field}`);
         return expectedType === 'array' ? [] : {};
     };
 

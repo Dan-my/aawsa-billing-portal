@@ -395,47 +395,43 @@ const mapDomainCustomerToInsert = async (
   };
 };
 
-const mapDomainCustomerToUpdate = async (customer: Partial<DomainIndividualCustomer>): Promise<IndividualCustomerUpdate> => {
-  const updatePayload: IndividualCustomerUpdate = {};
+const mapDomainCustomerToUpdate = async (customerWithUpdates: DomainIndividualCustomer): Promise<IndividualCustomerUpdate> => {
+    const updatePayload: IndividualCustomerUpdate = {
+        name: customerWithUpdates.name,
+        customerKeyNumber: customerWithUpdates.customerKeyNumber,
+        contractNumber: customerWithUpdates.contractNumber,
+        customerType: customerWithUpdates.customerType,
+        bookNumber: customerWithUpdates.bookNumber,
+        ordinal: Number(customerWithUpdates.ordinal),
+        meterSize: Number(customerWithUpdates.meterSize),
+        meterNumber: customerWithUpdates.meterNumber,
+        previousReading: Number(customerWithUpdates.previousReading),
+        currentReading: Number(customerWithUpdates.currentReading),
+        month: customerWithUpdates.month,
+        specificArea: customerWithUpdates.specificArea,
+        subCity: customerWithUpdates.subCity,
+        woreda: customerWithUpdates.woreda,
+        sewerageConnection: customerWithUpdates.sewerageConnection,
+        assignedBulkMeterId: customerWithUpdates.assignedBulkMeterId,
+        branch_id: customerWithUpdates.branchId,
+        status: customerWithUpdates.status,
+        paymentStatus: customerWithUpdates.paymentStatus,
+        arrears: customerWithUpdates.arrears,
+        approved_by: customerWithUpdates.approved_by,
+        approved_at: customerWithUpdates.approved_at,
+    };
 
-  if(customer.name !== undefined) updatePayload.name = customer.name;
-  if(customer.customerKeyNumber !== undefined) updatePayload.customerKeyNumber = customer.customerKeyNumber;
-  if(customer.contractNumber !== undefined) updatePayload.contractNumber = customer.contractNumber;
-  if(customer.customerType !== undefined) updatePayload.customerType = customer.customerType;
-  if(customer.bookNumber !== undefined) updatePayload.bookNumber = customer.bookNumber;
-  if(customer.ordinal !== undefined) updatePayload.ordinal = Number(customer.ordinal);
-  if(customer.meterSize !== undefined) updatePayload.meterSize = Number(customer.meterSize);
-  if(customer.meterNumber !== undefined) updatePayload.meterNumber = customer.meterNumber;
-  if(customer.previousReading !== undefined) updatePayload.previousReading = Number(customer.previousReading);
-  if(customer.currentReading !== undefined) updatePayload.currentReading = Number(customer.currentReading);
-  if(customer.month !== undefined) updatePayload.month = customer.month;
-  if(customer.specificArea !== undefined) updatePayload.specificArea = customer.specificArea;
-  if(customer.subCity !== undefined) updatePayload.subCity = customer.subCity;
-  if(customer.woreda !== undefined) updatePayload.woreda = customer.woreda;
-  if(customer.sewerageConnection !== undefined) updatePayload.sewerageConnection = customer.sewerageConnection;
-  if(customer.assignedBulkMeterId !== undefined) updatePayload.assignedBulkMeterId = customer.assignedBulkMeterId;
-  if(customer.branchId !== undefined) updatePayload.branch_id = customer.branchId; 
-  if(customer.status !== undefined) updatePayload.status = customer.status;
-  if(customer.paymentStatus !== undefined) updatePayload.paymentStatus = customer.paymentStatus;
-  if(customer.approved_by !== undefined) updatePayload.approved_by = customer.approved_by;
-  if(customer.approved_at !== undefined) updatePayload.approved_at = customer.approved_at;
-  if(customer.arrears !== undefined) updatePayload.arrears = customer.arrears;
-  
-  if (customer.currentReading !== undefined || customer.previousReading !== undefined || customer.customerType !== undefined || customer.sewerageConnection !== undefined || customer.meterSize !== undefined || customer.month !== undefined) {
-    const existingCustomer = customers.find(c => c.customerKeyNumber === customer.customerKeyNumber);
-    if (existingCustomer) {
-        const usage = (customer.currentReading ?? existingCustomer.currentReading) - (customer.previousReading ?? existingCustomer.previousReading);
-        const { totalBill } = await calculateBill(
-            usage,
-            customer.customerType ?? existingCustomer.customerType,
-            customer.sewerageConnection ?? existingCustomer.sewerageConnection,
-            Number(customer.meterSize ?? existingCustomer.meterSize),
-            customer.month ?? existingCustomer.month
-        );
-        updatePayload.calculatedBill = totalBill;
-    }
-  }
-  return updatePayload;
+    const usage = customerWithUpdates.currentReading - customerWithUpdates.previousReading;
+    const { totalBill } = await calculateBill(
+        usage,
+        customerWithUpdates.customerType,
+        customerWithUpdates.sewerageConnection,
+        Number(customerWithUpdates.meterSize),
+        customerWithUpdates.month
+    );
+    updatePayload.calculatedBill = totalBill;
+
+    return updatePayload;
 };
 
 
@@ -518,60 +514,60 @@ const mapDomainBulkMeterToInsert = async (bm: Partial<BulkMeter>): Promise<BulkM
 };
 
 
-const mapDomainBulkMeterToUpdate = async (bm: Partial<BulkMeter> & { customerKeyNumber?: string } ): Promise<BulkMeterUpdate> => {
-    const updatePayload: BulkMeterUpdate = {};
-    if (bm.name !== undefined) updatePayload.name = bm.name;
-    if (bm.customerKeyNumber !== undefined) updatePayload.customerKeyNumber = bm.customerKeyNumber;
-    if (bm.contractNumber !== undefined) updatePayload.contractNumber = bm.contractNumber;
-    if (bm.meterSize !== undefined) updatePayload.meterSize = Number(bm.meterSize);
-    if (bm.meterNumber !== undefined) updatePayload.meterNumber = bm.meterNumber;
-    if (bm.previousReading !== undefined) updatePayload.previousReading = Number(bm.previousReading);
-    if (bm.currentReading !== undefined) updatePayload.currentReading = Number(bm.currentReading);
-    if (bm.month !== undefined) updatePayload.month = bm.month;
-    if (bm.specificArea !== undefined) updatePayload.specificArea = bm.specificArea;
-    if (bm.subCity !== undefined) updatePayload.subCity = bm.subCity;
-    if (bm.woreda !== undefined) updatePayload.woreda = bm.woreda;
-    if (bm.branchId !== undefined) updatePayload.branch_id = bm.branchId; 
-    if (bm.status !== undefined) updatePayload.status = bm.status;
-    if (bm.paymentStatus !== undefined) updatePayload.paymentStatus = bm.paymentStatus;
-    if (bm.chargeGroup !== undefined) updatePayload.charge_group = bm.chargeGroup;
-    if (bm.sewerageConnection !== undefined) updatePayload.sewerage_connection = bm.sewerageConnection;
-    if (bm.outStandingbill !== undefined) updatePayload.outStandingbill = Number(bm.outStandingbill);
-    if (bm.xCoordinate !== undefined) updatePayload.x_coordinate = bm.xCoordinate;
-    if (bm.yCoordinate !== undefined) updatePayload.y_coordinate = bm.yCoordinate;
-    if (bm.approved_by !== undefined) updatePayload.approved_by = bm.approved_by;
-    if (bm.approved_at !== undefined) updatePayload.approved_at = bm.approved_at;
+const mapDomainBulkMeterToUpdate = async (bulkMeterWithUpdates: BulkMeter): Promise<BulkMeterUpdate> => {
+    const updatePayload: BulkMeterUpdate = {
+        name: bulkMeterWithUpdates.name,
+        customerKeyNumber: bulkMeterWithUpdates.customerKeyNumber,
+        contractNumber: bulkMeterWithUpdates.contractNumber,
+        meterSize: Number(bulkMeterWithUpdates.meterSize),
+        meterNumber: bulkMeterWithUpdates.meterNumber,
+        previousReading: Number(bulkMeterWithUpdates.previousReading),
+        currentReading: Number(bulkMeterWithUpdates.currentReading),
+        month: bulkMeterWithUpdates.month,
+        specificArea: bulkMeterWithUpdates.specificArea,
+        subCity: bulkMeterWithUpdates.subCity,
+        woreda: bulkMeterWithUpdates.woreda,
+        branch_id: bulkMeterWithUpdates.branchId,
+        status: bulkMeterWithUpdates.status,
+        paymentStatus: bulkMeterWithUpdates.paymentStatus,
+        charge_group: bulkMeterWithUpdates.chargeGroup,
+        sewerage_connection: bulkMeterWithUpdates.sewerageConnection,
+        outStandingbill: Number(bulkMeterWithUpdates.outStandingbill),
+        x_coordinate: bulkMeterWithUpdates.xCoordinate,
+        y_coordinate: bulkMeterWithUpdates.yCoordinate,
+        approved_by: bulkMeterWithUpdates.approved_by,
+        approved_at: bulkMeterWithUpdates.approved_at,
+    };
 
-    if (bm.customerKeyNumber && (bm.currentReading !== undefined || bm.previousReading !== undefined || bm.meterSize !== undefined || bm.month !== undefined)) {
-        const existingBM = bulkMeters.find(b => b.customerKeyNumber === bm.customerKeyNumber);
-        const currentReading = bm.currentReading ?? existingBM?.currentReading ?? 0;
-        const previousReading = bm.previousReading ?? existingBM?.previousReading ?? 0;
-        const meterSize = bm.meterSize ?? existingBM?.meterSize ?? 0;
-        const billingMonth = bm.month ?? existingBM?.month ?? new Date().toISOString().slice(0, 7);
-        const chargeGroup = bm.chargeGroup ?? existingBM?.chargeGroup ?? 'Non-domestic';
-        const sewerageConnection = bm.sewerageConnection ?? existingBM?.sewerageConnection ?? 'No';
+    const newBulkUsage = bulkMeterWithUpdates.currentReading - bulkMeterWithUpdates.previousReading;
+    const { totalBill: newTotalBulkBill } = await calculateBill(
+        newBulkUsage,
+        bulkMeterWithUpdates.chargeGroup,
+        bulkMeterWithUpdates.sewerageConnection,
+        Number(bulkMeterWithUpdates.meterSize),
+        bulkMeterWithUpdates.month
+    );
 
-        
-        const newBulkUsage = currentReading - previousReading;
-        const { totalBill: newTotalBulkBill } = await calculateBill(newBulkUsage, chargeGroup, sewerageConnection, Number(meterSize), billingMonth);
+    updatePayload.bulk_usage = newBulkUsage;
+    updatePayload.total_bulk_bill = newTotalBulkBill;
 
-        updatePayload.bulk_usage = newBulkUsage;
-        updatePayload.total_bulk_bill = newTotalBulkBill;
-
-        const allIndividualCustomers = getCustomers(); 
-        const associatedCustomers = allIndividualCustomers.filter(c => c.assignedBulkMeterId === bm.customerKeyNumber);
-        
-        const sumIndividualUsage = associatedCustomers.reduce((acc, cust) => {
-            const usage = (cust.currentReading ?? 0) - (cust.previousReading ?? 0);
-            return acc + usage;
-        }, 0);
-        
-        const newDifferenceUsage = newBulkUsage - sumIndividualUsage;
-        updatePayload.difference_usage = newDifferenceUsage;
-        
-        const { totalBill: newDifferenceBill } = await calculateBill(newDifferenceUsage, chargeGroup, sewerageConnection, Number(meterSize), billingMonth);
-        updatePayload.difference_bill = newDifferenceBill;
-    }
+    const allIndividualCustomers = getCustomers();
+    const associatedCustomers = allIndividualCustomers.filter(c => c.assignedBulkMeterId === bulkMeterWithUpdates.customerKeyNumber);
+    
+    const sumIndividualUsage = associatedCustomers.reduce((acc, cust) => acc + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
+    
+    const newDifferenceUsage = newBulkUsage - sumIndividualUsage;
+    updatePayload.difference_usage = newDifferenceUsage;
+    
+    const { totalBill: newDifferenceBill } = await calculateBill(
+        newDifferenceUsage,
+        bulkMeterWithUpdates.chargeGroup,
+        bulkMeterWithUpdates.sewerageConnection,
+        Number(bulkMeterWithUpdates.meterSize),
+        bulkMeterWithUpdates.month
+    );
+    updatePayload.difference_bill = newDifferenceBill;
+    
     return updatePayload;
 };
 
@@ -1226,29 +1222,41 @@ export const addCustomer = async (
 
 
 export const updateCustomer = async (customerKeyNumber: string, customerData: Partial<Omit<DomainIndividualCustomer, 'customerKeyNumber'>>): Promise<StoreOperationResult<void>> => {
-  const updatePayloadSupabase = await mapDomainCustomerToUpdate({ customerKeyNumber, ...customerData });
-  const { data: updatedSupabaseCustomer, error } = await updateCustomerAction(customerKeyNumber, updatePayloadSupabase);
-
-  if (updatedSupabaseCustomer && !error) {
-    const updatedCustomer = await mapSupabaseCustomerToDomain(updatedSupabaseCustomer);
-    customers = customers.map(c => c.customerKeyNumber === customerKeyNumber ? updatedCustomer : c);
-    notifyCustomerListeners();
-    return { success: true };
-  } else {
-    console.error("DataStore: Failed to update customer. Original error object:", JSON.stringify(error, null, 2));
-    let userMessage = "Failed to update customer due to an unexpected error.";
-    let isNotFoundError = false;
-    if (error && typeof error === 'object') {
-      const supabaseError = error as any;
-      if (supabaseError.code === 'PGRST204') {
-        userMessage = "Failed to update customer: Record not found. It may have been deleted.";
-        isNotFoundError = true;
-      } else if (supabaseError.message) {
-        userMessage = `Failed to update customer: ${supabaseError.message}`;
-      }
+    const existingCustomer = customers.find(c => c.customerKeyNumber === customerKeyNumber);
+    if (!existingCustomer) {
+        return { success: false, message: "Customer not found to update.", isNotFoundError: true };
     }
-    return { success: false, message: userMessage, isNotFoundError, error };
-  }
+
+    // Create a complete, updated domain object by merging the new data with existing data.
+    const updatedDomainCustomer: DomainIndividualCustomer = {
+        ...existingCustomer,
+        ...customerData,
+    };
+
+    const updatePayloadSupabase = await mapDomainCustomerToUpdate(updatedDomainCustomer);
+
+    const { data: updatedSupabaseCustomer, error } = await updateCustomerAction(customerKeyNumber, updatePayloadSupabase);
+
+    if (updatedSupabaseCustomer && !error) {
+        const updatedCustomer = await mapSupabaseCustomerToDomain(updatedSupabaseCustomer);
+        customers = customers.map(c => c.customerKeyNumber === customerKeyNumber ? updatedCustomer : c);
+        notifyCustomerListeners();
+        return { success: true };
+    } else {
+        console.error("DataStore: Failed to update customer. Original error object:", JSON.stringify(error, null, 2));
+        let userMessage = "Failed to update customer due to an unexpected error.";
+        let isNotFoundError = false;
+        if (error && typeof error === 'object') {
+            const supabaseError = error as any;
+            if (supabaseError.code === 'PGRST204') {
+                userMessage = "Failed to update customer: Record not found. It may have been deleted.";
+                isNotFoundError = true;
+            } else if (supabaseError.message) {
+                userMessage = `Failed to update customer: ${supabaseError.message}`;
+            }
+        }
+        return { success: false, message: userMessage, isNotFoundError, error };
+    }
 };
 
 export const deleteCustomer = async (customerKeyNumber: string): Promise<StoreOperationResult<void>> => {
@@ -1284,24 +1292,36 @@ export const addBulkMeter = async (
 };
 
 export const updateBulkMeter = async (customerKeyNumber: string, bulkMeterData: Partial<Omit<BulkMeter, 'customerKeyNumber'>>): Promise<StoreOperationResult<BulkMeter>> => {
-  const updatePayloadToSend = await mapDomainBulkMeterToUpdate({ customerKeyNumber, ...bulkMeterData });
-  const { data: updatedSupabaseBulkMeter, error } = await updateBulkMeterAction(customerKeyNumber, updatePayloadToSend);
-  if (updatedSupabaseBulkMeter && !error) {
-    const updatedBulkMeter = await mapSupabaseBulkMeterToDomain(updatedSupabaseBulkMeter);
-    bulkMeters = bulkMeters.map(bm => bm.customerKeyNumber === customerKeyNumber ? updatedBulkMeter : bm);
-    notifyBulkMeterListeners();
-    return { success: true, data: updatedBulkMeter };
-  }
-  console.error("DataStore: Failed to update bulk meter. Error:", JSON.stringify(error, null, 2));
-  let userMessage = "Failed to update bulk meter.";
-  let isNotFoundError = false;
-  if (error && typeof error === 'object' && 'code' in error && error.code === 'PGRST204') {
-    userMessage = "Failed to update bulk meter: Record not found.";
-    isNotFoundError = true;
-  } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-    userMessage = `Failed to update bulk meter: ${error.message}`;
-  }
-  return { success: false, message: userMessage, isNotFoundError, error };
+    const existingBulkMeter = bulkMeters.find(bm => bm.customerKeyNumber === customerKeyNumber);
+    if (!existingBulkMeter) {
+        return { success: false, message: "Bulk meter not found to update.", isNotFoundError: true };
+    }
+
+    const updatedDomainBulkMeter: BulkMeter = {
+        ...existingBulkMeter,
+        ...bulkMeterData,
+    };
+    
+    const updatePayloadToSend = await mapDomainBulkMeterToUpdate(updatedDomainBulkMeter);
+    const { data: updatedSupabaseBulkMeter, error } = await updateBulkMeterAction(customerKeyNumber, updatePayloadToSend);
+    
+    if (updatedSupabaseBulkMeter && !error) {
+        const updatedBulkMeter = await mapSupabaseBulkMeterToDomain(updatedSupabaseBulkMeter);
+        bulkMeters = bulkMeters.map(bm => bm.customerKeyNumber === customerKeyNumber ? updatedBulkMeter : bm);
+        notifyBulkMeterListeners();
+        return { success: true, data: updatedBulkMeter };
+    }
+    
+    console.error("DataStore: Failed to update bulk meter. Error:", JSON.stringify(error, null, 2));
+    let userMessage = "Failed to update bulk meter.";
+    let isNotFoundError = false;
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'PGRST204') {
+        userMessage = "Failed to update bulk meter: Record not found.";
+        isNotFoundError = true;
+    } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+        userMessage = `Failed to update bulk meter: ${error.message}`;
+    }
+    return { success: false, message: userMessage, isNotFoundError, error };
 };
 
 export const deleteBulkMeter = async (customerKeyNumber: string): Promise<StoreOperationResult<void>> => {

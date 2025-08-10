@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image"; 
-import { Droplets, Edit, Trash2, Menu, User, CheckCircle, XCircle, FileEdit, RefreshCcw, Gauge, Users as UsersIcon, DollarSign, TrendingUp, Clock, MinusCircle, PlusCircle as PlusCircleIcon, Printer, History, AlertTriangle, ListCollapse, Eye } from "lucide-react";
+import { Droplets, Edit, Trash2, Menu, User, CheckCircle, XCircle, FileEdit, RefreshCcw, Gauge, Users as UsersIcon, DollarSign, TrendingUp, Clock, MinusCircle, PlusCircle as PlusCircleIcon, Printer, History, AlertTriangle, ListCollapse, Eye, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -687,8 +687,17 @@ export default function BulkMeterDetailsPage() {
                 <p><strong className="font-semibold">Specific Area:</strong> {bulkMeter.specificArea ?? 'N/A'}</p>
                 <p><strong className="font-semibold">Meter No:</strong> {bulkMeter.meterNumber ?? 'N/A'}</p>
                 <p><strong className="font-semibold">Meter Size:</strong> {bulkMeter.meterSize} inch</p>
-                <p><strong className="font-semibold">X Coordinate:</strong> {bulkMeter.xCoordinate ?? 'N/A'}</p>
-                <p><strong className="font-semibold">Y Coordinate:</strong> {bulkMeter.yCoordinate ?? 'N/A'}</p>
+                {bulkMeter.xCoordinate && bulkMeter.yCoordinate && (
+                  <a
+                    href={`https://www.google.com/maps?q=${bulkMeter.yCoordinate},${bulkMeter.xCoordinate}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center text-primary hover:underline mt-1"
+                  >
+                    <MapPin className="mr-1 h-4 w-4" />
+                    View on Map
+                  </a>
+                )}
               </div>
               <div>
                 <p><strong className="font-semibold">Customer Key:</strong> {bulkMeter.customerKeyNumber ?? 'N/A'}</p>
@@ -820,3 +829,4 @@ export default function BulkMeterDetailsPage() {
     </div>
   );
 }
+

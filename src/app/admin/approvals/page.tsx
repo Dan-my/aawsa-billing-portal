@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from "react";
@@ -27,8 +26,8 @@ import type { Branch } from "../branches/branch-types";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Check, Frown, Lock, ShieldCheck, UserCheck, FileEdit } from "lucide-react";
-import { ApprovalTable } from "./approval-table";
-import { BulkMeterApprovalTable } from "./bulk-meter-approval-table";
+import { IndividualCustomerTable } from "../individual-customers/individual-customer-table";
+import { BulkMeterTable } from "../bulk-meters/bulk-meter-table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 
@@ -183,11 +182,13 @@ export default function ApprovalsPage() {
                 <p className="text-muted-foreground mt-1">There are no pending customer approvals at this time.</p>
              </div>
           ) : (
-            <ApprovalTable 
+            <IndividualCustomerTable 
               data={pendingCustomers} 
               branches={branches}
-              onApprove={handleApproveClick}
-              onReject={handleRejectClick}
+              onEdit={handleApproveClick}
+              onDelete={handleRejectClick}
+              canEdit={hasPermission('customers_approve')}
+              canDelete={hasPermission('customers_approve')}
             />
           )}
         </CardContent>
@@ -212,11 +213,13 @@ export default function ApprovalsPage() {
                 <p className="text-muted-foreground mt-1">There are no pending bulk meter approvals at this time.</p>
              </div>
           ) : (
-            <BulkMeterApprovalTable
+            <BulkMeterTable
               data={pendingBulkMeters} 
               branches={branches}
-              onApprove={handleApproveClick}
-              onReject={handleRejectClick}
+              onEdit={handleApproveClick}
+              onDelete={handleRejectClick}
+              canEdit={hasPermission('bulk_meters_approve')}
+              canDelete={hasPermission('bulk_meters_approve')}
             />
           )}
         </CardContent>

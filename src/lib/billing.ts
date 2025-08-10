@@ -155,13 +155,15 @@ export async function calculateBill(
       }
   } else if (customerType === 'Non-domestic') {
       let applicableRate = 0;
+      // For non-domestic, find the single rate that applies based on the usage tier.
       for (const tier of sortedTiers) {
           const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
-          applicableRate = Number(tier.rate);
+          applicableRate = Number(tier.rate); // Set the rate, it will be the correct one when we break
           if (usageM3 <= tierLimit) {
               break; 
           }
       }
+      // Apply the single applicable rate to the entire consumption
       baseWaterCharge = Number(usageM3) * Number(applicableRate);
   }
 

@@ -341,9 +341,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                         </FormControl>
                         <SelectContent>
                           {subCityOptions.map(option => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
+                            <SelectItem key={option} value={option}>{option}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -365,9 +363,7 @@ export function IndividualCustomerFormDialog({ open, onOpenChange, onSubmit, def
                         </FormControl>
                         <SelectContent>
                           {woredaOptions.map(option => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
+                            <SelectItem key={option} value={option}>{option}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>

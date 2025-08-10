@@ -30,6 +30,40 @@ export interface TariffInfo {
     domestic_vat_threshold_m3: number;
 }
 
+const safeParseJsonField = (field: any, fieldName: string, expectedType: 'array' | 'object'): any[] | Record<string, any> => {
+    const fallback = expectedType === 'array' ? [] : {};
+    if (field === null || field === undefined) {
+        console.error(`Tariff field '${fieldName}' is null or undefined.`);
+        return fallback;
+    }
+    if (typeof field === 'object') {
+        if (expectedType === 'array' && !Array.isArray(field)) {
+            console.error(`Tariff field '${fieldName}' was expected to be an array but is an object.`);
+            return fallback;
+        }
+        if (expectedType === 'object' && Array.isArray(field)) {
+            console.error(`Tariff field '${fieldName}' was expected to be an object but is an array.`);
+            return fallback;
+        }
+        return field;
+    }
+    if (typeof field === 'string') {
+        try {
+            const parsed = JSON.parse(field);
+            if (expectedType === 'array' && Array.isArray(parsed)) return parsed;
+            if (expectedType === 'object' && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+            console.error(`Tariff field '${fieldName}' JSON string parsed to the wrong type.`);
+            return fallback;
+        } catch (e) {
+            console.error(`Failed to parse JSON for ${fieldName}:`, e);
+            return fallback;
+        }
+    }
+    console.error(`Tariff field '${fieldName}' has an unexpected type: ${typeof field}`);
+    return fallback;
+};
+
+
 const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<TariffInfo | null> => {
     let { data, error } = await supabase
         .from('tariffs')
@@ -45,39 +79,6 @@ const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<Ta
 
     const tariff: TariffRow = data;
     
-    // This is a more robust parser that checks if the parsed result is a valid object/array.
-    const safeParseJsonField = (field: any, fieldName: string, expectedType: 'array' | 'object') => {
-        if (field === null || field === undefined) {
-             console.error(`Tariff field '${fieldName}' is null or undefined for ${type}/${year}.`);
-             return expectedType === 'array' ? [] : {};
-        }
-        if (typeof field === 'object' && field !== null) {
-            if (expectedType === 'array' && !Array.isArray(field)) {
-                console.error(`Tariff field '${fieldName}' was expected to be an array but is an object for ${type}/${year}.`);
-                return [];
-            }
-             if (expectedType === 'object' && Array.isArray(field)) {
-                console.error(`Tariff field '${fieldName}' was expected to be an object but is an array for ${type}/${year}.`);
-                return {};
-            }
-            return field;
-        }
-        if (typeof field === 'string') {
-            try { 
-                const parsed = JSON.parse(field);
-                if (expectedType === 'array' && Array.isArray(parsed)) return parsed;
-                if (expectedType === 'object' && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
-                 console.error(`Tariff field '${fieldName}' JSON string parsed to the wrong type for ${type}/${year}.`);
-                return expectedType === 'array' ? [] : {};
-            } catch (e) { 
-                console.error(`Failed to parse JSON for ${fieldName} for tariff ${type}/${year}:`, e);
-                return expectedType === 'array' ? [] : {};
-            }
-        }
-        console.error(`Tariff field '${fieldName}' has an unexpected type for ${type}/${year}: ${typeof field}`);
-        return expectedType === 'array' ? [] : {};
-    };
-
     return {
         customer_type: tariff.customer_type as CustomerType,
         year: tariff.year,
@@ -155,15 +156,13 @@ export async function calculateBill(
       }
   } else if (customerType === 'Non-domestic') {
       let applicableRate = 0;
-      // For non-domestic, find the single rate that applies based on the usage tier.
       for (const tier of sortedTiers) {
           const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
-          applicableRate = Number(tier.rate); // Set the rate, it will be the correct one when we break
+          applicableRate = Number(tier.rate);
           if (usageM3 <= tierLimit) {
               break; 
           }
       }
-      // Apply the single applicable rate to the entire consumption
       baseWaterCharge = Number(usageM3) * Number(applicableRate);
   }
 
@@ -201,7 +200,6 @@ export async function calculateBill(
   }
 
   const meterRentPrices = tariffConfig.meter_rent_prices || {};
-  // More robust meter size to string conversion for lookup
   const meterSizeStringKey = String(meterSize); 
   const meterRent = meterRentPrices[meterSizeStringKey] || 0;
   

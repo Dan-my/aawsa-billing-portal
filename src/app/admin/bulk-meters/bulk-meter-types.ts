@@ -26,4 +26,5 @@ export type BulkMeter = z.infer<typeof baseBulkMeterDataSchema> & {
   approved_by?: string | null;
   approved_at?: string | null;
   woreda: string;
+  location: string;
 };

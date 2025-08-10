@@ -123,7 +123,7 @@ export default function BulkMeterDetailsPage() {
     const paymentStatus = totalPayable > 0.01 ? 'Unpaid' : 'Paid';
   
     const displayBranchName = currentBulkMeter.branchId ? currentBranches.find(b => b.id === currentBulkMeter.branchId)?.name : currentBulkMeter.subCity;
-    const displayCardLocation = currentBulkMeter.subCity || "N/A";
+    const displayCardLocation = currentBulkMeter.location || "N/A";
   
     const billToRender = currentBillForPrintView || (currentBillingHistory.length > 0 ? currentBillingHistory[0] : null);
   
@@ -597,7 +597,7 @@ export default function BulkMeterDetailsPage() {
                   <div className="print-row"><span>Customer key number:</span> <span>{bulkMeter.customerKeyNumber}</span></div>
                   <div className="print-row"><span>Contract No:</span> <span>{bulkMeter.contractNumber ?? 'N/A'}</span></div>
                   <div className="print-row"><span>Branch:</span> <span>{displayBranchName ?? 'N/A'}</span></div>
-                  <div className="print-row"><span>Sub-City:</span> <span>{bulkMeter.subCity}</span></div>
+                  <div className="print-row"><span>Sub-City:</span> <span>{bulkMeter.location}</span></div>
                 </div>
 
                 <div className="print-section">
@@ -683,7 +683,7 @@ export default function BulkMeterDetailsPage() {
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div>
                 <p><strong className="font-semibold">Branch:</strong> {displayBranchName ?? 'N/A'}</p>
-                <p><strong className="font-semibold">Sub-City:</strong> {bulkMeter.subCity ?? 'N/A'}, {bulkMeter.woreda ?? 'N/A'}</p>
+                <p><strong className="font-semibold">Sub-City:</strong> {bulkMeter.location ?? 'N/A'}, {bulkMeter.woreda ?? 'N/A'}</p>
                 <p><strong className="font-semibold">Specific Area:</strong> {bulkMeter.specificArea ?? 'N/A'}</p>
                 <p><strong className="font-semibold">Meter No:</strong> {bulkMeter.meterNumber ?? 'N/A'}</p>
                 <p><strong className="font-semibold">Meter Size:</strong> {bulkMeter.meterSize} inch</p>

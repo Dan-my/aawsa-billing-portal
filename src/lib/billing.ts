@@ -1,6 +1,4 @@
 
-
-// src/lib/billing.ts
 import { supabase } from '@/lib/supabase';
 import type { TariffRow } from '@/lib/actions';
 
@@ -33,7 +31,7 @@ export interface TariffInfo {
 const safeParseJsonField = (field: any, fieldName: string, expectedType: 'array' | 'object'): any[] | Record<string, any> => {
     const fallback = expectedType === 'array' ? [] : {};
     if (field === null || field === undefined) {
-        console.error(`Tariff field '${fieldName}' is null or undefined.`);
+        console.warn(`Tariff field '${fieldName}' is null or undefined. Using fallback.`);
         return fallback;
     }
     if (typeof field === 'object') {
@@ -63,7 +61,6 @@ const safeParseJsonField = (field: any, fieldName: string, expectedType: 'array'
     return fallback;
 };
 
-
 const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<TariffInfo | null> => {
     let { data, error } = await supabase
         .from('tariffs')
@@ -73,16 +70,22 @@ const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<Ta
         .single();
     
     if (error || !data) {
-        console.warn(`Tariff for ${type}/${year} not found in the database. Bill calculation cannot proceed.`, error);
-        return null;
+        console.warn(`Tariff for ${type}/${year} not found in the database. Bill calculation cannot proceed.`, error?.message);
+        return null; // Strict: No tariff, no calculation.
     }
 
     const tariff: TariffRow = data;
     
+    const tiers = safeParseJsonField(tariff.tiers, 'tiers', 'array');
+    if (!tiers || tiers.length === 0) {
+        console.error(`Tariff for ${type}/${year} has no valid tiers defined.`);
+        return null;
+    }
+
     return {
         customer_type: tariff.customer_type as CustomerType,
         year: tariff.year,
-        tiers: safeParseJsonField(tariff.tiers, 'tiers', 'array'),
+        tiers: tiers,
         maintenance_percentage: tariff.maintenance_percentage,
         sanitation_percentage: tariff.sanitation_percentage,
         sewerage_rate_per_m3: tariff.sewerage_rate_per_m3,
@@ -111,12 +114,8 @@ export async function calculateBill(
 ): Promise<BillCalculationResult> {
   const emptyResult: BillCalculationResult = { totalBill: 0, baseWaterCharge: 0, maintenanceFee: 0, sanitationFee: 0, vatAmount: 0, meterRent: 0, sewerageCharge: 0 };
   
-  if (usageM3 < 0) {
-    return emptyResult;
-  }
-  
-  if (!billingMonth || typeof billingMonth !== 'string' || !billingMonth.match(/^\d{4}-\d{2}$/)) {
-    console.error(`Invalid billingMonth provided: ${billingMonth}. Calculation cannot proceed.`);
+  if (usageM3 < 0 || !customerType || !billingMonth || typeof billingMonth !== 'string' || !billingMonth.match(/^\d{4}-\d{2}$/)) {
+    console.error(`Invalid input for bill calculation. Usage: ${usageM3}, Type: ${customerType}, Month: ${billingMonth}`);
     return emptyResult;
   }
 
@@ -124,7 +123,7 @@ export async function calculateBill(
   const tariffConfig = await getLiveTariffFromDB(customerType, year);
   
   if (!tariffConfig) {
-      console.warn(`Tariff information for customer type "${customerType}" for year ${year} not found. Bill calculation will be 0.`);
+      console.warn(`Tariff information for customer type "${customerType}" for year ${year} not found. Bill will be 0.`);
       return emptyResult;
   }
   
@@ -166,8 +165,8 @@ export async function calculateBill(
       baseWaterCharge = Number(usageM3) * Number(applicableRate);
   }
 
-  const maintenanceFee = tariffConfig.maintenance_percentage * baseWaterCharge;
-  const sanitationFee = tariffConfig.sanitation_percentage * baseWaterCharge;
+  const maintenanceFee = (tariffConfig.maintenance_percentage || 0) * baseWaterCharge;
+  const sanitationFee = (tariffConfig.sanitation_percentage || 0) * baseWaterCharge;
   
   let vatAmount = 0;
   if (customerType === 'Domestic' && usageM3 > tariffConfig.domestic_vat_threshold_m3) {
@@ -194,16 +193,16 @@ export async function calculateBill(
           remainingUsageForVat -= usageInTier;
           lastLimitForVat = tierLimit;
       }
-      vatAmount = taxableWaterCharge * Number(tariffConfig.vat_rate);
+      vatAmount = taxableWaterCharge * Number(tariffConfig.vat_rate || 0);
   } else if (customerType === 'Non-domestic') {
-      vatAmount = baseWaterCharge * tariffConfig.vat_rate;
+      vatAmount = baseWaterCharge * (tariffConfig.vat_rate || 0);
   }
 
   const meterRentPrices = tariffConfig.meter_rent_prices || {};
-  const meterSizeStringKey = String(meterSize); 
+  const meterSizeStringKey = String(meterSize);
   const meterRent = meterRentPrices[meterSizeStringKey] || 0;
   
-  const sewerageChargeRate = tariffConfig.sewerage_rate_per_m3;
+  const sewerageChargeRate = tariffConfig.sewerage_rate_per_m3 || 0;
   const sewerageCharge = (sewerageConnection === "Yes") ? usageM3 * sewerageChargeRate : 0;
 
   const totalBill = baseWaterCharge + maintenanceFee + sanitationFee + vatAmount + meterRent + sewerageCharge;

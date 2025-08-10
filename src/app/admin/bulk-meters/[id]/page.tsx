@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image"; 
 import { Droplets, Edit, Trash2, Menu, User, CheckCircle, XCircle, FileEdit, RefreshCcw, Gauge, Users as UsersIcon, DollarSign, TrendingUp, Clock, MinusCircle, PlusCircle as PlusCircleIcon, Printer, History, AlertTriangle, ListCollapse, Eye } from "lucide-react";
@@ -122,8 +122,8 @@ export default function BulkMeterDetailsPage() {
     const totalPayable = differenceBill + outStandingBillValue;
     const paymentStatus = totalPayable > 0.01 ? 'Unpaid' : 'Paid';
   
-    const displayBranchName = currentBulkMeter.branchId ? currentBranches.find(b => b.id === currentBulkMeter.branchId)?.name : currentBulkMeter.subCity;
-    const displayCardLocation = currentBulkMeter.location || "N/A";
+    const displayBranchName = currentBulkMeter.branchId ? currentBranches.find(b => b.id === currentBulkMeter.branchId)?.name : currentBulkMeter.location;
+    const displayCardLocation = currentBulkMeter.subCity || "N/A";
   
     const billToRender = currentBillForPrintView || (currentBillingHistory.length > 0 ? currentBillingHistory[0] : null);
   

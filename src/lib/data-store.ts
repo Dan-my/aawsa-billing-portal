@@ -1622,11 +1622,11 @@ export const removeReportLog = async (logId: string): Promise<StoreOperationResu
 
 export const addNotification = async (notificationData: Omit<DomainNotification, 'id' | 'createdAt'>): Promise<StoreOperationResult<DomainNotification>> => {
   const { data, error } = await createNotificationAction({
-    title: notificationData.title,
-    message: notificationData.message,
-    sender_name: notificationData.senderName,
-    target_branch_id: notificationData.targetBranchId
-  })
+    p_title: notificationData.title,
+    p_message: notificationData.message,
+    p_sender_name: notificationData.senderName,
+    p_target_branch_id: notificationData.targetBranchId
+  });
 
   if (data && !error) {
     const newNotification = mapSupabaseNotificationToDomain(data as SupabaseNotificationRow);

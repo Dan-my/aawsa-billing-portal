@@ -58,42 +58,31 @@ export function NotificationBell({ user }: NotificationBellProps) {
 
   const relevantNotifications = React.useMemo(() => {
     if (!user) {
-        return [];
+      return [];
     }
     const userRole = user.role.toLowerCase();
 
     // Admins do not see the notification bell.
     if (userRole === 'admin') {
-        return [];
+      return [];
     }
 
-    // Head Office Management sees only global notifications.
-    if (userRole === 'head office management') {
-        return notifications
-            .filter(notification => notification.targetBranchId === null)
-            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }
-
-    // Staff and Staff Management see global and their branch-specific notifications.
     const staffBranchId = user.branchId;
-    if (userRole === 'staff' || userRole === 'staff management') {
-        return notifications
-          .filter(notification => {
-            // Show if targeted to 'All Staff'
-            if (notification.targetBranchId === null) {
-                return true;
-            }
-            // Show if targeted to the user's specific branch
-            if (staffBranchId && notification.targetBranchId === staffBranchId) {
-                return true;
-            }
-            return false;
-          })
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }
-    
-    // Default case for any other roles.
-    return [];
+
+    return notifications
+      .filter(notification => {
+        // Show if targeted to 'All Staff'
+        if (notification.targetBranchId === null) {
+          return true;
+        }
+        // Show if targeted to the user's specific branch
+        if (staffBranchId && notification.targetBranchId === staffBranchId) {
+          return true;
+        }
+        return false;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
   }, [notifications, user]);
 
   React.useEffect(() => {

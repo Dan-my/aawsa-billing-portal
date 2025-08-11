@@ -118,7 +118,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
     return allBranches.find(b => b.id === targetId)?.name || `Branch ID: ${targetId}`;
   };
 
-  if (!user || user.role.toLowerCase() === 'admin') return null;
+  if (!user || user.role.toLowerCase() === 'admin' || user.role.toLowerCase() === 'head office management') return null;
 
   return (
     <Dialog open={!!selectedNotification} onOpenChange={handleDialogChange}>

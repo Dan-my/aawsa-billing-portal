@@ -127,7 +127,16 @@ export default function StaffBulkMeterDetailsPage() {
   
     const totalIndividualUsage = currentAssociatedCustomers.reduce((sum, cust) => sum + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
   
-    const differenceUsage = bulkUsage - totalIndividualUsage;
+    let differenceUsage = bulkUsage - totalIndividualUsage;
+
+    // Apply specific adjustment rules
+    if (differenceUsage === 0) {
+      differenceUsage += 3;
+    } else if (differenceUsage === 1) {
+      differenceUsage += 2;
+    } else if (differenceUsage === 2) {
+      differenceUsage += 1;
+    }
   
     const { totalBill: differenceBill, ...differenceBillBreakdown } = await calculateBill(differenceUsage, effectiveBulkMeterCustomerType, effectiveBulkMeterSewerageConnection, currentBulkMeter.meterSize, billingMonth);
   
@@ -506,7 +515,17 @@ export default function StaffBulkMeterDetailsPage() {
       
       const bmUsage = (latestMeterData.currentReading ?? 0) - (latestMeterData.previousReading ?? 0);
       const totalIndivUsage = associatedCustomers.reduce((sum, cust) => sum + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
-      const differenceUsageForCycle = bmUsage - totalIndivUsage;
+      let differenceUsageForCycle = bmUsage - totalIndivUsage;
+
+      // Apply specific adjustment rules
+      if (differenceUsageForCycle === 0) {
+        differenceUsageForCycle += 3;
+      } else if (differenceUsageForCycle === 1) {
+        differenceUsageForCycle += 2;
+      } else if (differenceUsageForCycle === 2) {
+        differenceUsageForCycle += 1;
+      }
+
       const chargeGroup = latestMeterData.chargeGroup as CustomerType || 'Non-domestic';
       const sewerageConn = latestMeterData.sewerageConnection || 'No';
       const { totalBill: billForDifferenceUsage, ...differenceBillBreakdownForCycle } = await calculateBill(differenceUsageForCycle, chargeGroup, sewerageConn, latestMeterData.meterSize, parsedMonth);
@@ -727,7 +746,7 @@ export default function StaffBulkMeterDetailsPage() {
                     rel="noopener noreferrer"
                     className="flex items-center text-primary hover:underline mt-1"
                   >
-                    <MapPin className="mr-1 h-4 w-4" />
+                    <MapPin className="mr-1 h-4 w-4"/>
                     View on Map
                   </a>
                 )}
@@ -857,4 +876,6 @@ export default function StaffBulkMeterDetailsPage() {
     </div>
   );
 }
+
+
 

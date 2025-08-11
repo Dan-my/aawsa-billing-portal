@@ -44,9 +44,12 @@ export function NotificationBell({ user }: NotificationBellProps) {
     if (typeof window !== "undefined") {
       setLastReadTimestamp(localStorage.getItem(LAST_READ_TIMESTAMP_KEY));
     }
+    
+    // Initialize both stores
     initializeNotifications();
     initializeBranches();
     
+    // Subscribe to both stores
     const unsubNotifications = subscribeToNotifications(setNotifications);
     const unsubBranches = subscribeToBranches(setAllBranches);
 
@@ -57,7 +60,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
   }, []);
 
   const relevantNotifications = React.useMemo(() => {
-    if (!user) {
+    if (!user || allBranches.length === 0) { // <-- Wait for branches to be loaded
       return [];
     }
     const userRole = user.role.toLowerCase();
@@ -83,7 +86,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
-  }, [notifications, user]);
+  }, [notifications, user, allBranches]); // <-- Add allBranches as a dependency
 
   React.useEffect(() => {
     const newUnreadCount = relevantNotifications.filter(

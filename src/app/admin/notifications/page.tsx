@@ -34,7 +34,7 @@ const ALL_STAFF_VALUE = "all-staff-target";
 const formSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters.").max(100, "Title is too long."),
   message: z.string().min(10, "Message must be at least 10 characters.").max(1000, "Message is too long."),
-  targetBranchId: z.string().min(1, "You must select a target."),
+  target_branch_id: z.string().min(1, "You must select a target."),
 });
 
 type NotificationFormValues = z.infer<typeof formSchema>;
@@ -77,7 +77,7 @@ export default function AdminNotificationsPage() {
     defaultValues: {
       title: "",
       message: "",
-      targetBranchId: ALL_STAFF_VALUE,
+      target_branch_id: ALL_STAFF_VALUE,
     },
   });
   
@@ -101,7 +101,7 @@ export default function AdminNotificationsPage() {
       return;
     }
     
-    const targetBranchId = data.targetBranchId === ALL_STAFF_VALUE ? null : data.targetBranchId;
+    const targetBranchId = data.target_branch_id === ALL_STAFF_VALUE ? null : data.target_branch_id;
 
     const result = await addNotification({
       title: data.title,
@@ -118,7 +118,7 @@ export default function AdminNotificationsPage() {
       form.reset({
         title: "",
         message: "",
-        targetBranchId: ALL_STAFF_VALUE,
+        target_branch_id: ALL_STAFF_VALUE,
       });
     } else {
       toast({ variant: "destructive", title: "Failed to Send", description: result.message });
@@ -172,7 +172,7 @@ export default function AdminNotificationsPage() {
                     />
                     <FormField
                     control={form.control}
-                    name="targetBranchId"
+                    name="target_branch_id"
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Send To</FormLabel>

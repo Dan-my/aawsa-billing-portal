@@ -60,7 +60,8 @@ export function NotificationBell({ user }: NotificationBellProps) {
   }, []);
 
   const relevantNotifications = React.useMemo(() => {
-    if (!user || allBranches.length === 0) { // <-- Wait for branches to be loaded
+    // Crucial check: only filter if user and branches are loaded.
+    if (!user || allBranches.length === 0) { 
       return [];
     }
     const userRole = user.role.toLowerCase();
@@ -86,14 +87,16 @@ export function NotificationBell({ user }: NotificationBellProps) {
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
-  }, [notifications, user, allBranches]); // <-- Add allBranches as a dependency
+  }, [notifications, user, allBranches]); // <-- allBranches dependency is key
 
   React.useEffect(() => {
-    const newUnreadCount = relevantNotifications.filter(
-      (n) => !lastReadTimestamp || new Date(n.createdAt) > new Date(lastReadTimestamp)
-    ).length;
-    setUnreadCount(newUnreadCount);
-  }, [relevantNotifications, lastReadTimestamp]);
+    if (user) { // Only calculate if user is loaded
+        const newUnreadCount = relevantNotifications.filter(
+          (n) => !lastReadTimestamp || new Date(n.createdAt) > new Date(lastReadTimestamp)
+        ).length;
+        setUnreadCount(newUnreadCount);
+    }
+  }, [relevantNotifications, lastReadTimestamp, user]);
 
   const handleOpenChange = (open: boolean) => {
     if (open && unreadCount > 0) {

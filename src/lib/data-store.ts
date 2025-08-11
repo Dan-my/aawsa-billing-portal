@@ -455,7 +455,7 @@ const mapSupabaseBulkMeterToDomain = async (sbm: BulkMeterRow): Promise<BulkMete
     currentReading: Number(sbm.currentReading),
     month: sbm.month,
     specificArea: sbm.specificArea,
-    subCity: sbm.subCity,
+    subCity: sbm.location,
     woreda: sbm.woreda,
     branchId: sbm.branch_id || undefined, 
     status: sbm.status,
@@ -471,20 +471,21 @@ const mapSupabaseBulkMeterToDomain = async (sbm: BulkMeterRow): Promise<BulkMete
     yCoordinate: sbm.y_coordinate ? Number(sbm.y_coordinate) : undefined,
     approved_by: sbm.approved_by,
     approved_at: sbm.approved_at,
+    location: sbm.location,
   };
 };
 
 
 const mapDomainBulkMeterToInsert = async (bm: Partial<BulkMeter>): Promise<BulkMeterInsert> => {
   const calculatedBulkUsage = (bm.currentReading ?? 0) - (bm.previousReading ?? 0);
-  const { totalBill: calculatedTotalBulkBill } = await calculateBill(calculatedBulkUsage, "Non-domestic", "No", Number(bm.meterSize), bm.month!);
+  const { totalBill: calculatedTotalBulkBill } = await calculateBill(calculatedBulkUsage, bm.chargeGroup as CustomerType || "Non-domestic", bm.sewerageConnection || "No", Number(bm.meterSize), bm.month!);
 
   const allIndividualCustomers = getCustomers();
   const associatedCustomers = allIndividualCustomers.filter(c => c.assignedBulkMeterId === bm.customerKeyNumber);
   const sumIndividualUsage = associatedCustomers.reduce((acc, cust) => acc + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
 
   const differenceUsage = calculatedBulkUsage - sumIndividualUsage;
-  const { totalBill: differenceBill } = await calculateBill(differenceUsage, "Non-domestic", "No", Number(bm.meterSize), bm.month!);
+  const { totalBill: differenceBill } = await calculateBill(differenceUsage, bm.chargeGroup as CustomerType || "Non-domestic", bm.sewerageConnection || "No", Number(bm.meterSize), bm.month!);
 
   return {
     name: bm.name!,
@@ -496,12 +497,12 @@ const mapDomainBulkMeterToInsert = async (bm: Partial<BulkMeter>): Promise<BulkM
     currentReading: Number(bm.currentReading) || 0,
     month: bm.month!,
     specificArea: bm.specificArea!,
-    subCity: bm.subCity!,
+    location: bm.subCity!,
     woreda: bm.woreda!,
     branch_id: bm.branchId, 
     status: bm.status || 'Active',
     paymentStatus: bm.paymentStatus || 'Unpaid',
-    charge_group: bm.chargeGroup || 'Non-domestic',
+    charge_group: bm.chargeGroup as "Domestic" | "Non-domestic" || 'Non-domestic',
     sewerage_connection: bm.sewerageConnection || 'No',
     bulk_usage: calculatedBulkUsage,
     total_bulk_bill: calculatedTotalBulkBill,
@@ -525,12 +526,12 @@ const mapDomainBulkMeterToUpdate = async (bulkMeterWithUpdates: BulkMeter): Prom
         currentReading: Number(bulkMeterWithUpdates.currentReading),
         month: bulkMeterWithUpdates.month,
         specificArea: bulkMeterWithUpdates.specificArea,
-        subCity: bulkMeterWithUpdates.subCity,
+        location: bulkMeterWithUpdates.subCity,
         woreda: bulkMeterWithUpdates.woreda,
         branch_id: bulkMeterWithUpdates.branchId,
         status: bulkMeterWithUpdates.status,
         paymentStatus: bulkMeterWithUpdates.paymentStatus,
-        charge_group: bulkMeterWithUpdates.chargeGroup,
+        charge_group: bulkMeterWithUpdates.chargeGroup as "Domestic" | "Non-domestic",
         sewerage_connection: bulkMeterWithUpdates.sewerageConnection,
         outStandingbill: Number(bulkMeterWithUpdates.outStandingbill),
         x_coordinate: bulkMeterWithUpdates.xCoordinate,
@@ -542,7 +543,7 @@ const mapDomainBulkMeterToUpdate = async (bulkMeterWithUpdates: BulkMeter): Prom
     const newBulkUsage = bulkMeterWithUpdates.currentReading - bulkMeterWithUpdates.previousReading;
     const { totalBill: newTotalBulkBill } = await calculateBill(
         newBulkUsage,
-        bulkMeterWithUpdates.chargeGroup,
+        bulkMeterWithUpdates.chargeGroup as CustomerType,
         bulkMeterWithUpdates.sewerageConnection,
         Number(bulkMeterWithUpdates.meterSize),
         bulkMeterWithUpdates.month
@@ -561,7 +562,7 @@ const mapDomainBulkMeterToUpdate = async (bulkMeterWithUpdates: BulkMeter): Prom
     
     const { totalBill: newDifferenceBill } = await calculateBill(
         newDifferenceUsage,
-        bulkMeterWithUpdates.chargeGroup,
+        bulkMeterWithUpdates.chargeGroup as CustomerType,
         bulkMeterWithUpdates.sewerageConnection,
         Number(bulkMeterWithUpdates.meterSize),
         bulkMeterWithUpdates.month
@@ -847,13 +848,13 @@ async function fetchAllBulkMeters() {
       const previousReading = Number(sbm.previousReading) || 0;
 
       const calculatedBulkUsage = currentReading - previousReading;
-      const { totalBill: calculatedTotalBulkBill } = await calculateBill(calculatedBulkUsage, "Non-domestic", "No", Number(sbm.meterSize), sbm.month);
+      const { totalBill: calculatedTotalBulkBill } = await calculateBill(calculatedBulkUsage, sbm.charge_group || 'Non-domestic', sbm.sewerage_connection || 'No', Number(sbm.meterSize), sbm.month);
 
       const associatedCustomersData = getCustomers().filter(c => c.assignedBulkMeterId === sbm.customerKeyNumber);
       const sumIndividualUsage = associatedCustomersData.reduce((acc, cust) => acc + ((cust.currentReading ?? 0) - (cust.previousReading ?? 0)), 0);
       
       const calculatedDifferenceUsage = calculatedBulkUsage - sumIndividualUsage;
-      const { totalBill: calculatedDifferenceBill } = await calculateBill(calculatedDifferenceUsage, "Non-domestic", "No", Number(sbm.meterSize), sbm.month);
+      const { totalBill: calculatedDifferenceBill } = await calculateBill(calculatedDifferenceUsage, sbm.charge_group || 'Non-domestic', sbm.sewerage_connection || 'No', Number(sbm.meterSize), sbm.month);
 
 
       const updatePayload: BulkMeterUpdate = {
@@ -1622,10 +1623,10 @@ export const removeReportLog = async (logId: string): Promise<StoreOperationResu
 
 export const addNotification = async (notificationData: Omit<DomainNotification, 'id' | 'createdAt'>): Promise<StoreOperationResult<DomainNotification>> => {
   const { data, error } = await createNotificationAction({
-    p_title: notificationData.title,
-    p_message: notificationData.message,
-    p_sender_name: notificationData.senderName,
-    p_target_branch_id: notificationData.targetBranchId
+    title: notificationData.title,
+    message: notificationData.message,
+    sender_name: notificationData.senderName,
+    target_branch_id: notificationData.targetBranchId
   });
 
   if (data && !error) {

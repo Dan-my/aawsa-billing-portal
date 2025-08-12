@@ -4,10 +4,21 @@
 import type { ReactNode } from "react";
 import * as React from "react";
 import { usePathname, useRouter } from 'next/navigation';
-import { AppShell } from "@/components/layout/app-shell";
+import dynamic from 'next/dynamic';
 import { SidebarNav, type NavItemGroup, type NavItem } from "@/components/layout/sidebar-nav"; 
 import { Skeleton } from "@/components/ui/skeleton";
 import { PermissionsContext, type PermissionsContextType } from '@/hooks/use-permissions';
+
+// Dynamically import the AppShell component
+const AppShell = dynamic(() => import('@/components/layout/app-shell').then(mod => mod.AppShell), {
+  ssr: false, // AppShell uses localStorage, so we disable server-side rendering for it.
+  loading: () => (
+    <div className="flex items-center justify-center h-screen">
+      <Skeleton className="h-16 w-16 rounded-full" />
+    </div>
+  )
+});
+
 
 interface UserProfile {
   id: string; 

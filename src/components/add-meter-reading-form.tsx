@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -32,9 +32,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import Tabs
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
+import { AiMeterReaderDialog } from "./ai-meter-reader-dialog";
 
 // Base schema for form fields, we will add a refinement check dynamically.
 const formSchemaBase = z.object({
@@ -58,7 +59,8 @@ interface AddMeterReadingFormProps {
 }
 
 export function AddMeterReadingForm({ onSubmit, customers, bulkMeters, isLoading }: AddMeterReadingFormProps) {
-  
+  const [isAiReaderOpen, setIsAiReaderOpen] = React.useState(false);
+
   // The final schema is built dynamically inside the component to include a refinement check.
   const formSchema = React.useMemo(() => {
     return formSchemaBase.refine(
@@ -135,110 +137,128 @@ export function AddMeterReadingForm({ onSubmit, customers, bulkMeters, isLoading
     form.clearErrors();
   };
 
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <Tabs 
-          defaultValue="individual_customer_meter" 
-          onValueChange={handleTabChange} 
-          className="w-full"
-        >
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="individual_customer_meter">Individual Customer</TabsTrigger>
-            <TabsTrigger value="bulk_meter">Bulk Meter</TabsTrigger>
-          </TabsList>
-        </Tabs>
+  const handleAiReadingSuccess = (reading: number) => {
+    form.setValue("reading", reading, { shouldValidate: true });
+    setIsAiReaderOpen(false);
+  };
 
-        <FormField
-          control={form.control}
-          name="entityId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Select Meter</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value} disabled={isLoading || availableMeters.length === 0}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder={availableMeters.length === 0 ? "No meters available for type" : "Select a meter"} />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {availableMeters.map((meter) => (
-                    <SelectItem key={meter.value} value={meter.value}>
-                      {meter.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="reading"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Reading Value</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="Enter reading value"
-                  {...field}
-                  disabled={isLoading || !selectedEntityId}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="date"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Date of Reading</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
+  return (
+    <>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          <Tabs 
+            defaultValue="individual_customer_meter" 
+            onValueChange={handleTabChange} 
+            className="w-full"
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="individual_customer_meter">Individual Customer</TabsTrigger>
+              <TabsTrigger value="bulk_meter">Bulk Meter</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <FormField
+            control={form.control}
+            name="entityId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Select Meter</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value} disabled={isLoading || availableMeters.length === 0}>
                   <FormControl>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-[240px] pl-3 text-left font-normal",
-                        !field.value && "text-muted-foreground"
-                      )}
-                      disabled={isLoading}
-                    >
-                      {field.value ? (
-                        format(field.value, "PPP")
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
+                    <SelectTrigger>
+                      <SelectValue placeholder={availableMeters.length === 0 ? "No meters available for type" : "Select a meter"} />
+                    </SelectTrigger>
                   </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value}
-                    onSelect={field.onChange}
-                    disabled={(date) =>
-                      date > new Date() || date < new Date("2000-01-01") 
-                    }
-                    initialFocus
+                  <SelectContent>
+                    {availableMeters.map((meter) => (
+                      <SelectItem key={meter.value} value={meter.value}>
+                        {meter.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="reading"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex justify-between items-center">
+                  <FormLabel>Reading Value</FormLabel>
+                   <Button type="button" variant="outline" size="sm" onClick={() => setIsAiReaderOpen(true)} disabled={isLoading}>
+                    <Sparkles className="mr-2 h-4 w-4 text-amber-500" />
+                    AI Read
+                  </Button>
+                </div>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="Enter reading value"
+                    {...field}
+                    disabled={isLoading || !selectedEntityId}
                   />
-                </PopoverContent>
-              </Popover>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Button type="submit" disabled={isLoading || !form.formState.isValid}>
-          {isLoading ? "Submitting..." : "Add Reading"}
-        </Button>
-      </form>
-    </Form>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="date"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Date of Reading</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-[240px] pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                        disabled={isLoading}
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) =>
+                        date > new Date() || date < new Date("2000-01-01") 
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" disabled={isLoading || !form.formState.isValid}>
+            {isLoading ? "Submitting..." : "Add Reading"}
+          </Button>
+        </form>
+      </Form>
+      <AiMeterReaderDialog 
+        open={isAiReaderOpen} 
+        onOpenChange={setIsAiReaderOpen}
+        onReadingSuccess={handleAiReadingSuccess}
+      />
+    </>
   );
 }

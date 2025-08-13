@@ -45,11 +45,9 @@ export function NotificationBell({ user }: NotificationBellProps) {
       setLastReadTimestamp(localStorage.getItem(LAST_READ_TIMESTAMP_KEY));
     }
     
-    // Initialize both stores
     initializeNotifications();
     initializeBranches();
     
-    // Subscribe to both stores
     const unsubNotifications = subscribeToNotifications(setNotifications);
     const unsubBranches = subscribeToBranches(setAllBranches);
 
@@ -65,7 +63,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
     }
     const userRole = user.role.toLowerCase();
 
-    // Admins and certain roles do not see the notification bell.
+    // Hide bell for admin roles
     if (userRole === 'admin' || userRole === 'head office management') {
       return [];
     }
@@ -74,11 +72,9 @@ export function NotificationBell({ user }: NotificationBellProps) {
 
     return notifications
       .filter(notification => {
-        // Show if targeted to 'All Staff'
         if (notification.targetBranchId === null) {
           return true;
         }
-        // Show if targeted to the user's specific branch
         if (staffBranchId && notification.targetBranchId === staffBranchId) {
           return true;
         }
@@ -86,7 +82,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
-  }, [notifications, user, allBranches]); 
+  }, [notifications, user, allBranches]); // <-- Added 'user' to dependency array
 
   React.useEffect(() => {
     if (user) { 
@@ -117,7 +113,9 @@ export function NotificationBell({ user }: NotificationBellProps) {
     return allBranches.find(b => b.id === targetId)?.name || `Branch ID: ${targetId}`;
   };
 
-  if (!user || user.role.toLowerCase() === 'admin' || user.role.toLowerCase() === 'head office management') return null;
+  if (!user || user.role.toLowerCase() === 'admin' || user.role.toLowerCase() === 'head office management') {
+      return null;
+  }
 
   return (
     <Dialog open={!!selectedNotification} onOpenChange={handleDialogChange}>
@@ -126,10 +124,8 @@ export function NotificationBell({ user }: NotificationBellProps) {
           <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-full">
             <Bell className="h-5 w-5" />
             {unreadCount > 0 && (
-              <div className="absolute top-0 right-0 -translate-x-1/4 -translate-y-1/4">
-                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </div>
+              <div className="absolute top-0 right-0 -mr-1 -mt-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white">
+                {unreadCount > 9 ? '9+' : unreadCount}
               </div>
             )}
             <span className="sr-only">Notifications</span>

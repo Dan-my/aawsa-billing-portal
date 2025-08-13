@@ -62,27 +62,30 @@ export function NotificationBell({ user }: NotificationBellProps) {
       return [];
     }
     const userRole = user.role.toLowerCase();
-
-    // Hide bell for admin roles
-    if (userRole === 'admin' || userRole === 'head office management') {
-      return [];
-    }
-
     const staffBranchId = user.branchId;
 
     return notifications
       .filter(notification => {
+        // Admins and Head Office see everything
+        if (userRole === 'admin' || userRole === 'head office management') {
+          return true;
+        }
+        
+        // All staff see global notifications
         if (notification.targetBranchId === null) {
           return true;
         }
+        
+        // Branch-specific roles see notifications for their branch
         if (staffBranchId && notification.targetBranchId === staffBranchId) {
           return true;
         }
+        
         return false;
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
-  }, [notifications, user, allBranches]); // <-- Added 'user' to dependency array
+  }, [notifications, user, allBranches]);
 
   React.useEffect(() => {
     if (user) { 
@@ -113,7 +116,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
     return allBranches.find(b => b.id === targetId)?.name || `Branch ID: ${targetId}`;
   };
 
-  if (!user || user.role.toLowerCase() === 'admin' || user.role.toLowerCase() === 'head office management') {
+  if (!user) {
       return null;
   }
 

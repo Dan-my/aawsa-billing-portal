@@ -455,7 +455,7 @@ const mapSupabaseBulkMeterToDomain = async (sbm: BulkMeterRow): Promise<BulkMete
     currentReading: Number(sbm.currentReading),
     month: sbm.month,
     specificArea: sbm.specificArea,
-    subCity: sbm.location,
+    subCity: sbm.subCity,
     woreda: sbm.woreda,
     branchId: sbm.branch_id || undefined, 
     status: sbm.status,
@@ -471,7 +471,7 @@ const mapSupabaseBulkMeterToDomain = async (sbm: BulkMeterRow): Promise<BulkMete
     yCoordinate: sbm.y_coordinate ? Number(sbm.y_coordinate) : undefined,
     approved_by: sbm.approved_by,
     approved_at: sbm.approved_at,
-    location: sbm.location,
+    location: sbm.subCity,
   };
 };
 
@@ -497,7 +497,7 @@ const mapDomainBulkMeterToInsert = async (bm: Partial<BulkMeter>): Promise<BulkM
     currentReading: Number(bm.currentReading) || 0,
     month: bm.month!,
     specificArea: bm.specificArea!,
-    location: bm.subCity!,
+    subCity: bm.subCity!,
     woreda: bm.woreda!,
     branch_id: bm.branchId, 
     status: bm.status || 'Active',
@@ -526,7 +526,7 @@ const mapDomainBulkMeterToUpdate = async (bulkMeterWithUpdates: BulkMeter): Prom
         currentReading: Number(bulkMeterWithUpdates.currentReading),
         month: bulkMeterWithUpdates.month,
         specificArea: bulkMeterWithUpdates.specificArea,
-        location: bulkMeterWithUpdates.subCity,
+        subCity: bulkMeterWithUpdates.subCity,
         woreda: bulkMeterWithUpdates.woreda,
         branch_id: bulkMeterWithUpdates.branchId,
         status: bulkMeterWithUpdates.status,
@@ -1623,10 +1623,10 @@ export const removeReportLog = async (logId: string): Promise<StoreOperationResu
 
 export const addNotification = async (notificationData: Omit<DomainNotification, 'id' | 'createdAt'>): Promise<StoreOperationResult<DomainNotification>> => {
   const { data, error } = await createNotificationAction({
-    title: notificationData.title,
-    message: notificationData.message,
-    sender_name: notificationData.senderName,
-    target_branch_id: notificationData.targetBranchId
+    p_title: notificationData.title,
+    p_message: notificationData.message,
+    p_sender_name: notificationData.senderName,
+    p_target_branch_id: notificationData.targetBranchId
   });
 
   if (data && !error) {

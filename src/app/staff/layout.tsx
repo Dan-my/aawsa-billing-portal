@@ -7,6 +7,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { SidebarNav, type NavItemGroup } from "@/components/layout/sidebar-nav";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PermissionsContext, type PermissionsContextType } from '@/hooks/use-permissions';
+import { useRouter } from 'next/navigation';
 
 interface UserProfile {
   id: string;
@@ -44,6 +45,7 @@ const staffSidebarNavItems: NavItemGroup[] = [
 export default function StaffLayout({ children }: { children: React.ReactNode }) {
     const [user, setUser] = React.useState<UserProfile | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
+    const router = useRouter();
 
     React.useEffect(() => {
         const storedUser = localStorage.getItem("user");
@@ -53,10 +55,13 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                 setUser(parsedUser);
             } catch (e) {
                 console.error("Failed to parse user from localStorage", e);
+                router.replace("/");
             }
+        } else {
+            router.replace("/");
         }
         setIsLoading(false);
-    }, []);
+    }, [router]);
 
     const permissionsValue: PermissionsContextType = React.useMemo(() => ({
         permissions: new Set(user?.permissions || []),
@@ -72,12 +77,16 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
          </div>
        );
     }
+
+    if (!user) {
+        return null;
+    }
     
     return (
-        <AppShell userRole="staff" sidebar={<SidebarNav items={staffSidebarNavItems} />} >
-            <PermissionsContext.Provider value={permissionsValue}>
+        <PermissionsContext.Provider value={permissionsValue}>
+            <AppShell user={user} userRole="staff" sidebar={<SidebarNav items={staffSidebarNavItems} />} >
                 {children}
-            </PermissionsContext.Provider>
-        </AppShell>
+            </AppShell>
+        </PermissionsContext.Provider>
     );
 }

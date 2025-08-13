@@ -3,10 +3,8 @@
 
 import type { ReactNode } from "react";
 import * as React from "react";
-import { usePathname, useRouter } from 'next/navigation';
 import { SidebarNav, type NavItemGroup, type NavItem } from "@/components/layout/sidebar-nav";
 import { AppShell } from "@/components/layout/app-shell";
-import { Skeleton } from "@/components/ui/skeleton";
 import { PermissionsContext, type PermissionsContextType } from '@/hooks/use-permissions';
 
 interface UserProfile {
@@ -81,36 +79,15 @@ const buildSidebarNavItems = (user: UserProfile | null): NavItemGroup[] => {
     return navItems;
 }
 
-export default function AdminLayoutClient({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = React.useState<UserProfile | null>(null);
-    const [navItems, setNavItems] = React.useState<NavItemGroup[]>([]);
-    const [isLoading, setIsLoading] = React.useState(true);
-    const router = useRouter();
-    const pathname = usePathname();
 
-    React.useEffect(() => {
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-            try {
-                const parsedUser: UserProfile = JSON.parse(storedUser);
-                const userRoleLower = parsedUser.role.toLowerCase();
-                const ADMIN_ROLES = ['admin', 'head office management', 'staff management'];
+interface AdminLayoutClientProps {
+    children: React.ReactNode;
+    user: UserProfile | null; 
+}
 
-                if (ADMIN_ROLES.includes(userRoleLower)) {
-                    setUser(parsedUser);
-                    setNavItems(buildSidebarNavItems(parsedUser));
-                } else {
-                    router.replace("/"); // Not authorized for this layout
-                }
-            } catch (e) {
-                console.error("Failed to parse user from localStorage", e);
-                router.replace("/");
-            }
-        } else if (pathname !== '/') {
-            router.replace("/");
-        }
-        setIsLoading(false);
-    }, [router, pathname]);
+
+export default function AdminLayoutClient({ children, user }: AdminLayoutClientProps) {
+    const navItems = buildSidebarNavItems(user);
 
     const permissionsValue: PermissionsContextType = React.useMemo(() => ({
         permissions: new Set(user?.permissions || []),
@@ -120,23 +97,11 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
         }
     }), [user]);
 
-    if (isLoading) {
-       return (
-         <div className="flex items-center justify-center h-screen">
-           <Skeleton className="h-16 w-16 rounded-full" />
-         </div>
-       );
-    }
-    
-    if (!user && pathname !== '/') {
-        return null; // Don't render anything if not authenticated and not on login page
-    }
-
     return (
-        <AppShell userRole="admin" sidebar={<SidebarNav items={navItems} />} >
-            <PermissionsContext.Provider value={permissionsValue}>
+        <PermissionsContext.Provider value={permissionsValue}>
+            <AppShell user={user} userRole="admin" sidebar={<SidebarNav items={navItems} />} >
                 {children}
-            </PermissionsContext.Provider>
-        </AppShell>
+            </AppShell>
+        </PermissionsContext.Provider>
     );
 }

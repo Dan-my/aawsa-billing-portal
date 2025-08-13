@@ -71,21 +71,21 @@ export function NotificationBell({ user }: NotificationBellProps) {
           return true;
         }
         
-        // All staff see global notifications
-        if (notification.targetBranchId === null) {
-          return true;
-        }
-        
-        // Branch-specific roles see notifications for their branch
-        if (staffBranchId && notification.targetBranchId === staffBranchId) {
-          return true;
+        // Branch-specific roles see notifications for their branch and global ones
+        if (staffBranchId) {
+            if (notification.targetBranchId === null || notification.targetBranchId === staffBranchId) {
+              return true;
+            }
+        } else if (notification.targetBranchId === null) {
+            // Unassigned staff see only global notifications
+            return true;
         }
         
         return false;
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
-  }, [notifications, user, allBranches]);
+  }, [notifications, user]);
 
   React.useEffect(() => {
     if (user) { 

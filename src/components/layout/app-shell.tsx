@@ -30,16 +30,15 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useIdleTimeout } from '@/hooks/use-idle-timeout';
 import { NotificationBell } from './notification-bell';
 
 interface UserProfile {
   id: string; 
   email: string;
-  role: string; // No longer a strict enum
-  roleId?: number; // Added
-  permissions?: string[]; // Added
+  role: string;
+  roleId?: number; 
+  permissions?: string[];
   branchName?: string;
   branchId?: string;
   name?: string;
@@ -52,9 +51,16 @@ interface AppHeaderContentProps {
 }
 
 function AppHeaderContent({ user, appName = "AAWSA Billing Portal", onLogout }: AppHeaderContentProps) {
-  const { toggleSidebar, isMobile, state: sidebarState } = useSidebar();
+  const { isMobile, state: sidebarState } = useSidebar();
   
-  const dashboardHref = user?.role.toLowerCase() === 'admin' ? '/admin/dashboard' : '/staff/dashboard';
+  let dashboardHref = "/";
+  if (user) {
+    const role = user.role.toLowerCase();
+    if (role === 'admin') dashboardHref = '/admin/dashboard';
+    else if (role === 'head office management') dashboardHref = '/admin/head-office-dashboard';
+    else if (role === 'staff management') dashboardHref = '/admin/staff-management-dashboard';
+    else if (role === 'staff') dashboardHref = '/staff/dashboard';
+  }
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
@@ -90,7 +96,7 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal", onLogout }: 
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel className="truncate max-w-[200px]">{user.name || user.email}</DropdownMenuLabel>
                 <DropdownMenuLabel className="text-xs text-muted-foreground font-normal -mt-2">
-                  Role: {user.role === 'Staff' && user.branchName ? `Staff (${user.branchName})` : user.role}
+                  Role: {user.role}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onLogout}>
@@ -106,24 +112,17 @@ function AppHeaderContent({ user, appName = "AAWSA Billing Portal", onLogout }: 
   );
 }
 
-const ADMIN_ROLES = ['admin', 'head office management', 'staff management'];
-const STAFF_ROLES = ['staff'];
-
-export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 'staff', children: React.ReactNode, sidebar?: React.ReactNode }) {
+export function AppShell({ user, userRole, sidebar, children }: { user: UserProfile | null, userRole: 'admin' | 'staff', children: React.ReactNode, sidebar?: React.ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
-  const [user, setUser] = React.useState<UserProfile | null>(null);
   const [appName, setAppName] = React.useState("AAWSA Billing Portal");
-  const [authChecked, setAuthChecked] = React.useState(false);
   const currentYear = new Date().getFullYear();
 
   const handleLogout = React.useCallback(async () => {
     if (typeof window !== 'undefined' && window.localStorage) {
       window.localStorage.removeItem("user");
       window.localStorage.removeItem("session_expires_at");
-      window.localStorage.removeItem("last-read-timestamp"); // Also clear notification timestamp
+      window.localStorage.removeItem("last-read-timestamp");
     }
-    setUser(null);
     router.push("/");
   }, [router]);
 
@@ -131,7 +130,6 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
 
   React.useEffect(() => {
     if (typeof window === 'undefined' || !window.localStorage) {
-      setAuthChecked(true);
       return;
     }
     
@@ -144,52 +142,7 @@ export function AppShell({ userRole, sidebar, children }: { userRole: 'admin' | 
     const storedDarkMode = window.localStorage.getItem("aawsa-dark-mode-default");
     document.documentElement.classList.toggle('dark', storedDarkMode === "true");
 
-    const storedUser = window.localStorage.getItem('user');
-    if (storedUser) {
-        try {
-            const parsedUser: UserProfile = JSON.parse(storedUser);
-            const userRoleLower = parsedUser.role.toLowerCase();
-
-            // Check if the user's role is authorized for the current layout (defined by the userRole prop)
-            const isAuthorizedForLayout = 
-              (userRole === 'admin' && ADMIN_ROLES.includes(userRoleLower)) ||
-              (userRole === 'staff' && STAFF_ROLES.includes(userRoleLower));
-
-            if (isAuthorizedForLayout) {
-                setUser(parsedUser);
-            } else {
-                handleLogout();
-            }
-        } catch (e) {
-            handleLogout();
-        }
-    } else if (pathname !== '/') {
-        router.replace('/');
-    }
-    setAuthChecked(true);
-
-  }, [pathname, router, userRole, handleLogout]);
-
-  if (!authChecked) { 
-    return (
-      <div className="flex min-h-screen w-full items-center justify-center bg-background">
-        <div className="space-y-4 w-full max-w-xs p-4">
-            <Skeleton className="h-12 w-12 rounded-full mx-auto" />
-            <Skeleton className="h-8 w-3/4 mx-auto" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-        </div>
-      </div>
-    );
-  }
-  
-  if (pathname === '/') {
-      return <>{children}</>;
-  }
-  
-  if (!user) {
-    return null;
-  }
+  }, []);
   
   return (
     <SidebarProvider defaultOpen>

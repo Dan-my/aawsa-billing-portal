@@ -60,14 +60,13 @@ export function NotificationBell({ user }: NotificationBellProps) {
   }, []);
 
   const relevantNotifications = React.useMemo(() => {
-    // Crucial check: only filter if user and branches are loaded.
-    if (!user || allBranches.length === 0) { 
+    if (!user) {
       return [];
     }
     const userRole = user.role.toLowerCase();
 
-    // Admins do not see the notification bell.
-    if (userRole === 'admin') {
+    // Admins and certain roles do not see the notification bell.
+    if (userRole === 'admin' || userRole === 'head office management') {
       return [];
     }
 
@@ -87,10 +86,10 @@ export function NotificationBell({ user }: NotificationBellProps) {
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
-  }, [notifications, user, allBranches]); // <-- allBranches dependency is key
+  }, [notifications, user, allBranches]); 
 
   React.useEffect(() => {
-    if (user) { // Only calculate if user is loaded
+    if (user) { 
         const newUnreadCount = relevantNotifications.filter(
           (n) => !lastReadTimestamp || new Date(n.createdAt) > new Date(lastReadTimestamp)
         ).length;
@@ -127,10 +126,11 @@ export function NotificationBell({ user }: NotificationBellProps) {
           <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-full">
             <Bell className="h-5 w-5" />
             {unreadCount > 0 && (
-              <span className="absolute top-0 right-0 flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-              </span>
+              <div className="absolute top-0 right-0 -translate-x-1/4 -translate-y-1/4">
+                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </div>
+              </div>
             )}
             <span className="sr-only">Notifications</span>
           </Button>

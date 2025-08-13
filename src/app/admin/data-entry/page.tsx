@@ -88,14 +88,14 @@ export default function AdminDataEntryPage() {
       </div>
 
       <Tabs defaultValue="manual-individual" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 md:w-auto md:inline-flex">
-            <TabsTrigger value="manual-individual">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto sm:h-10">
+            <TabsTrigger value="manual-individual" className="py-2 sm:py-1.5">
               <FileText className="mr-2 h-4 w-4" /> Individual (Manual)
             </TabsTrigger>
-            <TabsTrigger value="manual-bulk">
+            <TabsTrigger value="manual-bulk" className="py-2 sm:py-1.5">
               <FileText className="mr-2 h-4 w-4" /> Bulk Meter (Manual)
             </TabsTrigger>
-            <TabsTrigger value="csv-upload">
+            <TabsTrigger value="csv-upload" className="py-2 sm:py-1.5">
               <UploadCloud className="mr-2 h-4 w-4" /> CSV Upload
             </TabsTrigger>
         </TabsList>

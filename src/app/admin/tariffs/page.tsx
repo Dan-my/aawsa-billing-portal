@@ -221,7 +221,7 @@ export default function TariffManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
             <LibraryBig className="h-8 w-8 text-primary" />
             <h1 className="text-2xl md:text-3xl font-bold">Tariff Management</h1>

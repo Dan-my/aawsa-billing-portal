@@ -137,22 +137,22 @@ export default function BulkMetersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <h1 className="text-2xl md:text-3xl font-bold">Bulk Meters Management</h1>
         <div className="flex gap-2 w-full md:w-auto">
-           <div className="relative flex-grow md:flex-grow-0">
+           <div className="relative flex-grow">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Search bulk meters..."
-              className="pl-8 w-full md:w-[250px]"
+              className="pl-8 w-full"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           {hasPermission('bulk_meters_create') && (
-            <Button onClick={handleAddBulkMeter}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Add New Bulk Meter
+            <Button onClick={handleAddBulkMeter} className="flex-shrink-0">
+              <PlusCircle className="mr-2 h-4 w-4" /> Add New
             </Button>
           )}
         </div>
@@ -169,8 +169,10 @@ export default function BulkMetersPage() {
                 Loading bulk meters...
              </div>
            ) : bulkMeters.length === 0 && !searchTerm ? (
-             <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
-                No bulk meters found. Click "Add New Bulk Meter" to get started. <Gauge className="inline-block ml-2 h-5 w-5" />
+             <div className="mt-4 p-8 border-2 border-dashed rounded-lg bg-muted/50 text-center">
+                <Gauge className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-semibold">No Bulk Meters Found</h3>
+                <p className="text-muted-foreground mt-1">Click "Add New" to get started.</p>
              </div>
            ) : (
             <BulkMeterTable

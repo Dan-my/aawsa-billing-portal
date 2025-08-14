@@ -213,7 +213,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Bulk Meter Name / Identifier *</FormLabel>
+                    <FormLabel>Bulk Meter Name / Identifier <span className="text-destructive">*</span></FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -226,7 +226,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 name="customerKeyNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Customer Key Number *</FormLabel>
+                    <FormLabel>Customer Key Number <span className="text-destructive">*</span></FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -239,7 +239,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 name="contractNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Contract Number *</FormLabel>
+                    <FormLabel>Contract Number <span className="text-destructive">*</span></FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -252,7 +252,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 name="meterSize"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Meter Size (inch) *</FormLabel>
+                    <FormLabel>Meter Size (inch) <span className="text-destructive">*</span></FormLabel>
                     <Select 
                       onValueChange={field.onChange} 
                       defaultValue={field.value ? String(field.value) : undefined}
@@ -280,7 +280,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 name="meterNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Meter Number *</FormLabel>
+                    <FormLabel>Meter Number <span className="text-destructive">*</span></FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -293,7 +293,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 name="previousReading"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Initial Previous Reading *</FormLabel>
+                    <FormLabel>Initial Previous Reading <span className="text-destructive">*</span></FormLabel>
                     <FormControl>
                       <Input 
                         type="number" 
@@ -315,7 +315,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 name="currentReading"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Initial Current Reading *</FormLabel>
+                    <FormLabel>Initial Current Reading <span className="text-destructive">*</span></FormLabel>
                     <FormControl>
                       <Input 
                         type="number" 
@@ -337,7 +337,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 name="month"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Initial Reading Month *</FormLabel>
+                    <FormLabel>Initial Reading Month <span className="text-destructive">*</span></FormLabel>
                      <DatePicker
                         date={field.value && isValid(parse(field.value, 'yyyy-MM', new Date())) ? parse(field.value, 'yyyy-MM', new Date()) : undefined}
                         setDate={(selectedDate) => {
@@ -353,7 +353,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 name="specificArea"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Specific Area *</FormLabel>
+                    <FormLabel>Specific Area <span className="text-destructive">*</span></FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -366,7 +366,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 name="subCity"
                 render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Sub-City *</FormLabel>
+                        <FormLabel>Sub-City <span className="text-destructive">*</span></FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                                 <SelectTrigger>
@@ -388,7 +388,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 name="woreda"
                 render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Woreda *</FormLabel>
+                        <FormLabel>Woreda <span className="text-destructive">*</span></FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                                 <SelectTrigger>
@@ -454,7 +454,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 name="chargeGroup"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Charge Group *</FormLabel>
+                    <FormLabel>Charge Group <span className="text-destructive">*</span></FormLabel>
                     <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value || 'Non-domestic'}>
                       <FormControl>
                         <SelectTrigger>
@@ -478,7 +478,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 name="sewerageConnection"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Sewerage Connection *</FormLabel>
+                    <FormLabel>Sewerage Connection <span className="text-destructive">*</span></FormLabel>
                     <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value || 'No'}>
                       <FormControl>
                         <SelectTrigger>
@@ -502,7 +502,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Status *</FormLabel>
+                    <FormLabel>Status <span className="text-destructive">*</span></FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || "Active"} defaultValue={field.value || "Active"}>
                       <FormControl>
                         <SelectTrigger>
@@ -524,7 +524,7 @@ export function BulkMeterFormDialog({ open, onOpenChange, onSubmit, defaultValue
                 name="paymentStatus"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Payment Status *</FormLabel>
+                    <FormLabel>Payment Status <span className="text-destructive">*</span></FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || "Unpaid"} defaultValue={field.value || "Unpaid"}>
                       <FormControl>
                         <SelectTrigger>

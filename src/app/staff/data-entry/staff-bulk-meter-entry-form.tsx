@@ -136,7 +136,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Bulk Meter Name / Identifier *</FormLabel>
+                  <FormLabel>Bulk Meter Name / Identifier <span className="text-destructive">*</span></FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -149,7 +149,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
               name="customerKeyNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Customer Key Number *</FormLabel>
+                  <FormLabel>Customer Key Number <span className="text-destructive">*</span></FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -162,7 +162,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
               name="contractNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Contract Number *</FormLabel>
+                  <FormLabel>Contract Number <span className="text-destructive">*</span></FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -175,7 +175,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
               name="meterSize"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Meter Size (inch) *</FormLabel>
+                  <FormLabel>Meter Size (inch) <span className="text-destructive">*</span></FormLabel>
                    <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined}>
                       <FormControl>
                         <SelectTrigger>
@@ -199,7 +199,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
               name="meterNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Meter Number *</FormLabel>
+                  <FormLabel>Meter Number <span className="text-destructive">*</span></FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -212,7 +212,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
               name="previousReading"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Previous Reading *</FormLabel>
+                  <FormLabel>Previous Reading <span className="text-destructive">*</span></FormLabel>
                   <FormControl>
                     <Input 
                       type="number" 
@@ -234,7 +234,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
               name="currentReading"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Current Reading *</FormLabel>
+                  <FormLabel>Current Reading <span className="text-destructive">*</span></FormLabel>
                   <FormControl>
                     <Input 
                       type="number" 
@@ -256,7 +256,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
               name="month"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Reading Month *</FormLabel>
+                  <FormLabel>Reading Month <span className="text-destructive">*</span></FormLabel>
                    <DatePicker
                     date={field.value ? parse(field.value, "yyyy-MM", new Date()) : undefined}
                     setDate={(selectedDate) => {
@@ -272,7 +272,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
               name="specificArea"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Specific Area *</FormLabel>
+                  <FormLabel>Specific Area <span className="text-destructive">*</span></FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -285,7 +285,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
               name="subCity"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Sub-City *</FormLabel>
+                  <FormLabel>Sub-City <span className="text-destructive">*</span></FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -309,7 +309,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
               name="woreda"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Woreda *</FormLabel>
+                  <FormLabel>Woreda <span className="text-destructive">*</span></FormLabel>
                    <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -333,7 +333,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
               name="chargeGroup"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Charge Group *</FormLabel>
+                  <FormLabel>Charge Group <span className="text-destructive">*</span></FormLabel>
                   <Select onValueChange={field.onChange} value={field.value} defaultValue="Non-domestic">
                     <FormControl>
                       <SelectTrigger><SelectValue /></SelectTrigger>
@@ -351,7 +351,7 @@ export function StaffBulkMeterEntryForm({ branchName }: StaffBulkMeterEntryFormP
               name="sewerageConnection"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Sewerage Connection *</FormLabel>
+                  <FormLabel>Sewerage Connection <span className="text-destructive">*</span></FormLabel>
                   <Select onValueChange={field.onChange} value={field.value} defaultValue="No">
                     <FormControl>
                       <SelectTrigger><SelectValue /></SelectTrigger>

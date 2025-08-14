@@ -227,20 +227,20 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
             </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Name *</FormLabel><FormControl><Input {...field} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
-            <FormField control={form.control} name="customerKeyNumber" render={({ field }) => (<FormItem><FormLabel>Cust. Key No. *</FormLabel><FormControl><Input {...field} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
-            <FormField control={form.control} name="contractNumber" render={({ field }) => (<FormItem><FormLabel>Contract No. *</FormLabel><FormControl><Input {...field} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Name <span className="text-destructive">*</span></FormLabel><FormControl><Input {...field} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="customerKeyNumber" render={({ field }) => (<FormItem><FormLabel>Cust. Key No. <span className="text-destructive">*</span></FormLabel><FormControl><Input {...field} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="contractNumber" render={({ field }) => (<FormItem><FormLabel>Contract No. <span className="text-destructive">*</span></FormLabel><FormControl><Input {...field} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
             
-            <FormField control={form.control} name="customerType" render={({ field }) => (<FormItem><FormLabel>Customer Type *</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={commonFieldDisabled}><FormControl><SelectTrigger disabled={commonFieldDisabled}><SelectValue placeholder="Select type" /></SelectTrigger></FormControl><SelectContent>{customerTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
-            <FormField control={form.control} name="bookNumber" render={({ field }) => (<FormItem><FormLabel>Book No. *</FormLabel><FormControl><Input {...field} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
-            <FormField control={form.control} name="ordinal" render={({ field }) => (<FormItem><FormLabel>Ordinal *</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseInt(e.target.value,10))} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="customerType" render={({ field }) => (<FormItem><FormLabel>Customer Type <span className="text-destructive">*</span></FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={commonFieldDisabled}><FormControl><SelectTrigger disabled={commonFieldDisabled}><SelectValue placeholder="Select type" /></SelectTrigger></FormControl><SelectContent>{customerTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="bookNumber" render={({ field }) => (<FormItem><FormLabel>Book No. <span className="text-destructive">*</span></FormLabel><FormControl><Input {...field} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="ordinal" render={({ field }) => (<FormItem><FormLabel>Ordinal <span className="text-destructive">*</span></FormLabel><FormControl><Input type="number" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseInt(e.target.value,10))} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
             
             <FormField 
                 control={form.control} 
                 name="meterSize" 
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Meter Size (inch) *</FormLabel>
+                    <FormLabel>Meter Size (inch) <span className="text-destructive">*</span></FormLabel>
                     <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined} disabled={commonFieldDisabled}>
                     <FormControl>
                         <SelectTrigger disabled={commonFieldDisabled}>
@@ -259,19 +259,19 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
                 </FormItem>
                 )} 
             />
-            <FormField control={form.control} name="meterNumber" render={({ field }) => (<FormItem><FormLabel>Meter No. *</FormLabel><FormControl><Input {...field} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
-            <FormField control={form.control} name="previousReading" render={({ field }) => (<FormItem><FormLabel>Previous Reading *</FormLabel><FormControl><Input type="number" step="0.01" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseFloat(e.target.value))} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="meterNumber" render={({ field }) => (<FormItem><FormLabel>Meter No. <span className="text-destructive">*</span></FormLabel><FormControl><Input {...field} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="previousReading" render={({ field }) => (<FormItem><FormLabel>Previous Reading <span className="text-destructive">*</span></FormLabel><FormControl><Input type="number" step="0.01" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseFloat(e.target.value))} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
             
-            <FormField control={form.control} name="currentReading" render={({ field }) => (<FormItem><FormLabel>Current Reading *</FormLabel><FormControl><Input type="number" step="0.01" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseFloat(e.target.value))} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
-            <FormField control={form.control} name="month" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Reading Month *</FormLabel><DatePicker date={field.value && isValid(parse(field.value, "yyyy-MM", new Date())) ? parse(field.value, "yyyy-MM", new Date()) : undefined} setDate={(date) => field.onChange(date ? format(date, "yyyy-MM") : "")} disabledTrigger={commonFieldDisabled} /><FormMessage /></FormItem>)} />
-            <FormField control={form.control} name="specificArea" render={({ field }) => (<FormItem><FormLabel>Specific Area *</FormLabel><FormControl><Input {...field} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="currentReading" render={({ field }) => (<FormItem><FormLabel>Current Reading <span className="text-destructive">*</span></FormLabel><FormControl><Input type="number" step="0.01" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseFloat(e.target.value))} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="month" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Reading Month <span className="text-destructive">*</span></FormLabel><DatePicker date={field.value && isValid(parse(field.value, "yyyy-MM", new Date())) ? parse(field.value, "yyyy-MM", new Date()) : undefined} setDate={(date) => field.onChange(date ? format(date, "yyyy-MM") : "")} disabledTrigger={commonFieldDisabled} /><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="specificArea" render={({ field }) => (<FormItem><FormLabel>Specific Area <span className="text-destructive">*</span></FormLabel><FormControl><Input {...field} disabled={commonFieldDisabled} /></FormControl><FormMessage /></FormItem>)} />
             
             <FormField
               control={form.control}
               name="subCity"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Sub-City *</FormLabel>
+                  <FormLabel>Sub-City <span className="text-destructive">*</span></FormLabel>
                    <Select 
                       onValueChange={field.onChange} 
                       value={field.value} 
@@ -299,7 +299,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
               name="woreda"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Woreda *</FormLabel>
+                  <FormLabel>Woreda <span className="text-destructive">*</span></FormLabel>
                    <Select onValueChange={field.onChange} value={field.value} disabled={commonFieldDisabled}>
                     <FormControl>
                       <SelectTrigger>
@@ -319,7 +319,7 @@ export function StaffIndividualCustomerEntryForm({ branchName }: StaffIndividual
               )}
             />
 
-            <FormField control={form.control} name="sewerageConnection" render={({ field }) => (<FormItem><FormLabel>Sewerage Conn. *</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={commonFieldDisabled}><FormControl><SelectTrigger disabled={commonFieldDisabled}><SelectValue placeholder="Select connection" /></SelectTrigger></FormControl><SelectContent>{sewerageConnections.map(conn => <SelectItem key={conn} value={conn}>{conn}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="sewerageConnection" render={({ field }) => (<FormItem><FormLabel>Sewerage Conn. <span className="text-destructive">*</span></FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={commonFieldDisabled}><FormControl><SelectTrigger disabled={commonFieldDisabled}><SelectValue placeholder="Select connection" /></SelectTrigger></FormControl><SelectContent>{sewerageConnections.map(conn => <SelectItem key={conn} value={conn}>{conn}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
           </div>
           
           <Button type="submit" className="w-full md:w-auto" disabled={submitButtonDisabled}>

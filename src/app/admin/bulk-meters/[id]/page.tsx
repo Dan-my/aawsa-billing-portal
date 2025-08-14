@@ -78,9 +78,16 @@ export default function BulkMeterDetailsPage() {
   const [showSlip, setShowSlip] = React.useState(false);
   const [isPrinting, setIsPrinting] = React.useState(false);
 
-  // Pagination state for billing history
+  // Pagination states
+  const [readingHistoryPage, setReadingHistoryPage] = React.useState(0);
+  const [readingHistoryRowsPerPage, setReadingHistoryRowsPerPage] = React.useState(5);
   const [billingHistoryPage, setBillingHistoryPage] = React.useState(0);
   const [billingHistoryRowsPerPage, setBillingHistoryRowsPerPage] = React.useState(10);
+  
+  const paginatedReadingHistory = meterReadingHistory.slice(
+    readingHistoryPage * readingHistoryRowsPerPage,
+    readingHistoryPage * readingHistoryRowsPerPage + readingHistoryRowsPerPage
+  );
 
   const paginatedBillingHistory = billingHistory.slice(
     billingHistoryPage * billingHistoryRowsPerPage,
@@ -763,7 +770,45 @@ export default function BulkMeterDetailsPage() {
                     </Button>
                 </div>
             </CardHeader>
-            <CardContent><div className="overflow-x-auto max-h-96">{meterReadingHistory.length > 0 ? (<Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">Reading Value</TableHead><TableHead>Notes</TableHead></TableRow></TableHeader><TableBody>{meterReadingHistory.map(reading => (<TableRow key={reading.id}><TableCell>{format(parseISO(reading.readingDate), "PP")}</TableCell><TableCell className="text-right">{reading.readingValue.toFixed(2)}</TableCell><TableCell className="text-xs text-muted-foreground">{reading.notes}</TableCell></TableRow>))}</TableBody></Table>) : (<p className="text-muted-foreground text-sm text-center py-4">No historical readings found.</p>)}</div></CardContent>
+            <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                    {meterReadingHistory.length > 0 ? (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead className="text-right">Reading Value</TableHead>
+                                    <TableHead>Notes</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {paginatedReadingHistory.map(reading => (
+                                    <TableRow key={reading.id}>
+                                        <TableCell>{format(parseISO(reading.readingDate), "PP")}</TableCell>
+                                        <TableCell className="text-right">{reading.readingValue.toFixed(2)}</TableCell>
+                                        <TableCell className="text-xs text-muted-foreground">{reading.notes}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    ) : (
+                        <p className="text-muted-foreground text-sm text-center py-4">No historical readings found.</p>
+                    )}
+                </div>
+            </CardContent>
+             {meterReadingHistory.length > 0 && (
+              <TablePagination
+                count={meterReadingHistory.length}
+                page={readingHistoryPage}
+                rowsPerPage={readingHistoryRowsPerPage}
+                onPageChange={setReadingHistoryPage}
+                onRowsPerPageChange={(value) => {
+                  setReadingHistoryRowsPerPage(value);
+                  setReadingHistoryPage(0);
+                }}
+                rowsPerPageOptions={[5, 10, 25]}
+              />
+            )}
           </Card>
     
           <Card className="shadow-lg non-printable">
@@ -847,6 +892,7 @@ export default function BulkMeterDetailsPage() {
     </div>
   );
 }
+
 
 
 

@@ -41,6 +41,7 @@ import {
 import type { BulkMeter } from '../bulk-meters/bulk-meter-types';
 import type { IndividualCustomer } from '../individual-customers/individual-customer-types';
 import type { Branch } from '../branches/branch-types';
+import { format } from 'date-fns';
 
 const chartConfig = {
   paid: { label: "Paid", color: "hsl(var(--chart-1))" },
@@ -78,10 +79,12 @@ export default function AdminDashboardPage() {
     const currentBranches = getBranches();
     const currentBulkMeters = getBulkMeters();
     const currentCustomers = getCustomers();
+    const currentMonthYear = format(new Date(), 'yyyy-MM');
 
-    // 1. Total Bills Status (from BULK meters only)
-    const paidBMs = currentBulkMeters.filter(bm => bm.paymentStatus === 'Paid').length;
-    const unpaidBMs = currentBulkMeters.filter(bm => bm.paymentStatus === 'Unpaid').length;
+    // 1. Total Bills Status (from BULK meters only for the current month)
+    const currentMonthBMs = currentBulkMeters.filter(bm => bm.month === currentMonthYear);
+    const paidBMs = currentMonthBMs.filter(bm => bm.paymentStatus === 'Paid').length;
+    const unpaidBMs = currentMonthBMs.filter(bm => bm.paymentStatus === 'Unpaid').length;
     
     setDynamicTotalBills(paidBMs + unpaidBMs);
     setDynamicPaidBills(paidBMs);
@@ -91,11 +94,11 @@ export default function AdminDashboardPage() {
       { name: 'Unpaid', value: unpaidBMs, fill: 'hsl(var(--chart-3))' },
     ]);
 
-    // 2. Customer and Meter Counts
+    // 2. Customer and Meter Counts (Overall totals)
     setDynamicTotalCustomerCount(currentCustomers.length);
     setDynamicTotalBulkMeterCount(currentBulkMeters.length);
 
-    // 3. Branch Performance Data (Bulk Meters ONLY)
+    // 3. Branch Performance Data (Bulk Meters ONLY, for the current month)
     const performanceMap = new Map<string, { branchName: string, paid: number, unpaid: number }>();
     const displayableBranches = currentBranches.filter(branch => branch.name.toLowerCase() !== 'head office');
 
@@ -103,7 +106,7 @@ export default function AdminDashboardPage() {
       performanceMap.set(branch.id, { branchName: branch.name, paid: 0, unpaid: 0 });
     });
 
-    currentBulkMeters.forEach(bm => {
+    currentMonthBMs.forEach(bm => {
       if (bm.branchId && performanceMap.has(bm.branchId)) {
         const entry = performanceMap.get(bm.branchId)!;
         if (bm.paymentStatus === 'Paid') entry.paid++;
@@ -115,7 +118,7 @@ export default function AdminDashboardPage() {
     setDynamicBranchPerformanceData(Array.from(performanceMap.values()).map(p => ({ branch: p.branchName.replace(/ Branch$/i, ""), paid: p.paid, unpaid: p.unpaid })));
 
 
-    // 4. Water Usage Trend Data from Bulk Meters AND Individual Customers
+    // 4. Water Usage Trend Data from Bulk Meters AND Individual Customers (historical)
     const usageMap = new Map<string, number>();
     
     const allMeters = [...currentBulkMeters, ...currentCustomers];
@@ -196,7 +199,7 @@ export default function AdminDashboardPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bulk Meter Bills Status</CardTitle>
+            <CardTitle className="text-sm font-medium">Bulk Meter Bills Status (This Month)</CardTitle>
             <FileText className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -216,7 +219,7 @@ export default function AdminDashboardPage() {
                   </ResponsiveContainer>
                 </ChartContainer>
               ) : (
-                <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No bill data to display.</div>
+                <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No bill data for this month.</div>
               )}
             </div>
           </CardContent>
@@ -284,7 +287,7 @@ export default function AdminDashboardPage() {
         <Card className="shadow-lg">
           <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <div>
-              <CardTitle>Branch Performance (Bulk Meters)</CardTitle>
+              <CardTitle>Branch Performance (Bulk Meters - This Month)</CardTitle>
               <CardDescription>Paid vs. Unpaid status for bulk meters across branches.</CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={() => setBranchPerformanceView(prev => prev === 'chart' ? 'table' : 'chart')}>

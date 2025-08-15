@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from "react";
@@ -104,8 +103,8 @@ export default function StaffManagementPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <h1 className="text-2xl md:text-3xl font-bold">Staff Management</h1>
-        <div className="flex gap-2 w-full md:w-auto">
-           <div className="relative flex-grow">
+        <div className="flex w-full flex-col sm:flex-row items-center gap-2">
+           <div className="relative w-full sm:w-auto flex-grow">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
@@ -116,7 +115,7 @@ export default function StaffManagementPage() {
             />
           </div>
           {hasPermission('staff_create') && (
-            <Button onClick={handleAddStaff} className="flex-shrink-0">
+            <Button onClick={handleAddStaff} className="w-full sm:w-auto flex-shrink-0">
               <PlusCircle className="mr-2 h-4 w-4" /> Add New
             </Button>
           )}
@@ -140,13 +139,15 @@ export default function StaffManagementPage() {
                 <p className="text-muted-foreground mt-1">Click "Add New" to get started.</p>
              </div>
           ) : (
-            <StaffTable
-              data={filteredStaff}
-              onEdit={handleEditStaff}
-              onDelete={handleDeleteStaff}
-              canEdit={hasPermission('staff_update')}
-              canDelete={hasPermission('staff_delete')}
-            />
+            <div className="overflow-x-auto">
+                <StaffTable
+                data={filteredStaff}
+                onEdit={handleEditStaff}
+                onDelete={handleDeleteStaff}
+                canEdit={hasPermission('staff_update')}
+                canDelete={hasPermission('staff_delete')}
+                />
+            </div>
           )}
         </CardContent>
       </Card>

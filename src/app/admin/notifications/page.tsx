@@ -210,35 +210,37 @@ export default function AdminNotificationsPage() {
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[450px]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Message</TableHead>
-                    <TableHead>Target</TableHead>
-                    <TableHead>Sent</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    <TableRow><TableCell colSpan={3} className="h-24 text-center">Loading notifications...</TableCell></TableRow>
-                  ) : filteredAndSortedNotifications.length > 0 ? (
-                    filteredAndSortedNotifications.map(n => (
-                      <TableRow key={n.id}>
-                        <TableCell>
-                          <p className="font-medium">{n.title}</p>
-                          <p className="text-xs text-muted-foreground truncate max-w-xs">{n.message}</p>
-                        </TableCell>
-                        <TableCell>{getDisplayTargetName(n.targetBranchId)}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow><TableCell colSpan={3} className="h-24 text-center">No notifications sent yet.</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader>
+                        <TableRow>
+                            <TableHead>Message</TableHead>
+                            <TableHead>Target</TableHead>
+                            <TableHead>Sent</TableHead>
+                        </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {isLoading ? (
+                            <TableRow><TableCell colSpan={3} className="h-24 text-center">Loading notifications...</TableCell></TableRow>
+                        ) : filteredAndSortedNotifications.length > 0 ? (
+                            filteredAndSortedNotifications.map(n => (
+                            <TableRow key={n.id}>
+                                <TableCell>
+                                <p className="font-medium">{n.title}</p>
+                                <p className="text-xs text-muted-foreground truncate max-w-xs">{n.message}</p>
+                                </TableCell>
+                                <TableCell>{getDisplayTargetName(n.targetBranchId)}</TableCell>
+                                <TableCell className="text-xs text-muted-foreground">
+                                {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
+                                </TableCell>
+                            </TableRow>
+                            ))
+                        ) : (
+                            <TableRow><TableCell colSpan={3} className="h-24 text-center">No notifications sent yet.</TableCell></TableRow>
+                        )}
+                        </TableBody>
+                    </Table>
+                </div>
             </ScrollArea>
           </CardContent>
         </Card>

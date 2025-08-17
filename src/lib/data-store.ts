@@ -1195,37 +1195,29 @@ export const addCustomer = async (
   customerData: Partial<DomainIndividualCustomer>,
   currentUser: StaffMember
 ): Promise<StoreOperationResult<DomainIndividualCustomer>> => {
-  let finalStatus: IndividualCustomerStatus = 'Active'; // Default for admins
   const userRole = currentUser?.role?.toLowerCase();
-
-  // Set status to 'Pending Approval' if the creator is a 'Staff' member
-  if (userRole === 'staff' || userRole === 'staff management') {
-    finalStatus = 'Pending Approval';
-  }
+  const finalStatus: IndividualCustomerStatus = (userRole === 'staff' || userRole === 'staff management')
+    ? 'Pending Approval'
+    : 'Active';
 
   const customerDataWithStatus = { ...customerData, status: finalStatus };
   const customerPayload = await mapDomainCustomerToInsert(customerDataWithStatus);
 
-  const { data: newSupabaseCustomer, error } = await supabase
-    .from('individual_customers')
-    .upsert(customerPayload, { onConflict: 'customerKeyNumber' })
-    .select()
-    .single();
+  const { data: newSupabaseCustomer, error } = await createCustomerAction(customerPayload);
 
   if (newSupabaseCustomer && !error) {
     const newCustomer = await mapSupabaseCustomerToDomain(newSupabaseCustomer);
-    customers = customers.filter(c => c.customerKeyNumber !== newCustomer.customerKeyNumber);
     customers.push(newCustomer);
     notifyCustomerListeners();
     return { success: true, data: newCustomer };
   }
-  console.error("DataStore: Failed to add or update customer. Error:", JSON.stringify(error, null, 2));
+  console.error("DataStore: Failed to add customer. Error:", JSON.stringify(error, null, 2));
   
-  if (error && error.code === '23505') { // Handle unique constraint violation specifically if upsert fails
+  if (error && (error as any).code === '23505') { 
       return { success: false, message: `Customer with key '${customerData.customerKeyNumber}' already exists.`, error };
   }
 
-  return { success: false, message: error?.message || "Failed to add or update customer.", error };
+  return { success: false, message: error?.message || "Failed to add customer.", error };
 };
 
 
@@ -1282,7 +1274,8 @@ export const addBulkMeter = async (
     bulkMeterDomainData: Partial<BulkMeter>,
     currentUser: StaffMember
 ): Promise<StoreOperationResult<BulkMeter>> => {
-  const finalStatus = (currentUser.role.toLowerCase() === 'staff' || currentUser.role.toLowerCase() === 'staff management')
+  const userRole = currentUser?.role?.toLowerCase();
+  const finalStatus = (userRole === 'staff' || userRole === 'staff management')
       ? 'Pending Approval'
       : 'Active';
 
@@ -1295,6 +1288,11 @@ export const addBulkMeter = async (
     notifyBulkMeterListeners();
     return { success: true, data: newBulkMeter };
   }
+  
+  if (error && (error as any).code === '23505') { 
+      return { success: false, message: `Bulk Meter with key '${bulkMeterDomainData.customerKeyNumber}' already exists.`, error };
+  }
+
   console.error("DataStore: Failed to add bulk meter. Error:", JSON.stringify(error, null, 2));
   return { success: false, message: (error as any)?.message || "Failed to add bulk meter.", error };
 };
@@ -1628,17 +1626,19 @@ export const removeReportLog = async (logId: string): Promise<StoreOperationResu
     return { success: false, message: (error as any)?.message || "Failed to delete report log.", error };
 };
 
-export const addNotification = async (notificationData: Omit<DomainNotification, 'id' | 'createdAt'>): Promise<StoreOperationResult<DomainNotification>> => {
-  const { data, error } = await createNotificationAction({
+export const addNotification = async (notificationData: { title: string, message: string, senderName: string, targetBranchId: string | null }): Promise<StoreOperationResult<DomainNotification>> => {
+  const payload = {
     p_title: notificationData.title,
     p_message: notificationData.message,
     p_sender_name: notificationData.senderName,
     p_target_branch_id: notificationData.targetBranchId
-  });
+  };
+
+  const { data, error } = await createNotificationAction(payload);
 
   if (data && !error) {
     const newNotification = mapSupabaseNotificationToDomain(data as SupabaseNotificationRow);
-    notifications = [newNotification, ...notifications].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    notifications = [newNotification, ...notifications].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     notifyNotificationListeners();
     return { success: true, data: newNotification };
   }

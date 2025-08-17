@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { IndividualCustomer as DomainIndividualCustomer, IndividualCustomerStatus } from '@/app/admin/individual-customers/individual-customer-types';
@@ -1206,16 +1205,26 @@ export const addCustomer = async (
   const customerDataWithStatus = { ...customerData, status: finalStatus };
   const customerPayload = await mapDomainCustomerToInsert(customerDataWithStatus);
 
-  const { data: newSupabaseCustomer, error } = await createCustomerAction(customerPayload);
+  const { data: newSupabaseCustomer, error } = await supabase
+    .from('individual_customers')
+    .upsert(customerPayload, { onConflict: 'customerKeyNumber' })
+    .select()
+    .single();
 
   if (newSupabaseCustomer && !error) {
     const newCustomer = await mapSupabaseCustomerToDomain(newSupabaseCustomer);
-    customers = [newCustomer, ...customers];
+    customers = customers.filter(c => c.customerKeyNumber !== newCustomer.customerKeyNumber);
+    customers.push(newCustomer);
     notifyCustomerListeners();
     return { success: true, data: newCustomer };
   }
-  console.error("DataStore: Failed to add customer. Error:", JSON.stringify(error, null, 2));
-  return { success: false, message: (error as any)?.message || "Failed to add customer.", error };
+  console.error("DataStore: Failed to add or update customer. Error:", JSON.stringify(error, null, 2));
+  
+  if (error && error.code === '23505') { // Handle unique constraint violation specifically if upsert fails
+      return { success: false, message: `Customer with key '${customerData.customerKeyNumber}' already exists.`, error };
+  }
+
+  return { success: false, message: error?.message || "Failed to add or update customer.", error };
 };
 
 
@@ -1911,3 +1920,5 @@ export async function loadInitialData() {
     initializeRolePermissions(),
   ]);
 }
+
+    

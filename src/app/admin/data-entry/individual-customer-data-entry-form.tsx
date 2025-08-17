@@ -44,7 +44,6 @@ import type { StaffMember } from "../staff-management/staff-types";
 const FormSchemaForAdminDataEntry = baseIndividualCustomerDataSchema.extend({
   status: z.enum(individualCustomerStatuses, { errorMap: () => ({ message: "Please select a valid status."}) }),
   paymentStatus: z.enum(paymentStatuses, { errorMap: () => ({ message: "Please select a valid payment status."}) }),
-  arrears: z.coerce.number().min(0, "Arrears must be a non-negative number.")
 });
 type AdminDataEntryFormValues = z.infer<typeof FormSchemaForAdminDataEntry>;
 
@@ -118,7 +117,6 @@ export function IndividualCustomerDataEntryForm() {
       sewerageConnection: undefined,
       status: "Active", 
       paymentStatus: "Unpaid", 
-      arrears: 0,
     },
   });
 
@@ -334,7 +332,6 @@ export function IndividualCustomerDataEntryForm() {
                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                  <FormField control={form.control} name="status" render={({ field }) => (<FormItem><FormLabel>Customer Status <span className="text-destructive">*</span></FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={form.formState.isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select status"/></SelectTrigger></FormControl><SelectContent>{individualCustomerStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
                  <FormField control={form.control} name="paymentStatus" render={({ field }) => (<FormItem><FormLabel>Payment Status <span className="text-destructive">*</span></FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={form.formState.isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select payment status"/></SelectTrigger></FormControl><SelectContent>{paymentStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
-                 <FormField control={form.control} name="arrears" render={({ field }) => (<FormItem><FormLabel>Outstanding Bill (ETB) <span className="text-destructive">*</span></FormLabel><FormControl><Input type="number" step="0.01" {...field} value={field.value ?? 0} onChange={e => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))} /></FormControl><FormMessage /></FormItem>)} />
                </div>
 
               <Button type="submit" className="w-full md:w-auto" disabled={form.formState.isSubmitting}>

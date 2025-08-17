@@ -357,7 +357,6 @@ const mapSupabaseCustomerToDomain = async (sc: SupabaseIndividualCustomerRow): P
     status: sc.status,
     paymentStatus: sc.paymentStatus,
     calculatedBill: bill,
-    arrears: 0, // Placeholder, as it's not in the DB
     created_at: sc.created_at,
     updated_at: sc.updated_at,
     approved_by: sc.approved_by,
@@ -391,7 +390,6 @@ const mapDomainCustomerToInsert = async (
     status: customer.status || 'Active', 
     paymentStatus: customer.paymentStatus || 'Unpaid', 
     calculatedBill: bill,
-    arrears: customer.arrears || 0
   };
 };
 
@@ -416,7 +414,6 @@ const mapDomainCustomerToUpdate = async (customerWithUpdates: DomainIndividualCu
         branch_id: customerWithUpdates.branchId,
         status: customerWithUpdates.status,
         paymentStatus: customerWithUpdates.paymentStatus,
-        arrears: customerWithUpdates.arrears,
         approved_by: customerWithUpdates.approved_by,
         approved_at: customerWithUpdates.approved_at,
     };
@@ -1119,7 +1116,7 @@ export const getTariff = (customerType: CustomerType, year: number): TariffInfo 
 
 
 
-export const getBranches = (): DomainBranch[] => [...branches];
+export const getBranches = (): DomainBranch[] => [...branches]];
 export const getCustomers = (): DomainIndividualCustomer[] => [...customers];
 export const getBulkMeters = (): BulkMeter[] => [...bulkMeters];
 export const getStaffMembers = (): StaffMember[] => [...staffMembers];

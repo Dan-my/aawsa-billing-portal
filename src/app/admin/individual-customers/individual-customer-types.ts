@@ -14,7 +14,6 @@ export type IndividualCustomer = z.infer<typeof baseIndividualCustomerDataSchema
   status: IndividualCustomerStatus;
   paymentStatus: PaymentStatus; 
   calculatedBill: number; 
-  arrears: number;
   branchId?: string; // New field for branch association
   created_at?: string | null;
   updated_at?: string | null;

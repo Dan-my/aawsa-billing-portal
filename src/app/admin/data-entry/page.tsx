@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from "react";
+import * as XLSX from 'xlsx';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, UploadCloud, Info, FileSpreadsheet, AlertCircle } from "lucide-react";
@@ -16,8 +17,8 @@ import {
   type IndividualCustomerDataEntryFormValues
 } from "./customer-data-entry-types";
 import { addBulkMeter, addCustomer, initializeBulkMeters, initializeCustomers } from "@/lib/data-store";
-import type { BulkMeter } from "../bulk-meters/bulk-meter-types";
-import type { IndividualCustomer } from "../individual-customers/individual-customer-types";
+import type { BulkMeter, BulkMeterStatus } from "../bulk-meters/bulk-meter-types";
+import type { IndividualCustomer, IndividualCustomerStatus } from "../individual-customers/individual-customer-types";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import type { StaffMember } from "../staff-management/staff-types";
@@ -41,14 +42,21 @@ export default function AdminDataEntryPage() {
 
   const handleBulkMeterCsvUpload = async (data: BulkMeterDataEntryFormValues) => {
     if (!currentUser) return;
-    await addBulkMeter(data, currentUser);
+    // Admins can upload directly as 'Active', others are 'Pending Approval'
+    const status: BulkMeterStatus = currentUser.role.toLowerCase() === 'admin' ? 'Active' : 'Pending Approval';
+    const bulkMeterDataWithStatus = { ...data, status };
+    await addBulkMeter(bulkMeterDataWithStatus, currentUser);
   };
 
   const handleIndividualCustomerCsvUpload = async (data: IndividualCustomerDataEntryFormValues) => {
      if (!currentUser) return;
+     // Admins can upload directly as 'Active', others are 'Pending Approval'
+     const status: IndividualCustomerStatus = currentUser.role.toLowerCase() === 'admin' ? 'Active' : 'Pending Approval';
      const customerDataForStore = {
         ...data,
-    } as Omit<IndividualCustomer, 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill' | 'arrears'>;
+        status,
+        paymentStatus: 'Unpaid', // Default payment status
+    } as Omit<IndividualCustomer, 'created_at' | 'updated_at' | 'calculatedBill' | 'approved_by' | 'approved_at'>;
     await addCustomer(customerDataForStore, currentUser);
   };
 

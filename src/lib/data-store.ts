@@ -1116,7 +1116,7 @@ export const getTariff = (customerType: CustomerType, year: number): TariffInfo 
 
 
 
-export const getBranches = (): DomainBranch[] => [...branches]];
+export const getBranches = (): DomainBranch[] => [...branches];
 export const getCustomers = (): DomainIndividualCustomer[] => [...customers];
 export const getBulkMeters = (): BulkMeter[] => [...bulkMeters];
 export const getStaffMembers = (): StaffMember[] => [...staffMembers];

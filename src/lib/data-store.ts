@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { IndividualCustomer as DomainIndividualCustomer, IndividualCustomerStatus } from '@/app/admin/individual-customers/individual-customer-types';

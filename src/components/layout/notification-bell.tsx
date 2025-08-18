@@ -45,8 +45,13 @@ export function NotificationBell({ user }: NotificationBellProps) {
       setLastReadTimestamp(localStorage.getItem(LAST_READ_TIMESTAMP_KEY));
     }
     
-    initializeNotifications();
-    initializeBranches();
+    const fetchData = async () => {
+      await Promise.all([initializeNotifications(), initializeBranches()]);
+      setNotifications(getNotifications());
+      setAllBranches(getBranches());
+    };
+    
+    fetchData();
     
     const unsubNotifications = subscribeToNotifications(setNotifications);
     const unsubBranches = subscribeToBranches(setAllBranches);
@@ -67,11 +72,11 @@ export function NotificationBell({ user }: NotificationBellProps) {
     return notifications
       .filter(notification => {
         // Admins and Head Office see everything
-        if (userRole === 'admin' || userRole === 'head office management') {
+        if (userRole === 'admin' || userRole === 'head office management' || userRole === 'staff management') {
           return true;
         }
         
-        // Branch-specific roles see notifications for their branch and global ones
+        // Branch-specific staff see notifications for their branch and global ones
         if (staffBranchId) {
             if (notification.targetBranchId === null || notification.targetBranchId === staffBranchId) {
               return true;

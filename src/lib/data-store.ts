@@ -1195,6 +1195,12 @@ export const addCustomer = async (
   customerData: Partial<DomainIndividualCustomer>,
   currentUser: StaffMember
 ): Promise<StoreOperationResult<DomainIndividualCustomer>> => {
+    // Check if customer with the same key already exists
+    const existingCustomer = customers.find(c => c.customerKeyNumber === customerData.customerKeyNumber);
+    if (existingCustomer) {
+        return { success: false, message: `Customer with key '${customerData.customerKeyNumber}' already exists.` };
+    }
+
   const userRole = currentUser?.role?.toLowerCase();
   const finalStatus: IndividualCustomerStatus = (userRole === 'staff' || userRole === 'staff management')
     ? 'Pending Approval'
@@ -1211,12 +1217,12 @@ export const addCustomer = async (
     notifyCustomerListeners();
     return { success: true, data: newCustomer };
   }
-  console.error("DataStore: Failed to add customer. Error:", JSON.stringify(error, null, 2));
   
   if (error && (error as any).code === '23505') { 
       return { success: false, message: `Customer with key '${customerData.customerKeyNumber}' already exists.`, error };
   }
-
+  
+  console.error("DataStore: Failed to add customer. Error:", JSON.stringify(error, null, 2));
   return { success: false, message: error?.message || "Failed to add customer.", error };
 };
 
@@ -1274,6 +1280,12 @@ export const addBulkMeter = async (
     bulkMeterDomainData: Partial<BulkMeter>,
     currentUser: StaffMember
 ): Promise<StoreOperationResult<BulkMeter>> => {
+    // Check if bulk meter with the same key already exists
+    const existingBulkMeter = bulkMeters.find(bm => bm.customerKeyNumber === bulkMeterDomainData.customerKeyNumber);
+    if (existingBulkMeter) {
+        return { success: false, message: `Bulk meter with key '${bulkMeterDomainData.customerKeyNumber}' already exists.` };
+    }
+
   const userRole = currentUser?.role?.toLowerCase();
   const finalStatus = (userRole === 'staff' || userRole === 'staff management')
       ? 'Pending Approval'

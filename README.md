@@ -188,7 +188,7 @@ CREATE OR REPLACE FUNCTION public.insert_notification(
     p_title text,
     p_message text,
     p_sender_name text,
-    p_target_branch_id uuid DEFAULT NULL
+    p_target_branch_id text DEFAULT NULL
 )
 RETURNS SETOF public.notifications
 LANGUAGE plpgsql
@@ -198,7 +198,7 @@ BEGIN
     RETURN QUERY
     INSERT INTO public.notifications (title, message, sender_name, target_branch_id)
     VALUES (p_title, p_message, p_sender_name, p_target_branch_id)
-    RETURNING id, created_at, title, message, sender_name, target_branch_id::uuid;
+    RETURNING id, created_at, title, message, sender_name, target_branch_id;
 END;
 $$;
 ```
@@ -259,3 +259,5 @@ This update makes VAT calculations fully database-driven by adding `vat_rate` an
     *   Open the newly added file `database_migrations/006_add_vat_to_tariffs.sql` in this project.
     *   Copy the entire content of that file and run it.
 
+
+```

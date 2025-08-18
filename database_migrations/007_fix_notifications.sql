@@ -1,38 +1,30 @@
--- Drop existing functions to resolve any signature conflicts.
--- It is safe to run these DROP commands even if the functions do not exist.
-DROP FUNCTION IF EXISTS insert_notification(text, text, text, text);
-DROP FUNCTION IF EXISTS insert_notification(text, text, text, uuid);
+-- Drop the existing function to ensure a clean re-creation and resolve any overloading conflicts.
+-- The IF EXISTS clause prevents an error if the function doesn't exist.
+DROP FUNCTION IF EXISTS public.insert_notification(text, text, text, text);
+DROP FUNCTION IF EXISTS public.insert_notification(text, text, text, uuid);
 
--- Create the definitive function with the correct signature.
--- This version uses uuid for the branch ID, which is the correct type.
--- It also includes `SECURITY DEFINER` to work correctly with Row-Level Security policies.
-CREATE OR REPLACE FUNCTION insert_notification(
+
+-- Re-create the function with the correct parameter types and return structure.
+-- p_target_branch_id is explicitly defined as uuid.
+-- The function now returns a single record matching the notifications table structure.
+CREATE OR REPLACE FUNCTION public.insert_notification(
     p_title text,
     p_message text,
     p_sender_name text,
-    p_target_branch_id uuid
+    p_target_branch_id uuid DEFAULT NULL -- Explicitly set to uuid
 )
-RETURNS TABLE (
-    id uuid,
-    created_at timestamptz,
-    title text,
-    message text,
-    sender_name text,
-    target_branch_id uuid
-)
+RETURNS SETOF notifications -- Ensure the return type matches the table
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY DEFINER -- Crucial for allowing insertion while RLS is active
 AS $$
 BEGIN
     RETURN QUERY
     INSERT INTO public.notifications (title, message, sender_name, target_branch_id)
     VALUES (p_title, p_message, p_sender_name, p_target_branch_id)
-    RETURNING
-        notifications.id,
-        notifications.created_at,
-        notifications.title,
-        notifications.message,
-        notifications.sender_name,
-        notifications.target_branch_id;
+    RETURNING id, created_at, title, message, sender_name, target_branch_id; -- Explicitly return all columns
 END;
 $$;
+
+-- Grant execution rights to the authenticated role.
+-- This allows logged-in users to call this function.
+GRANT EXECUTE ON FUNCTION public.insert_notification(text, text, text, uuid) TO authenticated;

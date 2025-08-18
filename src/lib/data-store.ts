@@ -1626,32 +1626,36 @@ export const removeReportLog = async (logId: string): Promise<StoreOperationResu
     return { success: false, message: (error as any)?.message || "Failed to delete report log.", error };
 };
 
-export const addNotification = async (notificationData: { title: string, message: string, senderName: string, targetBranchId: string | null }): Promise<StoreOperationResult<DomainNotification>> => {
+export const addNotification = async (notificationData: { title: string; message: string; senderName: string; targetBranchId: string | null }): Promise<StoreOperationResult<DomainNotification>> => {
   const payload = {
     p_title: notificationData.title,
     p_message: notificationData.message,
     p_sender_name: notificationData.senderName,
-    p_target_branch_id: notificationData.targetBranchId
+    p_target_branch_id: notificationData.targetBranchId,
   };
 
   const { data, error } = await createNotificationAction(payload);
-
+  
   if (data && !error) {
     const newNotification = mapSupabaseNotificationToDomain(data as SupabaseNotificationRow);
-    notifications = [newNotification, ...notifications].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    notifications = [newNotification, ...notifications].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     notifyNotificationListeners();
     return { success: true, data: newNotification };
   }
-
-  console.error("DataStore: Failed to add notification. DB error:", JSON.stringify(error, null, 2));
   
-  let userMessage = (error as any)?.message || "Failed to add notification.";
-  if (error && (error as any).message?.includes('function public.insert_notification does not exist')) {
-    userMessage = "The database is missing a required function. Please run the SQL script provided in the instructions to create it.";
+  let userMessage = "Failed to add notification.";
+  if (error) {
+    console.error("DataStore: Failed to add notification. DB error:", JSON.stringify(error, null, 2));
+    if ((error as any).message?.includes('does not exist')) {
+        userMessage = "The database is missing a required function. Please run the SQL script provided in the documentation to create it.";
+    } else if ((error as any).message) {
+        userMessage = (error as any).message;
+    }
   }
   
   return { success: false, message: userMessage, error };
 };
+
 
 export const updateRolePermissions = async (roleId: number, permissionIds: number[]): Promise<StoreOperationResult<void>> => {
     const { error } = await rpcUpdateRolePermissionsAction(roleId, permissionIds);

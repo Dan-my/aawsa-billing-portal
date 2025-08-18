@@ -146,7 +146,7 @@ You can also deploy this application to major cloud providers, although these me
 
 ## Database Migrations
 
-From time to time, application updates may require changes to the database structure or functions. These changes are provided as SQL scripts that you need to run in your Supabase project's SQL Editor.
+From time to to time, application updates may require changes to the database structure or functions. These changes are provided as SQL scripts that you need to run in your Supabase project's SQL Editor.
 
 ### **Important: Always back up your data before running any migration script.**
 
@@ -180,21 +180,22 @@ You should see a "Success. No rows returned" message. After running this, the fo
 
 ---
 
-### **Migration: Update Notification Function (Required)**
+### **Migration: Fix Notification Function (Required)**
 
-This update fixes two critical bugs in the notification system.
+This update fixes critical bugs and security issues in the notification system. If notifications are not working, running this script is essential.
+
+**What it does:**
 1. It changes how notifications are targeted from using a branch *name* to a unique branch *ID*, making the system much more reliable.
 2. It resolves a "row-level security policy" error by adding a necessary `SECURITY DEFINER` setting, allowing the application to send notifications without disabling important database security rules.
-**If you have run a previous version of this script, please run this updated version to apply the security fix.**
 
 **To apply this update:**
 
 1.  **Navigate to the SQL Editor:**
     *   Go to your Supabase project dashboard.
-    *   In the left-hand menu, click on the **SQL Editor** icon (it looks like a database with a query symbol).
+    *   In the left-hand menu, click on the **SQL Editor** icon.
 2.  **Run the Script:**
     *   Click on **"+ New query"**.
-    *   Open the newly added file `database_migrations/update_notification_function.sql` in this project.
+    *   Open the newly added file `database_migrations/007_fix_notifications.sql` in this project.
     *   Copy the entire content of that file.
     *   Paste the content into the query window in the Supabase SQL Editor.
     *   Click the **"RUN"** button.

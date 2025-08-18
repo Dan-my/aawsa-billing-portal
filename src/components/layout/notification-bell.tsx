@@ -67,25 +67,26 @@ export function NotificationBell({ user }: NotificationBellProps) {
       return [];
     }
     const userRole = user.role.toLowerCase();
-    const staffBranchId = user.branchId;
+    const userBranchId = user.branchId;
 
     return notifications
       .filter(notification => {
-        const isPrivilegedRole = userRole === 'admin' || userRole === 'head office management' || userRole === 'staff management';
-        if (isPrivilegedRole) {
+        // Admins see everything.
+        if (userRole === 'admin') {
           return true;
         }
         
-        // For staff roles, show global notifications (targetBranchId is null)
+        // Everyone sees global notifications.
         if (notification.targetBranchId === null) {
           return true;
         }
 
-        // Also show notifications specifically for their branch
-        if (staffBranchId && notification.targetBranchId === staffBranchId) {
+        // Users see notifications for their own branch.
+        if (userBranchId && notification.targetBranchId === userBranchId) {
           return true;
         }
         
+        // By default, hide the notification if none of the above conditions are met.
         return false;
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

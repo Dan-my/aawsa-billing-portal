@@ -71,19 +71,19 @@ export function NotificationBell({ user }: NotificationBellProps) {
 
     return notifications
       .filter(notification => {
-        // Admins and Head Office see everything
-        if (userRole === 'admin' || userRole === 'head office management' || userRole === 'staff management') {
+        const isPrivilegedRole = userRole === 'admin' || userRole === 'head office management' || userRole === 'staff management';
+        if (isPrivilegedRole) {
           return true;
         }
         
-        // Branch-specific staff see notifications for their branch and global ones
-        if (staffBranchId) {
-            if (notification.targetBranchId === null || notification.targetBranchId === staffBranchId) {
-              return true;
-            }
-        } else if (notification.targetBranchId === null) {
-            // Unassigned staff see only global notifications
-            return true;
+        // For staff roles, show global notifications (targetBranchId is null)
+        if (notification.targetBranchId === null) {
+          return true;
+        }
+
+        // Also show notifications specifically for their branch
+        if (staffBranchId && notification.targetBranchId === staffBranchId) {
+          return true;
         }
         
         return false;

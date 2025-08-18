@@ -77,20 +77,21 @@ export default function AdminNotificationsPage() {
     defaultValues: {
       title: "",
       message: "",
-      target_branch_id: ALL_STAFF_VALUE,
+      target_branch_id: user?.role?.toLowerCase() === 'staff management' ? user.branchId : ALL_STAFF_VALUE,
     },
   });
-  
+
   const filteredAndSortedNotifications = React.useMemo(() => {
     let notificationsToDisplay = [...sentNotifications];
     const userRole = user?.role?.toLowerCase();
+    const isPrivilegedUser = userRole === 'admin' || userRole === 'head office management';
 
-    if (userRole === 'staff management' && user.branchId) {
+    if (!isPrivilegedUser && user?.branchId) {
       notificationsToDisplay = sentNotifications.filter(n =>
         n.targetBranchId === null || n.targetBranchId === user.branchId
       );
     }
-
+    
     return notificationsToDisplay.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [sentNotifications, user]);
 
@@ -118,7 +119,7 @@ export default function AdminNotificationsPage() {
       form.reset({
         title: "",
         message: "",
-        target_branch_id: ALL_STAFF_VALUE,
+        target_branch_id: user?.role?.toLowerCase() === 'staff management' ? user.branchId : ALL_STAFF_VALUE,
       });
     } else {
       toast({ variant: "destructive", title: "Failed to Send", description: result.message });
@@ -129,13 +130,16 @@ export default function AdminNotificationsPage() {
     if (targetId === null) return "All Staff";
     return branches.find(b => b.id === targetId)?.name || `ID: ${targetId}`;
   };
+  
+  const canCreateNotifications = hasPermission('notifications_create');
+  const isBranchManager = user?.role?.toLowerCase() === 'staff management' && user.branchId;
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl md:text-3xl font-bold">Send Notifications</h1>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
-        {hasPermission('notifications_create') && (
+        {canCreateNotifications && (
             <Card className="shadow-lg lg:col-span-2">
             <CardHeader>
                 <CardTitle>Compose Message</CardTitle>
@@ -183,10 +187,12 @@ export default function AdminNotificationsPage() {
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                            <SelectItem value={ALL_STAFF_VALUE}>All Staff</SelectItem>
-                            {branches.map(branch => (
-                                <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
-                            ))}
+                              {!isBranchManager && <SelectItem value={ALL_STAFF_VALUE}>All Staff</SelectItem>}
+                              {branches
+                                .filter(branch => !isBranchManager || branch.id === user.branchId)
+                                .map(branch => (
+                                  <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                         <FormMessage />
@@ -203,7 +209,7 @@ export default function AdminNotificationsPage() {
             </Card>
         )}
 
-        <Card className={`shadow-lg ${hasPermission('notifications_create') ? 'lg:col-span-3' : 'lg:col-span-5'}`}>
+        <Card className={`shadow-lg ${canCreateNotifications ? 'lg:col-span-3' : 'lg:col-span-5'}`}>
           <CardHeader>
             <CardTitle>Sent History</CardTitle>
             <CardDescription>A log of previously sent notifications.</CardDescription>

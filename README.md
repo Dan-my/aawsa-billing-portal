@@ -176,10 +176,32 @@ This update fixes critical bugs and security issues in the notification system. 
 **To apply this update:**
 
 1.  **Navigate to the SQL Editor.**
-2.  **Run the Script:**
-    *   Click on **"+ New query"**.
-    *   Open the newly added file `database_migrations/007_fix_notifications.sql` in this project.
-    *   Copy the entire content of that file and run it.
+2.  **Copy and Run the Code:** Click **"+ New query"**, paste the entire SQL code block below, and click **"RUN"**.
+
+```sql
+-- Drop existing conflicting functions if they exist
+DROP FUNCTION IF EXISTS public.insert_notification(text, text, text, text);
+DROP FUNCTION IF EXISTS public.insert_notification(text, text, text, uuid);
+
+-- Create the single, correct function
+CREATE OR REPLACE FUNCTION public.insert_notification(
+    p_title text,
+    p_message text,
+    p_sender_name text,
+    p_target_branch_id uuid DEFAULT NULL
+)
+RETURNS SETOF public.notifications
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    RETURN QUERY
+    INSERT INTO public.notifications (title, message, sender_name, target_branch_id)
+    VALUES (p_title, p_message, p_sender_name, p_target_branch_id)
+    RETURNING id, created_at, title, message, sender_name, target_branch_id::uuid;
+END;
+$$;
+```
 
 ---
 

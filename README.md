@@ -164,15 +164,21 @@ This is a comprehensive update that creates the tables for roles and permissions
 
 ---
 
-### **Migration: Update Notification Function (Required)**
+### **Migration: Fix Notification Function (Required)**
 
-This update fixes two critical bugs in the notification system.
+This update fixes critical bugs and security issues in the notification system. If notifications are not working, running this script is essential.
+
+**What it does:**
+1.  It resolves a "could not choose a best candidate function" error by dropping any old, conflicting versions of the notification function from your database.
+2.  It creates a single, reliable `insert_notification` function with the correct parameter types.
+3.  It adds the necessary `SECURITY DEFINER` setting, allowing the application to send notifications without disabling important database security rules.
+
 **To apply this update:**
 
 1.  **Navigate to the SQL Editor.**
 2.  **Run the Script:**
     *   Click on **"+ New query"**.
-    *   Open the newly added file `database_migrations/update_notification_function.sql` in this project.
+    *   Open the newly added file `database_migrations/007_fix_notifications.sql` in this project.
     *   Copy the entire content of that file and run it.
 
 ---
@@ -230,3 +236,4 @@ This update makes VAT calculations fully database-driven by adding `vat_rate` an
     *   Click on **"+ New query"**.
     *   Open the newly added file `database_migrations/006_add_vat_to_tariffs.sql` in this project.
     *   Copy the entire content of that file and run it.
+

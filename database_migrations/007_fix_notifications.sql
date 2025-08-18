@@ -1,26 +1,38 @@
--- Drop the existing function if it exists to avoid conflicts
-DROP FUNCTION IF EXISTS public.insert_notification(p_title text, p_message text, p_sender_name text, p_target_branch_id uuid);
+-- Drop existing functions to resolve any signature conflicts.
+-- It is safe to run these DROP commands even if the functions do not exist.
+DROP FUNCTION IF EXISTS insert_notification(text, text, text, text);
+DROP FUNCTION IF EXISTS insert_notification(text, text, text, uuid);
 
--- Create the new, corrected function
-CREATE OR REPLACE FUNCTION public.insert_notification(
+-- Create the definitive function with the correct signature.
+-- This version uses uuid for the branch ID, which is the correct type.
+-- It also includes `SECURITY DEFINER` to work correctly with Row-Level Security policies.
+CREATE OR REPLACE FUNCTION insert_notification(
     p_title text,
     p_message text,
     p_sender_name text,
-    p_target_branch_id uuid DEFAULT NULL
+    p_target_branch_id uuid
 )
-RETURNS SETOF public.notifications AS $$
+RETURNS TABLE (
+    id uuid,
+    created_at timestamptz,
+    title text,
+    message text,
+    sender_name text,
+    target_branch_id uuid
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
 BEGIN
-    -- This function now correctly handles a UUID for the branch ID.
-    -- The SECURITY DEFINER setting is crucial. It allows the function to be called
-    -- by authenticated users without them needing direct insert permissions on the
-    -- notifications table, which is a more secure pattern.
     RETURN QUERY
     INSERT INTO public.notifications (title, message, sender_name, target_branch_id)
     VALUES (p_title, p_message, p_sender_name, p_target_branch_id)
-    RETURNING *;
+    RETURNING
+        notifications.id,
+        notifications.created_at,
+        notifications.title,
+        notifications.message,
+        notifications.sender_name,
+        notifications.target_branch_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Grant execution permission to the authenticated role.
--- This is a key part of the security model, ensuring only logged-in users can trigger it.
-GRANT EXECUTE ON FUNCTION public.insert_notification(text, text, text, uuid) TO authenticated;
+$$;

@@ -30,6 +30,7 @@ import { IndividualCustomerTable } from "../individual-customers/individual-cust
 import { BulkMeterTable } from "../bulk-meters/bulk-meter-table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 export default function ApprovalsPage() {
   const { hasPermission } = usePermissions();
@@ -42,6 +43,15 @@ export default function ApprovalsPage() {
   
   const [actionType, setActionType] = React.useState<'approve' | 'reject' | null>(null);
   const [selectedEntity, setSelectedEntity] = React.useState<IndividualCustomer | BulkMeter | null>(null);
+
+  // Pagination state for customers
+  const [customerPage, setCustomerPage] = React.useState(0);
+  const [customerRowsPerPage, setCustomerRowsPerPage] = React.useState(10);
+
+  // Pagination state for bulk meters
+  const [bulkMeterPage, setBulkMeterPage] = React.useState(0);
+  const [bulkMeterRowsPerPage, setBulkMeterRowsPerPage] = React.useState(10);
+
 
   React.useEffect(() => {
     const userJson = localStorage.getItem('user');
@@ -87,6 +97,20 @@ export default function ApprovalsPage() {
     }
     return allPending;
   }, [bulkMeters, currentUser]);
+
+  const paginatedCustomers = React.useMemo(() => {
+    return pendingCustomers.slice(
+      customerPage * customerRowsPerPage,
+      customerPage * customerRowsPerPage + customerRowsPerPage
+    );
+  }, [pendingCustomers, customerPage, customerRowsPerPage]);
+
+  const paginatedBulkMeters = React.useMemo(() => {
+    return pendingBulkMeters.slice(
+      bulkMeterPage * bulkMeterRowsPerPage,
+      bulkMeterPage * bulkMeterRowsPerPage + bulkMeterRowsPerPage
+    );
+  }, [pendingBulkMeters, bulkMeterPage, bulkMeterRowsPerPage]);
   
   const handleApproveClick = (entity: IndividualCustomer | BulkMeter) => {
     setSelectedEntity(entity);
@@ -183,7 +207,7 @@ export default function ApprovalsPage() {
              </div>
           ) : (
             <IndividualCustomerTable 
-              data={pendingCustomers} 
+              data={paginatedCustomers} 
               branches={branches}
               onEdit={handleApproveClick}
               onDelete={handleRejectClick}
@@ -192,6 +216,18 @@ export default function ApprovalsPage() {
             />
           )}
         </CardContent>
+        {pendingCustomers.length > 0 && (
+          <TablePagination
+            count={pendingCustomers.length}
+            page={customerPage}
+            onPageChange={setCustomerPage}
+            rowsPerPage={customerRowsPerPage}
+            onRowsPerPageChange={(value) => {
+              setCustomerRowsPerPage(value);
+              setCustomerPage(0);
+            }}
+          />
+        )}
       </Card>
       
       <Card className="shadow-lg">
@@ -214,7 +250,7 @@ export default function ApprovalsPage() {
              </div>
           ) : (
             <BulkMeterTable
-              data={pendingBulkMeters} 
+              data={paginatedBulkMeters} 
               branches={branches}
               onEdit={handleApproveClick}
               onDelete={handleRejectClick}
@@ -223,6 +259,18 @@ export default function ApprovalsPage() {
             />
           )}
         </CardContent>
+        {pendingBulkMeters.length > 0 && (
+          <TablePagination
+            count={pendingBulkMeters.length}
+            page={bulkMeterPage}
+            onPageChange={setBulkMeterPage}
+            rowsPerPage={bulkMeterRowsPerPage}
+            onRowsPerPageChange={(value) => {
+              setBulkMeterRowsPerPage(value);
+              setBulkMeterPage(0);
+            }}
+          />
+        )}
       </Card>
 
       <AlertDialog open={!!selectedEntity} onOpenChange={(open) => !open && setSelectedEntity(null)}>
@@ -249,3 +297,5 @@ export default function ApprovalsPage() {
     </div>
   );
 }
+
+    

@@ -1,4 +1,5 @@
 
+
 import { supabase } from '@/lib/supabase';
 import type { TariffRow } from '@/lib/actions';
 
@@ -169,7 +170,9 @@ export async function calculateBill(
   const sanitationFee = (tariffConfig.sanitation_percentage || 0) * baseWaterCharge;
   
   let vatAmount = 0;
-  if (customerType === 'Domestic' && usageM3 > tariffConfig.domestic_vat_threshold_m3) {
+  if (customerType === 'Non-domestic') {
+      vatAmount = baseWaterCharge * (tariffConfig.vat_rate || 0);
+  } else if (customerType === 'Domestic' && usageM3 > tariffConfig.domestic_vat_threshold_m3) {
       let taxableWaterCharge = 0;
       let remainingUsageForVat = usageM3;
       let lastLimitForVat = 0;
@@ -194,8 +197,6 @@ export async function calculateBill(
           lastLimitForVat = tierLimit;
       }
       vatAmount = taxableWaterCharge * Number(tariffConfig.vat_rate || 0);
-  } else if (customerType === 'Non-domestic') {
-      vatAmount = baseWaterCharge * (tariffConfig.vat_rate || 0);
   }
 
   const meterRentPrices = tariffConfig.meter_rent_prices || {};
@@ -217,3 +218,4 @@ export async function calculateBill(
     sewerageCharge: parseFloat(sewerageCharge.toFixed(2)),
   };
 }
+

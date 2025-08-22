@@ -7,7 +7,6 @@ import type { BulkMeter as DomainBulkMeterTypeFromTypes } from '@/app/admin/bulk
 import type { Branch as DomainBranch } from '@/app/admin/branches/branch-types';
 import type { StaffMember as DomainStaffMember } from '@/app/admin/staff-management/staff-types';
 import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult } from '@/lib/billing';
-import { supabase } from '@/lib/supabase'; // Direct import of supabase client
 import {
   getAllBranchesAction,
   createBranchAction,
@@ -1910,12 +1909,17 @@ export const authenticateStaffMember = async (email: string, password: string): 
 };
 
 export const getBulkMeterByCustomerKey = async (key: string): Promise<StoreOperationResult<BulkMeter>> => {
-  const { data, error } = await supabase.from('bulk_meters').select('*').eq('customerKeyNumber', key).single();
-  if (error || !data) {
-    return { success: false, message: "Bulk meter not found", error };
-  }
-  const domainData = await mapSupabaseBulkMeterToDomain(data);
-  return { success: true, data: domainData };
+    const bulkMeter = bulkMeters.find(bm => bm.customerKeyNumber === key);
+    if (bulkMeter) {
+        return { success: true, data: bulkMeter };
+    }
+    // Fallback to DB if not in local store
+    const { data, error } = await supabase.from('bulk_meters').select('*').eq('customerKeyNumber', key).single();
+    if (error || !data) {
+        return { success: false, message: "Bulk meter not found", error };
+    }
+    const domainData = await mapSupabaseBulkMeterToDomain(data);
+    return { success: true, data: domainData };
 };
 
 
@@ -1937,5 +1941,3 @@ export async function loadInitialData() {
     initializeRolePermissions(),
   ]);
 }
-
-    

@@ -1,18 +1,8 @@
-
-
 // This file is intentionally left blank. 
 // The data-store.ts file now directly handles database interactions.
 // We are keeping this file to avoid breaking existing imports, but it no longer contains logic.
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from './supabase';
 import type { Database } from '@/types/supabase';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-// This client is not used for database queries anymore, but might be needed for other Supabase services.
-// To avoid breaking the app if it's used elsewhere, we'll keep its initialization,
-// but all data-store functions will use direct DB actions.
-export const supabase = createClient<Database>(supabaseUrl, supabaseKey);
 
 
 export const getStaffMemberForAuth = async (email: string, password?: string) => {
@@ -87,4 +77,3 @@ export const rpcUpdateRolePermissions = async (roleId: number, permissionIds: nu
 export const getAllTariffs = async () => supabase.from('tariffs').select('*');
 export const createTariff = async (tariff: any) => supabase.from('tariffs').insert(tariff).select().single();
 export const updateTariff = async (customerType: string, year: number, tariff: any) => supabase.from('tariffs').update(tariff).eq('customer_type', customerType).eq('year', year).select().single();
-

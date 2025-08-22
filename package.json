@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "supabase": "supabase"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.6.2",
@@ -66,6 +67,7 @@
     "autoprefixer": "^10.4.19",
     "genkit-cli": "^1.6.1",
     "postcss": "^8",
+    "supabase": "^1.187.3",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   },

@@ -12,7 +12,7 @@ body {
     --background: 210 20% 98%; /* Light Gray */
     --background: 0 0% 100%; /* White */
     --foreground: 0 0% 10%; /* Black */    
-    --card: 0 0% 100%; /* White */
+    --card: 220 13% 91%; /* User selected light gray */
     --card-foreground: 210 50% 10%;
     --popover: 0 0% 100%; /* White */
     --popover-foreground: 210 50% 10%;
@@ -48,7 +48,7 @@ body {
   .dark {
     --background: 210 20% 5%;
     --foreground: 210 20% 98%;
-    --card: 210 20% 5%;
+    --card: 220 13% 15%; /* Darker version of user selected color */
     --card-foreground: 210 20% 98%;
     --popover: 210 20% 5%;
     --popover-foreground: 210 20% 98%;

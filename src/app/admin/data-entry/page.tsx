@@ -2,7 +2,6 @@
 "use client";
 
 import * as React from "react";
-import * as XLSX from 'xlsx';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, UploadCloud, Info, FileSpreadsheet, AlertCircle } from "lucide-react";

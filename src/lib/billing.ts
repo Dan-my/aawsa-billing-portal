@@ -171,7 +171,7 @@ export async function calculateBill(
   
   let vatAmount = 0;
   if (customerType === 'Non-domestic') {
-      vatAmount = baseWaterCharge * (tariffConfig.vat_rate || 0);
+      vatAmount = baseWaterCharge * 0.15; // Apply 15% VAT for Non-domestic
   } else if (customerType === 'Domestic' && usageM3 > tariffConfig.domestic_vat_threshold_m3) {
       let taxableWaterCharge = 0;
       let remainingUsageForVat = usageM3;
@@ -218,4 +218,5 @@ export async function calculateBill(
     sewerageCharge: parseFloat(sewerageCharge.toFixed(2)),
   };
 }
+
 

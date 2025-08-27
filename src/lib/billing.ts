@@ -171,6 +171,7 @@ export async function calculateBill(
   
   let vatAmount = 0;
   if (customerType === 'Non-domestic') {
+    vatAmount=baseWaterCharge*0.15;
       vatAmount = baseWaterCharge * (tariffConfig.vat_rate || 0); // Apply VAT for Non-domestic
   } else if (customerType === 'Domestic' && usageM3 > tariffConfig.domestic_vat_threshold_m3) {
       let taxableWaterCharge = 0;

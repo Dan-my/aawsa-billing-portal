@@ -434,7 +434,6 @@ export default function AdminReportsPage() {
   const [isArchiveDeleteConfirmationOpen, setIsArchiveDeleteConfirmationOpen] = React.useState(false);
 
   const [filterColumns, setFilterColumns] = React.useState<Set<string>>(new Set());
-  const [filterValue, setFilterValue] = React.useState<string>("");
   const [isFilterPopoverOpen, setIsFilterPopoverOpen] = React.useState(false);
 
   const [reportData, setReportData] = React.useState<any[] | null>(null);
@@ -483,19 +482,8 @@ export default function AdminReportsPage() {
         endDate: dateRange?.to
     });
 
-    if (filterColumns.size > 0 && filterValue) {
-      data = data.filter(row => {
-          for (const column of filterColumns) {
-              const cellValue = row[column];
-              if (cellValue != null && String(cellValue).toLowerCase().includes(filterValue.toLowerCase())) {
-                  return true;
-              }
-          }
-          return false;
-      });
-    }
     return data;
-  }, [selectedReport, selectedBranch, dateRange, filterColumns, filterValue]);
+  }, [selectedReport, selectedBranch, dateRange]);
 
   const handleGenerateReport = () => {
     if (!selectedReport) return;
@@ -624,7 +612,6 @@ export default function AdminReportsPage() {
             <Select value={selectedReportId} onValueChange={(value) => {
               setSelectedReportId(value);
               setFilterColumns(new Set());
-              setFilterValue("");
               setReportData(null);
             }}>
               <SelectTrigger id="report-type" className="w-full md:w-[400px]">
@@ -651,7 +638,7 @@ export default function AdminReportsPage() {
               <CardContent>
                 <p className="text-sm text-muted-foreground">{selectedReport.description}</p>
                  {selectedReport.getData ? (
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                     <div className="space-y-2">
                         <Label htmlFor="branch-filter">Filter by Branch</Label>
                         <Select 
@@ -678,66 +665,6 @@ export default function AdminReportsPage() {
                             onDateChange={setDateRange}
                         />
                     </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="column-filter">Filter by Column(s)</Label>
-                         <Popover open={isFilterPopoverOpen} onOpenChange={setIsFilterPopoverOpen}>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              aria-expanded={isFilterPopoverOpen}
-                              className="w-full justify-between"
-                            >
-                              {filterColumns.size > 0 ? `${filterColumns.size} selected` : "Select columns..."}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-[200px] p-0">
-                              <Command>
-                                <CommandInput placeholder="Search columns..." />
-                                <CommandList>
-                                  <CommandEmpty>No columns found.</CommandEmpty>
-                                  <CommandGroup>
-                                    {selectedReport.headers?.map((header) => (
-                                      <CommandItem
-                                        key={header}
-                                        value={header}
-                                        onSelect={() => {
-                                          setFilterColumns(prev => {
-                                            const next = new Set(prev);
-                                            if (next.has(header)) {
-                                              next.delete(header);
-                                            } else {
-                                              next.add(header);
-                                            }
-                                            return next;
-                                          });
-                                        }}
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            filterColumns.has(header) ? "opacity-100" : "opacity-0"
-                                          )}
-                                        />
-                                        {header}
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                          </PopoverContent>
-                        </Popover>
-                     </div>
-                     <div className="lg:col-span-3">
-                         <Input
-                          id="filter-value"
-                          placeholder="Enter text to search for across selected columns..."
-                          value={filterValue}
-                          onChange={(e) => setFilterValue(e.target.value)}
-                          disabled={filterColumns.size === 0}
-                        />
-                     </div>
                   </div>
                  ) : (
                    <Alert variant="default" className="mt-4 border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30">

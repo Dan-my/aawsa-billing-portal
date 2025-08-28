@@ -49,8 +49,6 @@ interface ReportFilters {
   branchId?: string;
   startDate?: Date;
   endDate?: Date;
-  searchTerm?: string;
-  searchColumns?: Set<string>;
 }
 
 interface ReportType {
@@ -121,7 +119,7 @@ const availableReports: ReportType[] = [
       "Assigned Branch Name", "created_at", "updated_at"
     ],
     getData: (filters) => {
-      const { branchId, startDate, endDate, searchTerm, searchColumns } = filters;
+      const { branchId, startDate, endDate } = filters;
       const customers = getCustomers();
       const branches = getBranches();
       
@@ -150,15 +148,6 @@ const availableReports: ReportType[] = [
         };
       });
       
-      if (searchTerm && searchColumns && searchColumns.size > 0) {
-        const lowerCaseSearchTerm = searchTerm.toLowerCase();
-        return dataWithBranchName.filter(row => 
-            Array.from(searchColumns).some(column => 
-                row[column] !== null && row[column] !== undefined && String(row[column]).toLowerCase().includes(lowerCaseSearchTerm)
-            )
-        );
-      }
-
       return dataWithBranchName;
     },
   },
@@ -173,7 +162,7 @@ const availableReports: ReportType[] = [
       "bulkUsage", "totalBulkBill", "differenceUsage", "differenceBill"
     ],
     getData: (filters) => {
-      const { branchId, searchTerm, searchColumns } = filters;
+      const { branchId } = filters;
       const bulkMeters = getBulkMeters();
       const branches = getBranches();
 
@@ -192,15 +181,6 @@ const availableReports: ReportType[] = [
         };
       });
 
-      if (searchTerm && searchColumns && searchColumns.size > 0) {
-        const lowerCaseSearchTerm = searchTerm.toLowerCase();
-        return dataWithBranchName.filter(row => 
-            Array.from(searchColumns).some(column => 
-                row[column] !== null && row[column] !== undefined && String(row[column]).toLowerCase().includes(lowerCaseSearchTerm)
-            )
-        );
-      }
-
       return dataWithBranchName;
     },
   },
@@ -216,7 +196,7 @@ const availableReports: ReportType[] = [
         "paymentStatus", "billNumber", "notes", "createdAt", "updatedAt"
     ],
     getData: (filters) => {
-      const { branchId, startDate, endDate, searchTerm, searchColumns } = filters;
+      const { branchId, startDate, endDate } = filters;
       let bills = getBills();
       
       if (branchId) {
@@ -238,15 +218,6 @@ const availableReports: ReportType[] = [
          });
       }
 
-      if (searchTerm && searchColumns && searchColumns.size > 0) {
-        const lowerCaseSearchTerm = searchTerm.toLowerCase();
-        return bills.filter(row => 
-            Array.from(searchColumns).some(column => 
-                row[column] !== null && row[column] !== undefined && String(row[column]).toLowerCase().includes(lowerCaseSearchTerm)
-            )
-        );
-      }
-
       return bills;
     },
   },
@@ -262,7 +233,7 @@ const availableReports: ReportType[] = [
         "paymentStatus", "billNumber", "notes", "createdAt", "updatedAt"
     ],
     getData: (filters) => {
-      const { branchId, startDate, endDate, searchTerm, searchColumns } = filters;
+      const { branchId, startDate, endDate } = filters;
       let bills = getBills().filter(b => b.paymentStatus === 'Paid');
       
       if (branchId) {
@@ -284,15 +255,6 @@ const availableReports: ReportType[] = [
          });
       }
 
-      if (searchTerm && searchColumns && searchColumns.size > 0) {
-        const lowerCaseSearchTerm = searchTerm.toLowerCase();
-        return bills.filter(row => 
-            Array.from(searchColumns).some(column => 
-                row[column] !== null && row[column] !== undefined && String(row[column]).toLowerCase().includes(lowerCaseSearchTerm)
-            )
-        );
-      }
-
       return bills;
     },
   },
@@ -308,7 +270,7 @@ const availableReports: ReportType[] = [
         "paymentStatus", "billNumber", "notes", "createdAt", "updatedAt"
     ],
     getData: (filters) => {
-      const { branchId, startDate, endDate, searchTerm, searchColumns } = filters;
+      const { branchId, startDate, endDate } = filters;
       let bills = getBills();
       
       if (branchId) {
@@ -330,15 +292,6 @@ const availableReports: ReportType[] = [
          });
       }
 
-      if (searchTerm && searchColumns && searchColumns.size > 0) {
-        const lowerCaseSearchTerm = searchTerm.toLowerCase();
-        return bills.filter(row => 
-            Array.from(searchColumns).some(column => 
-                row[column] !== null && row[column] !== undefined && String(row[column]).toLowerCase().includes(lowerCaseSearchTerm)
-            )
-        );
-      }
-
       return bills;
     },
   },
@@ -352,7 +305,7 @@ const availableReports: ReportType[] = [
         "createdAt", "updatedAt"
     ],
     getData: (filters) => {
-      const { branchId, startDate, endDate, searchTerm, searchColumns } = filters;
+      const { branchId, startDate, endDate } = filters;
       let readings = getMeterReadings();
 
       if (branchId) {
@@ -374,15 +327,6 @@ const availableReports: ReportType[] = [
         });
       }
 
-      if (searchTerm && searchColumns && searchColumns.size > 0) {
-        const lowerCaseSearchTerm = searchTerm.toLowerCase();
-        return readings.filter(row => 
-            Array.from(searchColumns).some(column => 
-                row[column] !== null && row[column] !== undefined && String(row[column]).toLowerCase().includes(lowerCaseSearchTerm)
-            )
-        );
-      }
-
       return readings;
     },
   },
@@ -396,7 +340,7 @@ const availableReports: ReportType[] = [
         "createdAt", "updatedAt"
     ],
     getData: (filters) => {
-      const { branchId, startDate, endDate, searchTerm, searchColumns } = filters;
+      const { branchId, startDate, endDate } = filters;
       let payments = getPayments();
 
       if (branchId) {
@@ -414,15 +358,6 @@ const availableReports: ReportType[] = [
         });
       }
 
-      if (searchTerm && searchColumns && searchColumns.size > 0) {
-        const lowerCaseSearchTerm = searchTerm.toLowerCase();
-        return payments.filter(row => 
-            Array.from(searchColumns).some(column => 
-                row[column] !== null && row[column] !== undefined && String(row[column]).toLowerCase().includes(lowerCaseSearchTerm)
-            )
-        );
-      }
-
       return payments;
     },
   },
@@ -435,7 +370,7 @@ const availableReports: ReportType[] = [
       "Reading Value", "Is Estimate", "Reader Name", "Reader Staff ID", "Notes"
     ],
     getData: (filters) => {
-      const { branchId, startDate, endDate, searchTerm, searchColumns } = filters;
+      const { branchId, startDate, endDate } = filters;
       const readings = getMeterReadings();
       const customers = getCustomers();
       const bulkMeters = getBulkMeters();
@@ -489,14 +424,6 @@ const availableReports: ReportType[] = [
         };
       });
 
-      if (searchTerm && searchColumns && searchColumns.size > 0) {
-        const lowerCaseSearchTerm = searchTerm.toLowerCase();
-        return dataWithNames.filter(row => 
-            Array.from(searchColumns).some(column => 
-                row[column] !== null && row[column] !== undefined && String(row[column]).toLowerCase().includes(lowerCaseSearchTerm)
-            )
-        );
-      }
       return dataWithNames;
     },
   },
@@ -516,11 +443,7 @@ export default function AdminReportsPage() {
   const [archiveCutoffDate, setArchiveCutoffDate] = React.useState<Date | undefined>();
   const [archivableBills, setArchivableBills] = React.useState<DomainBill[]>([]);
   const [isArchiveDeleteConfirmationOpen, setIsArchiveDeleteConfirmationOpen] = React.useState(false);
-
-  const [filterColumns, setFilterColumns] = React.useState<Set<string>>(new Set());
-  const [isFilterPopoverOpen, setIsFilterPopoverOpen] = React.useState(false);
-  const [searchTerm, setSearchTerm] = React.useState("");
-
+  
   const [reportData, setReportData] = React.useState<any[] | null>(null);
   const [reportHeaders, setReportHeaders] = React.useState<string[] | null>(null);
 
@@ -565,12 +488,10 @@ export default function AdminReportsPage() {
         branchId: selectedBranch === 'all' ? undefined : selectedBranch,
         startDate: dateRange?.from,
         endDate: dateRange?.to,
-        searchTerm: searchTerm,
-        searchColumns: filterColumns,
     });
 
     return data;
-  }, [selectedReport, selectedBranch, dateRange, searchTerm, filterColumns]);
+  }, [selectedReport, selectedBranch, dateRange]);
 
   const handleGenerateReport = () => {
     if (!selectedReport) return;
@@ -698,8 +619,6 @@ export default function AdminReportsPage() {
             <Label htmlFor="report-type">Select Report Type</Label>
             <Select value={selectedReportId} onValueChange={(value) => {
               setSelectedReportId(value);
-              setFilterColumns(new Set());
-              setSearchTerm("");
               setReportData(null);
             }}>
               <SelectTrigger id="report-type" className="w-full md:w-[400px]">
@@ -727,7 +646,7 @@ export default function AdminReportsPage() {
                 <p className="text-sm text-muted-foreground">{selectedReport.description}</p>
                  {selectedReport.getData ? (
                   <div className="mt-4 space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                         <div className="space-y-2">
                             <Label htmlFor="branch-filter">Filter by Branch</Label>
                             <Select 
@@ -754,65 +673,6 @@ export default function AdminReportsPage() {
                                 onDateChange={setDateRange}
                             />
                         </div>
-                        <div className="space-y-2">
-                            <Label>Filter by Column(s)</Label>
-                            <Popover open={isFilterPopoverOpen} onOpenChange={setIsFilterPopoverOpen}>
-                                <PopoverTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    role="combobox"
-                                    className="w-full justify-between"
-                                >
-                                    {filterColumns.size > 0 ? `${filterColumns.size} selected` : "Select columns..."}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[300px] p-0">
-                                <Command>
-                                    <CommandInput placeholder="Search columns..." />
-                                    <CommandList>
-                                    <CommandEmpty>No columns found.</CommandEmpty>
-                                    <CommandGroup>
-                                        {(selectedReport.headers || []).map((column) => (
-                                        <CommandItem
-                                            key={column}
-                                            value={column}
-                                            onSelect={(currentValue) => {
-                                                setFilterColumns(prev => {
-                                                    const newSet = new Set(prev);
-                                                    if (newSet.has(currentValue)) {
-                                                        newSet.delete(currentValue);
-                                                    } else {
-                                                        newSet.add(currentValue);
-                                                    }
-                                                    return newSet;
-                                                });
-                                            }}
-                                        >
-                                            <Check
-                                            className={cn(
-                                                "mr-2 h-4 w-4",
-                                                filterColumns.has(column) ? "opacity-100" : "opacity-0"
-                                            )}
-                                            />
-                                            {column.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                        </CommandItem>
-                                        ))}
-                                    </CommandGroup>
-                                    </CommandList>
-                                </Command>
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                    </div>
-                     <div className="space-y-2">
-                        <Input 
-                            type="text" 
-                            placeholder="Enter text to search for across selected columns..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            disabled={filterColumns.size === 0}
-                        />
                     </div>
                   </div>
                  ) : (

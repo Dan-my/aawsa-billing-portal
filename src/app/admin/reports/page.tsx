@@ -220,7 +220,7 @@ const availableReports: ReportType[] = [
     name: "List Of Paid Bills (XLSX)",
     description: "A filtered list showing only the bills that have been marked as 'Paid'.",
     headers: [
-        "id", "individualCustomerId", "bulkMeterId", "billPeriodStartDate", "billPeriodEndDate", 
+        "bulkMeterId", "billPeriodStartDate", "billPeriodEndDate", 
         "monthYear", "previousReadingValue", "currentReadingValue", "usageM3", 
         "baseWaterCharge", "sewerageCharge", "maintenanceFee", "sanitationFee", 
         "meterRent", "totalAmountDue", "amountPaid", "balanceDue", "dueDate", 
@@ -256,7 +256,7 @@ const availableReports: ReportType[] = [
     name: "List Of Sent Bills (XLSX)",
     description: "A comprehensive list of all bills that have been generated, regardless of payment status.",
     headers: [
-        "id", "individualCustomerId", "bulkMeterId", "billPeriodStartDate", "billPeriodEndDate", 
+        "bulkMeterId", "billPeriodStartDate", "billPeriodEndDate", 
         "monthYear", "previousReadingValue", "currentReadingValue", "usageM3", 
         "baseWaterCharge", "sewerageCharge", "maintenanceFee", "sanitationFee", 
         "meterRent", "totalAmountDue", "amountPaid", "balanceDue", "dueDate", 
@@ -714,8 +714,7 @@ export default function AdminReportsPage() {
                             </PopoverContent>
                           </Popover>
                       </div>
-                       <div className="space-y-2">
-                          <Label htmlFor="filter-value">Value</Label>
+                       <div className="space-y-2 self-end">
                           <Input
                             id="filter-value"
                             placeholder="Enter value..."

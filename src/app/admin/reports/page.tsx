@@ -180,7 +180,7 @@ const availableReports: ReportType[] = [
     name: "Billing Summary Report (XLSX)",
     description: "Summary of all generated bills, including amounts and payment statuses.",
     headers: [
-        "id", "individualCustomerId", "bulkMeterId", "billPeriodStartDate", "billPeriodEndDate", 
+        "bulkMeterId", "billPeriodStartDate", "billPeriodEndDate", 
         "monthYear", "previousReadingValue", "currentReadingValue", "usageM3", 
         "baseWaterCharge", "sewerageCharge", "maintenanceFee", "sanitationFee", 
         "meterRent", "totalAmountDue", "amountPaid", "balanceDue", "dueDate", 

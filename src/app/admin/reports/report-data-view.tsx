@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { format, parseISO } from 'date-fns';
 
 interface ReportDataViewProps {
@@ -42,34 +42,37 @@ export function ReportDataView({ data, headers }: ReportDataViewProps) {
 
   return (
     <ScrollArea className="h-[500px] w-full border rounded-md">
-      <Table>
-        <TableHeader className="sticky top-0 bg-muted z-10">
-          <TableRow>
-            {headers.map((header) => (
-              <TableHead key={header}>{header.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.length > 0 ? (
-            data.map((row, rowIndex) => (
-              <TableRow key={rowIndex}>
-                {headers.map((header) => (
-                  <TableCell key={`${rowIndex}-${header}`} className="text-xs">
-                    {formatValue(row[header])}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          ) : (
+      <div className="relative">
+        <Table>
+          <TableHeader className="sticky top-0 bg-muted z-10">
             <TableRow>
-              <TableCell colSpan={headers.length} className="h-24 text-center">
-                No data to display.
-              </TableCell>
+              {headers.map((header) => (
+                <TableHead key={header}>{header.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</TableHead>
+              ))}
             </TableRow>
-          )}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {data.length > 0 ? (
+              data.map((row, rowIndex) => (
+                <TableRow key={rowIndex}>
+                  {headers.map((header) => (
+                    <TableCell key={`${rowIndex}-${header}`} className="text-xs whitespace-nowrap">
+                      {formatValue(row[header])}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={headers.length} className="h-24 text-center">
+                  No data to display.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+       <ScrollBar orientation="horizontal" />
     </ScrollArea>
   );
 }

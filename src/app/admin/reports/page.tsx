@@ -5,9 +5,10 @@ import * as React from "react";
 import * as XLSX from 'xlsx';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileSpreadsheet, Info, AlertCircle, Lock, Archive, Trash2 } from "lucide-react";
+import { Download, FileSpreadsheet, Info, AlertCircle, Lock, Archive, Trash2, Filter } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { 
   getCustomers, 
@@ -428,6 +429,9 @@ export default function AdminReportsPage() {
   const [archivableBills, setArchivableBills] = React.useState<DomainBill[]>([]);
   const [isArchiveDeleteConfirmationOpen, setIsArchiveDeleteConfirmationOpen] = React.useState(false);
 
+  const [filterColumn, setFilterColumn] = React.useState<string>("all");
+  const [filterValue, setFilterValue] = React.useState<string>("");
+
   const canSelectAllBranches = hasPermission('reports_generate_all');
   const isLockedToBranch = !canSelectAllBranches && hasPermission('reports_generate_branch');
 
@@ -474,11 +478,19 @@ export default function AdminReportsPage() {
     setIsGenerating(true);
 
     try {
-      const data = selectedReport.getData({
+      let data = selectedReport.getData({
           branchId: selectedBranch === 'all' ? undefined : selectedBranch,
           startDate: dateRange?.from,
           endDate: dateRange?.to
       });
+
+      if (filterColumn !== 'all' && filterValue) {
+        data = data.filter(row => {
+            const cellValue = row[filterColumn];
+            return cellValue != null && String(cellValue).toLowerCase().includes(filterValue.toLowerCase());
+        });
+      }
+
       if (!data || data.length === 0) {
         toast({
           title: "No Data",
@@ -585,7 +597,11 @@ export default function AdminReportsPage() {
         <CardContent className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="report-type">Select Report Type</Label>
-            <Select value={selectedReportId} onValueChange={setSelectedReportId}>
+            <Select value={selectedReportId} onValueChange={(value) => {
+              setSelectedReportId(value);
+              setFilterColumn("all");
+              setFilterValue("");
+            }}>
               <SelectTrigger id="report-type" className="w-full md:w-[400px]">
                 <SelectValue placeholder="Choose a report..." />
               </SelectTrigger>
@@ -610,7 +626,7 @@ export default function AdminReportsPage() {
               <CardContent>
                 <p className="text-sm text-muted-foreground">{selectedReport.description}</p>
                  {selectedReport.getData ? (
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
                     <div className="space-y-2">
                         <Label htmlFor="branch-filter">Filter by Branch</Label>
                         <Select 
@@ -636,6 +652,32 @@ export default function AdminReportsPage() {
                             date={dateRange} 
                             onDateChange={setDateRange}
                         />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="column-filter">Filter by Column</Label>
+                        <Select value={filterColumn} onValueChange={setFilterColumn}>
+                          <SelectTrigger id="column-filter">
+                            <SelectValue placeholder="Select Column" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">None</SelectItem>
+                            {selectedReport.headers?.map(header => (
+                              <SelectItem key={header} value={header}>{header}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                       <div className="space-y-2">
+                          <Label htmlFor="filter-value">Value</Label>
+                          <Input
+                            id="filter-value"
+                            placeholder="Enter value..."
+                            value={filterValue}
+                            onChange={(e) => setFilterValue(e.target.value)}
+                            disabled={filterColumn === 'all'}
+                          />
+                       </div>
                     </div>
                   </div>
                  ) : (

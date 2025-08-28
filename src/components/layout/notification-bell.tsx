@@ -66,29 +66,9 @@ export function NotificationBell({ user }: NotificationBellProps) {
     if (!user) {
       return [];
     }
-    const userRole = user.role.toLowerCase();
-    const userBranchId = user.branchId;
-
+    
+    // Display all notifications to every user, sorted by most recent.
     return notifications
-      .filter(notification => {
-        // Admins see everything.
-        if (userRole === 'admin') {
-          return true;
-        }
-        
-        // Everyone sees global notifications.
-        if (notification.targetBranchId === null) {
-          return true;
-        }
-
-        // Users see notifications for their own branch.
-        if (userBranchId && notification.targetBranchId === userBranchId) {
-          return true;
-        }
-        
-        // By default, hide the notification if none of the above conditions are met.
-        return false;
-      })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
   }, [notifications, user]);

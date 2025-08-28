@@ -5,15 +5,15 @@ import * as React from "react";
 import * as XLSX from 'xlsx';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileSpreadsheet, Info, AlertCircle, Lock, Archive, Trash2, Filter, Check, ChevronsUpDown } from "lucide-react";
+import { Download, FileSpreadsheet, Info, AlertCircle, Lock, Archive, Trash2, Filter, Check, ChevronsUpDown, Eye } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  getCustomers, 
-  getBulkMeters, 
-  initializeCustomers, 
+import {
+  getCustomers,
+  getBulkMeters,
+  initializeCustomers,
   initializeBulkMeters,
   getBills,
   initializeBills,
@@ -22,7 +22,7 @@ import {
   initializeBulkMeterReadings,
   getPayments,
   initializePayments,
-  getStaffMembers, 
+  getStaffMembers,
   initializeStaffMembers,
   getBranches,
   initializeBranches,
@@ -42,6 +42,7 @@ import type { DomainBill } from "@/lib/data-store";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import { ReportDataView } from './report-data-view';
 
 
 interface ReportFilters {
@@ -436,6 +437,10 @@ export default function AdminReportsPage() {
   const [filterValue, setFilterValue] = React.useState<string>("");
   const [isFilterPopoverOpen, setIsFilterPopoverOpen] = React.useState(false);
 
+  const [reportData, setReportData] = React.useState<any[] | null>(null);
+  const [reportHeaders, setReportHeaders] = React.useState<string[] | null>(null);
+
+
   const canSelectAllBranches = hasPermission('reports_generate_all');
   const isLockedToBranch = !canSelectAllBranches && hasPermission('reports_generate_branch');
 
@@ -466,68 +471,78 @@ export default function AdminReportsPage() {
   }, [hasPermission]);
 
   const selectedReport = availableReports.find(report => report.id === selectedReportId);
+  
+  const getFilteredData = React.useCallback(() => {
+    if (!selectedReport?.getData) {
+      return [];
+    }
+
+    let data = selectedReport.getData({
+        branchId: selectedBranch === 'all' ? undefined : selectedBranch,
+        startDate: dateRange?.from,
+        endDate: dateRange?.to
+    });
+
+    if (filterColumns.size > 0 && filterValue) {
+      data = data.filter(row => {
+          for (const column of filterColumns) {
+              const cellValue = row[column];
+              if (cellValue != null && String(cellValue).toLowerCase().includes(filterValue.toLowerCase())) {
+                  return true;
+              }
+          }
+          return false;
+      });
+    }
+    return data;
+  }, [selectedReport, selectedBranch, dateRange, filterColumns, filterValue]);
 
   const handleGenerateReport = () => {
     if (!selectedReport) return;
 
     if (!selectedReport.getData || !selectedReport.headers) {
-      toast({
-        variant: "destructive",
-        title: "Report Not Implemented",
-        description: `${selectedReport.name} is not available for download yet.`,
-      });
+      toast({ variant: "destructive", title: "Report Not Implemented" });
       return;
     }
 
     setIsGenerating(true);
-
     try {
-      let data = selectedReport.getData({
-          branchId: selectedBranch === 'all' ? undefined : selectedBranch,
-          startDate: dateRange?.from,
-          endDate: dateRange?.to
-      });
-
-      if (filterColumns.size > 0 && filterValue) {
-        data = data.filter(row => {
-            for (const column of filterColumns) {
-                const cellValue = row[column];
-                if (cellValue != null && String(cellValue).toLowerCase().includes(filterValue.toLowerCase())) {
-                    return true;
-                }
-            }
-            return false;
-        });
-      }
-
+      const data = getFilteredData();
       if (!data || data.length === 0) {
-        toast({
-          title: "No Data",
-          description: `No data found for ${selectedReport.name} with the selected filters.`,
-        });
-        setIsGenerating(false);
+        toast({ title: "No Data", description: "No data found for the selected filters." });
         return;
       }
-
       const xlsxBlob = arrayToXlsxBlob(data, selectedReport.headers);
       const fileName = `${selectedReport.id}_${new Date().toISOString().split('T')[0]}.xlsx`;
       downloadFile(xlsxBlob, fileName);
-
-      toast({
-        title: "Report Generated",
-        description: `${selectedReport.name} has been downloaded as ${fileName}.`,
-      });
-
+      toast({ title: "Report Generated", description: `${selectedReport.name} has been downloaded.` });
     } catch (error) {
       console.error("Error generating report:", error);
-      toast({
-        variant: "destructive",
-        title: "Error Generating Report",
-        description: "An unexpected error occurred while generating the report.",
-      });
+      toast({ variant: "destructive", title: "Error Generating Report" });
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleViewReport = () => {
+    if (!selectedReport) return;
+    
+    setReportData(null); 
+    setReportHeaders(null);
+
+    if (!selectedReport.getData || !selectedReport.headers) {
+        toast({ variant: "destructive", title: "Report Not Implemented" });
+        return;
+    }
+
+    const data = getFilteredData();
+    if (!data || data.length === 0) {
+      toast({ title: "No Data", description: `No data found for ${selectedReport.name} with the selected filters.` });
+      return;
+    }
+
+    setReportData(data);
+    setReportHeaders(selectedReport.headers);
   };
   
   const handleGenerateArchiveFile = () => {
@@ -610,6 +625,7 @@ export default function AdminReportsPage() {
               setSelectedReportId(value);
               setFilterColumns(new Set());
               setFilterValue("");
+              setReportData(null);
             }}>
               <SelectTrigger id="report-type" className="w-full md:w-[400px]">
                 <SelectValue placeholder="Choose a report..." />
@@ -737,10 +753,16 @@ export default function AdminReportsPage() {
           )}
 
           {selectedReport && selectedReport.getData && (
-            <Button onClick={handleGenerateReport} disabled={isGenerating || !selectedReportId}>
-              <Download className="mr-2 h-4 w-4" />
-              {isGenerating ? "Generating..." : `Generate & Download ${selectedReport.name.replace(" (XLSX)", "")}`}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={handleViewReport} variant="outline" disabled={isGenerating || !selectedReportId}>
+                <Eye className="mr-2 h-4 w-4" />
+                View Report
+              </Button>
+              <Button onClick={handleGenerateReport} disabled={isGenerating || !selectedReportId}>
+                <Download className="mr-2 h-4 w-4" />
+                {isGenerating ? "Generating..." : `Generate & Download ${selectedReport.name.replace(" (XLSX)", "")}`}
+              </Button>
+            </div>
           )}
 
           {!selectedReportId && (
@@ -751,6 +773,18 @@ export default function AdminReportsPage() {
         </CardContent>
       </Card>
       
+      {reportData && reportHeaders && (
+        <Card className="mt-6">
+            <CardHeader>
+                <CardTitle>Report Preview: {selectedReport?.name.replace(" (XLSX)", "")}</CardTitle>
+                <CardDescription>Displaying {reportData.length} row(s) of the generated report.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <ReportDataView data={reportData} headers={reportHeaders} />
+            </CardContent>
+        </Card>
+      )}
+
       {/* Data Archiving Section */}
       <Card className="shadow-lg border-amber-500/50">
         <CardHeader>

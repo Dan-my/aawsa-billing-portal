@@ -5,7 +5,7 @@ import * as React from "react";
 import * as XLSX from 'xlsx';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileSpreadsheet, Info, AlertCircle, Lock, Archive, Trash2, Filter } from "lucide-react";
+import { Download, FileSpreadsheet, Info, AlertCircle, Lock, Archive, Trash2, Filter, Check, ChevronsUpDown } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -39,6 +39,9 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { DatePicker } from "@/components/ui/date-picker";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import type { DomainBill } from "@/lib/data-store";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 
 interface ReportFilters {
@@ -429,8 +432,9 @@ export default function AdminReportsPage() {
   const [archivableBills, setArchivableBills] = React.useState<DomainBill[]>([]);
   const [isArchiveDeleteConfirmationOpen, setIsArchiveDeleteConfirmationOpen] = React.useState(false);
 
-  const [filterColumn, setFilterColumn] = React.useState<string>("all");
+  const [filterColumns, setFilterColumns] = React.useState<Set<string>>(new Set());
   const [filterValue, setFilterValue] = React.useState<string>("");
+  const [isFilterPopoverOpen, setIsFilterPopoverOpen] = React.useState(false);
 
   const canSelectAllBranches = hasPermission('reports_generate_all');
   const isLockedToBranch = !canSelectAllBranches && hasPermission('reports_generate_branch');
@@ -484,10 +488,15 @@ export default function AdminReportsPage() {
           endDate: dateRange?.to
       });
 
-      if (filterColumn !== 'all' && filterValue) {
+      if (filterColumns.size > 0 && filterValue) {
         data = data.filter(row => {
-            const cellValue = row[filterColumn];
-            return cellValue != null && String(cellValue).toLowerCase().includes(filterValue.toLowerCase());
+            for (const column of filterColumns) {
+                const cellValue = row[column];
+                if (cellValue != null && String(cellValue).toLowerCase().includes(filterValue.toLowerCase())) {
+                    return true;
+                }
+            }
+            return false;
         });
       }
 
@@ -599,7 +608,7 @@ export default function AdminReportsPage() {
             <Label htmlFor="report-type">Select Report Type</Label>
             <Select value={selectedReportId} onValueChange={(value) => {
               setSelectedReportId(value);
-              setFilterColumn("all");
+              setFilterColumns(new Set());
               setFilterValue("");
             }}>
               <SelectTrigger id="report-type" className="w-full md:w-[400px]">
@@ -656,17 +665,54 @@ export default function AdminReportsPage() {
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-2">
                         <Label htmlFor="column-filter">Filter by Column</Label>
-                        <Select value={filterColumn} onValueChange={setFilterColumn}>
-                          <SelectTrigger id="column-filter">
-                            <SelectValue placeholder="Select Column" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">None</SelectItem>
-                            {selectedReport.headers?.map(header => (
-                              <SelectItem key={header} value={header}>{header}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          <Popover open={isFilterPopoverOpen} onOpenChange={setIsFilterPopoverOpen}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={isFilterPopoverOpen}
+                                className="w-full justify-between"
+                              >
+                                {filterColumns.size > 0 ? `${filterColumns.size} selected` : "Select columns..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[200px] p-0">
+                                <Command>
+                                  <CommandInput placeholder="Search columns..." />
+                                  <CommandList>
+                                    <CommandEmpty>No columns found.</CommandEmpty>
+                                    <CommandGroup>
+                                      {selectedReport.headers?.map((header) => (
+                                        <CommandItem
+                                          key={header}
+                                          value={header}
+                                          onSelect={() => {
+                                            setFilterColumns(prev => {
+                                              const next = new Set(prev);
+                                              if (next.has(header)) {
+                                                next.delete(header);
+                                              } else {
+                                                next.add(header);
+                                              }
+                                              return next;
+                                            });
+                                          }}
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              filterColumns.has(header) ? "opacity-100" : "opacity-0"
+                                            )}
+                                          />
+                                          {header}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                            </PopoverContent>
+                          </Popover>
                       </div>
                        <div className="space-y-2">
                           <Label htmlFor="filter-value">Value</Label>
@@ -675,7 +721,7 @@ export default function AdminReportsPage() {
                             placeholder="Enter value..."
                             value={filterValue}
                             onChange={(e) => setFilterValue(e.target.value)}
-                            disabled={filterColumn === 'all'}
+                            disabled={filterColumns.size === 0}
                           />
                        </div>
                     </div>

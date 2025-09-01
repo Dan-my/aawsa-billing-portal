@@ -217,8 +217,3 @@ export async function calculateBill(
     sewerageCharge: parseFloat(sewerageCharge.toFixed(2)),
   };
 }
-
-
-
-
-

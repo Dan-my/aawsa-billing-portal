@@ -1,31 +1,48 @@
--- Add vat_rate and domestic_vat_threshold_m3 to the tariffs table if they don't exist
-ALTER TABLE public.tariffs
-ADD COLUMN IF NOT EXISTS vat_rate REAL NOT NULL DEFAULT 0.15,
-ADD COLUMN IF NOT EXISTS domestic_vat_threshold_m3 INTEGER NOT NULL DEFAULT 15;
+-- Add the new columns to the tariffs table if they don't already exist.
+-- This approach is safer than dropping and recreating the columns.
 
--- Ensure RLS is enabled on the tariffs table if not already
-ALTER TABLE public.tariffs ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+    -- Add vat_rate column if it does not exist
+    IF NOT EXISTS (
+        SELECT FROM pg_attribute
+        WHERE  attrelid = 'public.tariffs'::regclass
+        AND    attname = 'vat_rate'
+        AND    NOT attisdropped
+    ) THEN
+        ALTER TABLE public.tariffs ADD COLUMN vat_rate numeric(5, 2) NOT NULL DEFAULT 0.15;
+        RAISE NOTICE 'Column vat_rate added to public.tariffs';
+    ELSE
+        RAISE NOTICE 'Column vat_rate already exists in public.tariffs';
+    END IF;
 
--- Drop existing policies to prevent conflicts
-DROP POLICY IF EXISTS "Allow public read-only access to tariffs" ON public.tariffs;
-DROP POLICY IF EXISTS "Allow admin full access to tariffs" ON public.tariffs;
+    -- Add domestic_vat_threshold_m3 column if it does not exist
+    IF NOT EXISTS (
+        SELECT FROM pg_attribute
+        WHERE  attrelid = 'public.tariffs'::regclass
+        AND    attname = 'domestic_vat_threshold_m3'
+        AND    NOT attisdropped
+    ) THEN
+        ALTER TABLE public.tariffs ADD COLUMN domestic_vat_threshold_m3 numeric(10, 2) NOT NULL DEFAULT 15.00;
+        RAISE NOTICE 'Column domestic_vat_threshold_m3 added to public.tariffs';
+    ELSE
+        RAISE NOTICE 'Column domestic_vat_threshold_m3 already exists in public.tariffs';
+    END IF;
+END;
+$$;
 
--- Create policies for read and admin access
-CREATE POLICY "Allow public read-only access to tariffs"
-ON public.tariffs FOR SELECT
-TO authenticated
-USING (true);
+-- Update existing tariff records to set a default value for the new columns
+-- This is important to ensure that old records are also correctly handled.
+-- We set defaults here just in case the ALTER TABLE command did not apply them
+-- to existing rows (behavior can vary across PostgreSQL versions).
 
-CREATE POLICY "Allow admin full access to tariffs"
-ON public.tariffs FOR ALL
-TO authenticated
-USING ((SELECT role FROM public.staff_members WHERE id = auth.uid()) = 'Admin')
-WITH CHECK ((SELECT role FROM public.staff_members WHERE id = auth.uid()) = 'Admin');
+UPDATE public.tariffs
+SET 
+    vat_rate = COALESCE(vat_rate, 0.15),
+    domestic_vat_threshold_m3 = COALESCE(domestic_vat_threshold_m3, 15.00)
+WHERE 
+    vat_rate IS NULL OR domestic_vat_threshold_m3 IS NULL;
 
--- Optional: Update existing tariffs to set the default values if needed
--- This is useful if the table already existed with NULLs in these new columns
-UPDATE public.tariffs SET vat_rate = 0.15 WHERE vat_rate IS NULL;
-UPDATE public.tariffs SET domestic_vat_threshold_m3 = 15 WHERE domestic_vat_threshold_m3 IS NULL;
-
--- Add a comment to describe the table's purpose
-COMMENT ON TABLE public.tariffs IS 'Stores tariff rates and billing parameters for different customer types and years.';
+-- Add comments to the new columns for clarity
+COMMENT ON COLUMN public.tariffs.vat_rate IS 'The Value Added Tax rate to be applied (e.g., 0.15 for 15%).';
+COMMENT ON COLUMN public.tariffs.domestic_vat_threshold_m3 IS 'The consumption threshold in cubic meters (m³) above which VAT is applied for Domestic customers.';

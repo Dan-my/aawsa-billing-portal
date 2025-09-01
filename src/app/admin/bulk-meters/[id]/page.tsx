@@ -739,8 +739,8 @@ export default function BulkMeterDetailsPage() {
                 <p><strong className="font-semibold">Contract No:</strong> {bulkMeter.contractNumber ?? 'N/A'}</p>
                 <p><strong className="font-semibold">Month:</strong> {bulkMeter.month ?? 'N/A'}</p>
                 <p><strong className="font-semibold">Billed Readings (Prev/Curr):</strong> {(bmPreviousReading).toFixed(2)} / {(bmCurrentReading).toFixed(2)}</p>
-                <p><strong className="font-semibold text-lg">Bulk Usage:</strong> {bulkUsage.toFixed(2)} m³</p>
-                <p><strong className="font-semibold text-lg">Total Individual Usage:</strong> {totalIndividualUsage.toFixed(2)} m³</p>
+                <p className="text-lg"><strong className="font-semibold">Bulk Usage:</strong> {bulkUsage.toFixed(2)} m³</p>
+                <p className="text-lg"><strong className="font-semibold">Total Individual Usage:</strong> {totalIndividualUsage.toFixed(2)} m³</p>
                  <div className="flex items-center gap-2 mt-1">
                    <strong className="font-semibold">Payment Status:</strong>
                     <Badge variant={billCardDetails.paymentStatus === 'Paid' ? 'default' : 'destructive'} className="cursor-pointer hover:opacity-80">
@@ -757,13 +757,13 @@ export default function BulkMeterDetailsPage() {
                 <CardTitle>Difference Billing Calculation</CardTitle>
             </CardHeader>
              <CardContent className="space-y-1 text-sm">
-                <p className={cn("text-lg", differenceUsage >= 0 ? "text-green-600" : "text-amber-600")}><strong className="font-semibold">Difference Usage:</strong> {differenceUsage.toFixed(2)} m³</p>
-                 <p><strong className="font-semibold">Base Water Charge:</strong> ETB {differenceBillBreakdown.baseWaterCharge.toFixed(2)}</p>
-                <p><strong className="font-semibold">Maintenance Fee (1%):</strong> ETB {differenceBillBreakdown.maintenanceFee.toFixed(2)}</p>
-                <p><strong className="font-semibold">Sanitation Fee (7%):</strong> ETB {differenceBillBreakdown.sanitationFee.toFixed(2)}</p>
-                <p><strong className="font-semibold">Sewerage Fee:</strong> ETB {differenceBillBreakdown.sewerageCharge.toFixed(2)}</p>
-                <p><strong className="font-semibold">Meter Rent:</strong> ETB {differenceBillBreakdown.meterRent.toFixed(2)}</p>
-                <p><strong className="font-semibold">VAT (15%):</strong> ETB {differenceBillBreakdown.vatAmount.toFixed(2)}</p>
+                <p className={cn("text-lg", differenceUsage >= 0 ? "text-green-600" : "text-amber-600")}><strong className="font-semibold">Difference Usage:</strong> {differenceUsage?.toFixed(2)} m³</p>
+                 <p><strong className="font-semibold">Base Water Charge:</strong> ETB {differenceBillBreakdown?.baseWaterCharge?.toFixed(2)}</p>
+                <p><strong className="font-semibold">Maintenance Fee (1%):</strong> ETB {differenceBillBreakdown?.maintenanceFee?.toFixed(2)}</p>
+                <p><strong className="font-semibold">Sanitation Fee (7%):</strong> ETB {differenceBillBreakdown?.sanitationFee?.toFixed(2)}</p>
+                <p><strong className="font-semibold">Sewerage Fee:</strong> ETB {differenceBillBreakdown?.sewerageCharge?.toFixed(2)}</p>
+                <p><strong className="font-semibold">Meter Rent:</strong> ETB {differenceBillBreakdown?.meterRent?.toFixed(2)}</p>
+                <p><strong className="font-semibold">VAT (15%):</strong> ETB {differenceBillBreakdown?.vatAmount?.toFixed(2)}</p>
                 <p className="text-base pt-1 border-t mt-1 font-semibold">Total Difference Bill: ETB {differenceBill.toFixed(2)}</p>
                  <p className={cn("text-base font-semibold", bulkMeter.outStandingbill > 0 ? "text-destructive" : "text-muted-foreground")}>Outstanding Bill: ETB {bulkMeter.outStandingbill.toFixed(2)}</p>
                  <p className="text-xl font-bold text-primary pt-1 border-t mt-1">Total Amount Payable: ETB {totalPayable.toFixed(2)}</p>

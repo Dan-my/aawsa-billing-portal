@@ -170,8 +170,33 @@ export async function calculateBill(
   const sanitationFee = (tariffConfig.sanitation_percentage || 0) * baseWaterCharge;
   
   let vatAmount = 0;
-  // Apply 15% VAT for all customer types on the base water charge.
-  vatAmount = baseWaterCharge * (tariffConfig.vat_rate || 0);
+  if (customerType === 'Domestic' && usageM3 > tariffConfig.domestic_vat_threshold_m3) {
+      let taxableWaterCharge = 0;
+      let usageForVatCalc = usageM3;
+      let lastLimit = 0;
+      
+      for (const tier of sortedTiers) {
+          if (usageForVatCalc <= lastLimit) break;
+
+          const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
+          const tierRate = Number(tier.rate);
+
+          // Calculate the portion of consumption in this tier that is taxable
+          const taxableStart = Math.max(lastLimit, tariffConfig.domestic_vat_threshold_m3);
+          const taxableEnd = Math.min(usageForVatCalc, tierLimit);
+          
+          if (taxableEnd > taxableStart) {
+              const taxableUsageInTier = taxableEnd - taxableStart;
+              taxableWaterCharge += taxableUsageInTier * tierRate;
+          }
+          
+          lastLimit = tierLimit;
+      }
+      vatAmount = taxableWaterCharge * (tariffConfig.vat_rate || 0);
+  } else if (customerType === 'Non-domestic') {
+      vatAmount = baseWaterCharge * (tariffConfig.vat_rate || 0);
+  }
+
 
   const meterRentPrices = tariffConfig.meter_rent_prices || {};
   const meterSizeStringKey = String(meterSize);
@@ -192,6 +217,7 @@ export async function calculateBill(
     sewerageCharge: parseFloat(sewerageCharge.toFixed(2)),
   };
 }
+
 
 
 

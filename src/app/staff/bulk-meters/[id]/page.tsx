@@ -668,7 +668,7 @@ export default function StaffBulkMeterDetailsPage() {
                   <div className="print-row"><span>Customer key number:</span> <span>{bulkMeter.customerKeyNumber}</span></div>
                   <div className="print-row"><span>Contract No:</span> <span>{bulkMeter.contractNumber ?? 'N/A'}</span></div>
                   <div className="print-row"><span>Branch:</span> <span>{displayBranchName ?? 'N/A'}</span></div>
-                  <div className="print-row"><span>Sub-City:</span> <span>{bulkMeter.subCity}</span></div>
+                  <div className="print-row"><span>Sub-City:</span> <span>{bulkMeter.location}</span></div>
                 </div>
 
                 <div className="print-section">
@@ -791,12 +791,12 @@ export default function StaffBulkMeterDetailsPage() {
             </CardHeader>
              <CardContent className="space-y-1 text-sm">
                 <p className={cn("text-lg", differenceUsage >= 0 ? "text-green-600" : "text-amber-600")}><strong className="font-semibold">Difference Usage:</strong> {differenceUsage?.toFixed(2)} m³</p>
-                 <p><strong className="font-semibold">Base Water Charge:</strong> ETB {differenceBillBreakdown?.baseWaterCharge?.toFixed(2)}</p>
-                <p><strong className="font-semibold">Maintenance Fee (1%):</strong> ETB {differenceBillBreakdown?.maintenanceFee?.toFixed(2)}</p>
-                <p><strong className="font-semibold">Sanitation Fee (7%):</strong> ETB {differenceBillBreakdown?.sanitationFee?.toFixed(2)}</p>
-                <p><strong className="font-semibold">Sewerage Fee:</strong> ETB {differenceBillBreakdown?.sewerageCharge?.toFixed(2)}</p>
-                <p><strong className="font-semibold">Meter Rent:</strong> ETB {differenceBillBreakdown?.meterRent?.toFixed(2)}</p>
-                <p><strong className="font-semibold">VAT (15%):</strong> ETB {differenceBillBreakdown?.vatAmount?.toFixed(2)}</p>
+                 <p><strong className="font-semibold">Base Water Charge:</strong> ETB {differenceBillBreakdown?.baseWaterCharge?.toFixed(2) ?? '0.00'}</p>
+                <p><strong className="font-semibold">Maintenance Fee:</strong> ETB {differenceBillBreakdown?.maintenanceFee?.toFixed(2) ?? '0.00'}</p>
+                <p><strong className="font-semibold">Sanitation Fee:</strong> ETB {differenceBillBreakdown?.sanitationFee?.toFixed(2) ?? '0.00'}</p>
+                <p><strong className="font-semibold">Sewerage Fee:</strong> ETB {differenceBillBreakdown?.sewerageCharge?.toFixed(2) ?? '0.00'}</p>
+                <p><strong className="font-semibold">Meter Rent:</strong> ETB {differenceBillBreakdown?.meterRent?.toFixed(2) ?? '0.00'}</p>
+                <p><strong className="font-semibold">VAT (15%):</strong> ETB {differenceBillBreakdown?.vatAmount?.toFixed(2) ?? '0.00'}</p>
                 <p className="text-base pt-1 border-t mt-1 font-semibold">Total Difference Bill: ETB {differenceBill.toFixed(2)}</p>
                  <p className={cn("text-base font-semibold", bulkMeter.outStandingbill > 0 ? "text-destructive" : "text-muted-foreground")}>Outstanding Bill: ETB {bulkMeter.outStandingbill.toFixed(2)}</p>
                  <p className="text-xl font-bold text-primary pt-1 border-t mt-1">Total Amount Payable: ETB {totalPayable.toFixed(2)}</p>

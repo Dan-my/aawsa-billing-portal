@@ -670,11 +670,15 @@ export default function BulkMeterDetailsPage() {
         </Card>
       ) : (
         <>
-          <Card className="shadow-lg non-printable">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <Card className="shadow-lg xl:col-span-2">
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <Gauge className="h-6 w-6 text-primary" />
-                <CardTitle className="text-xl sm:text-2xl">Bulk Meter: {bulkMeter.name}</CardTitle>
+                <div className="flex-1">
+                  <CardTitle className="text-xl sm:text-2xl">{bulkMeter.name}</CardTitle>
+                  <CardDescription>Key: {bulkMeter.customerKeyNumber}</CardDescription>
+                </div>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -705,7 +709,7 @@ export default function BulkMeterDetailsPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
                 <p><strong className="font-semibold">Branch:</strong> {displayBranchName ?? 'N/A'}</p>
                 <p><strong className="font-semibold">Sub-City:</strong> {bulkMeter.location ?? 'N/A'}, {bulkMeter.woreda ?? 'N/A'}</p>
@@ -725,19 +729,11 @@ export default function BulkMeterDetailsPage() {
                 )}
               </div>
               <div>
-                <p><strong className="font-semibold">Customer Key:</strong> {bulkMeter.customerKeyNumber ?? 'N/A'}</p>
                 <p><strong className="font-semibold">Contract No:</strong> {bulkMeter.contractNumber ?? 'N/A'}</p>
                 <p><strong className="font-semibold">Month:</strong> {bulkMeter.month ?? 'N/A'}</p>
                 <p><strong className="font-semibold">Billed Readings (Prev/Curr):</strong> {(bmPreviousReading).toFixed(2)} / {(bmCurrentReading).toFixed(2)}</p>
-              </div>
-              <div className="space-y-1">
-                 <p className="text-lg"><strong className="font-semibold">Bulk Usage:</strong> {bulkUsage.toFixed(2)} m³</p>
-                 <p className="text-lg"><strong className="font-semibold">Total Individual Usage:</strong> {totalIndividualUsage.toFixed(2)} m³</p>
-                 <p className="text-xl text-primary"><strong className="font-semibold">Total Bulk Bill:</strong> ETB {totalBulkBillForPeriod.toFixed(2)}</p>
-                 <p className={cn("text-sm", differenceUsage >= 0 ? "text-green-600" : "text-amber-600")}><strong className="font-semibold">Difference Usage:</strong> {differenceUsage.toFixed(2)} m³</p>
-                 <p className={cn("text-sm", differenceBill >= 0 ? "text-green-600" : "text-amber-600")}><strong className="font-semibold">Difference Bill:</strong> ETB {differenceBill.toFixed(2)}</p>
-                 <p className={cn("text-sm font-semibold", bulkMeter.outStandingbill > 0 ? "text-destructive" : "text-muted-foreground")}>Outstanding Bill: ETB {bulkMeter.outStandingbill.toFixed(2)}</p>
-                 <p className="text-2xl font-bold text-primary">Total Amount Payable: ETB {totalPayable.toFixed(2)}</p>
+                <p><strong className="font-semibold text-lg">Bulk Usage:</strong> {bulkUsage.toFixed(2)} m³</p>
+                <p><strong className="font-semibold text-lg">Total Individual Usage:</strong> {totalIndividualUsage.toFixed(2)} m³</p>
                  <div className="flex items-center gap-2 mt-1">
                    <strong className="font-semibold">Payment Status:</strong>
                     <Badge variant={billCardDetails.paymentStatus === 'Paid' ? 'default' : 'destructive'} className="cursor-pointer hover:opacity-80">
@@ -745,19 +741,29 @@ export default function BulkMeterDetailsPage() {
                       {billCardDetails.paymentStatus}
                     </Badge>
                  </div>
-                 <div className="pt-4 mt-4 border-t space-y-2">
-                    <h4 className="font-semibold text-sm text-muted-foreground">End of Month Actions</h4>
-                    <Button size="sm" onClick={() => handleEndOfCycle(false)} disabled={isLoading || isProcessingCycle} className="w-full justify-center">
-                        <CheckCircle className="mr-2 h-4 w-4" /> Mark Paid & Start New Cycle
-                    </Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleEndOfCycle(true)} disabled={isLoading || isProcessingCycle} className="w-full justify-center">
-                        <RefreshCcw className="mr-2 h-4 w-4" /> Carry Balance & Start New Cycle
-                    </Button>
-                </div>
               </div>
             </CardContent>
           </Card>
           
+          <Card className="shadow-lg">
+            <CardHeader>
+                <CardTitle>Difference Billing Calculation</CardTitle>
+                <CardDescription>This is the final billable amount for unaccounted-for water.</CardDescription>
+            </CardHeader>
+             <CardContent className="space-y-1 text-sm">
+                <p className={cn("text-lg", differenceUsage >= 0 ? "text-green-600" : "text-amber-600")}><strong className="font-semibold">Difference Usage:</strong> {differenceUsage.toFixed(2)} m³</p>
+                 <p><strong className="font-semibold">Base Water Charge:</strong> ETB {differenceBillBreakdown.baseWaterCharge.toFixed(2)}</p>
+                <p><strong className="font-semibold">Maintenance Fee (1%):</strong> ETB {differenceBillBreakdown.maintenanceFee.toFixed(2)}</p>
+                <p><strong className="font-semibold">Sanitation Fee (7%):</strong> ETB {differenceBillBreakdown.sanitationFee.toFixed(2)}</p>
+                <p><strong className="font-semibold">Meter Rent:</strong> ETB {differenceBillBreakdown.meterRent.toFixed(2)}</p>
+                <p><strong className="font-semibold">VAT (15%):</strong> ETB {differenceBillBreakdown.vatAmount.toFixed(2)}</p>
+                <p className="text-base pt-1 border-t mt-1 font-semibold">Total Difference Bill: ETB {differenceBill.toFixed(2)}</p>
+                 <p className={cn("text-base font-semibold", bulkMeter.outStandingbill > 0 ? "text-destructive" : "text-muted-foreground")}>Outstanding Bill: ETB {bulkMeter.outStandingbill.toFixed(2)}</p>
+                 <p className="text-xl font-bold text-primary pt-1 border-t mt-1">Total Amount Payable: ETB {totalPayable.toFixed(2)}</p>
+            </CardContent>
+          </Card>
+        </div>
+
           <Card className="shadow-lg non-printable">
             <CardHeader>
                 <div className="flex items-center justify-between">
@@ -893,6 +899,4 @@ export default function BulkMeterDetailsPage() {
   );
 }
 
-
-
-
+    

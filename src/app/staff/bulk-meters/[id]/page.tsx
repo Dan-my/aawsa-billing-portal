@@ -794,6 +794,7 @@ export default function StaffBulkMeterDetailsPage() {
                  <p><strong className="font-semibold">Base Water Charge:</strong> ETB {differenceBillBreakdown.baseWaterCharge.toFixed(2)}</p>
                 <p><strong className="font-semibold">Maintenance Fee (1%):</strong> ETB {differenceBillBreakdown.maintenanceFee.toFixed(2)}</p>
                 <p><strong className="font-semibold">Sanitation Fee (7%):</strong> ETB {differenceBillBreakdown.sanitationFee.toFixed(2)}</p>
+                <p><strong className="font-semibold">Sewerage Fee:</strong> ETB {differenceBillBreakdown.sewerageCharge.toFixed(2)}</p>
                 <p><strong className="font-semibold">Meter Rent:</strong> ETB {differenceBillBreakdown.meterRent.toFixed(2)}</p>
                 <p><strong className="font-semibold">VAT (15%):</strong> ETB {differenceBillBreakdown.vatAmount.toFixed(2)}</p>
                 <p className="text-base pt-1 border-t mt-1 font-semibold">Total Difference Bill: ETB {differenceBill.toFixed(2)}</p>

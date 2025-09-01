@@ -37,7 +37,7 @@ body {
     --chart-5: 340 75% 55%; /* Pink */
     --radius: 0.5rem;
     --sidebar-background: 210 20% 94%; /* Slightly darker gray for sidebar */
-    --sidebar-foreground: 211 100% 50%; /* Blue */
+    --sidebar-foreground: 211 50% 10%; /* Dark Blue/Black for text */
     --sidebar-primary: 211 100% 50%; /* Blue */
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 211 100% 50%; /* Blue (Changed from Green) */
@@ -72,7 +72,7 @@ body {
     --chart-4: 280 65% 65%; /* Purple - slightly lighter for dark mode */
     --chart-5: 340 75% 60%; /* Pink - slightly lighter for dark mode */
     --sidebar-background: 210 20% 10%;
-    --sidebar-foreground: 211 100% 70%; /* Lighter Blue for Dark Mode */
+    --sidebar-foreground: 210 20% 98%; /* White text */
     --sidebar-primary: 211 100% 60%; /* Lighter Blue */
     --sidebar-primary-foreground: 210 50% 10%;
     --sidebar-accent: 211 100% 60%; /* Lighter Blue (Changed from Lighter Green) */
@@ -88,6 +88,20 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  aside[data-collapsible] button svg {
+    color: hsl(205 70% 60%); /* Light Blue for icons */
+  }
+
+  .dark aside[data-collapsible] button svg {
+    color: hsl(205 70% 65%); /* Lighter Blue for icons in dark mode */
+  }
+  
+  aside[data-collapsible] button.bg-sidebar-accent svg {
+    color: hsl(var(--sidebar-accent-foreground)); /* Active state icon color */
   }
 }
 

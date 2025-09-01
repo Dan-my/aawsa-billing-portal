@@ -690,7 +690,7 @@ export default function AdminReportsPage() {
 
           {selectedReport && selectedReport.getData && (
             <div className="flex flex-wrap gap-2">
-              <Button onClick={handleViewReport} variant="outline" disabled={isGenerating || !selectedReportId}>
+              <Button onClick={handleViewReport} disabled={isGenerating || !selectedReportId}>
                 <Eye className="mr-2 h-4 w-4" />
                 View Report
               </Button>

@@ -140,7 +140,6 @@ export default function BulkMeterDetailsPage() {
     const paymentStatus = totalPayable > 0.01 ? 'Unpaid' : 'Paid';
   
     const displayBranchName = currentBulkMeter.branchId ? currentBranches.find(b => b.id === currentBulkMeter.branchId)?.name : currentBulkMeter.location;
-    const displayCardLocation = currentBulkMeter.subCity || "N/A";
   
     const billToRender = currentBillForPrintView || (currentBillingHistory.length > 0 ? currentBillingHistory[0] : null);
   
@@ -183,7 +182,7 @@ export default function BulkMeterDetailsPage() {
     setMemoizedDetails({
       bmPreviousReading, bmCurrentReading, bulkUsage, totalBulkBillForPeriod,
       totalPayable, differenceUsage, differenceBill, differenceBillBreakdown,
-      displayBranchName, displayCardLocation, billCardDetails: finalBillCardDetails, totalIndividualUsage,
+      displayBranchName, displayCardLocation: currentBulkMeter.specificArea || "N/A", billCardDetails: finalBillCardDetails, totalIndividualUsage,
     });
   }, []);
 
@@ -749,7 +748,6 @@ export default function BulkMeterDetailsPage() {
           <Card className="shadow-lg">
             <CardHeader>
                 <CardTitle>Difference Billing Calculation</CardTitle>
-                <CardDescription>This is the final billable amount for unaccounted-for water.</CardDescription>
             </CardHeader>
              <CardContent className="space-y-1 text-sm">
                 <p className={cn("text-lg", differenceUsage >= 0 ? "text-green-600" : "text-amber-600")}><strong className="font-semibold">Difference Usage:</strong> {differenceUsage.toFixed(2)} m³</p>

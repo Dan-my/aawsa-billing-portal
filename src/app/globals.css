@@ -92,16 +92,20 @@ body {
 }
 
 @layer components {
+  aside[data-collapsible] a svg,
   aside[data-collapsible] button svg {
-    color: hsl(205 70% 60%); /* Light Blue for icons */
+    color: hsl(211 100% 50%); /* Blue */
   }
 
+  .dark aside[data-collapsible] a svg,
   .dark aside[data-collapsible] button svg {
-    color: hsl(205 70% 65%); /* Lighter Blue for icons in dark mode */
+    color: hsl(211 100% 60%); /* Lighter Blue for dark mode */
   }
   
+  /* Color for icon when its link is active */
+  aside[data-collapsible] a.bg-sidebar-accent svg,
   aside[data-collapsible] button.bg-sidebar-accent svg {
-    color: hsl(var(--sidebar-accent-foreground)); /* Active state icon color */
+    color: hsl(var(--sidebar-accent-foreground)); 
   }
 }
 

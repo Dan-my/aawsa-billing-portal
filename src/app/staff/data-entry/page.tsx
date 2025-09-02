@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from "react";
@@ -26,7 +25,7 @@ import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import type { StaffMember } from "@/app/admin/staff-management/staff-types";
 
-const bulkMeterCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "subCity", "woreda"];
+const bulkMeterCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "subCity", "woreda", "chargeGroup", "sewerageConnection", "xCoordinate", "yCoordinate"];
 const individualCustomerCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "subCity", "woreda", "sewerageConnection", "assignedBulkMeterId"];
 
 interface User {
@@ -82,7 +81,7 @@ export default function StaffDataEntryPage() {
      const customerDataForStore = {
         ...data,
         branchId: staffBranchId || undefined, // Use the stored branch ID
-    } as Omit<IndividualCustomer, 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill' | 'arrears'>;
+    } as Omit<IndividualCustomer, 'created_at' | 'updated_at' | 'status' | 'paymentStatus' | 'calculatedBill' | 'arrears' | 'approved_at' | 'approved_by'>;
     await addCustomer(customerDataForStore, currentUser);
   };
   

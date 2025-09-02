@@ -49,6 +49,8 @@ interface ReportFilters {
   branchId?: string;
   startDate?: Date;
   endDate?: Date;
+  filterColumn?: string;
+  filterValue?: string;
 }
 
 interface ReportType {
@@ -119,7 +121,7 @@ const availableReports: ReportType[] = [
       "Assigned Branch Name", "created_at", "updated_at"
     ],
     getData: (filters) => {
-      const { branchId, startDate, endDate } = filters;
+      const { branchId, startDate, endDate, filterColumn, filterValue } = filters;
       const customers = getCustomers();
       const branches = getBranches();
       
@@ -137,6 +139,13 @@ const availableReports: ReportType[] = [
             const customerDate = new Date(c.created_at).getTime();
             return customerDate >= start && customerDate <= end;
           } catch { return false; }
+        });
+      }
+
+      if (filterColumn && filterValue) {
+        filteredData = filteredData.filter(c => {
+          const value = c[filterColumn as keyof IndividualCustomer];
+          return String(value).toLowerCase().includes(filterValue.toLowerCase());
         });
       }
 
@@ -162,7 +171,7 @@ const availableReports: ReportType[] = [
       "bulkUsage", "totalBulkBill", "differenceUsage", "differenceBill"
     ],
     getData: (filters) => {
-      const { branchId } = filters;
+      const { branchId, filterColumn, filterValue } = filters;
       const bulkMeters = getBulkMeters();
       const branches = getBranches();
 
@@ -172,6 +181,13 @@ const availableReports: ReportType[] = [
         filteredData = filteredData.filter(bm => bm.branchId === branchId);
       }
       // Note: Bulk meter table does not have a created_at field, date filter is ignored.
+
+      if (filterColumn && filterValue) {
+        filteredData = filteredData.filter(c => {
+          const value = c[filterColumn as keyof BulkMeter];
+          return String(value).toLowerCase().includes(filterValue.toLowerCase());
+        });
+      }
 
       const dataWithBranchName = filteredData.map(bm => {
         const branch = bm.branchId ? branches.find(b => b.id === bm.branchId) : null;
@@ -189,14 +205,14 @@ const availableReports: ReportType[] = [
     name: "Billing Summary Report (XLSX)",
     description: "Summary of all generated bills, including amounts and payment statuses.",
     headers: [
-        "bulkMeterId", "billPeriodStartDate", "billPeriodEndDate", 
+        "id", "individualCustomerId", "bulkMeterId", "billPeriodStartDate", "billPeriodEndDate", 
         "monthYear", "previousReadingValue", "currentReadingValue", "usageM3", 
         "baseWaterCharge", "sewerageCharge", "maintenanceFee", "sanitationFee", 
         "meterRent", "totalAmountDue", "amountPaid", "balanceDue", "dueDate", 
         "paymentStatus", "billNumber", "notes", "createdAt", "updatedAt"
     ],
     getData: (filters) => {
-      const { branchId, startDate, endDate } = filters;
+      const { branchId, startDate, endDate, filterColumn, filterValue } = filters;
       let bills = getBills();
       
       if (branchId) {
@@ -218,6 +234,13 @@ const availableReports: ReportType[] = [
          });
       }
 
+      if (filterColumn && filterValue) {
+        bills = bills.filter(b => {
+          const value = b[filterColumn as keyof DomainBill];
+          return String(value).toLowerCase().includes(filterValue.toLowerCase());
+        });
+      }
+
       return bills;
     },
   },
@@ -226,14 +249,14 @@ const availableReports: ReportType[] = [
     name: "List Of Paid Bills (XLSX)",
     description: "A filtered list showing only the bills that have been marked as 'Paid'.",
     headers: [
-        "bulkMeterId", "billPeriodStartDate", "billPeriodEndDate", 
+        "id", "individualCustomerId", "bulkMeterId", "billPeriodStartDate", "billPeriodEndDate", 
         "monthYear", "previousReadingValue", "currentReadingValue", "usageM3", 
         "baseWaterCharge", "sewerageCharge", "maintenanceFee", "sanitationFee", 
         "meterRent", "totalAmountDue", "amountPaid", "balanceDue", "dueDate", 
         "paymentStatus", "billNumber", "notes", "createdAt", "updatedAt"
     ],
     getData: (filters) => {
-      const { branchId, startDate, endDate } = filters;
+      const { branchId, startDate, endDate, filterColumn, filterValue } = filters;
       let bills = getBills().filter(b => b.paymentStatus === 'Paid');
       
       if (branchId) {
@@ -254,6 +277,12 @@ const availableReports: ReportType[] = [
            } catch { return false; }
          });
       }
+      if (filterColumn && filterValue) {
+        bills = bills.filter(b => {
+          const value = b[filterColumn as keyof DomainBill];
+          return String(value).toLowerCase().includes(filterValue.toLowerCase());
+        });
+      }
 
       return bills;
     },
@@ -263,14 +292,14 @@ const availableReports: ReportType[] = [
     name: "List Of Sent Bills (XLSX)",
     description: "A comprehensive list of all bills that have been generated, regardless of payment status.",
     headers: [
-        "bulkMeterId", "billPeriodStartDate", "billPeriodEndDate", 
+        "id", "individualCustomerId", "bulkMeterId", "billPeriodStartDate", "billPeriodEndDate", 
         "monthYear", "previousReadingValue", "currentReadingValue", "usageM3", 
         "baseWaterCharge", "sewerageCharge", "maintenanceFee", "sanitationFee", 
         "meterRent", "totalAmountDue", "amountPaid", "balanceDue", "dueDate", 
         "paymentStatus", "billNumber", "notes", "createdAt", "updatedAt"
     ],
     getData: (filters) => {
-      const { branchId, startDate, endDate } = filters;
+      const { branchId, startDate, endDate, filterColumn, filterValue } = filters;
       let bills = getBills();
       
       if (branchId) {
@@ -292,6 +321,13 @@ const availableReports: ReportType[] = [
          });
       }
 
+      if (filterColumn && filterValue) {
+        bills = bills.filter(b => {
+          const value = b[filterColumn as keyof DomainBill];
+          return String(value).toLowerCase().includes(filterValue.toLowerCase());
+        });
+      }
+
       return bills;
     },
   },
@@ -305,7 +341,7 @@ const availableReports: ReportType[] = [
         "createdAt", "updatedAt"
     ],
     getData: (filters) => {
-      const { branchId, startDate, endDate } = filters;
+      const { branchId, startDate, endDate, filterColumn, filterValue } = filters;
       let readings = getMeterReadings();
 
       if (branchId) {
@@ -326,6 +362,12 @@ const availableReports: ReportType[] = [
           } catch { return false; }
         });
       }
+      if (filterColumn && filterValue) {
+        readings = readings.filter(r => {
+          const value = r[filterColumn as keyof typeof r];
+          return String(value).toLowerCase().includes(filterValue.toLowerCase());
+        });
+      }
 
       return readings;
     },
@@ -340,7 +382,7 @@ const availableReports: ReportType[] = [
         "createdAt", "updatedAt"
     ],
     getData: (filters) => {
-      const { branchId, startDate, endDate } = filters;
+      const { branchId, startDate, endDate, filterColumn, filterValue } = filters;
       let payments = getPayments();
 
       if (branchId) {
@@ -357,6 +399,12 @@ const availableReports: ReportType[] = [
           } catch { return false; }
         });
       }
+       if (filterColumn && filterValue) {
+        payments = payments.filter(p => {
+          const value = p[filterColumn as keyof DomainPayment];
+          return String(value).toLowerCase().includes(filterValue.toLowerCase());
+        });
+      }
 
       return payments;
     },
@@ -370,7 +418,7 @@ const availableReports: ReportType[] = [
       "Reading Value", "Is Estimate", "Reader Name", "Reader Staff ID", "Notes"
     ],
     getData: (filters) => {
-      const { branchId, startDate, endDate } = filters;
+      const { branchId, startDate, endDate, filterColumn, filterValue } = filters;
       const readings = getMeterReadings();
       const customers = getCustomers();
       const bulkMeters = getBulkMeters();
@@ -424,6 +472,13 @@ const availableReports: ReportType[] = [
         };
       });
 
+       if (filterColumn && filterValue) {
+        return dataWithNames.filter(d => {
+          const value = d[filterColumn as keyof typeof d];
+          return String(value).toLowerCase().includes(filterValue.toLowerCase());
+        });
+      }
+
       return dataWithNames;
     },
   },
@@ -446,6 +501,9 @@ export default function AdminReportsPage() {
   
   const [reportData, setReportData] = React.useState<any[] | null>(null);
   const [reportHeaders, setReportHeaders] = React.useState<string[] | null>(null);
+  
+  const [filterColumn, setFilterColumn] = React.useState<string>("");
+  const [filterValue, setFilterValue] = React.useState<string>("");
 
 
   const canSelectAllBranches = hasPermission('reports_generate_all');
@@ -488,10 +546,12 @@ export default function AdminReportsPage() {
         branchId: selectedBranch === 'all' ? undefined : selectedBranch,
         startDate: dateRange?.from,
         endDate: dateRange?.to,
+        filterColumn,
+        filterValue,
     });
 
     return data;
-  }, [selectedReport, selectedBranch, dateRange]);
+  }, [selectedReport, selectedBranch, dateRange, filterColumn, filterValue]);
 
   const handleGenerateReport = () => {
     if (!selectedReport) return;
@@ -620,6 +680,8 @@ export default function AdminReportsPage() {
             <Select value={selectedReportId} onValueChange={(value) => {
               setSelectedReportId(value);
               setReportData(null);
+              setFilterColumn("");
+              setFilterValue("");
             }}>
               <SelectTrigger id="report-type" className="w-full md:w-[400px]">
                 <SelectValue placeholder="Choose a report..." />
@@ -646,7 +708,7 @@ export default function AdminReportsPage() {
                 <p className="text-sm text-muted-foreground">{selectedReport.description}</p>
                  {selectedReport.getData ? (
                   <div className="mt-4 space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
                         <div className="space-y-2">
                             <Label htmlFor="branch-filter">Filter by Branch</Label>
                             <Select 
@@ -672,6 +734,27 @@ export default function AdminReportsPage() {
                                 date={dateRange} 
                                 onDateChange={setDateRange}
                             />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Filter by Column</Label>
+                          <div className="flex gap-2">
+                            <Select value={filterColumn} onValueChange={setFilterColumn} disabled={!selectedReport.headers}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select Column" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {selectedReport.headers?.map(header => (
+                                  <SelectItem key={header} value={header}>{header.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              placeholder="Enter value..."
+                              value={filterValue}
+                              onChange={(e) => setFilterValue(e.target.value)}
+                              disabled={!filterColumn}
+                            />
+                          </div>
                         </div>
                     </div>
                   </div>

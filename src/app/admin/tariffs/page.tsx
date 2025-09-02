@@ -345,7 +345,7 @@ export default function TariffManagementPage() {
                       <div className="flex-1 pr-4">
                           <span className="text-muted-foreground">VAT</span>
                           {currentTariffType === 'Domestic' && (
-                          <p className="text-xs text-muted-foreground italic">For Domestic customers, VAT only applies if consumption is {'>'}= {activeTariffInfo.domestic_vat_threshold_m3} m³.</p>
+                          <p className="text-xs text-muted-foreground italic">For Domestic customers, VAT only applies if consumption is &gt; {activeTariffInfo.domestic_vat_threshold_m3} m³.</p>
                           )}
                       </div>
                       <span className="font-semibold text-primary text-right">{(activeTariffInfo.vat_rate * 100).toFixed(0)}%</span>

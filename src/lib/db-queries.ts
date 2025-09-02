@@ -79,12 +79,15 @@ export const rpcUpdateRolePermissions = async (roleId: number, permissionIds: nu
 export const getAllTariffs = async () => supabase.from('tariffs').select('*');
 export const createTariff = async (tariff: any) => supabase.from('tariffs').insert(tariff).select().single();
 export const dbUpdateTariff = async (customerType: string, year: number, tariff: any) => {
-    return supabase
+    const { data, error } = await supabase
         .from('tariffs')
         .update(tariff)
         .eq('customer_type', customerType)
         .eq('year', year)
         .select()
         .single();
+    
+    return { data, error };
 };
+
 

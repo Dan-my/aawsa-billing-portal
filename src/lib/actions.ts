@@ -160,3 +160,4 @@ export async function updateTariffAction(customerType: string, year: number, tar
     return dbUpdateTariff(customerType, year, tariff);
 }
 
+

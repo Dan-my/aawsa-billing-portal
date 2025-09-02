@@ -29,7 +29,6 @@ export interface TariffInfo {
     sewerage_tiers: SewerageTier[];
     maintenance_percentage: number;
     sanitation_percentage: number;
-    sewerage_rate_per_m3: number;
     meter_rent_prices: { [key: string]: number; };
     vat_rate: number;
     domestic_vat_threshold_m3: number;
@@ -81,7 +80,7 @@ const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<Ta
         return null; // Strict: No tariff, no calculation.
     }
 
-    const tariff: TariffRow & { sewerage_tiers?: Json | null } = data;
+    const tariff: TariffRow = data;
     
     const tiers = safeParseJsonField(tariff.tiers, 'tiers', 'array');
     if (!tiers || tiers.length === 0) {
@@ -96,7 +95,6 @@ const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<Ta
         sewerage_tiers: safeParseJsonField(tariff.sewerage_tiers, 'sewerage_tiers', 'array'),
         maintenance_percentage: tariff.maintenance_percentage,
         sanitation_percentage: tariff.sanitation_percentage,
-        sewerage_rate_per_m3: tariff.sewerage_rate_per_m3,
         meter_rent_prices: safeParseJsonField(tariff.meter_rent_prices, 'meter_rent_prices', 'object'),
         vat_rate: tariff.vat_rate,
         domestic_vat_threshold_m3: tariff.domestic_vat_threshold_m3,
@@ -210,9 +208,10 @@ export async function calculateBill(
   const meterRent = meterRentPrices[meterSizeStringKey] || 0;
   
   let sewerageCharge = 0;
-  if (sewerageConnection === "Yes") {
-    if (customerType === 'Domestic' && tariffConfig.sewerage_tiers && tariffConfig.sewerage_tiers.length > 0) {
-        const sortedSewerageTiers = tariffConfig.sewerage_tiers.sort((a,b) => (a.limit === "Infinity" ? Infinity : a.limit) - (b.limit === "Infinity" ? Infinity : b.limit));
+  if (sewerageConnection === "Yes" && tariffConfig.sewerage_tiers && tariffConfig.sewerage_tiers.length > 0) {
+    const sortedSewerageTiers = tariffConfig.sewerage_tiers.sort((a,b) => (a.limit === "Infinity" ? Infinity : a.limit) - (b.limit === "Infinity" ? Infinity : b.limit));
+    
+    if (customerType === 'Domestic') {
         let remainingUsage = usageM3;
         let lastLimit = 0;
         for(const tier of sortedSewerageTiers) {
@@ -225,9 +224,16 @@ export async function calculateBill(
             remainingUsage -= usageInThisTier;
             lastLimit = tierLimit;
         }
-    } else {
-        const sewerageChargeRate = tariffConfig.sewerage_rate_per_m3 || 0;
-        sewerageCharge = usageM3 * sewerageChargeRate;
+    } else { // Non-domestic
+        let applicableRate = 0;
+        for (const tier of sortedSewerageTiers) {
+            const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
+            applicableRate = Number(tier.rate);
+            if (usageM3 <= tierLimit) {
+                break;
+            }
+        }
+        sewerageCharge = Number(usageM3) * Number(applicableRate);
     }
   }
 

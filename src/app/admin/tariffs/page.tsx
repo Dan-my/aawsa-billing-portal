@@ -355,26 +355,19 @@ export default function TariffManagementPage() {
                   <div className="space-y-2">
                      <div className="flex justify-between items-center mb-2">
                         <h4 className="font-medium text-sm text-muted-foreground">Sewerage Fee (if applicable)</h4>
-                        {currentTariffType === 'Domestic' && hasPermission('tariffs_update') && (
+                        {hasPermission('tariffs_update') && (
                             <Button onClick={() => handleAddTier('sewerage')} size="sm" variant="outline">
                                 <PlusCircle className="mr-2 h-4 w-4" /> Add Sewerage Tier
                             </Button>
                         )}
                      </div>
-                      {currentTariffType === 'Domestic' ? (
-                          <TariffRateTable 
-                            rates={activeSewerageTiers} 
-                            onEdit={(rate) => handleEditTier(rate, 'sewerage')}
-                            onDelete={(rate) => handleDeleteTier(rate, 'sewerage')}
-                            currency="ETB"
-                            canUpdate={hasPermission('tariffs_update')}
-                          />
-                      ) : (
-                         <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
-                            <span className="text-muted-foreground">Sewerage Rate</span>
-                            <span className="font-semibold">{activeTariffInfo.sewerage_rate_per_m3} ETB / m³</span>
-                        </div>
-                      )}
+                      <TariffRateTable 
+                        rates={activeSewerageTiers} 
+                        onEdit={(rate) => handleEditTier(rate, 'sewerage')}
+                        onDelete={(rate) => handleDeleteTier(rate, 'sewerage')}
+                        currency="ETB"
+                        canUpdate={hasPermission('tariffs_update')}
+                      />
                   </div>
               </div>
             </CardContent>

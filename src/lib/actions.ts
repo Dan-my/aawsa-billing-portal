@@ -157,5 +157,5 @@ export async function rpcUpdateRolePermissionsAction(roleId: number, permissionI
 export async function getAllTariffsAction() { return dbGetAllTariffs(); }
 export async function createTariffAction(tariff: TariffInsert) { return dbCreateTariff(tariff); }
 export async function updateTariffAction(customerType: string, year: number, tariff: TariffUpdate) { 
-    return await dbUpdateTariff(customerType, year, tariff).select().single();
+    return dbUpdateTariff(customerType, year, tariff);
 }

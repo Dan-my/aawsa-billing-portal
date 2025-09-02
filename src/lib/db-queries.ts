@@ -1,4 +1,5 @@
 
+
 // This file is intentionally left blank. 
 // The data-store.ts file now directly handles database interactions.
 // We are keeping this file to avoid breaking existing imports, but it no longer contains logic.
@@ -77,4 +78,6 @@ export const rpcUpdateRolePermissions = async (roleId: number, permissionIds: nu
 
 export const getAllTariffs = async () => supabase.from('tariffs').select('*');
 export const createTariff = async (tariff: any) => supabase.from('tariffs').insert(tariff).select().single();
-export const updateTariff = async (customerType: string, year: number, tariff: any) => supabase.from('tariffs').update(tariff).eq('customer_type', customerType).eq('year', year);
+export const updateTariff = async (customerType: string, year: number, tariff: any) => {
+    return supabase.from('tariffs').update(tariff).eq('customer_type', customerType).eq('year', year).select().single();
+};

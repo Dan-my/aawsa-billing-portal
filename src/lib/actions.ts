@@ -48,7 +48,7 @@ import {
   rpcUpdateRolePermissions as dbRpcUpdateRolePermissions,
   getAllTariffs as dbGetAllTariffs,
   createTariff as dbCreateTariff,
-  updateTariff as dbUpdateTariff,
+  dbUpdateTariff,
 } from './db-queries';
 
 import type { Database } from '@/types/supabase';
@@ -159,3 +159,4 @@ export async function createTariffAction(tariff: TariffInsert) { return dbCreate
 export async function updateTariffAction(customerType: string, year: number, tariff: TariffUpdate) { 
     return dbUpdateTariff(customerType, year, tariff);
 }
+

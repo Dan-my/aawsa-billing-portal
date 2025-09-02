@@ -782,6 +782,7 @@ export type Database = {
           meter_rent_prices: Json | null
           sanitation_percentage: number
           sewerage_rate_per_m3: number
+          sewerage_tiers: Json | null
           tiers: Json
           updated_at: string
           vat_rate: number
@@ -795,6 +796,7 @@ export type Database = {
           meter_rent_prices?: Json | null
           sanitation_percentage: number
           sewerage_rate_per_m3: number
+          sewerage_tiers?: Json | null
           tiers: Json
           updated_at?: string
           vat_rate?: number
@@ -808,6 +810,7 @@ export type Database = {
           meter_rent_prices?: Json | null
           sanitation_percentage?: number
           sewerage_rate_per_m3?: number
+          sewerage_tiers?: Json | null
           tiers?: Json
           updated_at?: string
           vat_rate?: number

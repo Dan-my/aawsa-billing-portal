@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { LibraryBig, ListChecks, PlusCircle, RotateCcw, DollarSign, Percent, Copy } from "lucide-react";
-import type { TariffTier, TariffInfo } from "@/lib/billing";
+import type { TariffTier, TariffInfo, SewerageTier } from "@/lib/billing";
 import { 
     getTariff, initializeTariffs, subscribeToTariffs, updateTariff, addTariff 
 } from "@/lib/data-store";
@@ -19,21 +19,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MeterRentDialog } from "./meter-rent-dialog";
 import { usePermissions } from "@/hooks/use-permissions";
 
-const mapTariffTierToDisplay = (tier: TariffTier, index: number, prevTier?: TariffTier): DisplayTariffRate => {
+const mapTariffTierToDisplay = (tier: TariffTier | SewerageTier, index: number, prevTier?: TariffTier | SewerageTier): DisplayTariffRate => {
   let minConsumption: number;
   if (index === 0) {
     minConsumption = 1;
   } else if (prevTier) {
-    minConsumption = prevTier.limit === Infinity ? Infinity : Math.floor(prevTier.limit) + 1;
+    const prevLimit = prevTier.limit === "Infinity" ? Infinity : prevTier.limit;
+    minConsumption = prevLimit === Infinity ? Infinity : Math.floor(prevLimit) + 1;
   } else {
     minConsumption = 1;
   }
 
-  const maxConsumptionDisplay = tier.limit === Infinity ? "Above" : String(Math.floor(tier.limit));
+  const maxConsumptionDisplay = tier.limit === "Infinity" ? "Above" : String(Math.floor(tier.limit as number));
   const minConsumptionDisplay = minConsumption === Infinity ? "N/A" : String(minConsumption);
 
-  const description = tier.limit === Infinity
-    ? `Tier ${index + 1}: Above ${prevTier ? Math.floor(prevTier.limit) : 0} m³`
+  const prevLimitForDesc = prevTier ? Math.floor(prevTier.limit as number) : 0;
+  const description = tier.limit === "Infinity"
+    ? `Tier ${index + 1}: Above ${prevLimitForDesc} m³`
     : `Tier ${index + 1}: ${minConsumptionDisplay} - ${maxConsumptionDisplay} m³`;
 
   return {
@@ -47,10 +49,14 @@ const mapTariffTierToDisplay = (tier: TariffTier, index: number, prevTier?: Tari
   };
 };
 
-const getDisplayTiersFromData = (tariffInfo?: TariffInfo): DisplayTariffRate[] => {
-    if (!tariffInfo || !tariffInfo.tiers) return [];
-    let previousTier: TariffTier | undefined;
-    return tariffInfo.tiers.map((tier, index) => {
+const getDisplayTiersFromData = (tariffInfo?: TariffInfo, tierType: 'water' | 'sewerage' = 'water'): DisplayTariffRate[] => {
+    if (!tariffInfo) return [];
+    
+    const tiersToMap = tierType === 'sewerage' ? tariffInfo.sewerage_tiers : tariffInfo.tiers;
+    if (!tiersToMap || tiersToMap.length === 0) return [];
+
+    let previousTier: TariffTier | SewerageTier | undefined;
+    return tiersToMap.map((tier, index) => {
         const displayTier = mapTariffTierToDisplay(tier, index, previousTier);
         previousTier = tier;
         return displayTier;
@@ -86,7 +92,8 @@ export default function TariffManagementPage() {
     return allTariffs.find(t => t.customer_type === currentTariffType && t.year === currentYear);
   }, [allTariffs, currentTariffType, currentYear]);
 
-  const activeTiers = getDisplayTiersFromData(activeTariffInfo);
+  const activeWaterTiers = getDisplayTiersFromData(activeTariffInfo, 'water');
+  const activeSewerageTiers = getDisplayTiersFromData(activeTariffInfo, 'sewerage');
   const yearOptions = React.useMemo(() => generateYearOptions(), []);
 
   React.useEffect(() => {
@@ -131,13 +138,13 @@ export default function TariffManagementPage() {
   };
 
   const confirmDelete = () => {
-    if (rateToDelete && activeTiers) {
-      const newRatesList = activeTiers
+    if (rateToDelete && activeWaterTiers) {
+      const newRatesList = activeWaterTiers
         .filter(r => r.id !== rateToDelete.id)
         .map(dt => ({ rate: dt.originalRate, limit: dt.originalLimit }))
-        .sort((a,b) => a.limit - b.limit);
+        .sort((a,b) => (a.limit as number) - (b.limit as number));
       
-      handleTierUpdate(newRatesList);
+      handleTierUpdate(newRatesList as TariffTier[]);
       toast({ title: "Tariff Tier Deleted", description: `Tier "${rateToDelete.description}" has been removed from ${currentTariffType} tariffs for ${currentYear}.` });
       setRateToDelete(null);
     }
@@ -150,20 +157,20 @@ export default function TariffManagementPage() {
     let updatedTiers: TariffTier[];
 
     if (editingRate) {
-      updatedTiers = activeTiers.map(r => 
+      updatedTiers = activeWaterTiers.map(r => 
         r.id === editingRate.id 
           ? { rate: newRateValue, limit: newMaxConsumptionValue }
           : { rate: r.originalRate, limit: r.originalLimit }
       );
     } else {
       updatedTiers = [
-        ...activeTiers.map(r => ({ rate: r.originalRate, limit: r.originalLimit })),
+        ...activeWaterTiers.map(r => ({ rate: r.originalRate, limit: r.originalLimit })),
         { rate: newRateValue, limit: newMaxConsumptionValue }
       ];
     }
     
-    updatedTiers.sort((a,b) => a.limit - b.limit);
-    handleTierUpdate(updatedTiers);
+    updatedTiers.sort((a,b) => (a.limit as number) - (b.limit as number));
+    handleTierUpdate(updatedTiers as TariffTier[]);
     
     setIsFormOpen(false);
     setEditingRate(null);
@@ -282,7 +289,7 @@ export default function TariffManagementPage() {
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <ListChecks className="h-6 w-6 text-primary" />
-                  <CardTitle>Current Tariff Rates ({currentTariffType} - {currentYear})</CardTitle>
+                  <CardTitle>Current Water Tariff Rates ({currentTariffType} - {currentYear})</CardTitle>
                 </div>
                 <CardDescription>
                     {currentTariffType === 'Domestic' 
@@ -293,7 +300,7 @@ export default function TariffManagementPage() {
               </CardHeader>
               <CardContent>
                 <TariffRateTable 
-                  rates={activeTiers} 
+                  rates={activeWaterTiers} 
                   onEdit={handleEditTier} 
                   onDelete={handleDeleteTier} 
                   currency="ETB"
@@ -312,31 +319,49 @@ export default function TariffManagementPage() {
                 Additional fees and taxes applied during bill calculation.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm pt-4">
-              <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
-                <span className="text-muted-foreground">Maintenance Fee</span>
-                <span className="font-semibold">{(activeTariffInfo.maintenance_percentage * 100).toFixed(0)}% of Base Water Charge</span>
-              </div>
-              <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
-                <span className="text-muted-foreground">Sanitation Fee</span>
-                <span className="font-semibold">{(activeTariffInfo.sanitation_percentage * 100).toFixed(0)}% of Base Water Charge</span>
-              </div>
-              <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
-                 <span className="text-muted-foreground">Sewerage Fee (if applicable)</span>
-                 <span className="font-semibold">{activeTariffInfo.sewerage_rate_per_m3} ETB / m³</span>
-              </div>
-               <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
-                <span className="text-muted-foreground">Meter Rent Fee</span>
-                <span className="font-semibold text-muted-foreground italic">Varies by meter size. Managed via "Manage Meter Rent" button.</span>
-              </div>
-               <div className="flex justify-between items-center p-2 rounded-md bg-muted/50 border border-primary/20">
-                <div className="flex-1 pr-4">
-                    <span className="text-muted-foreground">VAT</span>
-                    {currentTariffType === 'Domestic' && (
-                    <p className="text-xs text-muted-foreground italic">For Domestic customers, VAT only applies if consumption is 16 m³ or more.</p>
-                    )}
-                </div>
-                <span className="font-semibold text-primary text-right">15%</span>
+            <CardContent className="space-y-4 pt-4">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                      <span className="text-muted-foreground">Maintenance Fee</span>
+                      <span className="font-semibold">{(activeTariffInfo.maintenance_percentage * 100).toFixed(0)}% of Base Water Charge</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                      <span className="text-muted-foreground">Sanitation Fee</span>
+                      <span className="font-semibold">{(activeTariffInfo.sanitation_percentage * 100).toFixed(0)}% of Base Water Charge</span>
+                    </div>
+                     <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                      <span className="text-muted-foreground">Meter Rent Fee</span>
+                      <span className="font-semibold text-muted-foreground italic">Varies by meter size. Managed via "Manage Meter Rent" button.</span>
+                    </div>
+                     <div className="flex justify-between items-center p-2 rounded-md bg-muted/50 border border-primary/20">
+                      <div className="flex-1 pr-4">
+                          <span className="text-muted-foreground">VAT</span>
+                          {currentTariffType === 'Domestic' && (
+                          <p className="text-xs text-muted-foreground italic">For Domestic customers, VAT only applies if consumption is {'>'}= {activeTariffInfo.domestic_vat_threshold_m3} m³.</p>
+                          )}
+                      </div>
+                      <span className="font-semibold text-primary text-right">{(activeTariffInfo.vat_rate * 100).toFixed(0)}%</span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                     <h4 className="font-medium text-sm text-muted-foreground mb-2">Sewerage Fee (if applicable)</h4>
+                      {currentTariffType === 'Domestic' && activeSewerageTiers.length > 0 ? (
+                          <TariffRateTable 
+                            rates={activeSewerageTiers} 
+                            onEdit={() => {}} // Editing for sewerage tiers can be added here
+                            onDelete={() => {}} // Deleting for sewerage tiers can be added here
+                            currency="ETB"
+                            canUpdate={false} // Disable actions for now
+                          />
+                      ) : (
+                         <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                            <span className="text-muted-foreground">Sewerage Rate</span>
+                            <span className="font-semibold">{activeTariffInfo.sewerage_rate_per_m3} ETB / m³</span>
+                        </div>
+                      )}
+                  </div>
               </div>
             </CardContent>
           </Card>

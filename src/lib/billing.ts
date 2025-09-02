@@ -17,10 +17,16 @@ export interface TariffTier {
   limit: number | "Infinity";
 }
 
+export interface SewerageTier {
+  rate: number;
+  limit: number | "Infinity";
+}
+
 export interface TariffInfo {
     customer_type: CustomerType;
     year: number;
     tiers: TariffTier[];
+    sewerage_tiers: SewerageTier[];
     maintenance_percentage: number;
     sanitation_percentage: number;
     sewerage_rate_per_m3: number;
@@ -75,7 +81,7 @@ const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<Ta
         return null; // Strict: No tariff, no calculation.
     }
 
-    const tariff: TariffRow = data;
+    const tariff: TariffRow & { sewerage_tiers?: Json | null } = data;
     
     const tiers = safeParseJsonField(tariff.tiers, 'tiers', 'array');
     if (!tiers || tiers.length === 0) {
@@ -87,6 +93,7 @@ const getLiveTariffFromDB = async (type: CustomerType, year: number): Promise<Ta
         customer_type: tariff.customer_type as CustomerType,
         year: tariff.year,
         tiers: tiers,
+        sewerage_tiers: safeParseJsonField(tariff.sewerage_tiers, 'sewerage_tiers', 'array'),
         maintenance_percentage: tariff.maintenance_percentage,
         sanitation_percentage: tariff.sanitation_percentage,
         sewerage_rate_per_m3: tariff.sewerage_rate_per_m3,
@@ -202,8 +209,25 @@ export async function calculateBill(
   const meterSizeStringKey = String(meterSize);
   const meterRent = meterRentPrices[meterSizeStringKey] || 0;
   
-  const sewerageChargeRate = tariffConfig.sewerage_rate_per_m3 || 0;
-  const sewerageCharge = (sewerageConnection === "Yes") ? usageM3 * sewerageChargeRate : 0;
+  let sewerageCharge = 0;
+  if (sewerageConnection === "Yes") {
+    if (customerType === 'Domestic' && tariffConfig.sewerage_tiers && tariffConfig.sewerage_tiers.length > 0) {
+        const sortedSewerageTiers = tariffConfig.sewerage_tiers.sort((a,b) => (a.limit === "Infinity" ? Infinity : a.limit) - (b.limit === "Infinity" ? Infinity : b.limit));
+        let applicableRate = 0;
+        for (const tier of sortedSewerageTiers) {
+            const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
+            applicableRate = Number(tier.rate);
+            if (usageM3 <= tierLimit) {
+                break; 
+            }
+        }
+        sewerageCharge = usageM3 * applicableRate;
+    } else {
+        const sewerageChargeRate = tariffConfig.sewerage_rate_per_m3 || 0;
+        sewerageCharge = usageM3 * sewerageChargeRate;
+    }
+  }
+
 
   const totalBill = baseWaterCharge + maintenanceFee + sanitationFee + vatAmount + meterRent + sewerageCharge;
 

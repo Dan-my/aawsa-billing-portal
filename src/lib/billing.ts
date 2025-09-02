@@ -213,15 +213,18 @@ export async function calculateBill(
   if (sewerageConnection === "Yes") {
     if (customerType === 'Domestic' && tariffConfig.sewerage_tiers && tariffConfig.sewerage_tiers.length > 0) {
         const sortedSewerageTiers = tariffConfig.sewerage_tiers.sort((a,b) => (a.limit === "Infinity" ? Infinity : a.limit) - (b.limit === "Infinity" ? Infinity : b.limit));
-        let applicableRate = 0;
-        for (const tier of sortedSewerageTiers) {
+        let remainingUsage = usageM3;
+        let lastLimit = 0;
+        for(const tier of sortedSewerageTiers) {
+            if (remainingUsage <= 0) break;
             const tierLimit = tier.limit === "Infinity" ? Infinity : Number(tier.limit);
-            applicableRate = Number(tier.rate);
-            if (usageM3 <= tierLimit) {
-                break; 
-            }
+            const tierRate = Number(tier.rate);
+            const tierBlockSize = tierLimit - lastLimit;
+            const usageInThisTier = Math.min(remainingUsage, tierBlockSize);
+            sewerageCharge += usageInThisTier * tierRate;
+            remainingUsage -= usageInThisTier;
+            lastLimit = tierLimit;
         }
-        sewerageCharge = usageM3 * applicableRate;
     } else {
         const sewerageChargeRate = tariffConfig.sewerage_rate_per_m3 || 0;
         sewerageCharge = usageM3 * sewerageChargeRate;

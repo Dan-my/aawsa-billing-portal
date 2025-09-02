@@ -44,9 +44,10 @@ interface TariffFormDialogProps {
   onSubmit: (data: TariffFormValues) => void;
   defaultValues?: TariffFormValues | null;
   currency?: string;
+  tierType: 'water' | 'sewerage' | null;
 }
 
-export function TariffFormDialog({ open, onOpenChange, onSubmit, defaultValues, currency = "ETB" }: TariffFormDialogProps) {
+export function TariffFormDialog({ open, onOpenChange, onSubmit, defaultValues, currency = "ETB", tierType }: TariffFormDialogProps) {
   const form = useForm<TariffFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: defaultValues || {
@@ -72,12 +73,14 @@ export function TariffFormDialog({ open, onOpenChange, onSubmit, defaultValues, 
     onSubmit(data);
     onOpenChange(false); 
   };
+  
+  const dialogTitle = tierType === 'water' ? 'Water Tariff Tier' : 'Sewerage Tariff Tier';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>{defaultValues ? "Edit Tariff Tier" : "Add New Tariff Tier"}</DialogTitle>
+          <DialogTitle>{defaultValues ? `Edit ${dialogTitle}` : `Add New ${dialogTitle}`}</DialogTitle>
           <DialogDescription>
             {defaultValues ? "Update the details of this tariff tier." : "Define a new progressive tariff tier."}
           </DialogDescription>

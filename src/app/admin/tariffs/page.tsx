@@ -81,10 +81,10 @@ export default function TariffManagementPage() {
   const [allTariffs, setAllTariffs] = React.useState<TariffInfo[]>([]);
   const [isDataLoading, setIsDataLoading] = React.useState(true);
   
-  const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const [editingTierType, setEditingTierType] = React.useState<'water' | 'sewerage' | null>(null);
   const [editingRate, setEditingRate] = React.useState<DisplayTariffRate | null>(null);
   
-  const [rateToDelete, setRateToDelete] = React.useState<DisplayTariffRate | null>(null);
+  const [rateToDelete, setRateToDelete] = React.useState<{ tier: DisplayTariffRate, type: 'water' | 'sewerage' } | null>(null);
 
   const [isMeterRentDialogOpen, setIsMeterRentDialogOpen] = React.useState(false);
 
@@ -107,72 +107,75 @@ export default function TariffManagementPage() {
     return () => unsubscribe();
   }, []);
 
-  const handleTierUpdate = async (newTiers: TariffTier[]) => {
+  const handleTierUpdate = async (newTiers: (TariffTier | SewerageTier)[], type: 'water' | 'sewerage') => {
       if (!activeTariffInfo) return;
 
-      const newTariffInfo: Partial<TariffInfo> = {
-          tiers: newTiers,
-      };
+      const newTariffInfo: Partial<TariffInfo> = type === 'water'
+          ? { tiers: newTiers as TariffTier[] }
+          : { sewerage_tiers: newTiers as SewerageTier[] };
 
       const result = await updateTariff(activeTariffInfo.customer_type, activeTariffInfo.year, newTariffInfo);
       if (result.success) {
-          toast({ title: "Tariff Updated", description: `${currentTariffType} tariff rates for ${currentYear} have been saved.` });
+          toast({ title: "Tariff Updated", description: `${currentTariffType} ${type} tariff rates for ${currentYear} have been saved.` });
       } else {
           toast({ variant: "destructive", title: "Update Failed", description: result.message });
       }
   };
 
 
-  const handleAddTier = () => {
+  const handleAddTier = (type: 'water' | 'sewerage') => {
     setEditingRate(null);
-    setIsFormOpen(true);
+    setEditingTierType(type);
   };
 
-  const handleEditTier = (rate: DisplayTariffRate) => {
+  const handleEditTier = (rate: DisplayTariffRate, type: 'water' | 'sewerage') => {
     setEditingRate(rate);
-    setIsFormOpen(true);
+    setEditingTierType(type);
   };
 
-  const handleDeleteTier = (rate: DisplayTariffRate) => {
-    setRateToDelete(rate);
+  const handleDeleteTier = (rate: DisplayTariffRate, type: 'water' | 'sewerage') => {
+    setRateToDelete({ tier: rate, type });
   };
 
   const confirmDelete = () => {
-    if (rateToDelete && activeWaterTiers) {
-      const newRatesList = activeWaterTiers
-        .filter(r => r.id !== rateToDelete.id)
+    if (rateToDelete && activeTariffInfo) {
+      const tiersToUpdate = rateToDelete.type === 'water' ? activeWaterTiers : activeSewerageTiers;
+      const newRatesList = tiersToUpdate
+        .filter(r => r.id !== rateToDelete.tier.id)
         .map(dt => ({ rate: dt.originalRate, limit: dt.originalLimit }))
         .sort((a,b) => (a.limit as number) - (b.limit as number));
       
-      handleTierUpdate(newRatesList as TariffTier[]);
-      toast({ title: "Tariff Tier Deleted", description: `Tier "${rateToDelete.description}" has been removed from ${currentTariffType} tariffs for ${currentYear}.` });
+      handleTierUpdate(newRatesList, rateToDelete.type);
+      toast({ title: `Tariff Tier Deleted`, description: `Tier "${rateToDelete.tier.description}" has been removed.` });
       setRateToDelete(null);
     }
   };
   
   const handleSubmitTierForm = (data: TariffFormValues) => {
+    if (!editingTierType) return;
     const newRateValue = parseFloat(data.rate);
     const newMaxConsumptionValue = data.maxConsumption === "Infinity" ? Infinity : parseFloat(data.maxConsumption);
 
-    let updatedTiers: TariffTier[];
+    let updatedTiers: (TariffTier | SewerageTier)[];
+    const tiersToUpdate = editingTierType === 'water' ? activeWaterTiers : activeSewerageTiers;
 
     if (editingRate) {
-      updatedTiers = activeWaterTiers.map(r => 
+      updatedTiers = tiersToUpdate.map(r => 
         r.id === editingRate.id 
           ? { rate: newRateValue, limit: newMaxConsumptionValue }
           : { rate: r.originalRate, limit: r.originalLimit }
       );
     } else {
       updatedTiers = [
-        ...activeWaterTiers.map(r => ({ rate: r.originalRate, limit: r.originalLimit })),
+        ...tiersToUpdate.map(r => ({ rate: r.originalRate, limit: r.originalLimit })),
         { rate: newRateValue, limit: newMaxConsumptionValue }
       ];
     }
     
     updatedTiers.sort((a,b) => (a.limit as number) - (b.limit as number));
-    handleTierUpdate(updatedTiers as TariffTier[]);
+    handleTierUpdate(updatedTiers, editingTierType);
     
-    setIsFormOpen(false);
+    setEditingTierType(null);
     setEditingRate(null);
   };
   
@@ -238,9 +241,6 @@ export default function TariffManagementPage() {
                  <Button onClick={handleCreateNewYearTariff} variant="outline" disabled={!activeTariffInfo}>
                     <Copy className="mr-2 h-4 w-4" /> Copy to {currentYear + 1}
                 </Button>
-                <Button onClick={handleAddTier} className="bg-primary hover:bg-primary/90" disabled={!activeTariffInfo}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add New Tier
-                </Button>
                 <Button onClick={() => setIsMeterRentDialogOpen(true)} variant="default" disabled={!activeTariffInfo}>
                     <DollarSign className="mr-2 h-4 w-4" /> Manage Meter Rent
                 </Button>
@@ -287,9 +287,16 @@ export default function TariffManagementPage() {
          <>
           <Card className="shadow-lg mt-4">
               <CardHeader>
-                <div className="flex items-center gap-2">
-                  <ListChecks className="h-6 w-6 text-primary" />
-                  <CardTitle>Current Water Tariff Rates ({currentTariffType} - {currentYear})</CardTitle>
+                <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <ListChecks className="h-6 w-6 text-primary" />
+                      <CardTitle>Current Water Tariff Rates ({currentTariffType} - {currentYear})</CardTitle>
+                    </div>
+                    {hasPermission('tariffs_update') && (
+                        <Button onClick={() => handleAddTier('water')} size="sm">
+                            <PlusCircle className="mr-2 h-4 w-4" /> Add Water Tier
+                        </Button>
+                    )}
                 </div>
                 <CardDescription>
                     {currentTariffType === 'Domestic' 
@@ -301,8 +308,8 @@ export default function TariffManagementPage() {
               <CardContent>
                 <TariffRateTable 
                   rates={activeWaterTiers} 
-                  onEdit={handleEditTier} 
-                  onDelete={handleDeleteTier} 
+                  onEdit={(rate) => handleEditTier(rate, 'water')} 
+                  onDelete={(rate) => handleDeleteTier(rate, 'water')} 
                   currency="ETB"
                   canUpdate={hasPermission('tariffs_update')}
                 />
@@ -320,8 +327,8 @@ export default function TariffManagementPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 pt-4">
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
                     <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
                       <span className="text-muted-foreground">Maintenance Fee</span>
                       <span className="font-semibold">{(activeTariffInfo.maintenance_percentage * 100).toFixed(0)}% of Base Water Charge</span>
@@ -346,14 +353,21 @@ export default function TariffManagementPage() {
                   </div>
                   
                   <div className="space-y-2">
-                     <h4 className="font-medium text-sm text-muted-foreground mb-2">Sewerage Fee (if applicable)</h4>
-                      {currentTariffType === 'Domestic' && activeSewerageTiers.length > 0 ? (
+                     <div className="flex justify-between items-center mb-2">
+                        <h4 className="font-medium text-sm text-muted-foreground">Sewerage Fee (if applicable)</h4>
+                        {currentTariffType === 'Domestic' && hasPermission('tariffs_update') && (
+                            <Button onClick={() => handleAddTier('sewerage')} size="sm" variant="outline">
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add Sewerage Tier
+                            </Button>
+                        )}
+                     </div>
+                      {currentTariffType === 'Domestic' ? (
                           <TariffRateTable 
                             rates={activeSewerageTiers} 
-                            onEdit={() => {}} // Editing for sewerage tiers can be added here
-                            onDelete={() => {}} // Deleting for sewerage tiers can be added here
+                            onEdit={(rate) => handleEditTier(rate, 'sewerage')}
+                            onDelete={(rate) => handleDeleteTier(rate, 'sewerage')}
                             currency="ETB"
-                            canUpdate={false} // Disable actions for now
+                            canUpdate={hasPermission('tariffs_update')}
                           />
                       ) : (
                          <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
@@ -371,8 +385,8 @@ export default function TariffManagementPage() {
       {hasPermission('tariffs_update') && activeTariffInfo && (
         <>
           <TariffFormDialog
-            open={isFormOpen}
-            onOpenChange={setIsFormOpen}
+            open={!!editingTierType}
+            onOpenChange={(open) => !open && setEditingTierType(null)}
             onSubmit={handleSubmitTierForm}
             defaultValues={editingRate ? { 
                 description: editingRate.description,
@@ -380,6 +394,7 @@ export default function TariffManagementPage() {
                 rate: String(editingRate.originalRate)
             } : null}
             currency="ETB"
+            tierType={editingTierType}
           />
 
           <MeterRentDialog
@@ -395,7 +410,7 @@ export default function TariffManagementPage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure you want to delete this tier?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This action cannot be undone. Tier: "{rateToDelete?.description}"
+                  This action cannot be undone. Tier: "{rateToDelete?.tier.description}"
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

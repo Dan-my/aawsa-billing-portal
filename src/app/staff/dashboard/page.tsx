@@ -143,14 +143,19 @@ export default function StaffDashboardPage() {
     const activeCustomers = branchCustomers.filter(c => c.status === 'Active');
     const pendingCustomers = branchCustomers.filter(c => c.status === 'Pending Approval').length;
 
-    const paidCount = branchBMs.filter(bm => bm.paymentStatus === 'Paid').length + activeCustomers.filter(c => c.paymentStatus === 'Paid').length;
-    const unpaidCount = branchBMs.filter(bm => bm.paymentStatus === 'Unpaid').length + activeCustomers.filter(c => c.paymentStatus === 'Unpaid' || c.paymentStatus === 'Pending').length;
-    const totalBillsCount = paidCount + unpaidCount;
+    // Calculation for the "Bills Status" card (includes both)
+    const totalPaidCount = branchBMs.filter(bm => bm.paymentStatus === 'Paid').length + activeCustomers.filter(c => c.paymentStatus === 'Paid').length;
+    const totalUnpaidCount = branchBMs.filter(bm => bm.paymentStatus === 'Unpaid').length + activeCustomers.filter(c => c.paymentStatus === 'Unpaid' || c.paymentStatus === 'Pending').length;
+    const totalBillsCount = totalPaidCount + totalUnpaidCount;
     const billsData = [
-        { name: 'Paid', value: paidCount, fill: 'hsl(var(--chart-1))' },
-        { name: 'Unpaid', value: unpaidCount, fill: 'hsl(var(--chart-3))' },
+        { name: 'Paid', value: totalPaidCount, fill: 'hsl(var(--chart-1))' },
+        { name: 'Unpaid', value: totalUnpaidCount, fill: 'hsl(var(--chart-3))' },
     ];
-    const paidPercentage = totalBillsCount > 0 ? `${((paidCount / totalBillsCount) * 100).toFixed(0)}%` : "0%";
+    
+    // Calculation for "Payment Collection Rate" card (Bulk Meters ONLY)
+    const paidBMsCount = branchBMs.filter(bm => bm.paymentStatus === 'Paid').length;
+    const totalBMsCount = branchBMs.length;
+    const paidPercentage = totalBMsCount > 0 ? `${((paidBMsCount / totalBMsCount) * 100).toFixed(0)}%` : "0%";
 
     const performanceMap = new Map<string, { branchName: string, paid: number, unpaid: number }>();
     const displayableBranches = allBranches.filter(b => b.name.toLowerCase() !== 'head office');
@@ -197,8 +202,8 @@ export default function StaffDashboardPage() {
       totalBulkMeters: branchBMs.length,
       totalCustomers: activeCustomers.length,
       totalBills: totalBillsCount,
-      paidBills: paidCount,
-      unpaidBills: unpaidCount,
+      paidBills: totalPaidCount,
+      unpaidBills: totalUnpaidCount,
       billsData,
       branchPerformanceData,
       waterUsageTrendData,
@@ -290,12 +295,12 @@ export default function StaffDashboardPage() {
 
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Payment Collection Rate</CardTitle>
+            <CardTitle className="text-sm font-medium">Payment Collection Rate (Bulk Meters)</CardTitle>
             <TrendingUp className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-accent">{processedStats.paidPercentage}</div>
-            <p className="text-xs text-muted-foreground">of bills are marked as paid</p>
+            <p className="text-xs text-muted-foreground">of bulk meter bills are marked as paid</p>
              <div className="h-[120px] mt-4 flex items-center justify-center">
                 <TrendingUp className="h-16 w-16 text-accent opacity-50" />
             </div>

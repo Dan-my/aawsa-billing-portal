@@ -43,7 +43,11 @@ const buildStaffSidebarNavItems = (user: UserProfile | null): NavItemGroup[] => 
     const dataReportsItems: NavItem[] = [];
     if (hasPermission('data_entry_access')) dataReportsItems.push({ title: "Data Entry", href: "/staff/data-entry", iconName: "FileText" });
     if (hasPermission('meter_readings_view_branch')) dataReportsItems.push({ title: "Meter Readings", href: "/staff/meter-readings", iconName: "ClipboardList" });
-    if (hasPermission('reports_generate_branch')) dataReportsItems.push({ title: "Reports", href: "/staff/reports", iconName: "BarChart2" });
+    if (hasPermission('reports_generate_branch')) {
+        dataReportsItems.push({ title: "Reports", href: "/staff/reports", iconName: "BarChart2" });
+        dataReportsItems.push({ title: "List Of Paid Bills", href: "/staff/reports/paid-bills", iconName: "CheckCircle2" });
+        dataReportsItems.push({ title: "List Of Sent Bills", href: "/staff/reports/sent-bills", iconName: "Send" });
+    }
     
     // Dynamically add Tariff Management if permission exists
     if (hasPermission('tariffs_view')) {

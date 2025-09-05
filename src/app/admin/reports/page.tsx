@@ -42,6 +42,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { ReportDataView } from './report-data-view';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { ReportAIAssistant } from "./report-ai-assistant";
 
 
 interface ReportFilters {
@@ -58,7 +60,7 @@ interface ReportType {
   getData?: (filters: ReportFilters) => any[];
 }
 
-const arrayToXlsxBlob = (data: any[], headers: string[]): Blob => {
+export const arrayToXlsxBlob = (data: any[], headers: string[]): Blob => {
   const worksheetData = [
     headers,
     ...data.map(row => headers.map(header => row[header] ?? '')),
@@ -95,7 +97,7 @@ const arrayToXlsxBlob = (data: any[], headers: string[]): Blob => {
 };
 
 
-const downloadFile = (content: Blob, fileName: string) => {
+export const downloadFile = (content: Blob, fileName: string) => {
   const link = document.createElement('a');
   link.href = URL.createObjectURL(content);
   link.download = fileName;
@@ -606,9 +608,19 @@ export default function AdminReportsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl md:text-3xl font-bold">Generate Reports</h1>
       </div>
+
+      <Accordion type="single" collapsible className="w-full">
+        <AccordionItem value="item-1">
+          <AccordionTrigger className="text-lg font-medium">Interactive AI Assistant</AccordionTrigger>
+          <AccordionContent>
+            <ReportAIAssistant />
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Report Generation</CardTitle>
+          <CardTitle>Manual Report Generation</CardTitle>
           <CardDescription>Select a report type and apply filters to generate and download.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

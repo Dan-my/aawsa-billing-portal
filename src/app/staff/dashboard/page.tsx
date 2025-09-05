@@ -29,6 +29,7 @@ import type { Branch } from "@/app/admin/branches/branch-types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { format } from 'date-fns';
 
 interface User {
   email: string;
@@ -132,6 +133,8 @@ export default function StaffDashboardPage() {
     if (authStatus !== 'authorized' || !staffBranchId) {
       return { totalBulkMeters: 0, totalCustomers: 0, totalBills: 0, paidBills: 0, unpaidBills: 0, billsData: [], branchPerformanceData: [], waterUsageTrendData: [], paidPercentage: "0%", pendingApprovals: 0 };
     }
+    
+    const currentMonthYear = format(new Date(), 'yyyy-MM');
 
     const branchBMs = allBulkMeters.filter(bm => bm.branchId === staffBranchId);
     const branchBMKeys = new Set(branchBMs.map(bm => bm.customerKeyNumber));
@@ -140,23 +143,27 @@ export default function StaffDashboardPage() {
       (customer.assignedBulkMeterId && branchBMKeys.has(customer.assignedBulkMeterId))
     );
 
-    const activeCustomers = branchCustomers.filter(c => c.status === 'Active');
+    // Filter for current month data for the cards
+    const currentMonthBMs = branchBMs.filter(bm => bm.month === currentMonthYear);
+    const currentMonthCustomers = branchCustomers.filter(c => c.month === currentMonthYear && c.status === 'Active');
+
     const pendingCustomers = branchCustomers.filter(c => c.status === 'Pending Approval').length;
 
-    // Calculation for the "Bills Status" card (includes both)
-    const totalPaidCount = branchBMs.filter(bm => bm.paymentStatus === 'Paid').length + activeCustomers.filter(c => c.paymentStatus === 'Paid').length;
-    const totalUnpaidCount = branchBMs.filter(bm => bm.paymentStatus === 'Unpaid').length + activeCustomers.filter(c => c.paymentStatus === 'Unpaid' || c.paymentStatus === 'Pending').length;
-    const totalBillsCount = totalPaidCount + totalUnpaidCount;
+    // Calculation for the "Bills Status" card (includes both, for the current month)
+    const paidCount = currentMonthBMs.filter(bm => bm.paymentStatus === 'Paid').length + currentMonthCustomers.filter(c => c.paymentStatus === 'Paid').length;
+    const unpaidCount = currentMonthBMs.filter(bm => bm.paymentStatus === 'Unpaid').length + currentMonthCustomers.filter(c => c.paymentStatus === 'Unpaid' || c.paymentStatus === 'Pending').length;
+    const totalBillsCount = paidCount + unpaidCount;
     const billsData = [
-        { name: 'Paid', value: totalPaidCount, fill: 'hsl(var(--chart-1))' },
-        { name: 'Unpaid', value: totalUnpaidCount, fill: 'hsl(var(--chart-3))' },
+        { name: 'Paid', value: paidCount, fill: 'hsl(var(--chart-1))' },
+        { name: 'Unpaid', value: unpaidCount, fill: 'hsl(var(--chart-3))' },
     ];
     
-    // Calculation for "Payment Collection Rate" card (Bulk Meters ONLY)
+    // Calculation for "Payment Collection Rate" card (Bulk Meters ONLY, all time for the branch)
     const paidBMsCount = branchBMs.filter(bm => bm.paymentStatus === 'Paid').length;
     const totalBMsCount = branchBMs.length;
     const paidPercentage = totalBMsCount > 0 ? `${((paidBMsCount / totalBMsCount) * 100).toFixed(0)}%` : "0%";
 
+    // --- Data for Branch Performance Chart (ALL branches, all time) ---
     const performanceMap = new Map<string, { branchName: string, paid: number, unpaid: number }>();
     const displayableBranches = allBranches.filter(b => b.name.toLowerCase() !== 'head office');
 
@@ -174,6 +181,7 @@ export default function StaffDashboardPage() {
     });
     const branchPerformanceData = Array.from(performanceMap.values()).map(p => ({ branch: p.branchName.replace(/ Branch$/i, ""), paid: p.paid, unpaid: p.unpaid }));
 
+    // --- Data for Water Usage Trend Chart (filtered by staff manager's branch, historical) ---
     const usageMap = new Map<string, number>();
     branchBMs.forEach(bm => {
       if (bm.month) {
@@ -184,8 +192,8 @@ export default function StaffDashboardPage() {
         }
       }
     });
-    activeCustomers.forEach(c => {
-        if (c.month) {
+    branchCustomers.forEach(c => {
+        if (c.month && c.status === 'Active') {
             const usage = (c.currentReading ?? 0) - (c.previousReading ?? 0);
             if(typeof usage === 'number' && !isNaN(usage)) {
                 const currentMonthUsage = usageMap.get(c.month) || 0;
@@ -199,11 +207,11 @@ export default function StaffDashboardPage() {
 
 
     return {
-      totalBulkMeters: branchBMs.length,
-      totalCustomers: activeCustomers.length,
+      totalBulkMeters: currentMonthBMs.length,
+      totalCustomers: currentMonthCustomers.length,
       totalBills: totalBillsCount,
-      paidBills: totalPaidCount,
-      unpaidBills: totalUnpaidCount,
+      paidBills: paidCount,
+      unpaidBills: unpaidCount,
       billsData,
       branchPerformanceData,
       waterUsageTrendData,
@@ -239,7 +247,7 @@ export default function StaffDashboardPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bills Status (Active)</CardTitle>
+            <CardTitle className="text-sm font-medium">Bills Status (This Month)</CardTitle>
             <FileText className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -267,12 +275,12 @@ export default function StaffDashboardPage() {
 
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
+            <CardTitle className="text-sm font-medium">Active Customers (This Month)</CardTitle>
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{processedStats.totalCustomers.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Total active customers in your branch</p>
+            <p className="text-xs text-muted-foreground">Customers with readings this month</p>
              <div className="h-[120px] mt-4 flex items-center justify-center">
                 <Users className="h-16 w-16 text-primary opacity-50" />
             </div>
@@ -281,12 +289,12 @@ export default function StaffDashboardPage() {
 
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bulk Meters</CardTitle>
+            <CardTitle className="text-sm font-medium">Bulk Meters (This Month)</CardTitle>
             <Gauge className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{processedStats.totalBulkMeters.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Total bulk meters in your branch</p>
+            <p className="text-xs text-muted-foreground">Bulk meters with readings this month</p>
              <div className="h-[120px] mt-4 flex items-center justify-center">
                 <Gauge className="h-16 w-16 text-primary opacity-50" />
             </div>
@@ -295,7 +303,7 @@ export default function StaffDashboardPage() {
 
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Payment Collection Rate (Bulk Meters)</CardTitle>
+            <CardTitle className="text-sm font-medium">Payment Collection Rate (All Time)</CardTitle>
             <TrendingUp className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -362,8 +370,8 @@ export default function StaffDashboardPage() {
                           <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
                           <Tooltip content={<ChartTooltipContent />} />
                           <Legend />
-                          <Bar dataKey="paid" fill="var(--color-paid)" radius={[4, 4, 0, 0]} />
-                          <Bar dataKey="unpaid" fill="var(--color-unpaid)" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="paid" stackId="a" fill="var(--color-paid)" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="unpaid" stackId="a" fill="var(--color-unpaid)" radius={[4, 4, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </ChartContainer>

@@ -40,14 +40,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         if (storedUser) {
             try {
                 const parsedUser: UserProfile = JSON.parse(storedUser);
-                const isTariffPage = pathname.includes('/admin/tariffs');
-                const hasTariffPermission = parsedUser.permissions?.includes('tariffs_view');
 
-                // Allow access if user has an admin role OR if they are accessing the tariff page with permission
-                if (ADMIN_ROLES.includes(parsedUser.role.toLowerCase()) || (isTariffPage && hasTariffPermission)) {
+                // Allow access if user has an admin role
+                if (ADMIN_ROLES.includes(parsedUser.role.toLowerCase())) {
                     setUser(parsedUser);
                 } else {
-                    router.replace("/"); // Not authorized for this layout/page
+                    router.replace("/"); // Not authorized for this layout
                 }
             } catch (e) {
                 console.error("Failed to parse user from localStorage", e);

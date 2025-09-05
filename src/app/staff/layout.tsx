@@ -47,7 +47,7 @@ const buildStaffSidebarNavItems = (user: UserProfile | null): NavItemGroup[] => 
     
     // Dynamically add Tariff Management if permission exists
     if (hasPermission('tariffs_view')) {
-      dataReportsItems.push({ title: "Tariff Management", href: "/admin/tariffs", iconName: "LibraryBig" });
+      dataReportsItems.push({ title: "Tariff Management", href: "/staff/tariffs", iconName: "LibraryBig" });
     }
 
     if (dataReportsItems.length > 0) {

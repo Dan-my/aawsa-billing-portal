@@ -82,7 +82,7 @@ export function IndividualCustomerTable({ data, onEdit, onDelete, bulkMetersList
           {data.map((customer) => {
             const usage = (customer.currentReading ?? 0) - (customer.previousReading ?? 0);
             return (
-              <TableRow key={customer.customerKeyNumber}>
+              <TableRow key={customer.customerKeyNumber} className="even:bg-muted/50">
                 <TableCell className="font-medium">{customer.name}</TableCell>
                 <TableCell>{customer.meterNumber}</TableCell>
                 <TableCell>

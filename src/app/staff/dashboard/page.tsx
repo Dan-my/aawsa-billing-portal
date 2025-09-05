@@ -143,6 +143,9 @@ export default function StaffDashboardPage() {
       (customer.assignedBulkMeterId && branchBMKeys.has(customer.assignedBulkMeterId))
     );
 
+    // Get total active customers in the branch
+    const activeCustomersInBranch = branchCustomers.filter(c => c.status === 'Active');
+
     // Filter for current month data for the cards
     const currentMonthBMs = branchBMs.filter(bm => bm.month === currentMonthYear);
     const currentMonthCustomers = branchCustomers.filter(c => c.month === currentMonthYear && c.status === 'Active');
@@ -207,8 +210,8 @@ export default function StaffDashboardPage() {
 
 
     return {
-      totalBulkMeters: currentMonthBMs.length,
-      totalCustomers: currentMonthCustomers.length,
+      totalBulkMeters: branchBMs.length,
+      totalCustomers: activeCustomersInBranch.length,
       totalBills: totalBillsCount,
       paidBills: paidCount,
       unpaidBills: unpaidCount,
@@ -275,12 +278,12 @@ export default function StaffDashboardPage() {
 
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Customers (This Month)</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Active Customers</CardTitle>
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{processedStats.totalCustomers.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Customers with readings this month</p>
+            <p className="text-xs text-muted-foreground">Total active customers in your branch</p>
              <div className="h-[120px] mt-4 flex items-center justify-center">
                 <Users className="h-16 w-16 text-primary opacity-50" />
             </div>
@@ -289,12 +292,12 @@ export default function StaffDashboardPage() {
 
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bulk Meters (This Month)</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Bulk Meters</CardTitle>
             <Gauge className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{processedStats.totalBulkMeters.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Bulk meters with readings this month</p>
+            <p className="text-xs text-muted-foreground">Total bulk meters in your branch</p>
              <div className="h-[120px] mt-4 flex items-center justify-center">
                 <Gauge className="h-16 w-16 text-primary opacity-50" />
             </div>

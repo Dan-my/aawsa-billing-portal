@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import * as React from "react";
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -33,16 +33,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [user, setUser] = React.useState<UserProfile | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
     const router = useRouter();
+    const pathname = usePathname();
 
     React.useEffect(() => {
         const storedUser = localStorage.getItem("user");
         if (storedUser) {
             try {
                 const parsedUser: UserProfile = JSON.parse(storedUser);
-                if (ADMIN_ROLES.includes(parsedUser.role.toLowerCase())) {
+                const isTariffPage = pathname.includes('/admin/tariffs');
+                const hasTariffPermission = parsedUser.permissions?.includes('tariffs_view');
+
+                // Allow access if user has an admin role OR if they are accessing the tariff page with permission
+                if (ADMIN_ROLES.includes(parsedUser.role.toLowerCase()) || (isTariffPage && hasTariffPermission)) {
                     setUser(parsedUser);
                 } else {
-                    router.replace("/"); // Not authorized for this layout
+                    router.replace("/"); // Not authorized for this layout/page
                 }
             } catch (e) {
                 console.error("Failed to parse user from localStorage", e);
@@ -52,7 +57,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             router.replace("/");
         }
         setIsLoading(false);
-    }, [router]);
+    }, [router, pathname]);
 
     if (isLoading) {
        return (

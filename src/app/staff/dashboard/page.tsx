@@ -167,15 +167,15 @@ export default function StaffDashboardPage() {
     const totalBMsCount = currentMonthBMsForRate.length;
     const paidPercentage = totalBMsCount > 0 ? `${((paidBMsCount / totalBMsCount) * 100).toFixed(0)}%` : "0%";
 
-    // --- Data for Branch Performance Chart (ALL branches, all time) ---
+    // --- Data for Branch Performance Chart (ALL branches, Bulk Meters ONLY, THIS MONTH) ---
     const performanceMap = new Map<string, { branchName: string, paid: number, unpaid: number }>();
     const displayableBranches = allBranches.filter(b => b.name.toLowerCase() !== 'head office');
-
+    
     displayableBranches.forEach(branch => {
       performanceMap.set(branch.id, { branchName: branch.name, paid: 0, unpaid: 0 });
     });
 
-    allBulkMeters.forEach(bm => {
+    allBulkMeters.filter(bm => bm.month === currentMonthYear).forEach(bm => {
       if (bm.branchId && performanceMap.has(bm.branchId)) {
         const entry = performanceMap.get(bm.branchId)!;
         if (bm.paymentStatus === 'Paid') entry.paid++;
@@ -279,7 +279,7 @@ export default function StaffDashboardPage() {
 
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Active Customers</CardTitle>
+            <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -354,8 +354,8 @@ export default function StaffDashboardPage() {
         <Card className="shadow-lg">
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <div>
-                <CardTitle>Branch vs. Overall Performance (Bulk Meters)</CardTitle>
-                <CardDescription>Compare your branch's bill statuses to the company average.</CardDescription>
+                <CardTitle>Branch Performance (Bulk Meters - This Month)</CardTitle>
+                <CardDescription>Paid vs. Unpaid status for bulk meters across branches.</CardDescription>
               </div>
               <Button variant="outline" size="sm" onClick={() => setBranchPerformanceView(prev => prev === 'chart' ? 'table' : 'chart')}>
                 {branchPerformanceView === 'chart' ? <TableIcon className="mr-2 h-4 w-4" /> : <BarChartIcon className="mr-2 h-4 w-4" />}
@@ -374,8 +374,8 @@ export default function StaffDashboardPage() {
                           <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
                           <Tooltip content={<ChartTooltipContent />} />
                           <Legend />
-                          <Bar dataKey="paid" stackId="a" fill="var(--color-paid)" radius={[4, 4, 0, 0]} />
-                          <Bar dataKey="unpaid" stackId="a" fill="var(--color-unpaid)" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="paid" fill="var(--color-paid)" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="unpaid" fill="var(--color-unpaid)" radius={[4, 4, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </ChartContainer>

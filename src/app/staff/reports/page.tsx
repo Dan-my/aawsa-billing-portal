@@ -5,14 +5,14 @@ import * as React from "react";
 import * as XLSX from 'xlsx';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileSpreadsheet, AlertCircle } from "lucide-react";
+import { Download, FileSpreadsheet, AlertCircle, Eye, Check, ChevronsUpDown } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  getCustomers, 
-  getBulkMeters, 
-  initializeCustomers, 
+import {
+  getCustomers,
+  getBulkMeters,
+  initializeCustomers,
   initializeBulkMeters,
   getBranches,
   initializeBranches,
@@ -22,7 +22,12 @@ import {
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/components/ui/alert";
-import { calculateBill } from "@/lib/billing";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { ReportDataView } from "@/app/admin/reports/report-data-view";
+import { cn } from "@/lib/utils";
+import type { DateRange } from "react-day-picker";
 
 interface User {
   email: string;
@@ -31,12 +36,18 @@ interface User {
   branchId?: string;
 }
 
+interface ReportFilters {
+  branchId?: string;
+  startDate?: Date;
+  endDate?: Date;
+}
+
 interface ReportType {
   id: string;
   name: string;
   description: string;
   headers?: string[];
-  getData?: (branchId?: string) => any[]; // Accept optional branchId
+  getData?: (filters: ReportFilters) => any[];
 }
 
 const arrayToXlsxBlob = (data: any[], headers: string[]): Blob => {
@@ -82,7 +93,6 @@ const downloadFile = (content: Blob, fileName: string) => {
   URL.revokeObjectURL(link.href);
 };
 
-// Define reports available to staff
 const availableStaffReports: ReportType[] = [
   {
     id: "customer-data-branch-export",
@@ -91,19 +101,33 @@ const availableStaffReports: ReportType[] = [
     headers: [
       "customerKeyNumber", "name", "contractNumber", "customerType", "bookNumber", "ordinal",
       "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea",
-      "location", "ward", "sewerageConnection", "assignedBulkMeterId", "status", "paymentStatus", "calculatedBill"
+      "subCity", "woreda", "sewerageConnection", "assignedBulkMeterId", "status", "paymentStatus", "calculatedBill"
     ],
-    getData: (branchId?: string) => {
+    getData: (filters: ReportFilters) => {
+        const { branchId, startDate, endDate } = filters;
         if (!branchId) return [];
         const allCustomers = getCustomers();
         const allBulkMeters = getBulkMeters();
 
         const branchBulkMeterIds = new Set(allBulkMeters.filter(bm => bm.branchId === branchId).map(bm => bm.customerKeyNumber));
         
-        return allCustomers.filter(c => 
+        let filteredData = allCustomers.filter(c => 
             c.branchId === branchId || 
             (c.assignedBulkMeterId && branchBulkMeterIds.has(c.assignedBulkMeterId))
         );
+
+        if (startDate && endDate) {
+            const start = startDate.getTime();
+            const end = endDate.getTime();
+            filteredData = filteredData.filter(c => {
+              if (!c.created_at) return false;
+              try {
+                const customerDate = new Date(c.created_at).getTime();
+                return customerDate >= start && customerDate <= end;
+              } catch { return false; }
+            });
+        }
+        return filteredData;
     },
   },
   {
@@ -112,12 +136,14 @@ const availableStaffReports: ReportType[] = [
     description: "Download a list of bulk meters relevant to your branch.",
     headers: [
       "customerKeyNumber", "name", "contractNumber", "meterSize", "meterNumber",
-      "previousReading", "currentReading", "month", "specificArea", "location", "ward", "status", "paymentStatus"
+      "previousReading", "currentReading", "month", "specificArea", "subCity", "woreda", "status", "paymentStatus"
     ],
-    getData: (branchId?: string) => {
+    getData: (filters: ReportFilters) => {
+       const { branchId } = filters;
        if (!branchId) return [];
-        const allBulkMeters = getBulkMeters();
-        return allBulkMeters.filter(bm => bm.branchId === branchId);
+        let filteredData = getBulkMeters().filter(bm => bm.branchId === branchId);
+        // Note: Date filtering not implemented for bulk meters as they lack a `created_at` field
+        return filteredData;
     },
   },
   {
@@ -131,24 +157,36 @@ const availableStaffReports: ReportType[] = [
         "meterRent", "totalAmountDue", "amountPaid", "balanceDue", "dueDate", 
         "paymentStatus", "billNumber", "notes", "createdAt", "updatedAt"
     ],
-    getData: (branchId?: string) => {
+    getData: (filters: ReportFilters) => {
+        const { branchId, startDate, endDate } = filters;
         if (!branchId) return [];
 
+        let allBillsFromStore = getBills();
         const allCustomers = getCustomers();
         const allBulkMeters = getBulkMeters();
-        const allBillsFromStore = getBills();
 
         const branchBulkMeterKeys = new Set(allBulkMeters.filter(bm => bm.branchId === branchId).map(bm => bm.customerKeyNumber));
-        const bulkMeterBills = allBillsFromStore.filter(bill => bill.bulkMeterId && branchBulkMeterKeys.has(bill.bulkMeterId));
-        
-        const branchCustomerKeys = new Set(allCustomers
-            .filter(c => c.branchId === branchId || (c.assignedBulkMeterId && branchBulkMeterKeys.has(c.assignedBulkMeterId)))
-            .map(c => c.customerKeyNumber)
-        );
+        let filteredBills = allBillsFromStore.filter(bill => {
+            if (bill.bulkMeterId) return branchBulkMeterKeys.has(bill.bulkMeterId);
+            if (bill.individualCustomerId) {
+                const customer = allCustomers.find(c => c.customerKeyNumber === bill.individualCustomerId);
+                if (!customer) return false;
+                return customer.branchId === branchId || (customer.assignedBulkMeterId && branchBulkMeterKeys.has(customer.assignedBulkMeterId));
+            }
+            return false;
+        });
 
-        const individualCustomerBills = allBillsFromStore.filter(bill => bill.individualCustomerId && branchCustomerKeys.has(bill.individualCustomerId));
-
-        return [...bulkMeterBills, ...individualCustomerBills];
+        if (startDate && endDate) {
+             const start = startDate.getTime();
+             const end = endDate.getTime();
+             filteredBills = filteredBills.filter(b => {
+               try {
+                 const billDate = new Date(b.billPeriodEndDate).getTime();
+                 return billDate >= start && billDate <= end;
+               } catch { return false; }
+             });
+        }
+        return filteredBills;
     },
   },
 ];
@@ -159,7 +197,13 @@ export default function StaffReportsPage() {
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [staffBranchName, setStaffBranchName] = React.useState<string | undefined>(undefined);
   const [staffBranchId, setStaffBranchId] = React.useState<string | undefined>(undefined);
+  
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined);
+  const [selectedColumns, setSelectedColumns] = React.useState<Set<string>>(new Set());
+  const [isColumnSelectorOpen, setIsColumnSelectorOpen] = React.useState(false);
+  const [reportData, setReportData] = React.useState<any[] | null>(null);
 
+  const selectedReport = availableStaffReports.find(report => report.id === selectedReportId);
 
   React.useEffect(() => {
     initializeCustomers();
@@ -181,7 +225,21 @@ export default function StaffReportsPage() {
     }
   }, []);
 
-  const selectedReport = availableStaffReports.find(report => report.id === selectedReportId);
+  React.useEffect(() => {
+    setSelectedColumns(new Set(selectedReport?.headers || []));
+  }, [selectedReport]);
+
+  const getFilteredData = React.useCallback(() => {
+    if (!selectedReport?.getData || !staffBranchId) {
+      return [];
+    }
+    return selectedReport.getData({
+        branchId: staffBranchId,
+        startDate: dateRange?.from,
+        endDate: dateRange?.to,
+    });
+  }, [selectedReport, staffBranchId, dateRange]);
+
 
   const handleGenerateReport = () => {
     if (!selectedReport) return;
@@ -203,11 +261,10 @@ export default function StaffReportsPage() {
         return;
     }
 
-
     setIsGenerating(true);
 
     try {
-      const data = selectedReport.getData(staffBranchId);
+      const data = getFilteredData();
       if (!data || data.length === 0) {
         toast({
           title: "No Data",
@@ -217,7 +274,8 @@ export default function StaffReportsPage() {
         return;
       }
 
-      const xlsxBlob = arrayToXlsxBlob(data, selectedReport.headers);
+      const finalHeaders = Array.from(selectedColumns);
+      const xlsxBlob = arrayToXlsxBlob(data, finalHeaders);
       const fileName = `${selectedReport.id}_${new Date().toISOString().split('T')[0]}.xlsx`;
       downloadFile(xlsxBlob, fileName);
       
@@ -238,6 +296,25 @@ export default function StaffReportsPage() {
     }
   };
 
+  const handleViewReport = () => {
+    if (!selectedReport) return;
+    
+    setReportData(null); 
+
+    if (!selectedReport.getData || !selectedReport.headers) {
+        toast({ variant: "destructive", title: "Report Not Implemented" });
+        return;
+    }
+
+    const data = getFilteredData();
+    if (!data || data.length === 0) {
+      toast({ title: "No Data", description: `No data found for ${selectedReport.name} with the selected filters.` });
+      return;
+    }
+
+    setReportData(data);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -246,12 +323,15 @@ export default function StaffReportsPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Report Generation</CardTitle>
-          <CardDescription>Select a report type to generate and download for your branch.</CardDescription>
+          <CardDescription>Select a report type and apply filters to generate and download.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="report-type">Select Report Type</Label>
-            <Select value={selectedReportId} onValueChange={setSelectedReportId}>
+            <Select value={selectedReportId} onValueChange={(value) => {
+              setSelectedReportId(value);
+              setReportData(null);
+            }}>
               <SelectTrigger id="report-type" className="w-full md:w-[400px]">
                 <SelectValue placeholder="Choose a report..." />
               </SelectTrigger>
@@ -275,7 +355,77 @@ export default function StaffReportsPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">{selectedReport.description}</p>
-                {!selectedReport.getData && (
+                 {selectedReport.getData ? (
+                  <div className="mt-4 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                      <div className="space-y-2">
+                        <Label>Filter by Branch</Label>
+                        <div className="p-2 border rounded-md text-sm text-muted-foreground bg-background">
+                          {staffBranchName || 'N/A'}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                          <Label htmlFor="date-range-filter">Filter by Date</Label>
+                          <DateRangePicker 
+                              date={dateRange} 
+                              onDateChange={setDateRange}
+                          />
+                      </div>
+                      <div className="space-y-2">
+                          <Label>Select Columns</Label>
+                          <Popover open={isColumnSelectorOpen} onOpenChange={setIsColumnSelectorOpen}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={isColumnSelectorOpen}
+                                className="w-full justify-between"
+                                disabled={!selectedReport.headers}
+                              >
+                                {selectedColumns.size} of {selectedReport.headers?.length} selected
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Search columns..." />
+                                <CommandEmpty>No column found.</CommandEmpty>
+                                <CommandList>
+                                  <CommandGroup>
+                                    {selectedReport.headers?.map((header) => (
+                                      <CommandItem
+                                        key={header}
+                                        value={header}
+                                        onSelect={() => {
+                                          setSelectedColumns(prev => {
+                                            const newSet = new Set(prev);
+                                            if (newSet.has(header)) {
+                                              newSet.delete(header);
+                                            } else {
+                                              newSet.add(header);
+                                            }
+                                            return newSet;
+                                          });
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            selectedColumns.has(header) ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        {header.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                      </div>
+                    </div>
+                  </div>
+                 ) : (
                    <Alert variant="default" className="mt-4 border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30">
                      <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                      <AlertTitle className="text-blue-700 dark:text-blue-300">Coming Soon</AlertTitle>
@@ -284,23 +434,21 @@ export default function StaffReportsPage() {
                      </UIAlertDescription>
                    </Alert>
                 )}
-                 {selectedReport.getData && (
-                  <div className="mt-4 space-y-2">
-                    <Label>Report Filters (Default: Your Branch)</Label>
-                    <div className="p-4 border rounded-md text-sm text-muted-foreground">
-                      This report will be filtered for your branch ({staffBranchName || 'N/A'}).
-                    </div>
-                  </div>
-                 )}
               </CardContent>
             </Card>
           )}
 
           {selectedReport && selectedReport.getData && (
-            <Button onClick={handleGenerateReport} disabled={isGenerating || !selectedReportId || !staffBranchId}>
-              <Download className="mr-2 h-4 w-4" />
-              {isGenerating ? "Generating..." : `Generate & Download ${selectedReport.name.replace(" (XLSX)", "").replace(" (Coming Soon)", "")}`}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+               <Button onClick={handleViewReport} disabled={isGenerating || !selectedReportId || !staffBranchId}>
+                <Eye className="mr-2 h-4 w-4" />
+                View Report
+              </Button>
+              <Button onClick={handleGenerateReport} disabled={isGenerating || !selectedReportId || !staffBranchId}>
+                <Download className="mr-2 h-4 w-4" />
+                {isGenerating ? "Generating..." : `Generate & Download ${selectedReport.name.replace(" (XLSX)", "")}`}
+              </Button>
+            </div>
           )}
 
           {!selectedReportId && (
@@ -310,6 +458,19 @@ export default function StaffReportsPage() {
           )}
         </CardContent>
       </Card>
+      
+      {reportData && selectedColumns.size > 0 && (
+        <Card className="mt-6">
+            <CardHeader>
+                <CardTitle>Report Preview: {selectedReport?.name.replace(" (XLSX)", "")}</CardTitle>
+                <CardDescription>Displaying {reportData.length} row(s) with {selectedColumns.size} column(s).</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <ReportDataView data={reportData} headers={Array.from(selectedColumns)} />
+            </CardContent>
+        </Card>
+      )}
+
     </div>
   );
 }

@@ -139,9 +139,12 @@ const generateReportFlow = ai.defineFlow(
     outputSchema: ReportResponseSchema,
   },
   async ({ query }) => {
-    const { output } = await reportGeneratorAgent({ query });
+    const response = await reportGeneratorAgent({ query });
+    const output = response.output;
+
     if (!output) {
-      throw new Error('The model did not return a valid report structure.');
+      console.error("AI response missing output:", JSON.stringify(response, null, 2));
+      throw new Error('The AI model did not return a valid report structure. Please try rephrasing your request.');
     }
     return output;
   }

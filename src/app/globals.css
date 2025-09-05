@@ -23,7 +23,7 @@ body {
     --secondary-foreground: 210 50% 10%;
     --muted: 210 20% 96.1%; /* Lighter Gray */
     --muted-foreground: 210 30% 45.1%;
-    --accent: 145 63% 42%; /* Green */
+    --accent: 211 100% 50%; /* Blue - Changed from Green */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
@@ -59,7 +59,7 @@ body {
     --secondary-foreground: 210 20% 98%;
     --muted: 210 20% 14.9%;
     --muted-foreground: 210 20% 63.9%;
-    --accent: 145 53% 52%; /* Lighter Green for dark mode */
+    --accent: 211 100% 60%; /* Lighter Blue - Changed from Green */
     --accent-foreground: 210 50% 10%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;

@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 import { format, parseISO, lastDayOfMonth } from "date-fns";
 import type { Branch } from "@/app/admin/branches/branch-types";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { Separator } from "@/components/ui/separator";
 
 interface UserAuth {
   id?: string;
@@ -800,6 +801,30 @@ export default function StaffBulkMeterDetailsPage() {
                 <p className="text-base pt-1 border-t mt-1 font-semibold">Total Difference Bill: ETB {differenceBill.toFixed(2)}</p>
                  <p className={cn("text-base font-semibold", bulkMeter.outStandingbill > 0 ? "text-destructive" : "text-muted-foreground")}>Outstanding Bill: ETB {bulkMeter.outStandingbill.toFixed(2)}</p>
                  <p className="text-xl font-bold text-primary pt-1 border-t mt-1">Total Amount Payable: ETB {totalPayable.toFixed(2)}</p>
+                 <Separator className="my-4"/>
+
+                <div>
+                    <h4 className="text-sm font-semibold mb-2">End of Month Actions</h4>
+                    <div className="grid gap-2">
+                        <Button 
+                            onClick={() => handleEndOfCycle(false)} 
+                            disabled={isProcessingCycle}
+                            variant="default"
+                            className="bg-blue-600 hover:bg-blue-700"
+                        >
+                            {isProcessingCycle ? <RefreshCcw className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4"/>}
+                            Mark Paid & Start New Cycle
+                        </Button>
+                        <Button 
+                            onClick={() => handleEndOfCycle(true)} 
+                            disabled={isProcessingCycle}
+                            variant="destructive"
+                        >
+                            {isProcessingCycle ? <RefreshCcw className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCcw className="mr-2 h-4 w-4"/>}
+                            Carry Balance & Start New Cycle
+                        </Button>
+                    </div>
+                </div>
             </CardContent>
           </Card>
         </div>

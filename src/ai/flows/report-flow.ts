@@ -140,6 +140,12 @@ const generateReportFlow = ai.defineFlow(
   },
   async ({ query }) => {
     const response = await reportGeneratorAgent({ query });
+
+    if (!response) {
+      console.error("AI response is undefined. Query was:", query);
+      throw new Error('The AI model returned an empty response. Please try rephrasing your request.');
+    }
+
     const output = response.output;
 
     if (!output) {

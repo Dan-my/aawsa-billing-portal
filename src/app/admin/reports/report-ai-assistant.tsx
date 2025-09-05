@@ -8,8 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ReportDataView } from "./report-data-view";
-import { generateReport, type ReportResponse } from "@/ai/flows/report-flow";
+import { generateReport } from "@/ai/flows/report-flow";
 import { arrayToXlsxBlob, downloadFile } from "./page";
+import type { ReportRequest, ReportResponse } from '@/ai/flows/report-flow-types';
+
 
 export function ReportAIAssistant() {
   const { toast } = useToast();

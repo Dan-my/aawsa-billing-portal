@@ -21,6 +21,8 @@ import {
   initializeCustomers,
 } from '@/lib/data-store';
 import type { IndividualCustomer, BulkMeter, Branch, DomainBill } from '@/lib/data-store';
+import { ReportRequestSchema, ReportResponseSchema, type ReportRequest, type ReportResponse } from './report-flow-types';
+
 
 // Helper to ensure all data is loaded before tools use it
 const ensureDataInitialized = async () => {
@@ -110,20 +112,6 @@ const getCustomersTool = ai.defineTool(
         return allCustomers;
     }
 );
-
-
-// Main Flow Schema
-export const ReportRequestSchema = z.object({
-  query: z.string(),
-});
-export type ReportRequest = z.infer<typeof ReportRequestSchema>;
-
-export const ReportResponseSchema = z.object({
-  summary: z.string().describe("A brief, natural language summary of the report that was generated."),
-  data: z.array(z.any()).describe("The structured data array of the report results."),
-  headers: z.array(z.string()).describe("An array of suggested header strings for displaying the data in a table."),
-});
-export type ReportResponse = z.infer<typeof ReportResponseSchema>;
 
 
 const reportGeneratorAgent = ai.definePrompt({

@@ -66,9 +66,24 @@ export function NotificationBell({ user }: NotificationBellProps) {
     if (!user) {
       return [];
     }
+
+    const userRole = user.role.toLowerCase();
+    const isPrivilegedUser = userRole === 'admin' || userRole === 'head office management';
     
-    // Display all notifications to every user, sorted by most recent.
-    return notifications
+    let filteredNotifications;
+    
+    if (isPrivilegedUser) {
+        // Admins and Head Office see all notifications
+        filteredNotifications = notifications;
+    } else {
+        // Staff and Staff Management see notifications for their branch or for 'All Staff'
+        filteredNotifications = notifications.filter(n => 
+            n.targetBranchId === null || // Sent to All Staff
+            n.targetBranchId === user.branchId // Sent to their specific branch
+        );
+    }
+    
+    return filteredNotifications
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
   }, [notifications, user]);

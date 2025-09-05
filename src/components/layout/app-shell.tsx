@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -32,6 +31,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useIdleTimeout } from '@/hooks/use-idle-timeout';
 import { NotificationBell } from './notification-bell';
+import { ChatbotWidget } from '@/components/chatbot-widget';
 
 interface UserProfile {
   id: string; 
@@ -162,6 +162,7 @@ export function AppShell({ user, userRole, sidebar, children }: { user: UserProf
         <main className="flex-1 p-4 sm:p-6 space-y-6 bg-background">
           {children}
         </main>
+        <ChatbotWidget />
       </SidebarInset>
     </SidebarProvider>
   );

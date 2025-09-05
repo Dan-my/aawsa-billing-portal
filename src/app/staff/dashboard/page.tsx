@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart as BarChartIcon, PieChart as PieChartIcon, Gauge, Users, ArrowRight, FileText, TrendingUp, AlertCircle, Table as TableIcon } from 'lucide-react';
+import { BarChart as BarChartIcon, PieChart as PieChartIcon, Gauge, Users, ArrowRight, FileText, TrendingUp, AlertCircle, Table as TableIcon, UserCheck } from 'lucide-react';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -151,6 +151,9 @@ export default function StaffDashboardPage() {
     const currentMonthCustomers = branchCustomers.filter(c => c.month === currentMonthYear && c.status === 'Active');
 
     const pendingCustomers = branchCustomers.filter(c => c.status === 'Pending Approval').length;
+    const pendingBulkMeters = branchBMs.filter(bm => bm.status === 'Pending Approval').length;
+    const totalPendingApprovals = pendingCustomers + pendingBulkMeters;
+
 
     // Calculation for the "Bills Status" card (includes both, for the current month)
     const paidCount = currentMonthBMs.filter(bm => bm.paymentStatus === 'Paid').length + currentMonthCustomers.filter(c => c.paymentStatus === 'Paid').length;
@@ -220,7 +223,7 @@ export default function StaffDashboardPage() {
       branchPerformanceData,
       waterUsageTrendData,
       paidPercentage,
-      pendingApprovals: pendingCustomers,
+      pendingApprovals: totalPendingApprovals,
     };
   }, [authStatus, staffBranchId, allBulkMeters, allCustomers, allBranches]);
 
@@ -304,7 +307,7 @@ export default function StaffDashboardPage() {
             </div>
           </CardContent>
         </Card>
-
+        
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Payment Collection Rate (This Month)</CardTitle>
@@ -481,3 +484,4 @@ export default function StaffDashboardPage() {
     </div>
   );
 }
+

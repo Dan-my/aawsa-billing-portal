@@ -25,7 +25,7 @@ import { Alert, AlertTitle, AlertDescription as UIAlertDescription } from "@/com
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { ReportDataView } from "@/app/admin/reports/report-data-view";
+import { ReportDataView } from '@/app/admin/reports/report-data-view';
 import { cn } from "@/lib/utils";
 import type { DateRange } from "react-day-picker";
 

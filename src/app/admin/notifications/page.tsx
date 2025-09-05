@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { Bell, Send } from "lucide-react";
+import { Bell, Send, Lock } from "lucide-react";
 import {
   addNotification,
   getNotifications,
@@ -28,6 +28,7 @@ import {
 import type { DomainNotification } from "@/lib/data-store";
 import type { Branch } from "../branches/branch-types";
 import { usePermissions } from "@/hooks/use-permissions";
+import { Alert, AlertTitle } from "@/components/ui/alert";
 
 const ALL_STAFF_VALUE = "all-staff-target";
 
@@ -132,7 +133,21 @@ export default function AdminNotificationsPage() {
   };
   
   const canCreateNotifications = hasPermission('notifications_create');
+  const canViewNotifications = hasPermission('notifications_view');
   const isBranchManager = user?.role?.toLowerCase() === 'staff management' && user.branchId;
+
+  if (!canViewNotifications) {
+      return (
+        <div className="space-y-6">
+            <h1 className="text-2xl md:text-3xl font-bold">Notifications</h1>
+            <Alert variant="destructive">
+                <Lock className="h-4 w-4" />
+                <AlertTitle>Access Denied</AlertTitle>
+                <CardDescription>You do not have permission to view this page.</CardDescription>
+            </Alert>
+        </div>
+      );
+  }
 
   return (
     <div className="space-y-6">

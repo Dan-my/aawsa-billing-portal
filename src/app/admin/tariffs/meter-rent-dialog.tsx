@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -41,10 +42,11 @@ interface MeterRentDialogProps {
   onSubmit: (data: { [key: string]: number }) => void;
   defaultPrices: { [key: string]: number };
   currency?: string;
-  year: number; // Added year prop
+  year: number;
+  canUpdate: boolean;
 }
 
-export function MeterRentDialog({ open, onOpenChange, onSubmit, defaultPrices, currency = "ETB", year }: MeterRentDialogProps) {
+export function MeterRentDialog({ open, onOpenChange, onSubmit, defaultPrices, currency = "ETB", year, canUpdate }: MeterRentDialogProps) {
   
   const formSchema = React.useMemo(() => createMeterRentSchema(defaultPrices), [defaultPrices]);
   type FormValues = z.infer<typeof formSchema>;
@@ -98,7 +100,7 @@ export function MeterRentDialog({ open, onOpenChange, onSubmit, defaultPrices, c
                               <FormLabel className="w-1/2">{`Rent for ${option.label} Meter`}</FormLabel>
                               <div className="flex w-1/2 items-center gap-2">
                                 <FormControl>
-                                    <Input type="number" step="0.01" {...field} />
+                                    <Input type="number" step="0.01" {...field} disabled={!canUpdate}/>
                                 </FormControl>
                                 <span className="text-sm text-muted-foreground">{currency}</span>
                               </div>
@@ -111,7 +113,7 @@ export function MeterRentDialog({ open, onOpenChange, onSubmit, defaultPrices, c
             </ScrollArea>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit">Save Changes</Button>
+              {canUpdate && <Button type="submit">Save Changes</Button>}
             </DialogFooter>
           </form>
         </Form>

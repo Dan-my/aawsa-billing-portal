@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { LibraryBig, ListChecks, PlusCircle, RotateCcw, DollarSign, Percent, Copy } from "lucide-react";
+import { LibraryBig, ListChecks, PlusCircle, RotateCcw, DollarSign, Percent, Copy, Lock } from "lucide-react";
 import type { TariffTier, TariffInfo, SewerageTier } from "@/lib/billing";
 import { 
     getTariff, initializeTariffs, subscribeToTariffs, updateTariff, addTariff 
@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MeterRentDialog } from "./meter-rent-dialog";
 import { usePermissions } from "@/hooks/use-permissions";
+import { Alert, AlertTitle } from "@/components/ui/alert";
 
 const mapTariffTierToDisplay = (tier: TariffTier | SewerageTier, index: number, prevTier?: TariffTier | SewerageTier): DisplayTariffRate => {
   let minConsumption: number;
@@ -95,6 +96,8 @@ export default function TariffManagementPage() {
   const activeWaterTiers = getDisplayTiersFromData(activeTariffInfo, 'water');
   const activeSewerageTiers = getDisplayTiersFromData(activeTariffInfo, 'sewerage');
   const yearOptions = React.useMemo(() => generateYearOptions(), []);
+
+  const canUpdateTariffs = hasPermission('tariffs_update');
 
   React.useEffect(() => {
     setIsDataLoading(true);
@@ -229,6 +232,16 @@ export default function TariffManagementPage() {
   };
 
 
+  if (!hasPermission('tariffs_view')) {
+      return (
+        <Alert variant="destructive">
+            <Lock className="h-4 w-4" />
+            <AlertTitle>Access Denied</AlertTitle>
+            <CardDescription>You do not have the required permissions to view this page.</CardDescription>
+        </Alert>
+      );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -236,7 +249,7 @@ export default function TariffManagementPage() {
             <LibraryBig className="h-8 w-8 text-primary" />
             <h1 className="text-2xl md:text-3xl font-bold">Tariff Management</h1>
         </div>
-        {hasPermission('tariffs_update') && (
+        {canUpdateTariffs && (
             <div className="flex gap-2 flex-wrap">
                  <Button onClick={handleCreateNewYearTariff} variant="outline" disabled={!activeTariffInfo}>
                     <Copy className="mr-2 h-4 w-4" /> Copy to {currentYear + 1}
@@ -292,7 +305,7 @@ export default function TariffManagementPage() {
                       <ListChecks className="h-6 w-6 text-primary" />
                       <CardTitle>Current Water Tariff Rates ({currentTariffType} - {currentYear})</CardTitle>
                     </div>
-                    {hasPermission('tariffs_update') && (
+                    {canUpdateTariffs && (
                         <Button onClick={() => handleAddTier('water')} size="sm">
                             <PlusCircle className="mr-2 h-4 w-4" /> Add Water Tier
                         </Button>
@@ -311,7 +324,7 @@ export default function TariffManagementPage() {
                   onEdit={(rate) => handleEditTier(rate, 'water')} 
                   onDelete={(rate) => handleDeleteTier(rate, 'water')} 
                   currency="ETB"
-                  canUpdate={hasPermission('tariffs_update')}
+                  canUpdate={canUpdateTariffs}
                 />
               </CardContent>
           </Card>
@@ -355,7 +368,7 @@ export default function TariffManagementPage() {
                   <div className="space-y-2">
                      <div className="flex justify-between items-center mb-2">
                         <h4 className="font-medium text-sm text-muted-foreground">Sewerage Fee (if applicable)</h4>
-                        {hasPermission('tariffs_update') && (
+                        {canUpdateTariffs && (
                             <Button onClick={() => handleAddTier('sewerage')} size="sm" variant="outline">
                                 <PlusCircle className="mr-2 h-4 w-4" /> Add Sewerage Tier
                             </Button>
@@ -366,7 +379,7 @@ export default function TariffManagementPage() {
                         onEdit={(rate) => handleEditTier(rate, 'sewerage')}
                         onDelete={(rate) => handleDeleteTier(rate, 'sewerage')}
                         currency="ETB"
-                        canUpdate={hasPermission('tariffs_update')}
+                        canUpdate={canUpdateTariffs}
                       />
                   </div>
               </div>
@@ -375,7 +388,7 @@ export default function TariffManagementPage() {
         </>
       )}
       
-      {hasPermission('tariffs_update') && activeTariffInfo && (
+      {activeTariffInfo && (
         <>
           <TariffFormDialog
             open={!!editingTierType}
@@ -388,6 +401,7 @@ export default function TariffManagementPage() {
             } : null}
             currency="ETB"
             tierType={editingTierType}
+            canUpdate={canUpdateTariffs}
           />
 
           <MeterRentDialog
@@ -397,6 +411,7 @@ export default function TariffManagementPage() {
             defaultPrices={activeTariffInfo.meter_rent_prices as { [key: string]: number }}
             currency="ETB"
             year={currentYear}
+            canUpdate={canUpdateTariffs}
           />
           <AlertDialog open={!!rateToDelete} onOpenChange={(open) => !open && setRateToDelete(null)}>
             <AlertDialogContent>

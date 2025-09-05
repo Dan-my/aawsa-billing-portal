@@ -45,9 +45,10 @@ interface TariffFormDialogProps {
   defaultValues?: TariffFormValues | null;
   currency?: string;
   tierType: 'water' | 'sewerage' | null;
+  canUpdate: boolean;
 }
 
-export function TariffFormDialog({ open, onOpenChange, onSubmit, defaultValues, currency = "ETB", tierType }: TariffFormDialogProps) {
+export function TariffFormDialog({ open, onOpenChange, onSubmit, defaultValues, currency = "ETB", tierType, canUpdate }: TariffFormDialogProps) {
   const form = useForm<TariffFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: defaultValues || {
@@ -94,7 +95,7 @@ export function TariffFormDialog({ open, onOpenChange, onSubmit, defaultValues, 
                 <FormItem>
                   <FormLabel>Tier Description</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="e.g., First 5 m³ consumption, or High consumption tier" {...field} />
+                    <Textarea placeholder="e.g., First 5 m³ consumption, or High consumption tier" {...field} disabled={!canUpdate}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -107,7 +108,7 @@ export function TariffFormDialog({ open, onOpenChange, onSubmit, defaultValues, 
                 <FormItem>
                   <FormLabel>Max Consumption in Tier (m³)</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., 5 or 50 or 'Infinity' for the last tier" {...field} />
+                    <Input placeholder="e.g., 5 or 50 or 'Infinity' for the last tier" {...field} disabled={!canUpdate}/>
                   </FormControl>
                    <FormMessage />
                    <p className="text-xs text-muted-foreground">
@@ -123,7 +124,7 @@ export function TariffFormDialog({ open, onOpenChange, onSubmit, defaultValues, 
                 <FormItem>
                   <FormLabel>Rate ({currency}/m³)</FormLabel>
                   <FormControl>
-                    <Input type="number" step="0.01" placeholder="e.g., 10.21" {...field} />
+                    <Input type="number" step="0.01" placeholder="e.g., 10.21" {...field} disabled={!canUpdate}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -131,9 +132,11 @@ export function TariffFormDialog({ open, onOpenChange, onSubmit, defaultValues, 
             />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit">
-                {defaultValues ? "Save Changes" : "Add Tier"}
-              </Button>
+              {canUpdate && (
+                <Button type="submit">
+                  {defaultValues ? "Save Changes" : "Add Tier"}
+                </Button>
+              )}
             </DialogFooter>
           </form>
         </Form>

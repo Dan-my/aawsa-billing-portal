@@ -8,8 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Save, AlertTriangle, Info, DollarSign, Bell, FileDown } from "lucide-react";
+import { Save, AlertTriangle, Info, DollarSign, Bell, FileDown, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/use-permissions";
+import { Alert, AlertTitle } from "@/components/ui/alert";
 
 const APP_NAME_KEY = "aawsa-app-name";
 const CURRENCY_KEY = "aawsa-default-currency";
@@ -27,6 +29,7 @@ const EXPORT_PREFIX_KEY = "aawsa-export-prefix";
 const billingCycleDays = Array.from({ length: 28 }, (_, i) => (i + 1).toString());
 
 export default function AdminSettingsPage() {
+  const { hasPermission } = usePermissions();
   const { toast } = useToast();
   
   // State for existing settings
@@ -43,6 +46,7 @@ export default function AdminSettingsPage() {
   const [exportPrefix, setExportPrefix] = React.useState("aawsa_export");
 
   const [isMounted, setIsMounted] = React.useState(false);
+  const canUpdateSettings = hasPermission('settings_update');
 
   React.useEffect(() => {
     setIsMounted(true);
@@ -80,6 +84,14 @@ export default function AdminSettingsPage() {
   }, []);
 
   const handleSaveSettings = () => {
+    if (!canUpdateSettings) {
+      toast({
+        variant: "destructive",
+        title: "Permission Denied",
+        description: "You do not have permission to update settings.",
+      });
+      return;
+    }
     // Save existing settings
     localStorage.setItem(APP_NAME_KEY, appName);
     localStorage.setItem(CURRENCY_KEY, defaultCurrency);
@@ -112,6 +124,16 @@ export default function AdminSettingsPage() {
     return null; 
   }
 
+  if (!hasPermission('settings_view')) {
+      return (
+        <Alert variant="destructive">
+            <Lock className="h-4 w-4" />
+            <AlertTitle>Access Denied</AlertTitle>
+            <CardDescription>You do not have the required permissions to view this page.</CardDescription>
+        </Alert>
+      );
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl md:text-3xl font-bold">Application Settings</h1>
@@ -127,7 +149,8 @@ export default function AdminSettingsPage() {
             <Input 
               id="app-name" 
               value={appName}
-              onChange={(e) => setAppName(e.target.value)} 
+              onChange={(e) => setAppName(e.target.value)}
+              disabled={!canUpdateSettings}
             />
           </div>
           <div className="space-y-2">
@@ -135,7 +158,8 @@ export default function AdminSettingsPage() {
             <Input 
               id="currency" 
               value={defaultCurrency}
-              onChange={(e) => setDefaultCurrency(e.target.value)} 
+              onChange={(e) => setDefaultCurrency(e.target.value)}
+              disabled={!canUpdateSettings}
             />
           </div>
           <div className="flex items-center space-x-2">
@@ -143,6 +167,7 @@ export default function AdminSettingsPage() {
               id="dark-mode" 
               checked={enableDarkMode}
               onCheckedChange={(checked) => setEnableDarkMode(checked as boolean)}
+              disabled={!canUpdateSettings}
             />
             <Label htmlFor="dark-mode" className="font-medium">
               Enable Dark Mode by Default
@@ -159,7 +184,7 @@ export default function AdminSettingsPage() {
         <CardContent className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="billing-cycle-day">Billing Cycle Day</Label>
-            <Select value={billingCycleDay} onValueChange={setBillingCycleDay}>
+            <Select value={billingCycleDay} onValueChange={setBillingCycleDay} disabled={!canUpdateSettings}>
               <SelectTrigger id="billing-cycle-day" className="w-full md:w-[200px]">
                 <SelectValue placeholder="Select day" />
               </SelectTrigger>
@@ -179,6 +204,7 @@ export default function AdminSettingsPage() {
               id="overdue-reminders" 
               checked={enableOverdueReminders}
               onCheckedChange={(checked) => setEnableOverdueReminders(checked as boolean)}
+              disabled={!canUpdateSettings}
             />
             <Label htmlFor="overdue-reminders" className="font-medium">
               Enable Automatic Overdue Reminders
@@ -208,6 +234,7 @@ export default function AdminSettingsPage() {
                 id="notify-new-bill" 
                 checked={notifyOnNewBill}
                 onCheckedChange={(checked) => setNotifyOnNewBill(checked as boolean)}
+                disabled={!canUpdateSettings}
               />
               <Label htmlFor="notify-new-bill" className="font-normal">
                 Send email notification when a new bill is generated.
@@ -218,6 +245,7 @@ export default function AdminSettingsPage() {
                 id="notify-overdue" 
                 checked={notifyOnOverdue}
                 onCheckedChange={(checked) => setNotifyOnOverdue(checked as boolean)}
+                disabled={!canUpdateSettings}
               />
               <Label htmlFor="notify-overdue" className="font-normal">
                 Send email notification for overdue payments.
@@ -234,7 +262,7 @@ export default function AdminSettingsPage() {
         <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="export-format">Default Export Format</Label>
-              <Select value={exportFormat} onValueChange={setExportFormat}>
+              <Select value={exportFormat} onValueChange={setExportFormat} disabled={!canUpdateSettings}>
                 <SelectTrigger id="export-format" className="w-full md:w-[200px]">
                   <SelectValue placeholder="Select format" />
                 </SelectTrigger>
@@ -251,6 +279,7 @@ export default function AdminSettingsPage() {
                 value={exportPrefix}
                 onChange={(e) => setExportPrefix(e.target.value)} 
                 className="w-full md:w-[300px]"
+                disabled={!canUpdateSettings}
               />
             </div>
         </CardContent>
@@ -271,12 +300,13 @@ export default function AdminSettingsPage() {
         </CardContent>
       </Card>
       
-      <div className="flex justify-end">
-        <Button onClick={handleSaveSettings}>
-          <Save className="mr-2 h-4 w-4" /> Save All Settings
-        </Button>
-      </div>
+      {canUpdateSettings && (
+        <div className="flex justify-end">
+          <Button onClick={handleSaveSettings}>
+            <Save className="mr-2 h-4 w-4" /> Save All Settings
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
-    

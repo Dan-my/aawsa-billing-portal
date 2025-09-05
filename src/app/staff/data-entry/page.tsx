@@ -5,7 +5,7 @@ import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, UploadCloud, Building, FileSpreadsheet } from "lucide-react";
+import { FileText, UploadCloud, Building, FileSpreadsheet, Lock } from "lucide-react";
 import { StaffBulkMeterEntryForm } from "./staff-bulk-meter-entry-form";
 import { StaffIndividualCustomerEntryForm } from "./individual-customer-data-entry-form"; 
 import { CsvUploadSection } from "@/app/admin/data-entry/csv-upload-section";
@@ -24,6 +24,8 @@ import {
 import type { BulkMeter } from "@/app/admin/bulk-meters/bulk-meter-types";
 import type { IndividualCustomer } from "@/app/admin/individual-customers/individual-customer-types";
 import type { StaffMember } from "@/app/admin/staff-management/staff-types";
+import { usePermissions } from "@/hooks/use-permissions";
+import { Alert, AlertTitle } from "@/components/ui/alert";
 
 const bulkMeterCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "subCity", "woreda", "chargeGroup", "sewerageConnection", "xCoordinate", "yCoordinate"];
 const individualCustomerCsvHeaders = ["name", "customerKeyNumber", "contractNumber", "customerType", "bookNumber", "ordinal", "meterSize", "meterNumber", "previousReading", "currentReading", "month", "specificArea", "subCity", "woreda", "sewerageConnection", "assignedBulkMeterId"];
@@ -36,6 +38,7 @@ interface User {
 }
 
 export default function StaffDataEntryPage() {
+  const { hasPermission } = usePermissions();
   const [currentUser, setCurrentUser] = React.useState<StaffMember | null>(null);
   const [staffBranchName, setStaffBranchName] = React.useState<string>("Your Branch");
   const [staffBranchId, setStaffBranchId] = React.useState<string | null>(null);
@@ -101,6 +104,15 @@ export default function StaffDataEntryPage() {
     }
   };
 
+  if (!hasPermission('data_entry_access')) {
+      return (
+        <Alert variant="destructive">
+            <Lock className="h-4 w-4" />
+            <AlertTitle>Access Denied</AlertTitle>
+            <CardDescription>You do not have permission to perform data entry.</CardDescription>
+        </Alert>
+      )
+  }
 
   if (!isBranchDetermined) {
     return (

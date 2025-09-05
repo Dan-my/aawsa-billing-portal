@@ -105,3 +105,4 @@ export default function AdminLayoutClient({ children, user }: AdminLayoutClientP
         </PermissionsContext.Provider>
     );
 }
+

@@ -161,9 +161,10 @@ export default function StaffDashboardPage() {
         { name: 'Unpaid', value: unpaidCount, fill: 'hsl(var(--chart-3))' },
     ];
     
-    // Calculation for "Payment Collection Rate" card (Bulk Meters ONLY, all time for the branch)
-    const paidBMsCount = branchBMs.filter(bm => bm.paymentStatus === 'Paid').length;
-    const totalBMsCount = branchBMs.length;
+    // Calculation for "Payment Collection Rate" card (Bulk Meters ONLY, THIS MONTH for the branch)
+    const currentMonthBMsForRate = branchBMs.filter(bm => bm.month === currentMonthYear);
+    const paidBMsCount = currentMonthBMsForRate.filter(bm => bm.paymentStatus === 'Paid').length;
+    const totalBMsCount = currentMonthBMsForRate.length;
     const paidPercentage = totalBMsCount > 0 ? `${((paidBMsCount / totalBMsCount) * 100).toFixed(0)}%` : "0%";
 
     // --- Data for Branch Performance Chart (ALL branches, all time) ---
@@ -306,12 +307,12 @@ export default function StaffDashboardPage() {
 
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Payment Collection Rate (All Time)</CardTitle>
+            <CardTitle className="text-sm font-medium">Payment Collection Rate (This Month)</CardTitle>
             <TrendingUp className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-accent">{processedStats.paidPercentage}</div>
-            <p className="text-xs text-muted-foreground">of bulk meter bills are marked as paid</p>
+            <p className="text-xs text-muted-foreground">of this month's bulk meter bills are paid</p>
              <div className="h-[120px] mt-4 flex items-center justify-center">
                 <TrendingUp className="h-16 w-16 text-accent opacity-50" />
             </div>

@@ -47,6 +47,7 @@ const buildStaffSidebarNavItems = (user: UserProfile | null): NavItemGroup[] => 
         dataReportsItems.push({ title: "Reports", href: "/staff/reports", iconName: "BarChart2" });
         dataReportsItems.push({ title: "List Of Paid Bills", href: "/staff/reports/paid-bills", iconName: "CheckCircle2" });
         dataReportsItems.push({ title: "List Of Sent Bills", href: "/staff/reports/sent-bills", iconName: "Send" });
+        dataReportsItems.push({ title: "List of Unsettled Bills", href: "/staff/reports/unsettled-bills", iconName: "FileClock" });
     }
     
     // Dynamically add Tariff Management if permission exists

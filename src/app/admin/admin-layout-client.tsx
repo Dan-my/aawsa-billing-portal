@@ -64,6 +64,7 @@ const buildSidebarNavItems = (user: UserProfile | null): NavItemGroup[] => {
         dataReportsItems.push({ title: "Reports", href: "/admin/reports", iconName: "BarChart2" });
         dataReportsItems.push({ title: "List Of Paid Bills", href: "/admin/reports/paid-bills", iconName: "CheckCircle2" });
         dataReportsItems.push({ title: "List Of Sent Bills", href: "/admin/reports/sent-bills", iconName: "Send" });
+        dataReportsItems.push({ title: "List of Unsettled Bills", href: "/admin/reports/unsettled-bills", iconName: "FileClock" });
     }
     
     if (dataReportsItems.length > 0) {
@@ -105,4 +106,3 @@ export default function AdminLayoutClient({ children, user }: AdminLayoutClientP
         </PermissionsContext.Provider>
     );
 }
-

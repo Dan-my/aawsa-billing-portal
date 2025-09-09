@@ -55,12 +55,16 @@ import {
   rpcUpdateRolePermissionsAction,
   getAllTariffsAction,
   createTariffAction,
-  dbUpdateTariff,
-  getKnowledgeBaseArticles as dbGetKnowledgeBaseArticles,
-  createKnowledgeBaseArticle as dbCreateKnowledgeBaseArticle,
-  updateKnowledgeBaseArticle as dbUpdateKnowledgeBaseArticle,
-  deleteKnowledgeBaseArticle as dbDeleteKnowledgeBaseArticle,
+  updateTariffAction,
 } from './actions';
+
+import { 
+    getKnowledgeBaseArticles as dbGetKnowledgeBaseArticles,
+    createKnowledgeBaseArticle as dbCreateKnowledgeBaseArticle,
+    updateKnowledgeBaseArticle as dbUpdateKnowledgeBaseArticle,
+    deleteKnowledgeBaseArticle as dbDeleteKnowledgeBaseArticle
+} from './db-queries';
+
 
 import type { Database } from '@/types/supabase';
 
@@ -315,7 +319,7 @@ const notifyKnowledgeBaseArticleListeners = () => knowledgeBaseArticleListeners.
 
 
 // --- Mappers ---
-const mapSupabaseNotificationToDomain = (sn: SupabaseNotificationRow): DomainNotification => ({
+const mapSupabaseNotificationToDomain = (sn: NotificationRow): DomainNotification => ({
   id: sn.id,
   createdAt: sn.created_at,
   title: sn.title,
@@ -360,7 +364,7 @@ const mapDomainBranchToUpdate = (branch: Partial<Omit<DomainBranch, 'id'>>): Bra
 };
 
 
-const mapSupabaseCustomerToDomain = async (sc: SupabaseIndividualCustomerRow): Promise<DomainIndividualCustomer> => {
+const mapSupabaseCustomerToDomain = async (sc: IndividualCustomer): Promise<DomainIndividualCustomer> => {
   const usage = sc.currentReading - sc.previousReading;
   const { totalBill: bill } = await calculateBill(usage, sc.customerType, sc.sewerageConnection, Number(sc.meterSize), sc.month);
   return {
@@ -597,7 +601,7 @@ const mapDomainBulkMeterToUpdate = async (bulkMeterWithUpdates: BulkMeter): Prom
 };
 
 
-const mapSupabaseStaffToDomain = (ss: SupabaseStaffMemberRow & { roles?: { role_name: string } | null; role_name?: string }): StaffMember => ({
+const mapSupabaseStaffToDomain = (ss: StaffMember & { roles?: { role_name: string } | null; role_name?: string }): StaffMember => ({
   id: ss.id,
   name: ss.name,
   email: ss.email,
@@ -641,7 +645,7 @@ const mapDomainStaffToUpdate = (staff: Partial<Omit<StaffMember, 'id' | 'email'>
 };
 
 
-const mapSupabaseBillToDomain = (sb: SupabaseBillRow): DomainBill => ({
+const mapSupabaseBillToDomain = (sb: Bill): DomainBill => ({
   id: sb.id,
   individualCustomerId: sb.individual_customer_id,
   bulkMeterId: sb.bulk_meter_id,
@@ -695,7 +699,7 @@ const mapDomainBillToSupabase = (bill: Partial<DomainBill>): Partial<BillInsert 
     return payload;
 };
 
-const mapSupabaseIndividualReadingToDomain = (smr: SupabaseIndividualCustomerReadingRow): DomainIndividualCustomerReading => ({
+const mapSupabaseIndividualReadingToDomain = (smr: IndividualCustomerReading): DomainIndividualCustomerReading => ({
   id: smr.id,
   individualCustomerId: smr.individual_customer_id,
   readerStaffId: smr.reader_staff_id,
@@ -720,7 +724,7 @@ const mapDomainIndividualReadingToSupabase = (mr: Partial<DomainIndividualCustom
     return payload;
 };
 
-const mapSupabaseBulkReadingToDomain = (smr: SupabaseBulkMeterReadingRow): DomainBulkMeterReading => ({
+const mapSupabaseBulkReadingToDomain = (smr: BulkMeterReading): DomainBulkMeterReading => ({
   id: smr.id,
   bulkMeterId: smr.bulk_meter_id,
   readerStaffId: smr.reader_staff_id,
@@ -745,7 +749,7 @@ const mapDomainBulkReadingToSupabase = (mr: Partial<DomainBulkMeterReading>): Pa
     return payload;
 };
 
-const mapSupabasePaymentToDomain = (sp: SupabasePaymentRow): DomainPayment => ({
+const mapSupabasePaymentToDomain = (sp: Payment): DomainPayment => ({
   id: sp.id,
   billId: sp.bill_id,
   individualCustomerId: sp.individual_customer_id,
@@ -772,7 +776,7 @@ const mapDomainPaymentToSupabase = (p: Partial<DomainPayment>): Partial<PaymentI
     return payload;
 };
 
-const mapSupabaseReportLogToDomain = (srl: SupabaseReportLogRow): DomainReportLog => ({
+const mapSupabaseReportLogToDomain = (srl: ReportLog): DomainReportLog => ({
   id: srl.id,
   reportName: srl.report_name,
   description: srl.description,
@@ -1747,7 +1751,7 @@ export const addNotification = async (notificationData: { title: string; message
   const { data, error } = await createNotificationAction(payload);
   
   if (data && !error) {
-    const newNotification = mapSupabaseNotificationToDomain(data as SupabaseNotificationRow);
+    const newNotification = mapSupabaseNotificationToDomain(data as NotificationRow);
     notifications = [newNotification, ...notifications].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     notifyNotificationListeners();
     return { success: true, data: newNotification };

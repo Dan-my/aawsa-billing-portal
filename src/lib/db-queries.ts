@@ -78,7 +78,7 @@ export const rpcUpdateRolePermissions = async (roleId: number, permissionIds: nu
 
 export const getAllTariffs = async () => supabase.from('tariffs').select('*');
 export const createTariff = async (tariff: any) => supabase.from('tariffs').insert(tariff).select().single();
-export const dbUpdateTariff = async (customerType: string, year: number, tariff: any) => {
+export const updateTariff = async (customerType: string, year: number, tariff: any) => {
     const { data, error } = await supabase
         .from('tariffs')
         .update(tariff)
@@ -90,4 +90,7 @@ export const dbUpdateTariff = async (customerType: string, year: number, tariff:
     return { data, error };
 };
 
-
+export const getKnowledgeBaseArticles = async () => supabase.from('knowledge_base_articles').select('*');
+export const createKnowledgeBaseArticle = async (article: any) => supabase.from('knowledge_base_articles').insert(article).select().single();
+export const updateKnowledgeBaseArticle = async (id: number, article: any) => supabase.from('knowledge_base_articles').update(article).eq('id', id).select().single();
+export const deleteKnowledgeBaseArticle = async (id: number) => supabase.from('knowledge_base_articles').delete().eq('id', id);

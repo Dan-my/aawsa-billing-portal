@@ -56,15 +56,11 @@ import {
   getAllTariffsAction,
   createTariffAction,
   updateTariffAction,
+  createKnowledgeBaseArticleAction,
+  updateKnowledgeBaseArticleAction,
+  deleteKnowledgeBaseArticleAction,
+  getAllKnowledgeBaseArticlesAction
 } from './actions';
-
-import { 
-    getKnowledgeBaseArticles as dbGetKnowledgeBaseArticles,
-    createKnowledgeBaseArticle as dbCreateKnowledgeBaseArticle,
-    updateKnowledgeBaseArticle as dbUpdateKnowledgeBaseArticle,
-    deleteKnowledgeBaseArticle as dbDeleteKnowledgeBaseArticle
-} from './db-queries';
-
 
 import type { Database } from '@/types/supabase';
 
@@ -1046,7 +1042,7 @@ async function fetchAllRolePermissions() {
 }
 
 async function fetchAllKnowledgeBaseArticles() {
-  const { data, error } = await dbGetKnowledgeBaseArticles();
+  const { data, error } = await getAllKnowledgeBaseArticlesAction();
   if (error) {
     console.error("DataStore: Failed to fetch knowledge base articles. Error:", error);
     knowledgeBaseArticles = [];
@@ -1067,7 +1063,7 @@ export async function initializeKnowledgeBaseArticles() {
 export const getKnowledgeBaseArticles = (): KnowledgeBaseArticle[] => [...knowledgeBaseArticles];
 
 export const addKnowledgeBaseArticle = async (article: KnowledgeBaseArticleInsert): Promise<StoreOperationResult<KnowledgeBaseArticle>> => {
-  const { data, error } = await dbCreateKnowledgeBaseArticle(article);
+  const { data, error } = await createKnowledgeBaseArticleAction(article);
   if (!error && data) {
     const newArticle = mapSupabaseKnowledgeBaseArticleToDomain(data);
     knowledgeBaseArticles = [newArticle, ...knowledgeBaseArticles];
@@ -1078,7 +1074,7 @@ export const addKnowledgeBaseArticle = async (article: KnowledgeBaseArticleInser
 };
 
 export const updateKnowledgeBaseArticle = async (id: number, article: KnowledgeBaseArticleUpdate): Promise<StoreOperationResult<KnowledgeBaseArticle>> => {
-  const { data, error } = await dbUpdateKnowledgeBaseArticle(id, article);
+  const { data, error } = await updateKnowledgeBaseArticleAction(id, article);
   if (!error && data) {
     const updatedArticle = mapSupabaseKnowledgeBaseArticleToDomain(data);
     knowledgeBaseArticles = knowledgeBaseArticles.map(a => a.id === id ? updatedArticle : a);
@@ -1089,7 +1085,7 @@ export const updateKnowledgeBaseArticle = async (id: number, article: KnowledgeB
 };
 
 export const deleteKnowledgeBaseArticle = async (id: number): Promise<StoreOperationResult<void>> => {
-  const { error } = await dbDeleteKnowledgeBaseArticle(id);
+  const { error } = await deleteKnowledgeBaseArticleAction(id);
   if (!error) {
     knowledgeBaseArticles = knowledgeBaseArticles.filter(a => a.id !== id);
     notifyKnowledgeBaseArticleListeners();

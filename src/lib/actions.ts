@@ -49,6 +49,10 @@ import {
   getAllTariffs as dbGetAllTariffs,
   createTariff as dbCreateTariff,
   updateTariff as dbUpdateTariff,
+  createKnowledgeBaseArticle as dbCreateKnowledgeBaseArticle,
+  updateKnowledgeBaseArticle as dbUpdateKnowledgeBaseArticle,
+  deleteKnowledgeBaseArticle as dbDeleteKnowledgeBaseArticle,
+  getAllKnowledgeBaseArticles as dbGetAllKnowledgeBaseArticles,
 } from './db-queries';
 
 import type { Database } from '@/types/supabase';
@@ -91,9 +95,11 @@ type ReportLogUpdate = PublicTables['reports']['Update'];
 type NotificationInsert = PublicTables['notifications']['Insert'];
 type TariffInsert = PublicTables['tariffs']['Insert'];
 type TariffUpdate = PublicTables['tariffs']['Update'];
+type KnowledgeBaseArticleInsert = PublicTables['knowledge_base_articles']['Insert'];
+type KnowledgeBaseArticleUpdate = PublicTables['knowledge_base_articles']['Update'];
 
 
-export type { RoleRow, PermissionRow, RolePermissionRow, Branch, BulkMeterRow, IndividualCustomer, StaffMember, Bill, IndividualCustomerReading, BulkMeterReading, Payment, ReportLog, NotificationRow, BranchInsert, BranchUpdate, BulkMeterInsert, BulkMeterUpdate, IndividualCustomerInsert, IndividualCustomerUpdate, StaffMemberInsert, StaffMemberUpdate, BillInsert, BillUpdate, IndividualCustomerReadingInsert, IndividualCustomerReadingUpdate, BulkMeterReadingInsert, BulkMeterReadingUpdate, PaymentInsert, PaymentUpdate, ReportLogInsert, ReportLogUpdate, NotificationInsert, TariffRow, TariffInsert, TariffUpdate };
+export type { RoleRow, PermissionRow, RolePermissionRow, Branch, BulkMeterRow, IndividualCustomer, StaffMember, Bill, IndividualCustomerReading, BulkMeterReading, Payment, ReportLog, NotificationRow, BranchInsert, BranchUpdate, BulkMeterInsert, BulkMeterUpdate, IndividualCustomerInsert, IndividualCustomerUpdate, StaffMemberInsert, StaffMemberUpdate, BillInsert, BillUpdate, IndividualCustomerReadingInsert, IndividualCustomerReadingUpdate, BulkMeterReadingInsert, BulkMeterReadingUpdate, PaymentInsert, PaymentUpdate, ReportLogInsert, ReportLogUpdate, NotificationInsert, TariffRow, TariffInsert, TariffUpdate, KnowledgeBaseArticleInsert, KnowledgeBaseArticleUpdate };
 
 
 export async function getAllBranchesAction() { return dbGetAllBranches(); }
@@ -159,6 +165,11 @@ export async function createTariffAction(tariff: TariffInsert) { return dbCreate
 export async function updateTariffAction(customerType: string, year: number, tariff: TariffUpdate) { 
     return dbUpdateTariff(customerType, year, tariff);
 }
+
+export async function getAllKnowledgeBaseArticlesAction() { return dbGetAllKnowledgeBaseArticles(); }
+export async function createKnowledgeBaseArticleAction(article: KnowledgeBaseArticleInsert) { return dbCreateKnowledgeBaseArticle(article); }
+export async function updateKnowledgeBaseArticleAction(id: number, article: KnowledgeBaseArticleUpdate) { return dbUpdateKnowledgeBaseArticle(id, article); }
+export async function deleteKnowledgeBaseArticleAction(id: number) { return dbDeleteKnowledgeBaseArticle(id); }
 
 
 

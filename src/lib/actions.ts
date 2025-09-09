@@ -19,7 +19,7 @@ import {
   dbDeleteStaffMember,
   dbGetAllStaffMembers,
   dbUpdateStaffMember,
-  dbGetStaffMemberForAuth,
+  getStaffMemberForAuth as dbGetStaffMemberForAuth,
   dbCreateBill,
   dbDeleteBill,
   dbGetAllBills,
@@ -170,7 +170,3 @@ export async function getAllKnowledgeBaseArticlesAction() { return dbGetAllKnowl
 export async function createKnowledgeBaseArticleAction(article: KnowledgeBaseArticleInsert) { return dbCreateKnowledgeBaseArticle(article); }
 export async function updateKnowledgeBaseArticleAction(id: number, article: KnowledgeBaseArticleUpdate) { return dbUpdateKnowledgeBaseArticle(id, article); }
 export async function deleteKnowledgeBaseArticleAction(id: number) { return dbDeleteKnowledgeBaseArticle(id); }
-
-
-
-

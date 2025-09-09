@@ -17,6 +17,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription as FormDescriptionComponent,
   FormField,
   FormItem,
   FormLabel,
@@ -135,12 +136,15 @@ export function KnowledgeBaseFormDialog({ open, onOpenChange, onSubmit, defaultV
                         <FormLabel>Keywords (Optional)</FormLabel>
                         <FormControl>
                             <Input 
-                                placeholder="e.g., password, reset, login" 
+                                placeholder="password, login, access, locked out" 
                                 {...field} 
                                 // value is transformed to array, so we join it back for display
                                 value={Array.isArray(field.value) ? field.value.join(', ') : ''}
                             />
                         </FormControl>
+                        <FormDescriptionComponent>
+                          Comma-separated words that relate to this topic.
+                        </FormDescriptionComponent>
                         <FormMessage />
                         </FormItem>
                     )}

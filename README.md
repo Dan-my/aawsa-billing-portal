@@ -259,5 +259,16 @@ This update makes VAT calculations fully database-driven by adding `vat_rate` an
     *   Open the newly added file `database_migrations/006_add_vat_to_tariffs.sql` in this project.
     *   Copy the entire content of that file and run it.
 
+---
+### **Migration: Add Knowledge Base Table (Required)**
 
-```
+This update adds a new table called `knowledge_base_articles` to store information for the AI chatbot.
+
+**To apply this update:**
+
+1.  **Navigate to the SQL Editor.**
+2.  **Run the Script:**
+    *   Click on **"+ New query"**.
+    *   Open the newly added file `database_migrations/008_knowledge_base_setup.sql` in this project.
+    *   Copy the entire content of that file and run it.
+

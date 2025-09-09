@@ -1,13 +1,13 @@
+
 'use server';
 
 /**
- * @fileOverview A customer support chatbot that answers questions based on project documentation.
+ * @fileOverview A customer support chatbot that answers questions based on a dynamic knowledge base.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import fs from 'fs/promises';
-import path from 'path';
+import { getKnowledgeBaseArticles, initializeKnowledgeBaseArticles } from '@/lib/data-store';
 import {
   ChatbotRequestSchema,
   ChatbotResponseSchema,
@@ -15,40 +15,40 @@ import {
   type ChatbotResponse
 } from './chatbot-flow-types';
 
-
-// This function reads the documentation files from the project root.
-// It's designed to be robust against path changes during build/deployment.
-const getDocumentationContext = async (): Promise<string> => {
+// This function retrieves knowledge base articles from the data store.
+const getKnowledgeBaseContext = async (): Promise<string> => {
     try {
-        const docPath = path.join(process.cwd(), 'DOCUMENTATION.md');
-        const readmePath = path.join(process.cwd(), 'README.md');
+        await initializeKnowledgeBaseArticles();
+        const articles = getKnowledgeBaseArticles();
         
-        const docContent = await fs.readFile(docPath, 'utf-8');
-        const readmeContent = await fs.readFile(readmePath, 'utf-8');
+        if (articles.length === 0) {
+            return "No knowledge base articles found.";
+        }
         
-        return `
-        --- DOCUMENTATION.md ---
-        ${docContent}
+        // Format the articles into a string for the LLM context.
+        return articles.map(article => `
+          --- Article ---
+          Title: ${article.title}
+          Category: ${article.category || 'General'}
+          Content: ${article.content}
+          Keywords: ${(article.keywords || []).join(', ')}
+        `).join('\n\n');
 
-        --- README.md ---
-        ${readmeContent}
-        `;
     } catch (error) {
-        console.error("Error reading documentation files for chatbot:", error);
-        // Return a fallback message if files can't be read.
-        return "Documentation context is currently unavailable.";
+        console.error("Error reading knowledge base for chatbot:", error);
+        // Return a fallback message if data can't be read.
+        return "Knowledge base is currently unavailable.";
     }
 };
-
 
 const documentationChatbot = ai.definePrompt({
     name: 'documentationChatbot',
     input: { schema: z.object({ query: z.string(), context: z.string() }) },
     output: { schema: ChatbotResponseSchema },
-    system: `You are a helpful assistant for the AAWSA Billing Portal application. Your role is to answer user questions based ONLY on the provided documentation context.
+    system: `You are a helpful assistant for the AAWSA Billing Portal application. Your role is to answer user questions based ONLY on the provided knowledge base context.
 
     - Be concise and clear in your answers.
-    - If the answer is not in the documentation, say "I'm sorry, I don't have information about that."
+    - If the answer is not in the knowledge base, say "I'm sorry, I don't have information about that in my knowledge base."
     - Do not make up answers or provide information not found in the context.
     - Format your answers with markdown for readability (e.g., use bullet points for lists).
     - The user is a staff member, so address them professionally.`,
@@ -59,7 +59,6 @@ const documentationChatbot = ai.definePrompt({
     "{{{query}}}"`,
 });
 
-
 const chatbotFlow = ai.defineFlow(
   {
     name: 'chatbotFlow',
@@ -67,7 +66,7 @@ const chatbotFlow = ai.defineFlow(
     outputSchema: ChatbotResponseSchema,
   },
   async ({ query }) => {
-    const context = await getDocumentationContext();
+    const context = await getKnowledgeBaseContext();
     
     const response = await documentationChatbot({
         query,

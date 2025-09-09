@@ -7,6 +7,8 @@ import type { BulkMeter as DomainBulkMeterTypeFromTypes } from '@/app/admin/bulk
 import type { Branch as DomainBranch } from '@/app/admin/branches/branch-types';
 import type { StaffMember as DomainStaffMember } from '@/app/admin/staff-management/staff-types';
 import { calculateBill, type CustomerType, type SewerageConnection, type PaymentStatus, type BillCalculationResult } from '@/lib/billing';
+import { KnowledgeBaseArticle, KnowledgeBaseArticleInsert, KnowledgeBaseArticleUpdate } from '@/app/admin/knowledge-base/knowledge-base-types';
+
 import {
   getAllBranchesAction,
   createBranchAction,
@@ -37,53 +39,75 @@ import {
   createBulkMeterReadingAction,
   updateBulkMeterReadingAction,
   deleteBulkMeterReadingAction,
-  getAllPaymentsAction,
   createPaymentAction,
-  updatePaymentAction,
   deletePaymentAction,
-  getAllReportLogsAction,
+  getAllPaymentsAction,
+  updatePaymentAction,
   createReportLogAction,
-  updateReportLogAction,
   deleteReportLogAction,
-  getAllNotificationsAction,
+  getAllReportLogsAction,
+  updateReportLogAction,
   createNotificationAction,
+  getAllNotificationsAction,
   getAllRolesAction,
   getAllPermissionsAction,
   getAllRolePermissionsAction,
   rpcUpdateRolePermissionsAction,
   getAllTariffsAction,
-  updateTariffAction,
   createTariffAction,
+  dbUpdateTariff,
+  getKnowledgeBaseArticles as dbGetKnowledgeBaseArticles,
+  createKnowledgeBaseArticle as dbCreateKnowledgeBaseArticle,
+  updateKnowledgeBaseArticle as dbUpdateKnowledgeBaseArticle,
+  deleteKnowledgeBaseArticle as dbDeleteKnowledgeBaseArticle,
 } from './actions';
 
-import type {
-  RoleRow,
-  PermissionRow,
-  RolePermissionRow,
-  Branch,
-  BulkMeterRow,
-  IndividualCustomer as SupabaseIndividualCustomerRow,
-  StaffMember as SupabaseStaffMemberRow,
-  Bill as SupabaseBillRow,
-  IndividualCustomerReading as SupabaseIndividualCustomerReadingRow,
-  BulkMeterReading as SupabaseBulkMeterReadingRow,
-  Payment as SupabasePaymentRow,
-  ReportLog as SupabaseReportLogRow,
-  NotificationRow as SupabaseNotificationRow,
-  BranchInsert, BranchUpdate,
-  BulkMeterInsert, BulkMeterUpdate,
-  IndividualCustomerInsert, IndividualCustomerUpdate,
-  StaffMemberInsert, StaffMemberUpdate,
-  BillInsert, BillUpdate,
-  IndividualCustomerReadingInsert, IndividualCustomerReadingUpdate,
-  BulkMeterReadingInsert, BulkMeterReadingUpdate,
-  PaymentInsert, PaymentUpdate,
-  ReportLogInsert, ReportLogUpdate,
-  NotificationInsert,
-  TariffRow,
-  TariffInsert,
-  TariffUpdate,
-} from './actions';
+import type { Database } from '@/types/supabase';
+
+// Helper types to extract Row, Insert, and Update types from the database definition
+type PublicTables = Database['public']['Tables'];
+type RoleRow = PublicTables['roles']['Row'];
+type PermissionRow = PublicTables['permissions']['Row'];
+type RolePermissionRow = PublicTables['role_permissions']['Row'];
+type Branch = PublicTables['branches']['Row'];
+type BulkMeterRow = PublicTables['bulk_meters']['Row'];
+type IndividualCustomer = PublicTables['individual_customers']['Row'];
+type StaffMember = PublicTables['staff_members']['Row'];
+type Bill = PublicTables['bills']['Row'];
+type IndividualCustomerReading = PublicTables['individual_customer_readings']['Row'];
+type BulkMeterReading = PublicTables['bulk_meter_readings']['Row'];
+type Payment = PublicTables['payments']['Row'];
+type ReportLog = PublicTables['reports']['Row'];
+type NotificationRow = PublicTables['notifications']['Row'];
+type TariffRow = PublicTables['tariffs']['Row'];
+type KnowledgeBaseArticleRow = PublicTables['knowledge_base_articles']['Row'];
+
+
+type BranchInsert = PublicTables['branches']['Insert'];
+type BranchUpdate = PublicTables['branches']['Update'];
+type BulkMeterInsert = PublicTables['bulk_meters']['Insert'];
+type BulkMeterUpdate = PublicTables['bulk_meters']['Update'];
+type IndividualCustomerInsert = PublicTables['individual_customers']['Insert'];
+type IndividualCustomerUpdate = PublicTables['individual_customers']['Update'];
+type StaffMemberInsert = PublicTables['staff_members']['Insert'];
+type StaffMemberUpdate = PublicTables['staff_members']['Update'];
+type BillInsert = PublicTables['bills']['Insert'];
+type BillUpdate = PublicTables['bills']['Update'];
+type IndividualCustomerReadingInsert = PublicTables['individual_customer_readings']['Insert'];
+type IndividualCustomerReadingUpdate = PublicTables['individual_customer_readings']['Update'];
+type BulkMeterReadingInsert = PublicTables['bulk_meter_readings']['Insert'];
+type BulkMeterReadingUpdate = PublicTables['bulk_meter_readings']['Update'];
+type PaymentInsert = PublicTables['payments']['Insert'];
+type PaymentUpdate = PublicTables['payments']['Update'];
+type ReportLogInsert = PublicTables['reports']['Insert'];
+type ReportLogUpdate = PublicTables['reports']['Update'];
+type NotificationInsert = PublicTables['notifications']['Insert'];
+type TariffInsert = PublicTables['tariffs']['Insert'];
+type TariffUpdate = PublicTables['tariffs']['Update'];
+
+
+export type { RoleRow, PermissionRow, RolePermissionRow, Branch, BulkMeterRow, IndividualCustomer, StaffMember, Bill, IndividualCustomerReading, BulkMeterReading, Payment, ReportLog, NotificationRow, BranchInsert, BranchUpdate, BulkMeterInsert, BulkMeterUpdate, IndividualCustomerInsert, IndividualCustomerUpdate, StaffMemberInsert, StaffMemberUpdate, BillInsert, BillUpdate, IndividualCustomerReadingInsert, IndividualCustomerReadingUpdate, BulkMeterReadingInsert, BulkMeterReadingUpdate, PaymentInsert, PaymentUpdate, ReportLogInsert, ReportLogUpdate, NotificationInsert, TariffRow, TariffInsert, TariffUpdate };
+
 
 export type { RoleRow as DomainRole, PermissionRow as DomainPermission, RolePermissionRow as DomainRolePermission } from './actions';
 
@@ -236,6 +260,7 @@ let roles: DomainRole[] = [];
 let permissions: DomainPermission[] = [];
 let rolePermissions: DomainRolePermission[] = [];
 let tariffs: TariffRow[] = [];
+let knowledgeBaseArticles: KnowledgeBaseArticle[] = [];
 
 
 let branchesFetched = false;
@@ -252,6 +277,7 @@ let rolesFetched = false;
 let permissionsFetched = false;
 let rolePermissionsFetched = false;
 let tariffsFetched = false;
+let knowledgeBaseArticlesFetched = false;
 
 
 type Listener<T> = (data: T[]) => void;
@@ -269,6 +295,7 @@ const roleListeners: Set<Listener<DomainRole>> = new Set();
 const permissionListeners: Set<Listener<DomainPermission>> = new Set();
 const rolePermissionListeners: Set<Listener<DomainRolePermission>> = new Set();
 const tariffListeners: Set<Listener<TariffRow>> = new Set();
+const knowledgeBaseArticleListeners: Set<Listener<KnowledgeBaseArticle>> = new Set();
 
 const notifyBranchListeners = () => branchListeners.forEach(listener => listener([...branches]));
 const notifyCustomerListeners = () => customerListeners.forEach(listener => listener([...customers]));
@@ -284,6 +311,7 @@ const notifyRoleListeners = () => roleListeners.forEach(listener => listener([..
 const notifyPermissionListeners = () => permissionListeners.forEach(listener => listener([...permissions]));
 const notifyRolePermissionListeners = () => rolePermissionListeners.forEach(listener => listener([...rolePermissions]));
 const notifyTariffListeners = () => tariffListeners.forEach(listener => listener([...tariffs]));
+const notifyKnowledgeBaseArticleListeners = () => knowledgeBaseArticleListeners.forEach(listener => listener([...knowledgeBaseArticles]));
 
 
 // --- Mappers ---
@@ -770,6 +798,15 @@ const mapDomainReportLogToSupabase = (rl: Partial<DomainReportLog>): Partial<Rep
     return payload;
 };
 
+const mapSupabaseKnowledgeBaseArticleToDomain = (ska: KnowledgeBaseArticleRow): KnowledgeBaseArticle => ({
+    id: ska.id,
+    created_at: ska.created_at,
+    title: ska.title,
+    content: ska.content,
+    category: ska.category || undefined,
+    keywords: ska.keywords || undefined,
+});
+
 async function fetchAllTariffs() {
     const { data, error } = await getAllTariffsAction();
     if (data) {
@@ -1004,6 +1041,68 @@ async function fetchAllRolePermissions() {
   return rolePermissions;
 }
 
+async function fetchAllKnowledgeBaseArticles() {
+  const { data, error } = await dbGetKnowledgeBaseArticles();
+  if (error) {
+    console.error("DataStore: Failed to fetch knowledge base articles. Error:", error);
+    knowledgeBaseArticles = [];
+  } else {
+    knowledgeBaseArticles = data.map(mapSupabaseKnowledgeBaseArticleToDomain);
+  }
+  notifyKnowledgeBaseArticleListeners();
+  knowledgeBaseArticlesFetched = true;
+  return knowledgeBaseArticles;
+}
+
+export async function initializeKnowledgeBaseArticles() {
+  if (!knowledgeBaseArticlesFetched) {
+    await fetchAllKnowledgeBaseArticles();
+  }
+}
+
+export const getKnowledgeBaseArticles = (): KnowledgeBaseArticle[] => [...knowledgeBaseArticles];
+
+export const addKnowledgeBaseArticle = async (article: KnowledgeBaseArticleInsert): Promise<StoreOperationResult<KnowledgeBaseArticle>> => {
+  const { data, error } = await dbCreateKnowledgeBaseArticle(article);
+  if (!error && data) {
+    const newArticle = mapSupabaseKnowledgeBaseArticleToDomain(data);
+    knowledgeBaseArticles = [newArticle, ...knowledgeBaseArticles];
+    notifyKnowledgeBaseArticleListeners();
+    return { success: true, data: newArticle };
+  }
+  return { success: false, message: error?.message || "Failed to add article." };
+};
+
+export const updateKnowledgeBaseArticle = async (id: number, article: KnowledgeBaseArticleUpdate): Promise<StoreOperationResult<KnowledgeBaseArticle>> => {
+  const { data, error } = await dbUpdateKnowledgeBaseArticle(id, article);
+  if (!error && data) {
+    const updatedArticle = mapSupabaseKnowledgeBaseArticleToDomain(data);
+    knowledgeBaseArticles = knowledgeBaseArticles.map(a => a.id === id ? updatedArticle : a);
+    notifyKnowledgeBaseArticleListeners();
+    return { success: true, data: updatedArticle };
+  }
+  return { success: false, message: error?.message || "Failed to update article." };
+};
+
+export const deleteKnowledgeBaseArticle = async (id: number): Promise<StoreOperationResult<void>> => {
+  const { error } = await dbDeleteKnowledgeBaseArticle(id);
+  if (!error) {
+    knowledgeBaseArticles = knowledgeBaseArticles.filter(a => a.id !== id);
+    notifyKnowledgeBaseArticleListeners();
+    return { success: true };
+  }
+  return { success: false, message: error.message };
+};
+
+export const subscribeToKnowledgeBaseArticles = (listener: Listener<KnowledgeBaseArticle>): (() => void) => {
+  knowledgeBaseArticleListeners.add(listener);
+  if (knowledgeBaseArticlesFetched) listener([...knowledgeBaseArticles]);
+  else initializeKnowledgeBaseArticles().then(() => listener([...knowledgeBaseArticles]));
+  return () => knowledgeBaseArticleListeners.delete(listener);
+};
+
+
+
 export const initializeBranches = async () => {
   if (!branchesFetched || branches.length === 0) {
     await fetchAllBranches();
@@ -1106,7 +1205,7 @@ export const getTariff = (customerType: CustomerType, year: number): TariffInfo 
         tiers: parseJsonField(tariff.tiers, 'tiers'),
         maintenance_percentage: tariff.maintenance_percentage,
         sanitation_percentage: tariff.sanitation_percentage,
-        sewerage_rate_per_m3: tariff.sewerage_rate_per_m3,
+        sewerage_rate_per_m3: 0,
         meter_rent_prices: parseJsonField(tariff.meter_rent_prices, 'meter_rent_prices'),
         vat_rate: tariff.vat_rate,
         domestic_vat_threshold_m3: tariff.domestic_vat_threshold_m3,
@@ -1684,7 +1783,6 @@ export const updateTariff = async (customerType: CustomerType, year: number, tar
     if (tariff.tiers) updatePayload.tiers = tariff.tiers;
     if (tariff.maintenance_percentage) updatePayload.maintenance_percentage = tariff.maintenance_percentage;
     if (tariff.sanitation_percentage) updatePayload.sanitation_percentage = tariff.sanitation_percentage;
-    if (tariff.sewerage_rate_per_m3) updatePayload.sewerage_rate_per_m3 = tariff.sewerage_rate_per_m3;
     if (tariff.meter_rent_prices) updatePayload.meter_rent_prices = tariff.meter_rent_prices;
     if (tariff.vat_rate) updatePayload.vat_rate = tariff.vat_rate;
     if (tariff.domestic_vat_threshold_m3) updatePayload.domestic_vat_threshold_m3 = tariff.domestic_vat_threshold_m3;
@@ -1706,7 +1804,6 @@ export const addTariff = async (tariffData: Omit<TariffInfo, 'id'>): Promise<Sto
         tiers: tariffData.tiers,
         maintenance_percentage: tariffData.maintenance_percentage,
         sanitation_percentage: tariffData.sanitation_percentage,
-        sewerage_rate_per_m3: tariffData.sewerage_rate_per_m3,
         meter_rent_prices: tariffData.meter_rent_prices,
         vat_rate: tariffData.vat_rate,
         domestic_vat_threshold_m3: tariffData.domestic_vat_threshold_m3,
@@ -1939,5 +2036,6 @@ export async function loadInitialData() {
     initializeRoles(),
     initializePermissions(),
     initializeRolePermissions(),
+    initializeKnowledgeBaseArticles(),
   ]);
 }

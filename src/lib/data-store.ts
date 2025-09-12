@@ -804,7 +804,6 @@ const mapSupabaseKnowledgeBaseArticleToDomain = (ska: KnowledgeBaseArticleRow): 
     title: ska.title,
     content: ska.content,
     category: ska.category || undefined,
-    keywords: ska.keywords || undefined,
 });
 
 async function fetchAllTariffs() {

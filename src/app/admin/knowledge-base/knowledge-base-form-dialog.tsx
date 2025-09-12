@@ -31,7 +31,6 @@ const formSchema = z.object({
   title: z.string().min(5, { message: "Title must be at least 5 characters." }),
   content: z.string().min(20, { message: "Content must be at least 20 characters." }),
   category: z.string().optional(),
-  keywords: z.string().optional().transform(val => val ? val.split(',').map(k => k.trim()).filter(Boolean) : []),
 });
 
 export type KnowledgeBaseFormValues = z.infer<typeof formSchema>;
@@ -50,7 +49,6 @@ export function KnowledgeBaseFormDialog({ open, onOpenChange, onSubmit, defaultV
       title: "",
       content: "",
       category: "",
-      keywords: [],
     },
   });
 
@@ -60,14 +58,12 @@ export function KnowledgeBaseFormDialog({ open, onOpenChange, onSubmit, defaultV
         title: defaultValues.title,
         content: defaultValues.content,
         category: defaultValues.category || "",
-        keywords: defaultValues.keywords || [],
       });
     } else {
       form.reset({
         title: "",
         content: "",
         category: "",
-        keywords: [],
       });
     }
   }, [defaultValues, form, open]);
@@ -114,42 +110,19 @@ export function KnowledgeBaseFormDialog({ open, onOpenChange, onSubmit, defaultV
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Category (Optional)</FormLabel>
-                    <FormControl>
-                        <Input placeholder="e.g., Billing, Account Management" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                    control={form.control}
-                    name="keywords"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Keywords (Optional)</FormLabel>
-                        <FormControl>
-                            <Input 
-                                placeholder="password, login, access, locked out" 
-                                {...field} 
-                                // value is transformed to array, so we join it back for display
-                                value={Array.isArray(field.value) ? field.value.join(', ') : ''}
-                            />
-                        </FormControl>
-                        <FormDescriptionComponent>
-                          Comma-separated words that relate to this topic.
-                        </FormDescriptionComponent>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-            </div>
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                  <FormItem>
+                  <FormLabel>Category (Optional)</FormLabel>
+                  <FormControl>
+                      <Input placeholder="e.g., Billing, Account Management" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                  </FormItem>
+              )}
+            />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit">

@@ -31,7 +31,6 @@ const getKnowledgeBaseContext = async (): Promise<string> => {
           Title: ${article.title}
           Category: ${article.category || 'General'}
           Content: ${article.content}
-          Keywords: ${(article.keywords || []).join(', ')}
         `).join('\n\n');
 
     } catch (error) {

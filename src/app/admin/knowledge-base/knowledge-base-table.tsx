@@ -50,7 +50,6 @@ export function KnowledgeBaseTable({ data, onEdit, onDelete, canEdit, canDelete 
           <TableRow>
             <TableHead>Title</TableHead>
             <TableHead>Category</TableHead>
-            <TableHead>Keywords</TableHead>
             <TableHead>Last Updated</TableHead>
             {showActionsColumn && <TableHead className="text-right">Actions</TableHead>}
           </TableRow>
@@ -60,11 +59,6 @@ export function KnowledgeBaseTable({ data, onEdit, onDelete, canEdit, canDelete 
             <TableRow key={article.id}>
               <TableCell className="font-medium">{article.title}</TableCell>
               <TableCell>{article.category || "-"}</TableCell>
-              <TableCell className="max-w-xs truncate">
-                {article.keywords && article.keywords.length > 0 
-                  ? article.keywords.map(k => <Badge key={k} variant="secondary" className="mr-1 mb-1">{k}</Badge>) 
-                  : "-"}
-              </TableCell>
               <TableCell>
                 {formatDistanceToNow(new Date(article.created_at), { addSuffix: true })}
               </TableCell>

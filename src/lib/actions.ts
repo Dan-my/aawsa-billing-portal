@@ -73,6 +73,8 @@ type Payment = PublicTables['payments']['Row'];
 type ReportLog = PublicTables['reports']['Row'];
 type NotificationRow = PublicTables['notifications']['Row'];
 type TariffRow = PublicTables['tariffs']['Row'];
+type KnowledgeBaseArticleRow = PublicTables['knowledge_base_articles']['Row'];
+
 
 type BranchInsert = PublicTables['branches']['Insert'];
 type BranchUpdate = PublicTables['branches']['Update'];
@@ -99,7 +101,7 @@ type KnowledgeBaseArticleInsert = PublicTables['knowledge_base_articles']['Inser
 type KnowledgeBaseArticleUpdate = PublicTables['knowledge_base_articles']['Update'];
 
 
-export type { RoleRow, PermissionRow, RolePermissionRow, Branch, BulkMeterRow, IndividualCustomer, StaffMember, Bill, IndividualCustomerReading, BulkMeterReading, Payment, ReportLog, NotificationRow, BranchInsert, BranchUpdate, BulkMeterInsert, BulkMeterUpdate, IndividualCustomerInsert, IndividualCustomerUpdate, StaffMemberInsert, StaffMemberUpdate, BillInsert, BillUpdate, IndividualCustomerReadingInsert, IndividualCustomerReadingUpdate, BulkMeterReadingInsert, BulkMeterReadingUpdate, PaymentInsert, PaymentUpdate, ReportLogInsert, ReportLogUpdate, NotificationInsert, TariffRow, TariffInsert, TariffUpdate, KnowledgeBaseArticleInsert, KnowledgeBaseArticleUpdate };
+export type { RoleRow, PermissionRow, RolePermissionRow, Branch, BulkMeterRow, IndividualCustomer, StaffMember, Bill, IndividualCustomerReading, BulkMeterReading, Payment, ReportLog, NotificationRow, BranchInsert, BranchUpdate, BulkMeterInsert, BulkMeterUpdate, IndividualCustomerInsert, IndividualCustomerUpdate, StaffMemberInsert, StaffMemberUpdate, BillInsert, BillUpdate, IndividualCustomerReadingInsert, IndividualCustomerReadingUpdate, BulkMeterReadingInsert, BulkMeterReadingUpdate, PaymentInsert, PaymentUpdate, ReportLogInsert, ReportLogUpdate, NotificationInsert, TariffRow, TariffInsert, TariffUpdate, KnowledgeBaseArticleInsert, KnowledgeBaseArticleUpdate, KnowledgeBaseArticleRow };
 
 
 export async function getAllBranchesAction() { return dbGetAllBranches(); }
@@ -170,3 +172,4 @@ export async function getAllKnowledgeBaseArticlesAction() { return dbGetAllKnowl
 export async function createKnowledgeBaseArticleAction(article: KnowledgeBaseArticleInsert) { return dbCreateKnowledgeBaseArticle(article); }
 export async function updateKnowledgeBaseArticleAction(id: number, article: KnowledgeBaseArticleUpdate) { return dbUpdateKnowledgeBaseArticle(id, article); }
 export async function deleteKnowledgeBaseArticleAction(id: number) { return dbDeleteKnowledgeBaseArticle(id); }
+

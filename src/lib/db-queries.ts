@@ -1,5 +1,6 @@
 
 
+
 // This file is intentionally left blank. 
 // The data-store.ts file now directly handles database interactions.
 // We are keeping this file to avoid breaking existing imports, but it no longer contains logic.
@@ -94,3 +95,4 @@ export const dbGetAllKnowledgeBaseArticles = async () => supabase.from('knowledg
 export const dbCreateKnowledgeBaseArticle = async (article: any) => supabase.from('knowledge_base_articles').insert(article).select().single();
 export const dbUpdateKnowledgeBaseArticle = async (id: number, article: any) => supabase.from('knowledge_base_articles').update(article).eq('id', id).select().single();
 export const dbDeleteKnowledgeBaseArticle = async (id: number) => supabase.from('knowledge_base_articles').delete().eq('id', id);
+

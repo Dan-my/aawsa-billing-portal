@@ -192,7 +192,42 @@ This Next.js application is ready for deployment to various platforms that suppo
 
 ---
 
-### **Option 1: Vercel (Recommended)**
+### **Option 1: Self-Hosting with Docker (Advanced)**
+
+This is a powerful option for deploying the application on your own server or any cloud provider that supports Docker containers.
+
+#### **Prerequisites**
+-   **Docker** installed on your server.
+-   A **production database**. This can be a Supabase cloud project or another PostgreSQL database.
+
+#### **Step 1: Configure Production Environment**
+1.  Create a file named `.env` in the root of your project.
+2.  Add your production Supabase credentials to this file. **Do not use your local development keys.**
+
+    ```.env
+    NEXT_PUBLIC_SUPABASE_URL=YOUR_PRODUCTION_SUPABASE_URL
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_PRODUCTION_SUPABASE_ANON_KEY
+    ```
+
+#### **Step 2: Build and Run with Docker Compose**
+The included `Dockerfile` and `docker-compose.yml` are configured for a production-ready deployment.
+
+1.  From your project's root directory, run the build command:
+    ```bash
+    docker-compose build
+    ```
+    This command reads your `.env.local` file (for build-time static generation) and builds the Next.js application inside a Docker image.
+
+2.  Once the build is complete, start the application in detached mode:
+    ```bash
+    docker-compose up -d
+    ```
+
+Your application will now be running on port 3000 of your server. The `docker-compose.yml` file is configured to use the `.env` file for runtime environment variables, ensuring it connects to your production database.
+
+---
+
+### **Option 2: Vercel (Recommended)**
 Vercel is the creator of Next.js and provides a seamless, zero-configuration deployment experience.
 
 1.  **Sign Up:** Go to [vercel.com](https://vercel.com) and sign up with your GitHub account.
@@ -206,7 +241,7 @@ Vercel is the creator of Next.js and provides a seamless, zero-configuration dep
 
 ---
 
-### **Option 2: Netlify**
+### **Option 3: Netlify**
 Netlify is another popular platform with excellent support for Next.js.
 
 1.  **Sign Up:** Go to [netlify.com](https://app.netlify.com/signup) and sign up with your GitHub account.
@@ -221,7 +256,7 @@ Netlify is another popular platform with excellent support for Next.js.
 
 ---
 
-### **Option 3: Firebase Hosting**
+### **Option 4: Firebase Hosting**
 Since you are using Firebase Studio, deploying to Firebase Hosting is a natural fit, though it requires using the command line.
 
 1.  **Firebase Project:** Go to the [Firebase Console](https://console.firebase.google.com/) and create a new project (or select an existing one).
@@ -242,14 +277,6 @@ Since you are using Firebase Studio, deploying to Firebase Hosting is a natural 
     firebase deploy --only hosting
     ```
     *Note: For a Next.js app with server-side features, Firebase now has experimental support for deploying directly. When initializing, you might be prompted to use a web framework. If so, select Next.js, and Firebase will handle setting up Cloud Functions for you.*
-
----
-
-### **Other Cloud Providers**
-You can also deploy this application to major cloud providers, although these methods are typically more advanced:
-*   **AWS (Amazon Web Services):** Using services like AWS Amplify or containerizing your app for ECS/Fargate.
-*   **Google Cloud:** Using Cloud Run for a containerized deployment or App Engine.
-*   **Microsoft Azure:** Using Azure App Service or Azure Static Web Apps.
 
 ---
 
@@ -386,6 +413,7 @@ This update adds a new table called `knowledge_base_articles` to store informati
     *   Click on **"+ New query"**.
     *   Open the newly added file `database_migrations/008_knowledge_base_setup.sql` in this project.
     *   Copy the entire content of that file and run it.
+
 
 
 

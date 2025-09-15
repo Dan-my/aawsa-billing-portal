@@ -14,7 +14,7 @@ For the best development experience, we recommend using [Visual Studio Code](htt
     *   Select the main project folder and click "Open".
 3.  **Open the Integrated Terminal**:
     *   Once the project is open, go to the top menu and select `Terminal` > `New Terminal`.
-    *   This will open a command-line panel at the bottom of the VS Code window, which is where you will run all the necessary commands (like `supabase start`, `npm run dev`, etc.).
+    *   This will open a command-line panel at the bottom of the VS Code window, which is where you will run all the necessary commands (like `npm run supabase start`, `npm run dev`, etc.).
 
 ---
 
@@ -25,19 +25,27 @@ Running Supabase locally is highly recommended for development. It provides you 
 ### **Prerequisites**
 Before you begin, make sure you have the following installed:
 1.  **Docker Desktop**: Supabase uses Docker to run its services. Download and install it from the [official Docker website](https://www.docker.com/products/docker-desktop/).
-2.  **Supabase CLI**: This is the command-line tool for managing your local Supabase instance. Install it globally via npm:
-    ```bash
-    npm install -g supabase
-    ```
+2.  **Node.js and npm**: Ensure you have Node.js (which includes npm) installed. You can download it from [nodejs.org](https://nodejs.org/).
+3.  **Supabase CLI**: The application is configured to use the Supabase CLI from the project's dependencies, so no global installation is needed.
 
 ---
 
-### **Step 1: Start Supabase Services**
+### **Step 1: Install Project Dependencies**
 
-Navigate to your project's root directory in the terminal and run the following command:
+Before running any commands, you need to install the project's required packages. Navigate to your project's root directory in the terminal and run:
 
 ```bash
-supabase start
+npm install
+```
+
+---
+
+### **Step 2: Start Supabase Services**
+
+With the dependencies installed, run the following command to start your local Supabase instance:
+
+```bash
+npm run supabase start
 ```
 
 The first time you run this, it will download the necessary Docker images, which might take a few minutes. Once it's finished, it will output your local Supabase credentials, including:
@@ -51,7 +59,7 @@ Keep this terminal window open. You can stop the services at any time by pressin
 
 ---
 
-### **Step 2: Configure Your Next.js Application**
+### **Step 3: Configure Your Next.js Application**
 
 Your Next.js application needs to know how to connect to your new local Supabase instance.
 
@@ -64,7 +72,7 @@ Your Next.js application needs to know how to connect to your new local Supabase
     ```
 
 **Example:**
-If `supabase start` gave you:
+If `npm run supabase start` gave you:
 - API URL: `http://127.0.0.1:54321`
 - Anon Key: `eyJhbGciOiJIUzI1Ni...`
 
@@ -76,12 +84,12 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1Ni...
 
 ---
 
-### **Step 3: Apply Database Migrations**
+### **Step 4: Apply Database Migrations**
 
 Your local database is currently empty. You need to apply the schema and functions from your project's migration files. Run the following command:
 
 ```bash
-supabase db reset
+npm run supabase db reset
 ```
 
 This command will:
@@ -93,7 +101,7 @@ After running this, your local database schema will match what the application e
 
 ---
 
-### **Step 4: Run the Application**
+### **Step 5: Run the Application**
 
 Now you're ready to start your Next.js development server:
 
@@ -103,7 +111,7 @@ npm run dev
 
 Your application will start up and automatically connect to your local Supabase instance. You now have a fully functional local development environment!
 
-**Tip:** You can access the local Supabase Studio (a visual interface like the online dashboard) by navigating to the **Studio URL** provided by the `supabase start` command in your web browser.
+**Tip:** You can access the local Supabase Studio (a visual interface like the online dashboard) by navigating to the **Studio URL** provided by the `npm run supabase start` command in your web browser.
 
 ## Data Entry
 
@@ -378,6 +386,7 @@ This update adds a new table called `knowledge_base_articles` to store informati
     *   Click on **"+ New query"**.
     *   Open the newly added file `database_migrations/008_knowledge_base_setup.sql` in this project.
     *   Copy the entire content of that file and run it.
+
 
 
 

@@ -3,6 +3,21 @@ This guide will walk you through setting up your local development environment f
 
 ---
 
+## Opening the Project in VS Code
+
+For the best development experience, we recommend using [Visual Studio Code](https://code.visualstudio.com/), a free and powerful code editor.
+
+1.  **Open VS Code**: Launch the Visual Studio Code application.
+2.  **Open Project Folder**:
+    *   Go to the top menu and select `File` > `Open Folder...` (on Windows/Linux) or `Code` > `File` > `Open Folder...` (on macOS).
+    *   Navigate to the directory where you've saved this project.
+    *   Select the main project folder and click "Open".
+3.  **Open the Integrated Terminal**:
+    *   Once the project is open, go to the top menu and select `Terminal` > `New Terminal`.
+    *   This will open a command-line panel at the bottom of the VS Code window, which is where you will run all the necessary commands (like `supabase start`, `npm run dev`, etc.).
+
+---
+
 ## Local Development with Supabase
 
 Running Supabase locally is highly recommended for development. It provides you with a full, isolated instance of the Supabase stack (PostgreSQL database, authentication, storage, etc.) that runs on your local machine using Docker.
@@ -363,4 +378,6 @@ This update adds a new table called `knowledge_base_articles` to store informati
     *   Click on **"+ New query"**.
     *   Open the newly added file `database_migrations/008_knowledge_base_setup.sql` in this project.
     *   Copy the entire content of that file and run it.
+
+
 

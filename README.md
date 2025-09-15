@@ -1,4 +1,96 @@
 
+This guide will walk you through setting up your local development environment for the AAWSA Billing Portal application using the Supabase CLI.
+
+---
+
+## Local Development with Supabase
+
+Running Supabase locally is highly recommended for development. It provides you with a full, isolated instance of the Supabase stack (PostgreSQL database, authentication, storage, etc.) that runs on your local machine using Docker.
+
+### **Prerequisites**
+Before you begin, make sure you have the following installed:
+1.  **Docker Desktop**: Supabase uses Docker to run its services. Download and install it from the [official Docker website](https://www.docker.com/products/docker-desktop/).
+2.  **Supabase CLI**: This is the command-line tool for managing your local Supabase instance. Install it globally via npm:
+    ```bash
+    npm install -g supabase
+    ```
+
+---
+
+### **Step 1: Start Supabase Services**
+
+Navigate to your project's root directory in the terminal and run the following command:
+
+```bash
+supabase start
+```
+
+The first time you run this, it will download the necessary Docker images, which might take a few minutes. Once it's finished, it will output your local Supabase credentials, including:
+-   **API URL**
+-   **DB URL**
+-   **Studio URL**
+-   **Anon Key** (This is your public API key)
+-   **Service Role Key** (This is your secret key for server-side operations)
+
+Keep this terminal window open. You can stop the services at any time by pressing `Ctrl + C`.
+
+---
+
+### **Step 2: Configure Your Next.js Application**
+
+Your Next.js application needs to know how to connect to your new local Supabase instance.
+
+1.  In the root directory of your project, create a new file named `.env.local`.
+2.  Add the following lines to this file, replacing the placeholder values with the **API URL** and **Anon Key** from the `supabase start` command output:
+
+    ```.env
+    NEXT_PUBLIC_SUPABASE_URL=YOUR_LOCAL_API_URL
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_LOCAL_ANON_KEY
+    ```
+
+**Example:**
+If `supabase start` gave you:
+- API URL: `http://127.0.0.1:54321`
+- Anon Key: `eyJhbGciOiJIUzI1Ni...`
+
+Your `.env.local` file would look like this:
+```.env
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1Ni...
+```
+
+---
+
+### **Step 3: Apply Database Migrations**
+
+Your local database is currently empty. You need to apply the schema and functions from your project's migration files. Run the following command:
+
+```bash
+supabase db reset
+```
+
+This command will:
+1.  Drop the existing local database.
+2.  Create a new, clean one.
+3.  Apply all the SQL migration scripts located in the `database_migrations/` folder in the correct order.
+
+After running this, your local database schema will match what the application expects.
+
+---
+
+### **Step 4: Run the Application**
+
+Now you're ready to start your Next.js development server:
+
+```bash
+npm run dev
+```
+
+Your application will start up and automatically connect to your local Supabase instance. You now have a fully functional local development environment!
+
+**Tip:** You can access the local Supabase Studio (a visual interface like the online dashboard) by navigating to the **Studio URL** provided by the `supabase start` command in your web browser.
+
+## Data Entry
 
 The application supports data entry through manual forms and CSV file uploads for both bulk meters and individual customers. This can be accessed via the "Data Entry" section in the admin panel.
 
@@ -140,7 +232,7 @@ You can also deploy this application to major cloud providers, although these me
 
 ## Database Migrations
 
-From time to to time, application updates may require changes to the database structure or functions. These changes are provided as SQL scripts that you need to run in your Supabase project's SQL Editor.
+From time to time, application updates may require changes to the database structure or functions. These changes are provided as SQL scripts that you need to run in your Supabase project's SQL Editor.
 
 ### **Important: Always back up your data before running any migration script.**
 
